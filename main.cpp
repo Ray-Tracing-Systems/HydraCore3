@@ -16,20 +16,40 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
-  const int WIN_WIDTH  = 1024;
-  const int WIN_HEIGHT = 1024;
+  int WIN_WIDTH  = 1024;
+  int WIN_HEIGHT = 1024;
 
   std::vector<uint32_t> pixelData(WIN_WIDTH*WIN_HEIGHT);
   std::vector<uint32_t> packedXY(WIN_WIDTH*WIN_HEIGHT);
   std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);
   
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+  
   std::shared_ptr<Integrator> pImpl = nullptr;
   ArgParser args(argc, argv);
-
+  
   std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
   if(args.hasOption("-in"))
     scenePath = args.getOptionValue<std::string>("-in");
 
+  std::string imageOut = "z_out.bmp";
+  if(args.hasOption("-out"))
+    imageOut = args.getOptionValue<std::string>("-out");
+
+  const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
+
+  std::string integratorType = "mispt";
+  if(args.hasOption("-integrator"))
+    integratorType = args.getOptionValue<std::string>("-integrator");
+
+  int PASS_NUMBER = 100;
+  if(args.hasOption("-spp"))
+    PASS_NUMBER = args.getOptionValue<int>("-spp");
+  
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+  
   bool onGPU = args.hasOption("--gpu");
   if(onGPU)
   {
@@ -40,125 +60,119 @@ int main(int argc, const char** argv)
   else
     pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
   
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
   pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
-  
+  std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str());
   pImpl->CommitDeviceData();
 
-  // remember pitch-linear (x,y) for each thread to make our threading 1D
+  // remember (x,y) coords for each thread to make our threading 1D
   //
-  std::cout << "CastSingleRayBlock() ... " << std::endl; 
+  std::cout << "[main]: PackXYBlock() ... " << std::endl; 
   pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, packedXY.data(), 1);
-  pImpl->CastSingleRayBlock(WIN_HEIGHT*WIN_HEIGHT, packedXY.data(), pixelData.data(), 1);
-  
-  if(onGPU)
-    SaveBMP("zout_gpu.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  else
-    SaveBMP("zout_cpu.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  
-  // -------------------------------------------------------------------------------
 
-  const int PASS_NUMBER = 100;
   const float normConst = 1.0f/float(PASS_NUMBER);
   const float invGamma  = 1.0f/2.2f;
   
   // now test path tracing
   //
-  const int NAIVE_PT_REPEAT = 1;
-
-  std::cout << "NaivePathTraceBlock() ... " << std::endl;
-  memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
-  pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
-  pImpl->UpdateMembersPlainData();
-  pImpl->NaivePathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
-  
   float minValPdf = 1e30f;
   float maxValPdf = -1e29f;
-  for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+  if(integratorType == "naivept" || integratorType == "all")
   {
-    float4 color = realColor[i]*normConst*(1.0f/float(NAIVE_PT_REPEAT));
-    if(std::isfinite(color.w))
+    const int NAIVE_PT_REPEAT = 1;
+  
+    std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
+    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
+    pImpl->UpdateMembersPlainData();
+    pImpl->NaivePathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    
+    for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
     {
-      minValPdf    = std::min(minValPdf, color.w);
-      maxValPdf    = std::max(maxValPdf, color.w);
+      float4 color = realColor[i]*normConst*(1.0f/float(NAIVE_PT_REPEAT));
+      if(std::isfinite(color.w))
+      {
+        minValPdf    = std::min(minValPdf, color.w);
+        maxValPdf    = std::max(maxValPdf, color.w);
+      }
+      color.x      = std::pow(color.x, invGamma);
+      color.y      = std::pow(color.y, invGamma);
+      color.z      = std::pow(color.z, invGamma);
+      color.w      = 1.0f;
+      pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
     }
-    color.x      = std::pow(color.x, invGamma);
-    color.y      = std::pow(color.y, invGamma);
-    color.z      = std::pow(color.z, invGamma);
-    color.w      = 1.0f;
-    pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
+    
+    const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
+    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
-  
-  if(onGPU)
-    SaveBMP("zout_gpu2.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  else
-    SaveBMP("zout_cpu2.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  
-  std::cout << "minValPdf = " << minValPdf << std::endl;
-  std::cout << "maxValPdf = " << maxValPdf << std::endl;
-  const float normInv = 1.0f / (maxValPdf - minValPdf);
-  for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
-  {
-    const float pdf = std::isfinite(realColor[i].w) ? (realColor[i].w*normConst*(1.0f/float(NAIVE_PT_REPEAT)) - minValPdf)*normInv : 0.0f;
-    float4 color;
-    color.x      = pdf;
-    color.y      = std::sqrt(pdf);
-    color.z      = std::sqrt(pdf);
-    color.w      = 1.0f;
-    pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-  }
-  
-  if(onGPU)
-    SaveBMP("zout_gpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  else
-    SaveBMP("zout_cpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+
+  //std::cout << "minValPdf = " << minValPdf << std::endl;
+  //std::cout << "maxValPdf = " << maxValPdf << std::endl;
+  //const float normInv = 1.0f / (maxValPdf - minValPdf);
+  //for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+  //{
+  //  const float pdf = std::isfinite(realColor[i].w) ? (realColor[i].w*normConst*(1.0f/float(NAIVE_PT_REPEAT)) - minValPdf)*normInv : 0.0f;
+  //  float4 color;
+  //  color.x      = pdf;
+  //  color.y      = std::sqrt(pdf);
+  //  color.z      = std::sqrt(pdf);
+  //  color.w      = 1.0f;
+  //  pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
+  //}
+  //
+  //if(onGPU)
+  //  SaveBMP("zout_gpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+  //else
+  //  SaveBMP("zout_cpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
 
   // -------------------------------------------------------------------------------
-
-  std::cout << "PathTraceBlock(Shadow-PT) ... " << std::endl;
-  memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
-  pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
-  pImpl->UpdateMembersPlainData();
-  pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
-
-  for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+  if(integratorType == "shadowpt" || integratorType == "all")
   {
-    float4 color = realColor[i]*normConst;
-    color.x      = std::pow(color.x, invGamma);
-    color.y      = std::pow(color.y, invGamma);
-    color.z      = std::pow(color.z, invGamma);
-    color.w      = 1.0f;
-    pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
+    std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
+    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
+    pImpl->UpdateMembersPlainData();
+    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
+  
+    for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+    {
+      float4 color = realColor[i]*normConst;
+      color.x      = std::pow(color.x, invGamma);
+      color.y      = std::pow(color.y, invGamma);
+      color.z      = std::pow(color.z, invGamma);
+      color.w      = 1.0f;
+      pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
+    }
+  
+    const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
+    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
-
-  if(onGPU)
-    SaveBMP("zout_gpu3.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  else
-    SaveBMP("zout_cpu3.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
 
   // -------------------------------------------------------------------------------
-
-  std::cout << "PathTraceBlock(MIS-PT) ... " << std::endl;
-  memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
-  pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
-  pImpl->UpdateMembersPlainData();
-  pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
-
-  for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+  if(integratorType == "mispt" || integratorType == "all")
   {
-    float4 color = realColor[i]*normConst;
-    color.x      = std::pow(color.x, invGamma);
-    color.y      = std::pow(color.y, invGamma);
-    color.z      = std::pow(color.z, invGamma);
-    color.w      = 1.0f;
-    pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-  }
-
-  if(onGPU)
-    SaveBMP("zout_gpu4.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  else
-    SaveBMP("zout_cpu4.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+    std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
+    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+    pImpl->UpdateMembersPlainData();
+    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
   
+    for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
+    {
+      float4 color = realColor[i]*normConst;
+      color.x      = std::pow(color.x, invGamma);
+      color.y      = std::pow(color.y, invGamma);
+      color.z      = std::pow(color.z, invGamma);
+      color.w      = 1.0f;
+      pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
+    }
+  
+    const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
+    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+  }
   // -------------------------------------------------------------------------------
 
   std::cout << std::endl;

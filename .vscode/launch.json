@@ -8,7 +8,7 @@
             "name"   : "Launch",
             "type"   : "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-release/testapp",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--cpu", "-in", "/home/frol/PROG/HydraRepos2/HydraAPI-tests/tests_f/test_103/statex_00001.xml"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
@@ -25,10 +25,10 @@
         },
         
         {
-            "name": "(gdb) Launch",
+            "name": "(debug) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-debug/testapp",
+            "program": "${workspaceFolder}/cmake-build-debug/hydra",
             "args": ["--gpu", "-in", "/home/frol/PROG/HydraRepos2/HydraAPI-tests/tests_f/test_103/statex_00001.xml"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -42,7 +42,34 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+
+        {
+            "name": "(debug) Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-debug/hydra",
+            "args": ["-in", "/home/frol/PROG/HydraRepos2/HydraAPI-tests/tests_f/test_101/statex_00001.xml", 
+                     "-out", "/home/frol/PROG/HydraRepos2/HydraAPI-tests/tests_images/z_out.bmp", 
+                     "-integrator", "all", 
+                     "-spp", "1024", 
+                     "--gpu_id", "0", 
+                     "--gpu"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
+
+    
         
         
 
