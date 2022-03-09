@@ -33,18 +33,15 @@ public:
   void InitRandomGens(int a_maxThreads);
   virtual int LoadScene(const char* bvhPath);
 
-  void PackXY(uint tidX, uint tidY, uint* out_pakedXY   __attribute__((size("tidX", "tidY"))));
-  void CastSingleRay  (uint tid, const uint* in_pakedXY __attribute__((size("tid"))), 
-                                       uint* out_color  __attribute__((size("tid"))) );
-  void NaivePathTrace (uint tid, uint a_maxDepth, const uint* in_pakedXY __attribute__((size("tid"))), 
-                                                      float4* out_color  __attribute__((size("tid"))) );
-  void PathTrace(uint tid, uint a_maxDepth, const uint* in_pakedXY __attribute__((size("tid"))), 
-                                                       float4* out_color __attribute__((size("tid"))) );
+  void PackXY         (uint tidX, uint tidY);
+  void CastSingleRay  (uint tid, uint* out_color                    __attribute__((size("tid"))) );
+  void NaivePathTrace (uint tid, uint a_maxDepth, float4* out_color __attribute__((size("tid"))) );
+  void PathTrace      (uint tid, uint a_maxDepth, float4* out_color __attribute__((size("tid"))) );
 
-  virtual void PackXYBlock(uint tidX, uint tidY, uint* out_pakedXY, uint a_passNum);
-  virtual void CastSingleRayBlock(uint tid, const uint* in_pakedXY, uint* out_color, uint a_passNum);
-  virtual void NaivePathTraceBlock(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color, uint a_passNum);
-  virtual void PathTraceBlock(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color, uint a_passNum);
+  virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
+  virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
+  virtual void NaivePathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum);
+  virtual void PathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
   virtual void GetExecutionTime(const char* a_funcName, float a_out[4]); // will be overriden in generated class
@@ -109,6 +106,7 @@ public:
     m_winStartY = a_yStart;
     m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
     m_winHeight = a_height;
+    m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
   }
 
 protected:
@@ -127,10 +125,11 @@ protected:
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
-  std::vector<GLTFMaterial>   m_materials;
+  std::vector<GLTFMaterial>    m_materials;
   std::vector<uint32_t>        m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
   std::vector<uint32_t>        m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
   std::vector<uint32_t>        m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
+  std::vector<uint32_t>        m_packedXY;
 
   std::vector<uint32_t>        m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>          m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]

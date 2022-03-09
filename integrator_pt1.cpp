@@ -39,7 +39,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 {
   *accumColor        = make_float4(0,0,0,1);
   *accumuThoroughput = make_float4(1,1,1,1);
-  *gen               = m_randomGens[tid];
+  RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
 
   const uint XY = packedXY[tid];
@@ -47,14 +47,18 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  float3 rayDir = EyeRayDir(x, y, m_winWidth, m_winHeight, m_projInv); 
+  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal) - float2(0.5f);
+  const float fx = float(x) + pixelOffsets.x;
+  const float fy = float(y) + pixelOffsets.y;
+
+  float3 rayDir = EyeRayDir(fx, fy, m_winWidth, m_winHeight, m_projInv); 
   float3 rayPos = float3(0,0,0);
 
-  transform_ray3f(m_worldViewInv, 
-                  &rayPos, &rayDir);
+  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, MAXFLOAT);
+  *gen           = genLocal;
 }
 
 
@@ -333,32 +337,32 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Integrator::PackXY(uint tidX, uint tidY, uint* out_pakedXY)
+void Integrator::PackXY(uint tidX, uint tidY)
 {
-  kernel_PackXY(tidX, tidY, out_pakedXY);
+  kernel_PackXY(tidX, tidY, m_packedXY.data());
 }
 
-void Integrator::CastSingleRay(uint tid, const uint* in_pakedXY, uint* out_color)
+void Integrator::CastSingleRay(uint tid, uint* out_color)
 {
   float4 rayPosAndNear, rayDirAndFar;
-  kernel_InitEyeRay(tid, in_pakedXY, &rayPosAndNear, &rayDirAndFar);
+  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
 
   Lite_Hit hit; 
   float2   baricentrics; 
   if(!kernel_RayTrace(tid, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics))
     return;
   
-  kernel_GetRayColor(tid, &hit, in_pakedXY, out_color);
+  kernel_GetRayColor(tid, &hit, m_packedXY.data(), out_color);
 }
 
-void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color)
+void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
 {
   float4 accumColor, accumThoroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, in_pakedXY, &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
   for(int depth = 0; depth < a_maxDepth; depth++) 
   {
@@ -375,18 +379,18 @@ void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, const uint* in_pakedX
 
   //kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, in_pakedXY, 
+  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
                            out_color);
 }
 
-void Integrator::PathTrace(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color)
+void Integrator::PathTrace(uint tid, uint a_maxDepth, float4* out_color)
 {
   float4 accumColor, accumThoroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, in_pakedXY, &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
   for(int depth = 0; depth < a_maxDepth; depth++) 
   {
@@ -404,7 +408,7 @@ void Integrator::PathTrace(uint tid, uint a_maxDepth, const uint* in_pakedXY, fl
       break;
   }
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, in_pakedXY, 
+  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
                            out_color);
                            
 }

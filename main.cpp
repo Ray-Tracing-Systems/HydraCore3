@@ -20,7 +20,6 @@ int main(int argc, const char** argv)
   int WIN_HEIGHT = 1024;
 
   std::vector<uint32_t> pixelData(WIN_WIDTH*WIN_HEIGHT);
-  std::vector<uint32_t> packedXY(WIN_WIDTH*WIN_HEIGHT);
   std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);
   
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +70,7 @@ int main(int argc, const char** argv)
   // remember (x,y) coords for each thread to make our threading 1D
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl; 
-  pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, packedXY.data(), 1);
+  pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
   const float normConst = 1.0f/float(PASS_NUMBER);
   const float invGamma  = 1.0f/2.2f;
@@ -88,15 +87,15 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    pImpl->NaivePathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
     for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
     {
       float4 color = realColor[i]*normConst*(1.0f/float(NAIVE_PT_REPEAT));
       if(std::isfinite(color.w))
       {
-        minValPdf    = std::min(minValPdf, color.w);
-        maxValPdf    = std::max(maxValPdf, color.w);
+        minValPdf  = std::min(minValPdf, color.w);
+        maxValPdf  = std::max(maxValPdf, color.w);
       }
       color.x      = std::pow(color.x, invGamma);
       color.y      = std::pow(color.y, invGamma);
@@ -135,7 +134,7 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
   
     for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
     {
@@ -158,7 +157,7 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, packedXY.data(), realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
   
     for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
     {

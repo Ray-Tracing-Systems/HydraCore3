@@ -188,38 +188,38 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Integrator::PackXYBlock(uint tidX, uint tidY, uint* out_pakedXY, uint a_passNum)
+void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 {
   #pragma omp parallel for default(shared)
   for(int y=0;y<tidY;y++)
     for(int x=0;x<tidX;x++)
-      PackXY(x, y, out_pakedXY);
+      PackXY(x, y);
 }
 
-void Integrator::CastSingleRayBlock(uint tid, const uint* in_pakedXY, uint* out_color, uint a_passNum)
+void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
 {
   #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
-    CastSingleRay(i, in_pakedXY, out_color);
+    CastSingleRay(i, out_color);
 }
 
-void Integrator::NaivePathTraceBlock(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color, uint a_passNum)
+void Integrator::NaivePathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
-      NaivePathTrace(i, 6, in_pakedXY, out_color);
+      NaivePathTrace(i, a_maxDepth, out_color);
   naivePtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
-void Integrator::PathTraceBlock(uint tid, uint a_maxDepth, const uint* in_pakedXY, float4* out_color, uint a_passNum)
+void Integrator::PathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
-      PathTrace(i, 6, in_pakedXY, out_color);
+      PathTrace(i, a_maxDepth, out_color);
   shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
