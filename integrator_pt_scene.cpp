@@ -384,18 +384,33 @@ int Integrator::LoadScene(const char* scehePath)
     m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(),     currMesh.vNorm4f.end());     // #TODO: store compressed normal and tangent together
     m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
-  
+
   //// (3) make instances of created meshes
   //
-  m_normMatrices.clear();
-
+  m_normMatrices.clear(); m_normMatrices.reserve(1000);
+  m_remapInst.clear();    m_remapInst.reserve(1000);
   m_pAccelStruct->ClearScene();
   for(auto inst : scene.InstancesGeom())
   {
     m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
+    m_remapInst.push_back(inst.rmapId);
   }
-  m_pAccelStruct->CommitScene();
+
+  m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
+  
+  // (4) load remap lists and put all of the to the flat data structure
+  // 
+  m_allRemapLists.clear();
+  m_allRemapListsOffsets.clear();
+  m_allRemapLists.reserve(m_normMatrices.size()*10);     // approx size for all reamp lists based on number of instances; may not do this reserve in fact, or make it more precise
+  m_allRemapListsOffsets.reserve(m_normMatrices.size()); // approx size for all reamp lists ... 
+  for(auto remapList : scene.RemapLists())
+  {
+    m_allRemapListsOffsets.push_back(m_allRemapLists.size());
+    m_allRemapLists.insert(m_allRemapLists.end(), remapList.begin(), remapList.end());
+  }
+  m_allRemapListsOffsets.push_back(m_allRemapLists.size()); // put size of the list remap list
 
   return 0;
 }

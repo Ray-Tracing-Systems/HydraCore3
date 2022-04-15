@@ -129,6 +129,10 @@ protected:
   BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc);
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
+  uint RemapMaterialId(uint a_mId, int a_instId); 
+  
+  ////////////////////////////////////////////////////////////////////////////////////////////////
+
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
@@ -141,6 +145,10 @@ protected:
   std::vector<uint32_t>        m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>          m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
   std::vector<float2>          m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+  
+  std::vector<int>             m_remapInst;
+  std::vector<int>             m_allRemapLists;
+  std::vector<int>             m_allRemapListsOffsets;
 
   float4x4                     m_projInv;
   float4x4                     m_worldViewInv;
@@ -159,7 +167,7 @@ protected:
   //// textures
   //
   std::vector< std::shared_ptr<ITexture2DCombined> > m_textures; ///< all textures, right now represented via combined image/sampler
-
+  
 };
 
 #endif

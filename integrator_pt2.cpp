@@ -190,6 +190,48 @@ float4 Integrator::GetEnvironmentColorAndPdf(float3 a_dir)
   return m_envColor;
 }
 
+uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
+{
+  const int remapListId  = m_remapInst[a_instId];
+  const int r_offset     = m_allRemapListsOffsets[remapListId];
+  const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
+  const int2 offsAndSize = int2(r_offset, r_size);
+  
+  uint res = a_mId;
+  
+  // for (int i = 0; i < offsAndSize.y; i++) // #TODO: change to binery search
+  // {
+  //   int idRemapFrom = m_allRemapLists[offsAndSize.x + i * 2 + 0];
+  //   int idRemapTo   = m_allRemapLists[offsAndSize.x + i * 2 + 1];
+  //   if (idRemapFrom == a_mId) {
+  //     res = idRemapTo;
+  //     break;
+  //   }
+  // }
+
+  int low  = 0;
+  int high = offsAndSize.y - 1;
+  
+  while (low <= high)
+  {
+    const int mid         = low + ((high - low) / 2);
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + mid * 2 + 0];
+    if (idRemapFrom >= a_mId)
+      high = mid - 1;
+    else //if(a[mid]<i)
+      low = mid + 1;
+  }
+
+  if (high+1 < offsAndSize.y)
+  {
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 0];
+    const int idRemapTo   = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 1];
+    res                   = (idRemapFrom == a_mId) ? uint(idRemapTo) : a_mId;
+  }
+
+  return res;
+} 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
