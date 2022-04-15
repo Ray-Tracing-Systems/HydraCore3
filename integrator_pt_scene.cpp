@@ -335,7 +335,13 @@ int Integrator::LoadScene(const char* scehePath)
     if(power == 0.0f)
       power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
 
-    if(shape != L"rect")
+    float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
+
+    if(lightInst.lightNode.attribute(L"type").as_string() == std::wstring(L"sky"))
+    {
+      m_envColor = to_float4(color*power, 1.0f); // set pdf to 1.0f
+    }
+    else if(shape != L"rect")
     {
       std::cout << "WARNING: not supported shape of the light object!" << std::endl;
       continue;
@@ -343,8 +349,7 @@ int Integrator::LoadScene(const char* scehePath)
     
     m_light.pos       = lightInst.matrix*float4(0,0,0,1);
     m_light.size      = float2(sizeX, sizeZ);
-    m_light.intensity = float4(power,power,power,0);
-    break;
+    m_light.intensity = to_float4(color*power,0);
   }
 
   //// (2) load meshes

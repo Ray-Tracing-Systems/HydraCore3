@@ -322,6 +322,23 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
+void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
+                                       float4* accumColor)
+{
+  const uint currRayFlags = *rayFlags;
+  if(!isOutOfScene(currRayFlags))
+    return;
+  
+  const float4 envData  = GetEnvironmentColorAndPdf(to_float3(*rayDirAndFar));
+  const float3 envColor = to_float3(envData)/envData.w;                         // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
+
+  if(m_intergatorType == INTEGRATOR_STUPID_PT)                                  // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
+    *accumColor = (*accumThoroughput)*to_float4(envColor,0);
+  else
+    *accumColor += (*accumThoroughput)*to_float4(envColor,0);
+}
+
+
 void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, float4* out_color)
 {
   const uint XY = in_pakedXY[tid];
@@ -375,7 +392,8 @@ void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
       break;
   }
 
-  //kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &accumColor);
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThoroughput,
+                       &accumColor);
 
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
                            out_color);
@@ -402,9 +420,13 @@ void Integrator::PathTrace(uint tid, uint a_maxDepth, float4* out_color)
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &mis, &rayFlags);
+
     if(isDeadRay(rayFlags))
       break;
   }
+
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThoroughput,
+                       &accumColor);
 
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
                            out_color);

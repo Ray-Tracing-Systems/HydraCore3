@@ -73,6 +73,9 @@ public:
                                 const uint* rayFlags, 
                                 RandomGen* a_gen, float4* out_shadeColor);
 
+  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
+                             float4* accumColor);
+
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
   void kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
@@ -93,8 +96,10 @@ public:
   //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
   //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
-  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD) != 0; }
+  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)      != 0; }
   static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC) != 0; }
+  static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE) != 0; }
+
   static inline uint extractMatId(uint a_flags)    { return (a_flags & 0x00FFFFFF); }       
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
   static inline uint maxMaterials()             { return 0x00FFFFFF+1; }
@@ -118,6 +123,8 @@ protected:
 
   float LightPdfSelectRev(int a_lightId);
   float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
+
+  float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
   BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc);
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
@@ -143,6 +150,7 @@ protected:
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
   RectLightSource m_light;
+  float4          m_envColor = float4(0,0,0,1);
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
 
   float naivePtTime  = 0.0f;
