@@ -22,7 +22,7 @@ void Integrator::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPo
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  float3 rayDir = EyeRayDir(x, y, m_winWidth, m_winHeight, m_projInv); 
+  float3 rayDir = EyeRayDirNormalized((float(x)+0.5f)/float(m_winWidth), (float(y)+0.5f)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
 
   transform_ray3f(m_worldViewInv, 
@@ -47,11 +47,9 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal) - float2(0.5f);
-  const float fx = float(x) + pixelOffsets.x;
-  const float fy = float(y) + pixelOffsets.y;
-
-  float3 rayDir = EyeRayDir(fx, fy, m_winWidth, m_winHeight, m_projInv); 
+  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
+  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
+                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);

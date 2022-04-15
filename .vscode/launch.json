@@ -9,7 +9,7 @@
             "type"   : "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
-            "args"   : ["--cpu", "-integrator", "all"],
+            "args"   : ["--gpu", "-integrator", "all"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],
