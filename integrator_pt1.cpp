@@ -4,6 +4,12 @@
 #include <chrono>
 #include <string>
 
+#include "Image2d.h"
+using LiteImage::Image2D;
+using LiteImage::Sampler;
+using LiteImage::ICombinedImageSampler;
+using namespace LiteMath;
+
 void Integrator::InitRandomGens(int a_maxThreads)
 {
   m_randomGens.resize(a_maxThreads);
@@ -195,10 +201,14 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float2 uv = rndFloat2_Pseudo(a_gen);
+  const float2 uv = rndFloat2_Pseudo(a_gen); // todo: select ligt id also ... 
   
   const float2 sampleOff = 2.0f*(float2(-0.5f,-0.5f) + uv)*m_light.size;
-  const float3 samplePos = to_float3(m_light.pos) + float3(sampleOff.x, -1e-5f, sampleOff.y);
+  const float3 samplePos = to_float3(m_light.pos) + float3(sampleOff.x, -1e-5f*std::max(m_light.size.x, m_light.size.y), sampleOff.y);
+
+  //TODO: apply transform matrix 
+  //samplePos = matrix3x3f_mult_float3(pMatrix, samplePos) + lightPos(pLight); // translate to world light position
+
   const float  hitDist   = sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
 
   const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;

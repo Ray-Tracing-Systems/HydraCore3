@@ -10,9 +10,10 @@
 #include <fstream>
 #include <memory>
 
-#include "CrossRT.h"    // special include for ray tracing
-#include "texture2d.h"  // special include for textures
+#include "CrossRT.h" // special include for ray tracing
+#include "Image2d.h" // special include for textures
 
+using LiteImage::ICombinedImageSampler;
 
 class Integrator // : public DataClass
 {
@@ -166,7 +167,7 @@ protected:
 
   //// textures
   //
-  std::vector< std::shared_ptr<ITexture2DCombined> > m_textures; ///< all textures, right now represented via combined image/sampler
+  std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
   
 };
 

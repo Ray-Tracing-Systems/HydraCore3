@@ -4,6 +4,12 @@
 #include <chrono>
 #include <string>
 
+#include "Image2d.h"
+using LiteImage::Image2D;
+using LiteImage::Sampler;
+using LiteImage::ICombinedImageSampler;
+using namespace LiteMath;
+
 float Integrator::LightPdfSelectRev(int a_lightId) 
 { 
   return 1.0f; 

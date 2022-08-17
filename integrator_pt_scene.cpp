@@ -12,6 +12,12 @@ using cmesh::SimpleMesh;
 #include <unordered_map>
 #include <unordered_set>
 
+#include "Image2d.h"
+using LiteImage::Image2D;
+using LiteImage::Sampler;
+using LiteImage::ICombinedImageSampler;
+using namespace LiteMath;
+
 struct TextureInfo
 {
   std::wstring path;   ///< path to file with texture data
@@ -122,10 +128,10 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
 //bool LoadLDRImageFromFile(const wchar_t* a_fileName, int* pW, int* pH, std::vector<uint32_t>& a_data);
 //bool SaveLDRImageToFile  (const wchar_t* a_fileName, int w, int h, uint32_t* data);
 
-std::shared_ptr<ITexture2DCombined> MakeWhiteDummy()
+std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
 {
   constexpr uint32_t WHITE = 0x00FFFFFF;
-  std::shared_ptr< Texture2D<uint32_t> > pTexture1 = std::make_shared< Texture2D<uint32_t> >(1, 1, &WHITE);
+  std::shared_ptr< Image2D<uint32_t> > pTexture1 = std::make_shared< Image2D<uint32_t> >(1, 1, &WHITE);
   Sampler sampler;
   sampler.filter   = Sampler::Filter::NEAREST; 
   sampler.addressU = Sampler::AddressMode::CLAMP;
@@ -133,9 +139,9 @@ std::shared_ptr<ITexture2DCombined> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
-std::shared_ptr<ITexture2DCombined> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
+std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
 {
-  std::shared_ptr<ITexture2DCombined> pResult = nullptr;
+  std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
   int wh[2] = {0,0};
   
   #ifdef WIN32
@@ -154,7 +160,7 @@ std::shared_ptr<ITexture2DCombined> LoadTextureAndMakeCombined(const TextureInfo
     fin.read((char*)data.data(), sizeof(float)*4*data.size());
     fin.close();
 
-    auto pTexture = std::make_shared< Texture2D<float4> >(wh[0], wh[1], (const float4*)data.data());
+    auto pTexture = std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data());
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
   }
   else
@@ -163,7 +169,7 @@ std::shared_ptr<ITexture2DCombined> LoadTextureAndMakeCombined(const TextureInfo
     fin.read((char*)data.data(), sizeof(uint32_t)*data.size());
     fin.close();
 
-    auto pTexture = std::make_shared< Texture2D<uint32_t> >(wh[0], wh[1], data.data());
+    auto pTexture = std::make_shared< Image2D<uint32_t> >(wh[0], wh[1], data.data());
     pTexture->setSRGB(true);
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
   }
@@ -367,7 +373,7 @@ int Integrator::LoadScene(const char* scehePath)
   {
     std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
     auto currMesh = cmesh::LoadMeshFromVSGF(meshPath.c_str());
-    auto geomId   = m_pAccelStruct->AddGeom_Triangles4f(currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size());
+    auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
     
     m_matIdOffsets.push_back(m_matIdByPrimId.size());
     m_vertOffset.push_back(m_vNorm4f.size());

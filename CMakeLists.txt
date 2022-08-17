@@ -42,8 +42,7 @@ add_executable(hydra main.cpp
                      integrator_pt2.cpp
                      integrator_pt_scene.cpp
                      #imageutils.cpp 
-                     Bitmap.cpp
-                     ../LiteMath/texture2d.cpp
+                     ../LiteMath/Image2d.cpp
                      integrator_pt1_generated.cpp
                      integrator_pt1_generated_init.cpp 
                      integrator_pt1_generated_ds.cpp 

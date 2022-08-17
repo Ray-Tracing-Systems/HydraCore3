@@ -2,7 +2,6 @@
 #include <fstream>
 
 #include "integrator_pt.h"
-#include "Bitmap.h"
 #include "ArgParser.h"
 
 #include "vk_context.h"
@@ -105,7 +104,7 @@ int main(int argc, const char** argv)
     }
     
     const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
-    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+    LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
 
   //std::cout << "minValPdf = " << minValPdf << std::endl;
@@ -147,7 +146,7 @@ int main(int argc, const char** argv)
     }
   
     const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
-    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+    LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
 
   // -------------------------------------------------------------------------------
@@ -170,7 +169,7 @@ int main(int argc, const char** argv)
     }
   
     const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-    SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+    LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
   // -------------------------------------------------------------------------------
 
