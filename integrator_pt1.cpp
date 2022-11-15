@@ -389,7 +389,7 @@ void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
   MisData   mis;
-  uint      rayFlags;
+  uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
   for(int depth = 0; depth < a_maxDepth; depth++) 
@@ -418,7 +418,7 @@ void Integrator::PathTrace(uint tid, uint a_maxDepth, float4* out_color)
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
   MisData   mis;
-  uint      rayFlags;
+  uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
   for(int depth = 0; depth < a_maxDepth; depth++) 
