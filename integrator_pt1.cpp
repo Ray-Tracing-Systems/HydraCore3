@@ -302,7 +302,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   
   const float4 uv         = rndFloat4_Pseudo(a_gen);
   const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv);
-  const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-10f));
+  const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = dot(matSam.direction, hit.norm);
 
   MisData nextBounceData;                   // remember current pdfW for next bounce

@@ -7,6 +7,7 @@ add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 set (CMAKE_CXX_STANDARD 17)
 
 include_directories(".")
+include_directories("external")
 if(WIN32)
   link_directories(${ADDITIONAL_LIBRARY_DIRS})
 endif()
@@ -41,7 +42,8 @@ add_executable(hydra main.cpp
                      integrator_pt1.cpp
                      integrator_pt2.cpp
                      integrator_pt_scene.cpp
-                     #imageutils.cpp 
+                     imageutils.cpp 
+                     external/miniz.c
                      ../LiteMath/Image2d.cpp
                      integrator_pt1_generated.cpp
                      integrator_pt1_generated_init.cpp 
