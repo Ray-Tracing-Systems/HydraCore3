@@ -4,7 +4,8 @@
 #include "integrator_pt.h"
 #include "ArgParser.h"
 
-bool SaveHDRImage4fToEXR(const float* rgb, int width, int height, const char* outfilename);
+bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
+bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
 #include "vk_context.h"
 std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
@@ -82,12 +83,9 @@ int main(int argc, const char** argv)
   pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
   const float normConst = 1.0f/float(PASS_NUMBER);
-  const float invGamma  = 1.0f/gamma;
   
   // now test path tracing
   //
-  //float minValPdf = 1e30f;
-  //float maxValPdf = -1e29f;
   if(integratorType == "naivept" || integratorType == "all")
   {
     const int NAIVE_PT_REPEAT = 1;
@@ -96,50 +94,16 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
     if(saveHDR)
-      SaveHDRImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str());
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), true);
     else
     {
-      for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
-      {
-        float4 color = realColor[i]*normConst*(1.0f/float(NAIVE_PT_REPEAT));
-        //if(std::isfinite(color.w))
-        //{
-        //  minValPdf  = std::min(minValPdf, color.w);
-        //  maxValPdf  = std::max(maxValPdf, color.w);
-        //}
-        color.x      = std::pow(color.x, invGamma);
-        color.y      = std::pow(color.y, invGamma);
-        color.z      = std::pow(color.z, invGamma);
-        color.w      = 1.0f;
-        pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-      }
-      
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
-      LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
-
-  //std::cout << "minValPdf = " << minValPdf << std::endl;
-  //std::cout << "maxValPdf = " << maxValPdf << std::endl;
-  //const float normInv = 1.0f / (maxValPdf - minValPdf);
-  //for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
-  //{
-  //  const float pdf = std::isfinite(realColor[i].w) ? (realColor[i].w*normConst*(1.0f/float(NAIVE_PT_REPEAT)) - minValPdf)*normInv : 0.0f;
-  //  float4 color;
-  //  color.x      = pdf;
-  //  color.y      = std::sqrt(pdf);
-  //  color.z      = std::sqrt(pdf);
-  //  color.w      = 1.0f;
-  //  pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-  //}
-  //
-  //if(onGPU)
-  //  SaveBMP("zout_gpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
-  //else
-  //  SaveBMP("zout_cpu1.bmp", pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
 
   // -------------------------------------------------------------------------------
   if(integratorType == "shadowpt" || integratorType == "all")
@@ -148,24 +112,14 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
     
     if(saveHDR)
-      SaveHDRImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str());
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), true);
     else
     {
-      for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
-      {
-        float4 color = realColor[i]*normConst;
-        color.x      = std::pow(color.x, invGamma);
-        color.y      = std::pow(color.y, invGamma);
-        color.z      = std::pow(color.z, invGamma);
-        color.w      = 1.0f;
-        pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-      }
-    
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
-      LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
 
@@ -176,24 +130,15 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_HEIGHT*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
     
     if(saveHDR)
-      SaveHDRImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str());
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
-    {
-      for(int i=0;i<WIN_HEIGHT*WIN_HEIGHT;i++)
-      {
-        float4 color = realColor[i]*normConst;
-        color.x      = std::pow(color.x, invGamma);
-        color.y      = std::pow(color.y, invGamma);
-        color.z      = std::pow(color.z, invGamma);
-        color.w      = 1.0f;
-        pixelData[i] = RealColorToUint32(clamp(color, 0.0f, 1.0f));
-      }
+    {  
+      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
-    const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-    LiteImage::SaveBMP(outName.c_str(), pixelData.data(), WIN_WIDTH, WIN_HEIGHT);
   }
   // -------------------------------------------------------------------------------
 
@@ -210,4 +155,3 @@ int main(int argc, const char** argv)
   std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
   return 0;
 }
-
