@@ -82,7 +82,7 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
     FreeEXRErrorMessage(err); // free's buffer for an error message
     return false;
   }
-  printf("Saved exr file. [%s] \n", outfilename);
+  //printf("Saved exr file. [%s] \n", outfilename);
 
   free(header.channels);
   free(header.pixel_types);
@@ -141,7 +141,7 @@ static bool WriteBMP(const char* fname, Pixel* a_pixelData, int width, int heigh
   return true;
 }
 
-bool SaveBMP(const char* fname, const unsigned int* pixels, int w, int h)
+static bool SaveBMP(const char* fname, const unsigned int* pixels, int w, int h)
 {
   std::vector<Pixel> pixels2(w*h);
 

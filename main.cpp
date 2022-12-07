@@ -20,9 +20,7 @@ int main(int argc, const char** argv)
 
   int WIN_WIDTH  = 1024;
   int WIN_HEIGHT = 1024;
-
-  std::vector<uint32_t> pixelData(WIN_WIDTH*WIN_HEIGHT);
-  std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);
+  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -83,6 +81,7 @@ int main(int argc, const char** argv)
   pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
   const float normConst = 1.0f/float(PASS_NUMBER);
+  float timings[4] = {0,0,0,0};
   
   // now test path tracing
   //
@@ -96,6 +95,13 @@ int main(int argc, const char** argv)
     pImpl->UpdateMembersPlainData();
     pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
+    std::cout << std::endl;
+    pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
+    std::cout << "NaivePathTraceBlock(exec)  = " << timings[0]              << " ms " << std::endl;
+    std::cout << "NaivePathTraceBlock(copy)  = " << timings[1] + timings[2] << " ms " << std::endl;
+    std::cout << "NaivePathTraceBlock(ovrh)  = " << timings[3]              << " ms " << std::endl;
+    std::cout << std::endl;
+
     if(saveHDR)
       SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), true);
     else
@@ -105,7 +111,6 @@ int main(int argc, const char** argv)
     }
   }
 
-  // -------------------------------------------------------------------------------
   if(integratorType == "shadowpt" || integratorType == "all")
   {
     std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
@@ -123,7 +128,6 @@ int main(int argc, const char** argv)
     }
   }
 
-  // -------------------------------------------------------------------------------
   if(integratorType == "mispt" || integratorType == "all")
   {
     std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
@@ -132,6 +136,11 @@ int main(int argc, const char** argv)
     pImpl->UpdateMembersPlainData();
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
     
+    pImpl->GetExecutionTime("PathTraceBlock", timings);
+    std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+    std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+    std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+
     if(saveHDR)
       SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
@@ -140,18 +149,6 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
-  // -------------------------------------------------------------------------------
 
-  std::cout << std::endl;
-  float timings[4] = {0,0,0,0};
-  pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
-  std::cout << "NaivePathTraceBlock(exec)  = " << timings[0]              << " ms " << std::endl;
-  std::cout << "NaivePathTraceBlock(copy)  = " << timings[1] + timings[2] << " ms " << std::endl;
-  std::cout << "NaivePathTraceBlock(ovrh)  = " << timings[3]              << " ms " << std::endl;
-  std::cout << std::endl;
-  pImpl->GetExecutionTime("PathTraceBlock", timings);
-  std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-  std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-  std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
   return 0;
 }
