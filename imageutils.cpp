@@ -36,16 +36,16 @@ bool SaveHDRImage4fToEXR(const float* rgb, int width, int height, const char* ou
   images[2].resize(width * height);
 
   // Split RGBARGBARGBA... into R, G and B layer
-  for (int i = 0; i < width * height; i++) {
+  for (size_t i = 0; i < size_t(width * height); i++) {
     images[0][i] = rgb[4*i+0];
     images[1][i] = rgb[4*i+1];
     images[2][i] = rgb[4*i+2];
   }
 
   float* image_ptr[3];
-  image_ptr[0] = &(images[2].at(0)); // B
-  image_ptr[1] = &(images[1].at(0)); // G
-  image_ptr[2] = &(images[0].at(0)); // R
+  image_ptr[0] = images[2].data(); // B
+  image_ptr[1] = images[1].data(); // G
+  image_ptr[2] = images[0].data(); // R
 
   image.images = (unsigned char**)image_ptr;
   image.width = width;
@@ -61,20 +61,22 @@ bool SaveHDRImage4fToEXR(const float* rgb, int width, int height, const char* ou
   header.pixel_types = (int *)malloc(sizeof(int) * header.num_channels);
   header.requested_pixel_types = (int *)malloc(sizeof(int) * header.num_channels);
   for (int i = 0; i < header.num_channels; i++) {
-    header.pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
-    header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_HALF; // pixel type of output image to be stored in .EXR
+    header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+    header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
   }
-
-  const char* err = NULL; // or nullptr in C++11 or later.
+ 
+  const char* err = nullptr; 
   int ret = SaveEXRImageToFile(&image, &header, outfilename, &err);
   if (ret != TINYEXR_SUCCESS) {
     fprintf(stderr, "Save EXR err: %s\n", err);
     FreeEXRErrorMessage(err); // free's buffer for an error message
-    return ret;
+    return false;
   }
-  printf("Saved exr file. [ %s ] \n", outfilename);
+  printf("Saved exr file. [%s] \n", outfilename);
 
   free(header.channels);
   free(header.pixel_types);
   free(header.requested_pixel_types);
+
+  return true;
 }

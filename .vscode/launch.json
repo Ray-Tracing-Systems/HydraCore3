@@ -82,7 +82,7 @@
                         "-spp", "1024",
                         "-gamma", "2.2",
                         "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/01_sphere_hydra_lambert.xml",
-                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y01_sphere_hydra3_lambert.bmp"],
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y01_sphere_hydra3_lambert.exr"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],
