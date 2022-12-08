@@ -41,7 +41,8 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
   const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
   float  alpha           = m_materials[a_materialId].alpha;
-  
+  const float fresnelIOR = m_materials[a_materialId].ior;
+
   // TODO: read color     from texture
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
@@ -67,8 +68,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
 
       const float3 h = normalize(v - ggxDir); // half vector.
-    
-      if(type == BRDF_TYPE_GGX)
+      const float VdotH = dot(h,v);
+
+      if(type == BRDF_TYPE_GGX) // assume GGX-based metal
         alpha = 1.0f;
 
       // (1) select between metal and dielectric via rands.z
@@ -77,9 +79,8 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       if(rands.z < alpha) // select metall
       {
         pdfSelect *= alpha;
-        const float3 F = conductorFresnel(specular, dot(h,v));
         res.direction = ggxDir;
-        res.color     = ggxVal*F*alpha;
+        res.color     = ggxVal*alpha*conductorFresnel(specular, VdotH, fresnelIOR, roughness);
         res.pdf       = ggxPdf;
       }
       else                // select dielectric
@@ -88,7 +89,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         
         // (2) now select between specular and diffise via rands.w
         //
-        float fDielectric = gltfFresnelMix(dot(h,v));
+        float fDielectric = gltfFresnelMix(VdotH);
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
 
@@ -134,12 +135,13 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-  const uint type       = m_materials[a_materialId].brdfType;
-  const float3 color    = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const float3 specular = to_float3(m_materials[a_materialId].metalColor);
-  const float3 coat     = to_float3(m_materials[a_materialId].coatColor);
-  const float roughness = 1.0f - m_materials[a_materialId].glosiness;
-        float  alpha    = m_materials[a_materialId].alpha;
+  const uint type        = m_materials[a_materialId].brdfType;
+  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
+  const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
+  const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
+  const float roughness  = 1.0f - m_materials[a_materialId].glosiness;
+        float alpha      = m_materials[a_materialId].alpha;
+  const float fresnelIOR = m_materials[a_materialId].ior;
 
   // TODO: read color     from texture
   // TODO: read roughness from texture
@@ -149,7 +151,6 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   //if(roughness == 0.0f && type == BRDF_TYPE_GGX)
   //  type = BRDF_TYPE_MIRROR;
 
-
   BsdfEval res;
   switch(type)
   {
@@ -158,7 +159,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
     case BRDF_TYPE_LAMBERT:
     default:
     {
-      if(type == BRDF_TYPE_GGX)
+      if(type == BRDF_TYPE_GGX) // assume GGX-based metal
         alpha = 1.0f;
         
       const float ggxVal = ggxEvalBSDF(l, v, n, roughness);
@@ -167,11 +168,12 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float lambertVal = lambertEvalBSDF(l, v, n);
       const float lambertPdf = lambertEvalPDF (l, v, n);
       
-      const float3 h = normalize(v + l);
-      const float3 F = conductorFresnel(specular, dot(h,v));
+      const float3 h     = normalize(v + l);
+      const float  VdotH = dot(h,v);
+      float3 fConductor  = conductorFresnel(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
+      float fDielectric  = gltfFresnelMix(VdotH);                                    // (2) eval dielectric component
 
-      const float3 specularColor = ggxVal*F;                 // (1) eval metal and (same) specular component
-      float  fDielectric         = gltfFresnelMix(dot(h,v)); // (2) eval dielectric component
+      const float3 specularColor = ggxVal*fConductor;                    // eval metal specular component
       if(type == BRDF_TYPE_LAMBERT)
         fDielectric = 0.0f;
       const float  dielectricPdf = (1.0f-fDielectric)*lambertPdf       + fDielectric*ggxPdf;

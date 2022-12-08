@@ -38,10 +38,16 @@ struct GLTFMaterial
   float4 baseColor;   ///< color for both lambert and emissive lights; baseColor.w store emission
   float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
   float4 coatColor;   ///< in our implementation we allow different color for coating (fresnel) and diffuse
+
   uint  brdfType;     ///<
   uint  lightId;      ///< identifier of light if this material is light  
   float alpha;        ///< blend factor between lambert and reflection : alpha*baseColor + (1.0f-alpha)*baseColor
   float glosiness;    ///< material glosiness or intensity for lights, take color from baseColor
+
+  float ior;
+  float dummy1;
+  float dummy2;
+  float dummy3;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,6 +169,14 @@ static inline float fresnelSlick(float VdotH)
   return (tmp*tmp)*(tmp*tmp)*tmp;
 }
 
+static inline float fresnelConductorHydra(float cosTheta, float eta, float roughness)
+{
+  float tmp = (eta*eta + roughness*roughness) * (cosTheta * cosTheta);
+  float rParl2 = (tmp - (eta * (2.0f * cosTheta)) + 1.0f) / (tmp + (eta * (2.0f * cosTheta)) + 1.0f);
+  float tmpF = eta*eta + roughness*roughness;
+  float rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta)) / (tmpF + (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta));
+  return (rParl2 + rPerp2) / 2.0f;
+}
 
 static inline float3 colorExtrusionStrong(float3 f0)
 {
@@ -170,10 +184,58 @@ static inline float3 colorExtrusionStrong(float3 f0)
   return f0*(1.0f/maxVal);
 }
 
+//  The following functions calculate the reflected and refracted 
+//	directions in addition to the fresnel coefficients. Based on PBRT
+//	and the paper "Derivation of Refraction Formulas" by Paul S. Heckbert.
+//
 
-static inline float3 conductorFresnel(float3 f0, float VdotH) 
+static inline float fresnelDielectric(float cosTheta1, float cosTheta2, float etaExt, float etaInt)
 {
-  const float fresnelCoeff = fresnelSlick(VdotH);
+  float Rs = (etaExt * cosTheta1 - etaInt * cosTheta2) / (etaExt * cosTheta1 + etaInt * cosTheta2);
+  float Rp = (etaInt * cosTheta1 - etaExt * cosTheta2) / (etaInt * cosTheta1 + etaExt * cosTheta2);
+
+  return (Rs * Rs + Rp * Rp) / 2.0f;
+}
+
+static inline float fresnelReflectionCoeff(float cosTheta1, float etaExt, float etaInt)
+{
+  // Swap the indices of refraction if the interaction starts
+  // at the inside of the object
+  //
+  if (cosTheta1 < 0.0f)
+  {
+    float temp = etaInt;
+    etaInt = etaExt;
+    etaExt = temp;
+  }
+
+  // Using Snell's law, calculate the sine of the angle
+  // between the transmitted ray and the surface normal 
+  //
+  float sinTheta2 = etaExt / etaInt * std::sqrt(std::max(0.0f, 1.0f - cosTheta1*cosTheta1));
+
+  if (sinTheta2 > 1.0f)
+    return 1.0f;  // Total internal reflection!
+
+  // Use the sin^2+cos^2=1 identity - max() guards against
+  //	numerical imprecision
+  //
+  float cosTheta2 = std::sqrt(std::max(0.0f, 1.0f - sinTheta2*sinTheta2));
+
+  // Finally compute the reflection coefficient
+  //
+  return fresnelDielectric(std::abs(cosTheta1), cosTheta2, etaInt, etaExt);
+}
+
+
+static inline float3 conductorFresnel(float3 f0, float VdotH, float ior, float roughness) 
+{
+  if(ior == 0.0f) // fresnel reflactance is disabled
+    return f0;
+
+  //const float fresnelCoeff = fresnelSlick(VdotH);
+  const float fresnelCoeff = fresnelConductorHydra(VdotH, ior, roughness);
+  //const float fresnelCoeff = clamp(fresnelReflectionCoeff(std::abs(VdotH), 1.0f, ior), 0.0f, 1.0f);
   return (f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelCoeff)*colorExtrusionStrong(f0);
 }
 

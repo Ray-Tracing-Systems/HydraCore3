@@ -235,6 +235,7 @@ int Integrator::LoadScene(const char* scehePath)
   m_materials.reserve(100);
   for(auto materialNode : scene.MaterialNodes())
   {
+    std::wstring name = materialNode.attribute(L"name").as_string();
     GLTFMaterial mat = {};
     mat.brdfType     = BRDF_TYPE_LAMBERT;
     mat.alpha        = 0.0f;
@@ -275,15 +276,18 @@ int Integrator::LoadScene(const char* scehePath)
 
     float3 reflColor = float3(0,0,0);
     float glosiness  = 1.0f;
+    float fresnelIOR = 1.5f;
     auto nodeRefl = materialNode.child(L"reflectivity");
     if(nodeRefl != nullptr)
     {
-      reflColor = hydra_xml::readval3f(nodeRefl.child(L"color"));
-      glosiness = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
+      reflColor  = hydra_xml::readval3f(nodeRefl.child(L"color"));
+      glosiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
+      fresnelIOR = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
     }
 
     const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);
-    const float fresnelIOR = nodeRefl.child(L"fresnel_ior").attribute(L"val").as_float();
+    if(!hasFresnel)
+      fresnelIOR = 0.0f;
     
     if(length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f)
     {
@@ -315,6 +319,7 @@ int Integrator::LoadScene(const char* scehePath)
     }
 
     mat.glosiness  = glosiness;
+    mat.ior        = fresnelIOR;
     if(color[3] > 1e-5f)
     {
       mat.brdfType = BRDF_TYPE_LIGHT_SOURCE;
