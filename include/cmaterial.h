@@ -178,12 +178,6 @@ static inline float fresnelConductorHydra(float cosTheta, float eta, float rough
   return (rParl2 + rPerp2) / 2.0f;
 }
 
-static inline float3 colorExtrusionStrong(float3 f0)
-{
-  const float maxVal = max(max(f0.x,f0.y), max(f0.z, 5e-6f));
-  return f0*(1.0f/maxVal);
-}
-
 //  The following functions calculate the reflected and refracted 
 //	directions in addition to the fresnel coefficients. Based on PBRT
 //	and the paper "Derivation of Refraction Formulas" by Paul S. Heckbert.
@@ -227,6 +221,11 @@ static inline float fresnelReflectionCoeff(float cosTheta1, float etaExt, float 
   return fresnelDielectric(std::abs(cosTheta1), cosTheta2, etaInt, etaExt);
 }
 
+static inline float3 colorExtrusionStrong(float3 f0)
+{
+  const float maxVal = max(max(f0.x,f0.y), max(f0.z, 5e-6f));
+  return f0*(1.0f/maxVal);
+}
 
 static inline float3 conductorFresnel(float3 f0, float VdotH, float ior, float roughness) 
 {
