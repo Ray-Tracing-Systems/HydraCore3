@@ -67,7 +67,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
 
 bool Integrator::kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
-                                Lite_Hit* out_hit, float2* out_bars)
+                                 Lite_Hit* out_hit, float2* out_bars)
 {
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;

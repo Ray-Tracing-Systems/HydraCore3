@@ -184,8 +184,13 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
 int Integrator::LoadScene(const char* scehePath)
 {   
   hydra_xml::HydraScene scene;
-  scene.LoadState(scehePath);
-  
+  auto loadRes = scene.LoadState(scehePath);
+  if(loadRes != 0)
+  {
+    std::cout << "Integrator::LoadScene failed: '" << scehePath << "'" << std::endl; 
+    exit(0);
+  }
+
   std::vector<TextureInfo> texturesInfo;
   texturesInfo.resize(0);
   texturesInfo.reserve(100);
@@ -238,7 +243,7 @@ int Integrator::LoadScene(const char* scehePath)
 
     // read Hydra or GLTF materials
     //
-    float4 color(0.5f, 0.5f, 0.75f, 0.0f);
+    float4 color(0.0f, 0.0f, 0.0f, 0.0f);
     if(materialNode.attribute(L"light_id") != nullptr)
     {
       auto node = materialNode.child(L"emission").child(L"color");
@@ -274,7 +279,7 @@ int Integrator::LoadScene(const char* scehePath)
     if(nodeRefl != nullptr)
     {
       reflColor = hydra_xml::readval3f(nodeRefl.child(L"color"));
-      glosiness = nodeRefl.child(L"glossiness").text().as_float(); // #TODO: read in different way ... 
+      glosiness = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
     }
 
     const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);

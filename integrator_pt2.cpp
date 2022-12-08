@@ -77,7 +77,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       if(rands.z < alpha) // select metall
       {
         pdfSelect *= alpha;
-        const float3 F = gltfConductorFresnel(specular, dot(h,v));
+        const float3 F = conductorFresnel(specular, dot(h,v));
         res.direction = ggxDir;
         res.color     = ggxVal*F*alpha;
         res.pdf       = ggxPdf;
@@ -88,7 +88,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         
         // (2) now select between specular and diffise via rands.w
         //
-        float fDielectric = gltfFresnelMix2(dot(h,v));
+        float fDielectric = gltfFresnelMix(dot(h,v));
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
 
@@ -168,10 +168,10 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float lambertPdf = lambertEvalPDF (l, v, n);
       
       const float3 h = normalize(v + l);
-      const float3 F = gltfConductorFresnel(specular, dot(h,v));
+      const float3 F = conductorFresnel(specular, dot(h,v));
 
-      const float3 specularColor = ggxVal*F;                  // (1) eval metal and (same) specular component
-      float  fDielectric         = gltfFresnelMix2(dot(h,v)); // (2) eval dielectric component
+      const float3 specularColor = ggxVal*F;                 // (1) eval metal and (same) specular component
+      float  fDielectric         = gltfFresnelMix(dot(h,v)); // (2) eval dielectric component
       if(type == BRDF_TYPE_LAMBERT)
         fDielectric = 0.0f;
       const float  dielectricPdf = (1.0f-fDielectric)*lambertPdf       + fDielectric*ggxPdf;

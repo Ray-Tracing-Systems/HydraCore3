@@ -152,11 +152,32 @@ static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
 
 static inline float3 gltfConductorFresnel(float3 f0, float VdotH) 
 {
-  const float tmp = 1.0f - std::abs(VdotH);
+  //const float tmp = 1.0f - std::abs(VdotH);
+  const float tmp = std::abs(VdotH);
   return f0 + (float3(1.0f,1.0f,1.0f) - f0) * (tmp*tmp*tmp*tmp*tmp);
 }
 
-static inline float gltfFresnelMix2(float VdotH) 
+static inline float fresnelSlick(float VdotH)
+{
+  const float tmp = std::abs(VdotH);
+  return (tmp*tmp)*(tmp*tmp)*tmp;
+}
+
+
+static inline float3 colorExtrusionStrong(float3 f0)
+{
+  const float maxVal = max(max(f0.x,f0.y), max(f0.z, 5e-6f));
+  return f0*(1.0f/maxVal);
+}
+
+
+static inline float3 conductorFresnel(float3 f0, float VdotH) 
+{
+  const float fresnelCoeff = fresnelSlick(VdotH);
+  return (f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelCoeff)*colorExtrusionStrong(f0);
+}
+
+static inline float gltfFresnelMix(float VdotH) 
 {
   //return 0.25f;
   //const float f1  = (1.0f-ior)/(1+ior);
