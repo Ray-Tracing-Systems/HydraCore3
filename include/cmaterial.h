@@ -157,13 +157,60 @@ static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+static inline float fresnelDielectric(float cosTheta1, float cosTheta2, float etaExt, float etaInt)
+{
+  float Rs = (etaExt * cosTheta1 - etaInt * cosTheta2) / (etaExt * cosTheta1 + etaInt * cosTheta2);
+  float Rp = (etaInt * cosTheta1 - etaExt * cosTheta2) / (etaInt * cosTheta1 + etaExt * cosTheta2);
+
+  return (Rs * Rs + Rp * Rp) / 2.0f;
+}
+
+static inline float fresnelConductor(float cosTheta, float eta, float roughness)
+{
+  float tmp = (eta*eta + roughness*roughness) * (cosTheta * cosTheta);
+  float rParl2 = (tmp - (eta * (2.0f * cosTheta)) + 1.0f) / (tmp + (eta * (2.0f * cosTheta)) + 1.0f);
+  float tmpF = eta*eta + roughness*roughness;
+  float rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta)) / (tmpF + (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta));
+  return (rParl2 + rPerp2) / 2.0f;
+}
+
+static inline float fresnelPBRT(float cosTheta1, float etaExt, float etaInt)
+{
+  // Swap the indices of refraction if the interaction starts
+  // at the inside of the object
+  //
+  if (cosTheta1 < 0.0f)
+  {
+    float temp = etaInt;
+    etaInt = etaExt;
+    etaExt = temp;
+  }
+
+  // Using Snell's law, calculate the sine of the angle
+  // between the transmitted ray and the surface normal 
+  //
+  float sinTheta2 = etaExt / etaInt * std::sqrt(std::max(0.0f, 1.0f - cosTheta1*cosTheta1));
+
+  if (sinTheta2 > 1.0f)
+    return 1.0f;  // Total internal reflection!
+
+  // Use the sin^2+cos^2=1 identity - max() guards against
+  //	numerical imprecision
+  //
+  float cosTheta2 = std::sqrt(std::max(0.0f, 1.0f - sinTheta2*sinTheta2));
+
+  // Finally compute the reflection coefficient
+  //
+  return fresnelDielectric(std::abs(cosTheta1), cosTheta2, etaInt, etaExt);
+}
+
 static inline float fresnelSlick(float VdotH)
 {
   const float tmp = 1.0f - std::abs(VdotH);
   return (tmp*tmp)*(tmp*tmp)*tmp;
 }
 
-static inline float3 gltfConductorFresnel(float3 f0, float VdotH, float ior, float roughness) 
+static inline float3 gltfFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
 {
   if(ior == 0.0f) // fresnel reflactance is disabled
     return f0;
@@ -171,9 +218,11 @@ static inline float3 gltfConductorFresnel(float3 f0, float VdotH, float ior, flo
   return f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
-static inline float gltfFresnelMix(float VdotH) 
+static inline float gltfFresnelDiel(float VdotH, float ior, float roughness) 
 {
-  return 0.04f + 0.96f*fresnelSlick(VdotH);
+  const float tmp = (1.0f - ior)/(1.0f + ior);
+  const float f0 = tmp*tmp;
+  return f0 + (1.0f - f0)*fresnelPBRT(std::abs(VdotH), 1.0f, ior);  
 }
 
 #endif
