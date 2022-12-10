@@ -161,8 +161,7 @@ static inline float fresnelDielectric(float cosTheta1, float cosTheta2, float et
 {
   float Rs = (etaExt * cosTheta1 - etaInt * cosTheta2) / (etaExt * cosTheta1 + etaInt * cosTheta2);
   float Rp = (etaInt * cosTheta1 - etaExt * cosTheta2) / (etaInt * cosTheta1 + etaExt * cosTheta2);
-
-  return (Rs * Rs + Rp * Rp) / 2.0f;
+  return 0.5f*(Rs * Rs + Rp * Rp);
 }
 
 static inline float fresnelConductor(float cosTheta, float eta, float roughness)
@@ -171,7 +170,7 @@ static inline float fresnelConductor(float cosTheta, float eta, float roughness)
   float rParl2 = (tmp - (eta * (2.0f * cosTheta)) + 1.0f) / (tmp + (eta * (2.0f * cosTheta)) + 1.0f);
   float tmpF = eta*eta + roughness*roughness;
   float rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta)) / (tmpF + (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta));
-  return (rParl2 + rPerp2) / 2.0f;
+  return 0.5f*(rParl2 + rPerp2);
 }
 
 static inline float fresnelPBRT(float cosTheta1, float etaExt, float etaInt)
