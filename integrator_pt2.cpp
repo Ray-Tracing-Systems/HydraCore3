@@ -67,8 +67,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       const float  lambertPdf = lambertEvalPDF(lambertDir, v, n);
       const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
 
-      const float3 h = normalize(v - ggxDir); // half vector.
-      const float VdotH = dot(h,v);
+      float VdotH = dot(v,normalize(v + ggxDir));
 
       if(type == BRDF_TYPE_GGX) // assume GGX-based metal
         alpha = 1.0f;
@@ -80,7 +79,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       {
         pdfSelect *= alpha;
         res.direction = ggxDir;
-        res.color     = ggxVal*alpha*conductorFresnel(specular, VdotH, fresnelIOR, roughness);
+        res.color     = ggxVal*alpha*gltfConductorFresnel(specular, VdotH, fresnelIOR, roughness);
         res.pdf       = ggxPdf;
       }
       else                // select dielectric
@@ -168,10 +167,9 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float lambertVal = lambertEvalBSDF(l, v, n);
       const float lambertPdf = lambertEvalPDF (l, v, n);
       
-      const float3 h     = normalize(v + l);
-      const float  VdotH = dot(h,v);
-      float3 fConductor  = conductorFresnel(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
-      float fDielectric  = gltfFresnelMix(VdotH);                                    // (2) eval dielectric component
+      const float  VdotH = dot(v,normalize(v + l));
+      float3 fConductor  = gltfConductorFresnel(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
+      float fDielectric  = gltfFresnelMix(VdotH);                                        // (2) eval dielectric component
 
       const float3 specularColor = ggxVal*fConductor;                    // eval metal specular component
       if(type == BRDF_TYPE_LAMBERT)

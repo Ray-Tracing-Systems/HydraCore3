@@ -73,16 +73,41 @@
         },
 
         {
-            "name"   : "(spec) 01_plane",
+            "name"   : "sphere(metal)",
             "type"   : "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-debug/hydra",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--gpu", 
                         "-integrator", "mispt", 
                         "-spp", "1024",
                         "-gamma", "2.2",
                         "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/07_sphere_hydra_ggx_metal.xml",
                         "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y07_sphere_hydra3_ggx_metal.exr"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name"   : "sphere(fresnel)",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt", 
+                        "-spp", "1024",
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/10_sphere_hydra_gltf2lite.xml",
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y10_sphere_hydra3_gltf2lite.exr"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],
