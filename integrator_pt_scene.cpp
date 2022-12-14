@@ -239,7 +239,7 @@ int Integrator::LoadScene(const char* scehePath)
     GLTFMaterial mat = {};
     mat.brdfType     = BRDF_TYPE_LAMBERT;
     mat.alpha        = 0.0f;
-    mat.coatColor    = float4(0,0,0,0); 
+    mat.coatColor    = float4(1,1,1,0); 
     mat.metalColor   = float4(0,0,0,0); 
 
     // read Hydra or GLTF materials
@@ -297,7 +297,8 @@ int Integrator::LoadScene(const char* scehePath)
       mat.metalColor = to_float4(reflColor, 0.0f);
       if(hasFresnel)
       {
-        mat.alpha = 0.0f;
+        mat.alpha     = 0.0f;
+        mat.coatColor = float4(1,1,1,0);
       }
       else
       {

@@ -103,11 +103,86 @@
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--gpu", 
-                        "-integrator", "mispt", 
+                        "-integrator", "mispt", // "mispt", "shadowpt", "naivept"
                         "-spp", "1024",
                         "-gamma", "2.2",
                         "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/10_sphere_hydra_gltf2lite.xml",
                         "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y10_sphere_hydra3_gltf2lite.exr"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name"   : "cornell(fresnel)",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt", 
+                        "-spp", "1024",
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/13_cornell_hydra_gltf2lite.xml",
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y13_cornell_hydra3_gltf2lite.exr"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name"   : "instances_objects",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt", 
+                        "-spp", "1024",
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/Huawei/cbvh_raytrace/scenes/01_simple_scenes/instanced_objects.xml",
+                        "-out", "/home/frol/PROG/Huawei/cbvh_raytrace/scenes/01_simple_scenes/instanced_objects.png"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name"   : "hairballs",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt", 
+                        "-spp", "1024",
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/Huawei/cbvh_raytrace/scenes/09_hair_balls/hairballs.xml",
+                        "-out", "/home/frol/PROG/Huawei/cbvh_raytrace/scenes/09_hair_balls/hairballs_hydra3.png"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],

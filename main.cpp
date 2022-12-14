@@ -103,7 +103,7 @@ int main(int argc, const char** argv)
     std::cout << std::endl;
 
     if(saveHDR)
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), true);
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
@@ -120,7 +120,7 @@ int main(int argc, const char** argv)
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
     
     if(saveHDR)
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), true);
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
