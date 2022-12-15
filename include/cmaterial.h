@@ -242,12 +242,41 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
   return f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
+//θl and θv are the angles of incidence of the l and v vectors with respect to the normal, θh is the
+//angle between the normal and the half vector, and θd is the “difference” angle between l and the half
+//vector (or, symmetrically, v and h).
+
+static inline float pow5(float x) { return (x*x)*(x*x)*x; }
+static inline float disneyFresnelDiel(float3 l, float3 v, float3 n, float roughness)
+{
+  const float3 h         = normalize(l+v);
+  const float  cosThetaL = dot(l,n); 
+  const float  cosThetaV = dot(v,n);
+  const float  cosThetaD = dot(v,h); 
+  const float FD90MinusOne = (0.5f + 2.0f*roughness*cosThetaD) - 1.0f;
+  return 1.0f - (1.0f + FD90MinusOne*pow5(1.0f - cosThetaL))*(1.0f + FD90MinusOne*pow5(1.0f - cosThetaV));
+}
+
 static inline float hydraFresnelDiel(float VdotH, float ior, float roughness) 
 {
   //const float tmp = (1.0f - ior)/(1.0f + ior);
   //const float f0 = tmp*tmp;
-  //return f0 + (1.0f - f0)*FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);
+  //return f0 + (1.0f - f0)*fresnelSlick(VdotH);
   return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
 }
+
+//static inline float3 fresnelBlendPBRT(float3 l, float3 v, float3 n, float3 Rd, float3 Rs, float a_ggxVal) 
+//{
+//  const float3 h           = normalize(l+v);
+//  const float  cosThetaIn  = dot(l,n); 
+//  const float  cosThetaOut = dot(v,n);
+//  const float3 diffuse     = (28.f / (23.f * M_PI)) * Rd * (float3(1.f) - Rs) *
+//                             (1 - _pow5(1 - .5f * cosThetaIn)) *
+//                             (1 - _pow5(1 - .5f * cosThetaOut));
+//
+//  float3 specular = Rs*a_ggxVal/(4.0f * std::abs(dot(v, h)) * std::max(cosThetaIn, cosThetaOut)) * fresnelSlick(dot(v, h));
+//
+//  return diffuse + specular;
+//}
 
 #endif
