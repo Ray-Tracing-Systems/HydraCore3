@@ -247,14 +247,16 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
 //vector (or, symmetrically, v and h).
 
 static inline float pow5(float x) { return (x*x)*(x*x)*x; }
-static inline float disneyFresnelDiel(float3 l, float3 v, float3 n, float roughness)
+static inline float disneyFresnelDiel(float3 l, float3 v, float3 n, float ior, float roughness)
 {
+  const float tmp = (1.0f - ior)/(1.0f + ior);
+  const float f0 = tmp*tmp;
   const float3 h         = normalize(l+v);
   const float  cosThetaL = dot(l,n); 
   const float  cosThetaV = dot(v,n);
   const float  cosThetaD = dot(v,h); 
   const float FD90MinusOne = (0.5f + 2.0f*roughness*cosThetaD) - 1.0f;
-  return 1.0f - (1.0f + FD90MinusOne*pow5(1.0f - cosThetaL))*(1.0f + FD90MinusOne*pow5(1.0f - cosThetaV));
+  return f0 + (1.0f - f0)*(1.0f - (1.0f + FD90MinusOne*pow5(1.0f - cosThetaL))*(1.0f + FD90MinusOne*pow5(1.0f - cosThetaV)));
 }
 
 static inline float hydraFresnelDiel(float VdotH, float ior, float roughness) 
