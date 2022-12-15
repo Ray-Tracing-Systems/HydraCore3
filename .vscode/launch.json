@@ -123,7 +123,7 @@
         },
 
         {
-            "name"   : "cornell(fresnel)",
+            "name"   : "cornell(lambert)",
             "type"   : "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
@@ -131,8 +131,33 @@
                         "-integrator", "mispt", 
                         "-spp", "1024",
                         "-gamma", "2.2",
-                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/13_cornell_hydra_gltf2lite.xml",
-                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y13_cornell_hydra3_gltf2lite.exr"],
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/01_cornell_hydra_lambert.xml",
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y01_cornell_hydra3_lambert.exr"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name"   : "cornell(mirror)",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt", 
+                        "-spp", "1024",
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y02_cornell_hydra3_mirror.exr"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],

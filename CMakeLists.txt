@@ -36,7 +36,11 @@ add_compile_definitions(USE_VOLK)
 #uncomment this to detect broken memory problems via gcc sanitizers
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")
+else()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
+endif()
 
 add_executable(hydra main.cpp 
                      integrator_pt1.cpp
@@ -66,6 +70,13 @@ add_executable(hydra main.cpp
                      ../RayTracing/VulkanRTX.cpp)
 
 set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-target_link_libraries(hydra LINK_PUBLIC ${Vulkan_LIBRARY} OpenMP::OpenMP_CXX volk dl    # ${FREEIMAGE_LIBRARIES}
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+target_link_libraries(hydra LINK_PUBLIC ${Vulkan_LIBRARY} volk dl   
                       embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking # embree shit
                       ) 
+else()
+target_link_libraries(hydra LINK_PUBLIC ${Vulkan_LIBRARY} OpenMP::OpenMP_CXX volk dl    
+                      embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking # embree shit
+                      ) 
+endif()

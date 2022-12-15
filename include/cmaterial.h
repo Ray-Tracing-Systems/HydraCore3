@@ -8,7 +8,7 @@ struct BsdfSample
   float3 color;
   float3 direction;
   float  pdf; 
-  int    flags;
+  uint   flags;
 };
 
 struct BsdfEval
@@ -25,6 +25,16 @@ enum BRDF_TYPES { BRDF_TYPE_LAMBERT         = 1,
                   BRDF_TYPE_GLASS           = 6,
                   BRDF_TYPE_MIRROR          = 7,
                   BRDF_TYPE_LIGHT_SOURCE = 0xEFFFFFFF };
+
+enum MATERIAL_EVENT {
+  RAY_EVENT_S         = 1,  ///< Indicates Specular reflection or refraction (check for RAY_EVENT_T)
+  RAY_EVENT_D         = 2,  ///< Indicates Diffuse  reflection or translucent (check for RAY_EVENT_T)
+  RAY_EVENT_G         = 4,  ///< Indicates GLossy   reflection or refraction (check for RAY_EVENT_T)
+  RAY_EVENT_T         = 8,  ///< Indicates Transparensy or reftacrion. 
+  RAY_EVENT_V         = 16, ///< Indicates Volume scattering, not used for a while
+  RAY_EVENT_TOUT      = 32, ///< Indicates Transparensy Outside of water or glass or e.t.c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
+  RAY_EVENT_TNINGLASS = 64,
+};
 
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
 // The BRDFs **share** the parameters for roughness and base color.
@@ -183,13 +193,6 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
 }
 
-//static inline float fresnelDielectric(float cosTheta1, float cosTheta2, float etaExt, float etaInt)
-//{
-//  float Rs = (etaExt * cosTheta1 - etaInt * cosTheta2) / (etaExt * cosTheta1 + etaInt * cosTheta2);
-//  float Rp = (etaInt * cosTheta1 - etaExt * cosTheta2) / (etaInt * cosTheta1 + etaExt * cosTheta2);
-//  return 0.5f*(Rs * Rs + Rp * Rp);
-//}
-//
 //static inline float fresnelConductor(float cosTheta, float eta, float roughness)
 //{
 //  float tmp = (eta*eta + roughness*roughness) * (cosTheta * cosTheta);
@@ -198,35 +201,7 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
 //  float rPerp2 = (tmpF - (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta)) / (tmpF + (eta * (2.0f * cosTheta)) + (cosTheta*cosTheta));
 //  return 0.5f*(rParl2 + rPerp2);
 //}
-//static inline float fresnelHydra(float cosTheta1, float etaExt, float etaInt)
-//{
-//  // Swap the indices of refraction if the interaction starts
-//  // at the inside of the object
-//  //
-//  if (cosTheta1 < 0.0f)
-//  {
-//    float temp = etaInt;
-//    etaInt = etaExt;
-//    etaExt = temp;
-//  }
-//
-//  // Using Snell's law, calculate the sine of the angle
-//  // between the transmitted ray and the surface normal 
-//  //
-//  float sinTheta2 = etaExt / etaInt * std::sqrt(std::max(0.0f, 1.0f - cosTheta1*cosTheta1));
-//
-//  if (sinTheta2 > 1.0f)
-//    return 1.0f;  // Total internal reflection!
-//
-//  // Use the sin^2+cos^2=1 identity - max() guards against
-//  //	numerical imprecision
-//  //
-//  float cosTheta2 = std::sqrt(std::max(0.0f, 1.0f - sinTheta2*sinTheta2));
-//
-//  // Finally compute the reflection coefficient
-//  //
-//  return fresnelDielectric(std::abs(cosTheta1), cosTheta2, etaInt, etaExt);
-//}
+
 
 static inline float fresnelSlick(float VdotH)
 {
@@ -266,6 +241,7 @@ static inline float hydraFresnelDiel(float VdotH, float ior, float roughness)
   //return f0 + (1.0f - f0)*fresnelSlick(VdotH);
   return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
 }
+
 
 //static inline float3 fresnelBlendPBRT(float3 l, float3 v, float3 n, float3 Rd, float3 Rs, float a_ggxVal) 
 //{

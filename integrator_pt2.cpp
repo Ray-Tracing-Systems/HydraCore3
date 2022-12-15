@@ -35,7 +35,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-  const uint   type      = m_materials[a_materialId].brdfType;
+        uint   type      = m_materials[a_materialId].brdfType;
   const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
   const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
   const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
@@ -47,9 +47,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
 
-  // TODO: check if glosiness in 1 (roughness is 0), use special case mirror brdf
-  //if(roughness == 0.0f && type == BRDF_TYPE_GGX)
-  //  type = BRDF_TYPE_MIRROR;
+  // if glosiness in 1 (roughness is 0), use special case mirror brdf
+  if(roughness == 0.0f && type == BRDF_TYPE_GGX)
+    type = BRDF_TYPE_MIRROR;
 
   BsdfSample res;
   switch(type)
@@ -115,14 +115,21 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     break;
     case BRDF_TYPE_MIRROR:
     {
-      res.direction = reflect(v, n);
+      res.direction = reflect((-1.0f)*v, n);
+      //if (dot(res.direction, n) > 0.0f)
+      //  res.direction = (-1.0f)*v;
+
       // BSDF is multiplied (outside) by cosThetaOut.
       // For mirrors this shouldn't be done, so we pre-divide here instead.
       //
       const float cosThetaOut = dot(res.direction, n);
-      res.color     = specular*(1.0f/std::max(cosThetaOut, 1e-6f));
+      if (cosThetaOut <= 1e-6f)
+        res.color = float3(0.0f, 0.0f, 0.0f);
+      else
+        res.color = specular*(1.0f/std::max(cosThetaOut, 1e-6f));
+      
       res.pdf       = 1.0f;
-      res.flags     = 0;
+      res.flags     = RAY_EVENT_S;
     }
     break;
   }
@@ -135,7 +142,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-  const uint type        = m_materials[a_materialId].brdfType;
+        uint type        = m_materials[a_materialId].brdfType;
   const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
   const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
   const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
@@ -147,9 +154,9 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
  
-  // TODO: check if glosiness in 1 (roughness is 0), use special case mirror brdf
-  //if(roughness == 0.0f && type == BRDF_TYPE_GGX)
-  //  type = BRDF_TYPE_MIRROR;
+  // if glosiness in 1 (roughness is 0), use special case mirror brdf
+  if(roughness == 0.0f && type == BRDF_TYPE_GGX) 
+    type = BRDF_TYPE_MIRROR;
 
   BsdfEval res;
   switch(type)

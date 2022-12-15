@@ -240,7 +240,7 @@ int Integrator::LoadScene(const char* scehePath)
     mat.brdfType     = BRDF_TYPE_LAMBERT;
     mat.alpha        = 0.0f;
     mat.coatColor    = float4(1,1,1,0); 
-    mat.metalColor   = float4(0,0,0,0); 
+    mat.metalColor   = float4(0,0,0,0);  
 
     // read Hydra or GLTF materials
     //

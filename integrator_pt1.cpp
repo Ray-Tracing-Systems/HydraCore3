@@ -306,7 +306,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   const float  cosTheta   = dot(matSam.direction, hit.norm);
 
   MisData nextBounceData;                   // remember current pdfW for next bounce
-  nextBounceData.matSamplePdf = matSam.pdf; //
+  nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; //
   nextBounceData.cosTheta     = cosTheta;   //
   *misPrev = nextBounceData;                //
 
