@@ -265,23 +265,23 @@ void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
     CastSingleRay(i, out_color);
 }
 
-void Integrator::NaivePathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum)
+void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
-      NaivePathTrace(i, a_maxDepth, out_color);
+      NaivePathTrace(i, out_color);
   naivePtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
-void Integrator::PathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum)
+void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
-      PathTrace(i, a_maxDepth, out_color);
+      PathTrace(i, out_color);
   shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 

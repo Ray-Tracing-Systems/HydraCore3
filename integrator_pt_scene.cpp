@@ -428,6 +428,16 @@ int Integrator::LoadScene(const char* scehePath)
     m_allRemapLists.insert(m_allRemapLists.end(), remapList.begin(), remapList.end());
   }
   m_allRemapListsOffsets.push_back(m_allRemapLists.size()); // put size of the list remap list
+  
+  // (5) load render settings
+  //
+  for(auto sett : scene.Settings())
+  {
+    m_traceDepth = sett.depth;
+    if(m_traceDepth == 0)
+      m_traceDepth = 6;
+    break; // take first render settings
+  }
 
   return 0;
 }

@@ -383,7 +383,7 @@ void Integrator::CastSingleRay(uint tid, uint* out_color)
   kernel_GetRayColor(tid, &hit, m_packedXY.data(), out_color);
 }
 
-void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
+void Integrator::NaivePathTrace(uint tid, float4* out_color)
 {
   float4 accumColor, accumThoroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -392,7 +392,7 @@ void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
-  for(int depth = 0; depth < a_maxDepth; depth++) 
+  for(int depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;
     kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &rayFlags);
@@ -412,7 +412,7 @@ void Integrator::NaivePathTrace(uint tid, uint a_maxDepth, float4* out_color)
                            out_color);
 }
 
-void Integrator::PathTrace(uint tid, uint a_maxDepth, float4* out_color)
+void Integrator::PathTrace(uint tid, float4* out_color)
 {
   float4 accumColor, accumThoroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -421,7 +421,7 @@ void Integrator::PathTrace(uint tid, uint a_maxDepth, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
-  for(int depth = 0; depth < a_maxDepth; depth++) 
+  for(int depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;
     kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &rayFlags);

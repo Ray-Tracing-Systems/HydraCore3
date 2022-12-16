@@ -35,14 +35,14 @@ public:
   virtual int LoadScene(const char* bvhPath);
 
   void PackXY         (uint tidX, uint tidY);
-  void CastSingleRay  (uint tid, uint* out_color                    __attribute__((size("tid"))) );
-  void NaivePathTrace (uint tid, uint a_maxDepth, float4* out_color __attribute__((size("tid"))) );
-  void PathTrace      (uint tid, uint a_maxDepth, float4* out_color __attribute__((size("tid"))) );
+  void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) );
+  void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) );
+  void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) );
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
-  virtual void NaivePathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum);
-  virtual void PathTraceBlock(uint tid, uint a_maxDepth, float4* out_color, uint a_passNum);
+  virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
+  virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
   virtual void GetExecutionTime(const char* a_funcName, float a_out[4]); // will be overriden in generated class
@@ -121,6 +121,10 @@ protected:
   int m_winStartY;
   int m_winWidth;
   int m_winHeight;
+  uint m_traceDepth;
+  uint m_dummy1;
+  uint m_dummy2;
+  uint m_dummy3;
 
   float LightPdfSelectRev(int a_lightId);
   float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);

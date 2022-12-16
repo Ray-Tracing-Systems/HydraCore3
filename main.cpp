@@ -98,7 +98,7 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
     std::cout << std::endl;
     pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
@@ -125,7 +125,7 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
     if(saveHDR)
       SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
@@ -142,7 +142,7 @@ int main(int argc, const char** argv)
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, 6, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
     std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
