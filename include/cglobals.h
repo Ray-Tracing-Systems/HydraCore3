@@ -91,7 +91,7 @@ static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
 //constexpr float M_TWOPI  = 6.28318530717958647692f;
 //constexpr float INV_PI   = 0.31830988618379067154f
 
-constexpr float GEPSILON = 5e-6f ;
+constexpr float GEPSILON = 1e-5f ;
 constexpr float DEPSILON = 1e-20f;
 
 //enum THREAD_FLAGS { THREAD_IS_DEAD = 2147483648};
@@ -136,7 +136,7 @@ static inline float3 MapSampleToCosineDistribution(float r1, float r2, float3 di
   return res;
 }
 
-static inline float epsilonOfPos(float3 hitPos) { return fmax(fmax(fabs(hitPos.x), fmax(fabs(hitPos.y), fabs(hitPos.z))), 2.0f*GEPSILON)*GEPSILON; }
+static inline float epsilonOfPos(float3 hitPos) { return std::max(std::max(std::abs(hitPos.x), std::max(std::abs(hitPos.y), std::abs(hitPos.z))), 2.0f*GEPSILON)*GEPSILON; }
 
 /**
 \brief offset reflected ray position by epsilon;
