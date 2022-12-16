@@ -44,11 +44,9 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-integrator"))
     integratorType = args.getOptionValue<std::string>("-integrator");
-  if(args.hasOption("-spp"))
-    PASS_NUMBER = args.getOptionValue<int>("-spp");
 
-  if(args.hasOption("-spp-naive"))
-    NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive")/PASS_NUMBER,1);
+  if(args.hasOption("-spp-naive-mul"))
+    NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive-mul"),1);
   
   if(args.hasOption("-gamma"))
     gamma = args.getOptionValue<float>("-gamma");
@@ -82,6 +80,10 @@ int main(int argc, const char** argv)
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str());
   pImpl->CommitDeviceData();
+
+  PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
+  if(args.hasOption("-spp"))                         // override it if spp is specified via command line
+    PASS_NUMBER = args.getOptionValue<int>("-spp");
 
   // remember (x,y) coords for each thread to make our threading 1D
   //

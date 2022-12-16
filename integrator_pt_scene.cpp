@@ -434,8 +434,14 @@ int Integrator::LoadScene(const char* scehePath)
   for(auto sett : scene.Settings())
   {
     m_traceDepth = sett.depth;
+    m_spp        = sett.spp;
+
     if(m_traceDepth == 0)
       m_traceDepth = 6;
+    
+    if(m_spp == 0)
+      m_spp = 1;
+
     break; // take first render settings
   }
 

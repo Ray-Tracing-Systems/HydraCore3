@@ -24,7 +24,7 @@ def run_sample(test_name, imsize, skip, on_gpu=False, gpu_id=0):
     Log().info("  rendering scene: {0}, gpu={1}".format(test_name, on_gpu))
     full = PATH_TO_TESTS + "/tests_f/" + test_name + "/statex_00001.xml"
     outp = PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out.bmp"
-    args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", "all", "-spp", str(GLOBAL_SPP), "-spp-naive", str(GLOBAL_SPP*16)]
+    args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", "all", "-spp-naive-mul", str(16)]
     args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
     args = args + ["-width", str(imsize[0]), "-height", str(imsize[1])]
     if on_gpu:

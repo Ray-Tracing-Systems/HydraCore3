@@ -15,7 +15,7 @@
 
 using LiteImage::ICombinedImageSampler;
 
-class Integrator // : public DataClass
+class Integrator // : public DataClass, IRenderer
 {
 public:
 
@@ -105,6 +105,8 @@ public:
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
   static inline uint maxMaterials()             { return 0x00FFFFFF+1; }
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// CPU API
+
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
   { 
@@ -115,6 +117,8 @@ public:
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
   }
 
+  uint GetSPP() const { return m_spp; } 
+
 protected:
 
   int m_winStartX;
@@ -122,7 +126,7 @@ protected:
   int m_winWidth;
   int m_winHeight;
   uint m_traceDepth;
-  uint m_dummy1;
+  uint m_spp;
   uint m_dummy2;
   uint m_dummy3;
 
