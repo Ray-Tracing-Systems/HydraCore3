@@ -20,49 +20,57 @@ int main(int argc, const char** argv)
 
   int WIN_WIDTH  = 1024;
   int WIN_HEIGHT = 1024;
-  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
-  
+  int PASS_NUMBER = 1024;
+  int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
+
+  std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
+  std::string imageOut  = "z_out.bmp";
+  std::string integratorType = "mispt";
+  float gamma = 2.2f;
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-  
   std::shared_ptr<Integrator> pImpl = nullptr;
   ArgParser args(argc, argv);
   
-  std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
   if(args.hasOption("-in"))
     scenePath = args.getOptionValue<std::string>("-in");
 
-  std::string imageOut = "z_out.bmp";
   if(args.hasOption("-out"))
     imageOut = args.getOptionValue<std::string>("-out");
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos;
-
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
 
-  std::string integratorType = "mispt";
   if(args.hasOption("-integrator"))
     integratorType = args.getOptionValue<std::string>("-integrator");
-
-  int PASS_NUMBER = 1024;
   if(args.hasOption("-spp"))
     PASS_NUMBER = args.getOptionValue<int>("-spp");
+
+  if(args.hasOption("-spp-naive"))
+    NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive")/PASS_NUMBER,1);
   
-  float gamma = 2.2f;
   if(args.hasOption("-gamma"))
     gamma = args.getOptionValue<float>("-gamma");
   else if(args.hasOption("-out_gamma"))
     gamma = args.getOptionValue<float>("-out_gamma");
   
-  ///////////////////////////////////////////////////////////////////////////////////////
-  ///////////////////////////////////////////////////////////////////////////////////////
+  if(args.hasOption("-width"))
+    WIN_WIDTH = args.getOptionValue<int>("-width");
+  if(args.hasOption("-height"))
+    WIN_HEIGHT = args.getOptionValue<int>("-height");
   
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
+
   bool onGPU = args.hasOption("--gpu");
   if(onGPU)
   {
-    unsigned int a_preferredDeviceId = args.getOptionValue<int>("--gpu_id", 0);
+    unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated( WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
     pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
@@ -80,15 +88,12 @@ int main(int argc, const char** argv)
   std::cout << "[main]: PackXYBlock() ... " << std::endl; 
   pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
-  const float normConst = 1.0f/float(PASS_NUMBER);
   float timings[4] = {0,0,0,0};
   
   // now test path tracing
   //
   if(integratorType == "naivept" || integratorType == "all")
   {
-    const int NAIVE_PT_REPEAT = 1;
-  
     std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
     memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
@@ -102,6 +107,8 @@ int main(int argc, const char** argv)
     std::cout << "NaivePathTraceBlock(ovrh)  = " << timings[3]              << " ms " << std::endl;
     std::cout << std::endl;
 
+    const float normConst = 1.0f/float(PASS_NUMBER*NAIVE_PT_REPEAT);
+
     if(saveHDR)
       SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
@@ -110,7 +117,8 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
-
+  
+  const float normConst = 1.0f/float(PASS_NUMBER);
   if(integratorType == "shadowpt" || integratorType == "all")
   {
     std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;

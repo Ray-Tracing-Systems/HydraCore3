@@ -2,26 +2,43 @@ import sys
 import os
 import subprocess
 
-from logger import Log, Status
+os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
+import cv2
 
-PATH_TO_TESTS = "/home/frol/PROG/HydraRepos2/HydraAPI-tests"
+from logger import Log, Status
+from colorama import Fore
+
+PATH_TO_TESTS = "/home/frol/PROG/HydraRepos3/HydraAPI-tests"
 ENABLE_GPU    = True
 GLOBAL_SPP    = 1024
 
 ############################################################################################################
 ############################################################################################################
+############################################################################################################
 
-def run_sample(test_name, on_gpu=False, gpu_id=0):
+def run_sample(test_name, imsize, on_gpu=False, gpu_id=0):
     Log().info("  rendering scene: {0}, gpu={1}".format(test_name, on_gpu))
     full = PATH_TO_TESTS + "/tests_f/" + test_name + "/statex_00001.xml"
     outp = PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out.bmp"
-    args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", "all", "-spp", str(GLOBAL_SPP)]
-    args = args + ["--gpu_id", str(gpu_id)]  # for single launch samples
+    args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", "all", "-spp", str(GLOBAL_SPP), "-spp-naive", str(GLOBAL_SPP*16)]
+    args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
+    args = args + ["-width", str(imsize[0]), "-height", str(imsize[1])]
     if on_gpu:
         args = args + ["--gpu"]
     #print(args)
     try:
         res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        image_ref    = cv2.imread(PATH_TO_TESTS + "/tests_images/" + test_name + "/w_ref.png",         cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        image_naive  = cv2.imread(PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out_naivept.bmp", cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        image_shadow = cv2.imread(PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out_shadowpt.bmp",cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        image_mis    = cv2.imread(PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out_mispt.bmp",   cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        metrics      = [cv2.PSNR(image_ref,image_naive), cv2.PSNR(image_ref,image_shadow), cv2.PSNR(image_ref,image_mis)]
+        minPSNR      = min(metrics) 
+        color        = Fore.GREEN
+        message      = "[PASSED!]"
+        if minPSNR < 35.0: color,message = Fore.YELLOW,"[PASSED!]" 
+        if minPSNR < 30.0: color,message = Fore.RED, "[FAILED!]" 
+        Log().print_colored_text("  {} ==> PSNR(naive,shadow,mis) = ({:.2f},{:.2f},{:.2f})".format(message,metrics[0], metrics[1], metrics[2]), color = color)
     except Exception as e:
         Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
         return -1
@@ -36,12 +53,14 @@ def run_sample(test_name, on_gpu=False, gpu_id=0):
 ############################################################################################################
 
 class REQ:
-  def __init__(self, name, tests):
-    self.name  = name
-    self.tests = tests
+  def __init__(self, name, tests, imsize = [(512,512)]):
+    self.name   = name
+    self.tests  = tests
+    self.imsize = imsize
 
 reqs = []
 reqs.append( REQ("mat: lambert", ["test_101"]) )
+reqs.append( REQ("mat: mirror",  ["test_102"], [(1024, 1024)]) )
 reqs.append( REQ("mat: lambert_texture", ["test_103"]) )
 
 Log().set_workdir(".")
@@ -52,5 +71,5 @@ Log().set_workdir("testing")
 
 for req in reqs:
   Log().info("REQ: {}".format(req.name))
-  for test in req.tests:
-    run_sample(test, ENABLE_GPU)
+  for (test,imsize) in zip(req.tests, req.imsize):
+    run_sample(test, imsize, ENABLE_GPU)

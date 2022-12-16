@@ -212,7 +212,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float  hitDist   = sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
 
   const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;
-  const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems
+  const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
   const bool inShadow = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   
@@ -330,7 +330,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     *accumThoroughput = currThoroughput*cosTheta*to_float4(bxdfVal, 0.0f); 
   }
 
-  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f);
+  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f); // todo: use flatNormal for offset
   *rayDirAndFar  = to_float4(matSam.direction, MAXFLOAT);
   *rayFlags      = currRayFlags | matSam.flags;
 }
