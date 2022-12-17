@@ -26,7 +26,7 @@ int main(int argc, const char** argv)
   std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
   std::string imageOut  = "z_out.bmp";
   std::string integratorType = "mispt";
-  float gamma = 2.2f;
+  float gamma = 2.4f; // out gamma, special value, see save image functions
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -48,10 +48,13 @@ int main(int argc, const char** argv)
   if(args.hasOption("-spp-naive-mul"))
     NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive-mul"),1);
   
-  if(args.hasOption("-gamma"))
-    gamma = args.getOptionValue<float>("-gamma");
-  else if(args.hasOption("-out_gamma"))
-    gamma = args.getOptionValue<float>("-out_gamma");
+  if(args.hasOption("-gamma")) {
+    std::string gammaText = args.getOptionValue<std::string>("-gamma");
+    if(gammaText == "srgb" || gammaText == "sSRGB")
+      gamma = 2.4f;
+    else
+      gamma = args.getOptionValue<float>("-gamma");
+  }
   
   if(args.hasOption("-width"))
     WIN_WIDTH = args.getOptionValue<int>("-width");

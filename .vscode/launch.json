@@ -183,7 +183,7 @@
                         "-width", "512", "-height", "512", 
                         "-gamma", "2.2",
                         "-in", "/home/frol/PROG/HydraRepos3/HydraAPI-tests/tests_f/test_103/statex_00001.xml",
-                        "-out", "/home/frol/PROG/HydraRepos3/HydraAPI-tests/tests_f/test_103/02_hydra3_point_gpu.bmp"],
+                        "-out", "/home/frol/PROG/HydraRepos3/HydraAPI-tests/tests_f/test_103/04_hydra3_point_gpu.bmp"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],

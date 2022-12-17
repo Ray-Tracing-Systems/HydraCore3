@@ -26,7 +26,7 @@ def test_req(req, on_gpu=False, gpu_id=0):
     full = PATH_TO_TESTS + "/tests_f/" + test_name + "/statex_00001.xml"
     for inregrator in req.integs:
       outp = PATH_TO_TESTS + "/tests_images/" + test_name + "/z_out" + inregrator + ".bmp"
-      args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+      args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
       args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
       args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
       if on_gpu:

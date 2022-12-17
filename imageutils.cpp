@@ -157,19 +157,47 @@ static bool SaveBMP(const char* fname, const unsigned int* pixels, int w, int h)
   return WriteBMP(fname, &pixels2[0], w, h);
 }
 
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f) 
+static inline float linearToSRGB(float l)
+{
+  if(l <= 0.00313066844250063f)
+    return l*12.92f;
+  else
+    return 1.055*std::pow(l, 1.0f/2.4f) - 0.055;
+}
+
+std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma)
 {
   std::vector<uint32_t> pixelData(width*height);
-  const float invGamma  = 1.0f/a_gamma;
-  for(int i=0;i<width*height;i++)
-  {
-    float color[4];
-    color[0]     = clamp(std::pow(rgb[4*i+0]*a_normConst, invGamma), 0.0f, 1.0f);
-    color[1]     = clamp(std::pow(rgb[4*i+1]*a_normConst, invGamma), 0.0f, 1.0f);
-    color[2]     = clamp(std::pow(rgb[4*i+2]*a_normConst, invGamma), 0.0f, 1.0f);
-    color[3]     = 1.0f;
-    pixelData[i] = RealColorToUint32(color);
+  if(std::abs(a_gamma - 2.4f) < 1e-5f) {
+    for(int i=0;i<width*height;i++)
+    {
+      float color[4];
+      color[0]     = linearToSRGB(clamp(rgb[4*i+0]*a_normConst, 0.0f, 1.0f));
+      color[1]     = linearToSRGB(clamp(rgb[4*i+1]*a_normConst, 0.0f, 1.0f));
+      color[2]     = linearToSRGB(clamp(rgb[4*i+2]*a_normConst, 0.0f, 1.0f));
+      color[3]     = 1.0f;
+      pixelData[i] = RealColorToUint32(color);
+    }
   }
+  else {
+    const float invGamma  = 1.0f/a_gamma;
+    for(int i=0;i<width*height;i++)
+    {
+      float color[4];
+      color[0]     = clamp(std::pow(rgb[4*i+0]*a_normConst, invGamma), 0.0f, 1.0f);
+      color[1]     = clamp(std::pow(rgb[4*i+1]*a_normConst, invGamma), 0.0f, 1.0f);
+      color[2]     = clamp(std::pow(rgb[4*i+2]*a_normConst, invGamma), 0.0f, 1.0f);
+      color[3]     = 1.0f;
+      pixelData[i] = RealColorToUint32(color);
+    }
+  }
+  return pixelData;
+}
+
+
+bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f) 
+{
+  auto pixelData = FrameBufferColorToLDRImage(rgb,width,height,a_normConst,a_gamma);
   SaveBMP(outfilename, pixelData.data(), width, height);
   return true;
 }
