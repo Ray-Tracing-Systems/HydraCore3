@@ -106,6 +106,14 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
   }
 
   res.sampler.filter = Sampler::Filter::LINEAR;
+  if(texNode.attribute(L"filter") != nullptr)
+  {
+    std::wstring filterMode = texNode.attribute(L"filter").as_string();
+    if(filterMode == L"point" || filterMode == L"nearest")
+      res.sampler.filter = Sampler::Filter::NEAREST;
+    else if(filterMode == L"cubic" || filterMode == L"bicubic")
+      res.sampler.filter = Sampler::Filter::CUBIC;
+  }
 
   if(texNode.attribute(L"input_gamma") != nullptr)
     res.inputGamma = texNode.attribute(L"input_gamma").as_float();
@@ -168,6 +176,9 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     std::vector<uint32_t> data(wh[0]*wh[1]);
     fin.read((char*)data.data(), sizeof(uint32_t)*data.size());
     fin.close();
+
+    //#TODO: if old-version gamma 2.2 is globally enabled, use a trick
+    //#TODO: use gamma and invserse sRGB to get same results with sSRB   
 
     auto pTexture = std::make_shared< Image2D<uint32_t> >(wh[0], wh[1], data.data());
     pTexture->setSRGB(true);

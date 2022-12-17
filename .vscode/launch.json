@@ -173,6 +173,32 @@
         },
 
         {
+            "name"   : "run(test103)",
+            "type"   : "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-release/hydra",
+            "args"   : ["--gpu", 
+                        "-integrator", "mispt",  // "mispt", "shadowpt", "naivept"
+                        "-spp", "512",
+                        "-width", "512", "-height", "512", 
+                        "-gamma", "2.2",
+                        "-in", "/home/frol/PROG/HydraRepos3/HydraAPI-tests/tests_f/test_103/statex_00001.xml",
+                        "-out", "/home/frol/PROG/HydraRepos3/HydraAPI-tests/tests_f/test_103/02_hydra3_point_gpu.bmp"],
+            "stopAtEntry": false,
+            "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
             "name"   : "instances_objects",
             "type"   : "cppdbg",
             "request": "launch",
