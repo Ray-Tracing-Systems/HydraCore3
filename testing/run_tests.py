@@ -30,11 +30,9 @@ def test_req(req, gpu_id=0):
     devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
     for dev_type in devices:
       Log().info("  rendering scene: '{0}', dev_type='{1}', dev_id = '{2}'".format(test_name, dev_type, gpu_id))
-      naivem         = req.naivem   if dev_type == "gpu" else max(req.naivem/4,1)  # cpu implementation may do less samples
-      #psnrThresholds = [35.0, 30.0] if dev_type == "gpu" else [30.0, 25.0]        # cpu implementation may do less samples
       for inregrator in req.integs:
         outp = PATH_TO_TESTS + "/tests_images/" + test_name + "/z_" + dev_type + inregrator + ".bmp"
-        args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(naivem), "-gamma", "2.2"]
+        args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
         args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
         args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
         args = args + ["--" + dev_type]
