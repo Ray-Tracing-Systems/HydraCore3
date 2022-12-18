@@ -121,14 +121,14 @@ public:
 
 protected:
 
-  int m_winStartX;
-  int m_winStartY;
-  int m_winWidth;
-  int m_winHeight;
-  uint m_traceDepth;
-  uint m_spp;
-  uint m_dummy2;
-  uint m_dummy3;
+  int m_winStartX   = 0;
+  int m_winStartY   = 0;
+  int m_winWidth    = 512;
+  int m_winHeight   = 512;
+  uint m_traceDepth = 10;
+  uint m_spp        = 1024;
+  uint m_dummy2     = 0;
+  uint m_dummy3     = 0;
 
   float LightPdfSelectRev(int a_lightId);
   float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);

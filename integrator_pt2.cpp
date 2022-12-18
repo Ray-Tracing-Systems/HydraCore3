@@ -59,10 +59,24 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     case BRDF_TYPE_LAMBERT:
     default:
     {
-      const float3 ggxDir = ggxSample(float2(rands.x, rands.y), v, n, roughness);
-      const float  ggxPdf = ggxEvalPDF (ggxDir, v, n, roughness); 
-      const float  ggxVal = ggxEvalBSDF(ggxDir, v, n, roughness);
-      
+      float3 ggxDir;
+      float  ggxPdf; 
+      float  ggxVal;
+      if(roughness == 0.0f) // perfect specular reflection in coating layer
+      {
+        const float3 pefReflDir = reflect((-1.0f)*v, n);
+        const float cosThetaOut = dot(pefReflDir, n);
+        ggxDir = pefReflDir;
+        ggxVal = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f/std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+        ggxPdf = 1.0f;
+      }
+      else
+      {
+        ggxDir = ggxSample(float2(rands.x, rands.y), v, n, roughness);
+        ggxPdf = ggxEvalPDF (ggxDir, v, n, roughness); 
+        ggxVal = ggxEvalBSDF(ggxDir, v, n, roughness);
+      }
+
       const float3 lambertDir = lambertSample(float2(rands.x, rands.y), v, n);
       const float  lambertPdf = lambertEvalPDF(lambertDir, v, n);
       const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
@@ -81,6 +95,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         res.direction = ggxDir;
         res.color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness);
         res.pdf       = ggxPdf;
+        res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
       }
       else                // select dielectric
       {
@@ -89,7 +104,6 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         // (2) now select between specular and diffise via rands.w
         //
         float fDielectric = hydraFresnelDiel(VdotH, fresnelIOR, roughness);
-        //float fDielectric = disneyFresnelDiel(ggxDir, v, n, fresnelIOR, roughness);
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
 
@@ -99,6 +113,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
           res.direction = ggxDir;
           res.color     = ggxVal*coat*fDielectric*(1.0f - alpha);
           res.pdf       = ggxPdf;
+          res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
         } 
         else
         {
@@ -106,11 +121,11 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
           res.direction = lambertDir;
           res.color     = lambertVal*color*(1.0f-fDielectric)*(1.0f - alpha);
           res.pdf       = lambertPdf;
+          res.flags     = RAY_FLAG_HAS_NON_SPEC;
         }
       }
       
       res.pdf *= pdfSelect;
-      res.flags = RAY_FLAG_HAS_NON_SPEC;
     }
     break;
     case BRDF_TYPE_MIRROR:
@@ -119,8 +134,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       //if (dot(res.direction, n) > 0.0f)
       //  res.direction = (-1.0f)*v;
 
-      // BSDF is multiplied (outside) by cosThetaOut.
-      // For mirrors this shouldn't be done, so we pre-divide here instead.
+      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
       //
       const float cosThetaOut = dot(res.direction, n);
       if (cosThetaOut <= 1e-6f)
@@ -169,16 +183,20 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       if(type == BRDF_TYPE_GGX) // assume GGX-based metal
         alpha = 1.0f;
         
-      const float ggxVal = ggxEvalBSDF(l, v, n, roughness);
-      const float ggxPdf = ggxEvalPDF (l, v, n, roughness);
-      
+      float ggxVal = ggxEvalBSDF(l, v, n, roughness);
+      float ggxPdf = ggxEvalPDF (l, v, n, roughness);
+      if(roughness == 0.0f) // perfect specular reflection in coating layer
+      {
+        ggxVal = 0.0f;
+        ggxPdf = 0.0f;
+      }
+
       const float lambertVal = lambertEvalBSDF(l, v, n);
       const float lambertPdf = lambertEvalPDF (l, v, n);
       
       const float  VdotH = dot(v,normalize(v + l));
       float3 fConductor  = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
       float fDielectric  = hydraFresnelDiel(VdotH, fresnelIOR, roughness);           // (2) eval dielectric component
-      //float fDielectric  = disneyFresnelDiel(l, v, n, fresnelIOR, roughness);
 
       const float3 specularColor = ggxVal*fConductor;                    // eval metal specular component
       if(type == BRDF_TYPE_LAMBERT)
