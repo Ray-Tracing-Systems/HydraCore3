@@ -389,7 +389,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThoroughput, &gen, &rayFlags);
 
-  for(int depth = 0; depth < m_traceDepth; depth++) 
+  for(int depth = 0; depth < m_traceDepth+1; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;
     kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &rayFlags);

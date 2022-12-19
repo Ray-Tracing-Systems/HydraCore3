@@ -300,7 +300,7 @@ int Integrator::LoadScene(const char* scehePath)
     if(!hasFresnel)
       fresnelIOR = 0.0f;
     
-    if(length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f)
+    if(length(reflColor) > 1e-5f && (length(to_float3(color)) > 1e-5f || hasFresnel))
     {
       mat.brdfType   = BRDF_TYPE_GLTF;
       mat.baseColor  = color;
