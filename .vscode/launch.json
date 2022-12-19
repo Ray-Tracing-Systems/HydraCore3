@@ -178,11 +178,11 @@
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--gpu", 
-                        "-integrator", "shadowpt",  // "mispt", "shadowpt", "naivept"
+                        "-integrator", "mispt",  // "mispt", "shadowpt", "naivept"
                         "-spp", "1024",
                         //"-width", "512", "-height", "512", 
                         "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite_spec_shadowpt.exr"],
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite_spec_mispt.exr"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],
