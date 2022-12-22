@@ -103,13 +103,14 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         
         // (2) now select between specular and diffise via rands.w
         //
-        //float fDielectric = hydraFresnelDiel(VdotH, fresnelIOR, roughness);
+        //float fDielectric  = hydraFresnelDiel(VdotH, fresnelIOR, roughness);
+        //float fDielDiffuse = fresnelDielDiffMult(ggxDir, v, n, fresnelIOR);
         float fDielectric = hydraFresnelDiel2(ggxDir, v, n, fresnelIOR, roughness);
         
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
         
-        const float choicePdf = fDielectric; //0.5f;
+        const float choicePdf = fDielectric;
         if(rands.w < choicePdf) // specular
         {
           pdfSelect *= choicePdf;
@@ -122,7 +123,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         {
           pdfSelect *= (1.0f-choicePdf); // lambert
           res.direction = lambertDir;
-          res.color     = lambertVal*color*(1.0f-fDielectric)*(1.0f - alpha);
+          res.color     = lambertVal*color*(1.0f - fDielectric)*(1.0f - alpha);
           res.pdf       = lambertPdf;
           res.flags     = RAY_FLAG_HAS_NON_SPEC;
         }
@@ -203,7 +204,8 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       
       const float  VdotH = dot(v,normalize(v + l));
       float3 fConductor  = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
-      //float fDielectric  = hydraFresnelDiel(VdotH, fresnelIOR, roughness);           // (2) eval dielectric component
+      //float fDielectric  = hydraFresnelDiel(VdotH, fresnelIOR, roughness);         // (2) eval dielectric component
+      //float fDielDiffuse = fresnelDielDiffMult(l, v, n, fresnelIOR);
       float fDielectric = hydraFresnelDiel2(l, v, n, fresnelIOR, roughness);
 
       const float3 specularColor = ggxVal*fConductor;                    // eval metal specular component
@@ -211,8 +213,8 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
         fDielectric = 0.0f;
       
       const float  choicePdf     = fDielectric; // 0.5f
-      const float  dielectricPdf = (1.0f-choicePdf)*lambertPdf         + choicePdf*ggxPdf;
-      const float3 dielectricVal = (1.0f-fDielectric)*lambertVal*color + fDielectric*ggxVal*coat;
+      const float  dielectricPdf = (1.0f-choicePdf)*lambertPdf   + choicePdf*ggxPdf;
+      const float3 dielectricVal = (1.0f - fDielectric)*lambertVal*color + fDielectric*ggxVal*coat;
       //const float3 dielectricVal = fresnelBlendPBRT(l, v, n, lambertVal*color, ggxVal*coat); 
 
       res.color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
