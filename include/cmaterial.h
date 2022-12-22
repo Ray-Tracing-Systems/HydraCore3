@@ -236,24 +236,61 @@ static inline float disneyFresnelDiel(float3 l, float3 v, float3 n, float ior, f
 
 static inline float hydraFresnelDiel(float VdotH, float ior, float roughness) 
 {
-  //const float tmp = (1.0f - ior)/(1.0f + ior);
-  //const float f0 = tmp*tmp;
-  //return f0 + (1.0f - f0)*fresnelSlick(VdotH);
   return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
 }
 
+static inline float hydraFresnelDiel2(float3 l, float3 v, float3 n, float ior, float roughness) 
+{
+  const float cosThetaOut = dot(v,n);
+  return FrDielectricPBRT(std::abs(cosThetaOut), 1.0f, ior);  
+}
 
-//static inline float3 fresnelBlendPBRT(float3 l, float3 v, float3 n, float3 Rd, float3 Rs, float a_ggxVal) 
+//static inline float hydraFresnelDiel2(float3 l, float3 v, float3 n, float ior, float roughness) 
+//{
+//  const float  cosThetaIn  = dot(l,n); 
+//  const float  cosThetaOut = dot(v,n);
+//  return FrDielectricPBRT(std::sqrt(std::abs(cosThetaIn)*std::abs(cosThetaOut)), 1.0f, ior); // does not works correctly with 'shadowpt'
+//  //return FrDielectricPBRT(std::min(std::abs(cosThetaIn), std::abs(cosThetaOut)), 1.0f, ior);  
+//}
+
+//Spectrum FresnelBlend::f(const Vector3f &wo, const Vector3f &wi) const {
+//    auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
+//    Spectrum diffuse = (28.f / (23.f * Pi)) * Rd * (Spectrum(1.f) - Rs) *
+//                       (1 - pow5(1 - .5f * AbsCosTheta(wi))) *
+//                       (1 - pow5(1 - .5f * AbsCosTheta(wo)));
+//    Vector3f wh = wi + wo;
+//    if (wh.x == 0 && wh.y == 0 && wh.z == 0) return Spectrum(0);
+//    wh = Normalize(wh);
+//    Spectrum specular =
+//        distribution->D(wh) /
+//        (4 * AbsDot(wi, wh) * std::max(AbsCosTheta(wi), AbsCosTheta(wo))) *
+//        SchlickFresnel(Dot(wi, wh));
+//    return diffuse + specular;
+//}
+
+//static inline float3 fresnelBlendPBRT(float3 l, float3 v, float3 n, float3 Rd, float3 Rs) 
 //{
 //  const float3 h           = normalize(l+v);
 //  const float  cosThetaIn  = dot(l,n); 
 //  const float  cosThetaOut = dot(v,n);
-//  const float3 diffuse     = (28.f / (23.f * M_PI)) * Rd * (float3(1.f) - Rs) *
-//                             (1 - _pow5(1 - .5f * cosThetaIn)) *
-//                             (1 - _pow5(1 - .5f * cosThetaOut));
-//
-//  float3 specular = Rs*a_ggxVal/(4.0f * std::abs(dot(v, h)) * std::max(cosThetaIn, cosThetaOut)) * fresnelSlick(dot(v, h));
-//
+//  const float3 diffuse     = (28.f/23.f) * Rd * (float3(1.f) - Rs) * (1 - pow5(1 - .5f * cosThetaIn)) * (1 - pow5(1 - .5f * cosThetaOut));
+//  
+//  //const float dotNH = dot(n, h);
+//  //const float D     = GGX_Distribution(dotNH, 0.1f);
+//  float3 specular   = Rs/(4.0f * std::abs(dot(v, h)) * std::max(cosThetaIn, cosThetaOut)) * fresnelSlick(dot(v, h));
+//  return diffuse + specular;
+//}
+
+//static inline float3 fresnelBlendPBRT(float3 l, float3 v, float3 n, float3 Rd, float3 Rs) 
+//{
+//  const float3 h           = normalize(l+v);
+//  const float  cosThetaIn  = dot(l,n); 
+//  const float  cosThetaOut = dot(v,n);
+//  const float3 diffuse     = (28.f/23.f) * Rd * (float3(1.f) - Rs) * (1 - pow5(1 - .5f * cosThetaIn)) * (1 - pow5(1 - .5f * cosThetaOut));
+//  
+//  //const float dotNH = dot(n, h);
+//  //const float D     = GGX_Distribution(dotNH, 0.1f);
+//  float3 specular   = Rs/(4.0f * std::abs(dot(v, h)) * std::max(cosThetaIn, cosThetaOut)) * fresnelSlick(dot(v, h));
 //  return diffuse + specular;
 //}
 
