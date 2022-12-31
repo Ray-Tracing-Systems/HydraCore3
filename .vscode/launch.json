@@ -173,16 +173,17 @@
         },
 
         {
-            "name"   : "cornell(pbr_ls)",
+            "name"   : "sphere(pbr_ls)",
             "type"   : "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--gpu", 
-                        "-integrator", "mispt",  // "mispt", "shadowpt", "naivept"
+                        "-integrator", "all",  // "mispt", "shadowpt", "naivept"
                         "-spp", "1024",
+                        "-spp-naive-mul", "4",
                         //"-width", "512", "-height", "512", 
                         "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite_spec_mispt.exr"],
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/z03_sphere_hydra3_pbr_lite_spec.exr"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
             "environment": [],
