@@ -104,6 +104,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         // (2) now select between specular and diffise via rands.w
         //
         float fDielectric = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);
+        //float fDielectric = hydraFresnelDiel2(ggxDir, v, n, fresnelIOR, roughness);
         
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
@@ -203,7 +204,8 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float lambertPdf = lambertEvalPDF (l, v, n); 
       
       float3 fConductor  = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component
-      float fDielectric  = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);           // (2) eval dielectric component
+      float fDielectric  = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);      // (2) eval dielectric component
+      //float fDielectric = hydraFresnelDiel2(l, v, n, fresnelIOR, roughness);
 
       const float3 specularColor = ggxVal*fConductor;                    // eval metal specular component
       if(type == BRDF_TYPE_LAMBERT)

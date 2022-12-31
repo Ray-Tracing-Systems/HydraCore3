@@ -242,4 +242,11 @@ static inline float hydraFresnelDiel(float VdotH, float ior, float roughness)
   return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
 }
 
+static inline float hydraFresnelDiel2(float3 l, float3 v, float3 n, float ior, float roughness) 
+{
+  const float cosThetaL = std::abs(dot(l,n)); 
+  const float cosThetaV = std::abs(dot(v,n));
+  return std::sqrt(FrDielectricPBRT(cosThetaL, 1.0f, ior)*FrDielectricPBRT(cosThetaV, 1.0f, ior));  
+}
+
 #endif
