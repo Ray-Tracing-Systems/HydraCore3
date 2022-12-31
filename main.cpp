@@ -115,7 +115,10 @@ int main(int argc, const char** argv)
     const float normConst = 1.0f/float(PASS_NUMBER*NAIVE_PT_REPEAT);
 
     if(saveHDR)
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
+    {
+      const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr"; 
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+    }
     else
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
@@ -132,8 +135,11 @@ int main(int argc, const char** argv)
     pImpl->UpdateMembersPlainData();
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
-    if(saveHDR)
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
+    if(saveHDR) 
+    {
+      const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr"; 
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+    }
     else
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
@@ -154,8 +160,11 @@ int main(int argc, const char** argv)
     std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
     std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
 
-    if(saveHDR)
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
+    if(saveHDR) 
+    {
+      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+    }
     else
     {  
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
