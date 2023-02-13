@@ -52,8 +52,12 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
-
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
+
+  //const uint x = 146*2;
+  //const uint y = (512-152-1)*2; 
+  //const float2 pixelOffsets = float2(0,0);
+
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);

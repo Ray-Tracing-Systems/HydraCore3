@@ -221,7 +221,26 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
 //angle between the normal and the half vector, and θd is the “difference” angle between l and the half
 //vector (or, symmetrically, v and h).
 
-//static inline float pow5(float x) { return (x*x)*(x*x)*x; }
+static inline float pow5(float x) { return (x*x)*(x*x)*x; }
+
+static inline float3 pbrtFresnelBlendBRDF(float3 Rd, float3 Rs, float3 l, float3 v, float3 n, float ior, float roughness) 
+{
+  const float  cosThetaL  = dot(l,n); 
+  const float  cosThetaV  = dot(v,n);
+  const float  diffMult   = (28.f/(23.f *(float)(M_PI)))*(1 - pow5(1 - .5f*cosThetaV))*(1 - pow5(1 - .5f * cosThetaL)); 
+
+  const float3 wh = l + v;
+  if (wh.x == 0 && wh.y == 0 && wh.z == 0) 
+    return float3(0,0,0);
+  
+  const float D = GGX_Distribution(dot(n, normalize(wh)), roughness*roughness);
+
+  const float3 schlickFresnel = Rs + pow5(1 - dot(v, wh)) * (float3(1.0f) - Rs);
+  const float3 specular       = D /(4.0f * abs(dot(v, wh)) * std::max(cosThetaV, cosThetaL)) * schlickFresnel;
+
+  return Rd*diffMult + specular;
+}
+
 //static inline float2 disneyFresnelDiel(float3 l, float3 v, float3 n, float ior, float roughness)
 //{
 //  const float3 h = (roughness == 0.0f) ? n : normalize(l+v);
