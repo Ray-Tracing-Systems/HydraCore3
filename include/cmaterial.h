@@ -223,7 +223,7 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
 
 static inline float pow5(float x) { return (x*x)*(x*x)*x; }
 
-static inline float3 pbrtFresnelBlendBRDF(float3 Rd, float3 Rs, float3 l, float3 v, float3 n, float ior, float roughness) 
+static inline float3 pbrtFresnelBlendBRDF(float3 Rd, float3 Rs, float3 l, float3 v, float3 n, float roughness) 
 {
   const float  cosThetaL  = dot(l,n); 
   const float  cosThetaV  = dot(v,n);

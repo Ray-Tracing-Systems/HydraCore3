@@ -104,8 +104,6 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         // (2) now select between specular and diffise via rands.w
         //
         float fDielectric = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);
-        //float fDielectric = hydraFresnelDiel2(ggxDir, v, n, fresnelIOR, roughness);
-        
         if(type == BRDF_TYPE_LAMBERT)
           fDielectric = 0.0f;
         
