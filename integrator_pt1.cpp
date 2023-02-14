@@ -54,10 +54,6 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  //const uint x = 146*2;
-  //const uint y = (512-152-1)*2; 
-  //const float2 pixelOffsets = float2(0,0);
-
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -358,8 +354,12 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  float4 color = *a_accumColor;
+  //if(x == 511 && (y == 1024-340-1))
+  //  color = float4(0,0,1,0);
  
-  out_color[y*m_winWidth+x] += *a_accumColor;
+  out_color[y*m_winWidth+x] += color;
   m_randomGens[tid] = *gen;
 }
 
