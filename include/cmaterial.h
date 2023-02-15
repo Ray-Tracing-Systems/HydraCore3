@@ -218,67 +218,6 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
 }
 
 
-static inline float pow5(float x) { return (x*x)*(x*x)*x; }
-
-
-//// BSDF Inline Functions
-//inline float CosTheta   (float3 w, float3 n) { return dot(w,n); }
-//inline float Cos2Theta  (float3 w, float3 n) { float z = dot(w,n); return z * z; }
-//inline float AbsCosTheta(float3 w, float3 n) { return std::abs(CosTheta(w,n)); }
-//inline float Sin2Theta  (float3 w, float3 n) { return std::max(0.0f, 1.0f - Cos2Theta(w,n)); }
-//
-//inline float SinTheta    (float3 w, float3 n) { return std::sqrt(Sin2Theta(w,n)); }
-//inline float TanTheta    (float3 w, float3 n) { return SinTheta(w,n) / CosTheta(w,n); }
-//inline float Tan2Theta   (float3 w, float3 n) { return Sin2Theta(w,n) / Cos2Theta(w,n); }
-//
-//static inline float CosPhi(float3 w, float3 n) 
-//{
-//  float sinTheta = SinTheta(w,n);
-//  return (sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1.0f, 1.0f);
-//}
-//
-//static inline float SinPhi(float3 w, float3 n) 
-//{
-//  float sinTheta = SinTheta(w,n);
-//  return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
-//}
-//
-//static inline float Cos2Phi(float3 w, float3 n) { return CosPhi(w,n) * CosPhi(w,n); }
-//static inline float Sin2Phi(float3 w, float3 n) { return SinPhi(w,n) * SinPhi(w,n); }
-//
-//static inline float PBRT_GGX_D(const float3 wh, const float3 n, float roughness) 
-//{
-//  float tan2Theta = Tan2Theta(wh,n);
-//  if (std::isinf(tan2Theta)) 
-//    return 0.0f;
-//  const float cos4Theta = Cos2Theta(wh,n) * Cos2Theta(wh,n);
-//  const float e         = (Cos2Phi(wh,n) / (roughness * roughness) + Sin2Phi(wh,n) / (roughness * roughness)) * tan2Theta;
-//  return 1.0f / (M_PI * roughness * roughness * cos4Theta * (1.0f + e) * (1.0f + e));
-//}
-
-static inline float3 pbrtFresnelBlendBRDF(float3 Rd, float3 Rs, float3 l, float3 v, float3 n, float roughness, float a_ggxVal) 
-{
-  const float  cosThetaL = std::abs(dot(l,n)); 
-  const float  cosThetaV = std::abs(dot(v,n));
-  const float  diffMult  = (28.f/(23.f *(float)(M_PI)))*(1 - pow5(1 - .5f*cosThetaV))*(1 - pow5(1 - .5f * cosThetaL)); 
-
-  // const float3 wh = l + v;
-  // if (wh.x == 0 && wh.y == 0 && wh.z == 0) 
-  //   return float3(0,0,0);
-  // //const float3 schlickFresnel = Rs + pow5(1 - dot(v, wh)) * (float3(1.0f) - Rs);
-  // //(D * G / std::max(4.0f * dotNV * dotNL, 1e-6f));
-  // const float3 specular = PBRT_GGX_D(wh,n,roughness) /(4.0f * abs(dot(v, wh)) * std::max(cosThetaV, cosThetaL))*float3(1,1,1); // * schlickFresnel;
-  return Rd*diffMult; // + specular;
-}
-
-static inline float pbrtFresnelDiffuseMult(float3 l, float3 v, float3 n) 
-{
-  const float  cosThetaL = std::abs(dot(l,n)); 
-  const float  cosThetaV = std::abs(dot(v,n));
-  const float  diffMult  = (28.f/(23.f *(float)(M_PI)))*(1 - pow5(1 - .5f*cosThetaV))*(1 - pow5(1 - .5f * cosThetaL)); 
-  return diffMult;
-}
-
 static inline float hydraFresnelDiel(float VdotH, float ior, float roughness) 
 {
   return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
