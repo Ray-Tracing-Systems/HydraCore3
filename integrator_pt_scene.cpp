@@ -212,7 +212,7 @@ int Integrator::LoadScene(const char* scehePath)
   if(endPos == std::string::npos)
     endPos = scenePathStr.find_last_of("/");
   #else
-  size_t endPos = scenePathStr.find_last_of("/");
+  size_t endPos = scenePathStr.find_last_of('/');
   #endif
 
   std::string sceneFolder = scenePathStr.substr(0, endPos);
@@ -367,17 +367,20 @@ int Integrator::LoadScene(const char* scehePath)
 
     if(lightInst.lightNode.attribute(L"type").as_string() == std::wstring(L"sky"))
     {
-      m_envColor = to_float4(color*power, 1.0f); // set pdf to 1.0f
+      m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
     }
-    else if(shape != L"rect")
+    else if(shape == L"rect")
     {
-      std::cout << "WARNING: not supported shape of the light object!" << std::endl;
-      continue;
+      m_light.pos       = lightInst.matrix*float4(0,0,0,1);
+      m_light.size      = float2(sizeX, sizeZ);
+      m_light.intensity = to_float4(color*power,0);
     }
-    
-    m_light.pos       = lightInst.matrix*float4(0,0,0,1);
-    m_light.size      = float2(sizeX, sizeZ);
-    m_light.intensity = to_float4(color*power,0);
+
+    PointLightSource light{};
+    light.pos       = lightInst.matrix * float4(0,0,0,1);
+    light.intensity = to_float4(color * power,0);
+
+    m_pointLights.push_back(light);
   }
 
   //// (2) load meshes

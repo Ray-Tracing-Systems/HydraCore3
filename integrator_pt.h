@@ -48,11 +48,13 @@ public:
   void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) );
   void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) );
   void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) );
+  void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) );
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
+  virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
   virtual void GetExecutionTime(const char* a_funcName, float a_out[4]); // will be overriden in generated class
@@ -78,11 +80,19 @@ public:
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_shadeColor,
                          float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
-  
+
+  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_shadeColor,
+                        float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, RandomGen* a_gen,
+                        uint* rayFlags);
+
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, 
                                 const uint* rayFlags, 
                                 RandomGen* a_gen, float4* out_shadeColor);
+
+  void kernel_EvalPointLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
+                                   const float4* in_hitPart1, const float4* in_hitPart2,
+                                   const uint* rayFlags, RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                              float4* accumColor);
@@ -97,6 +107,7 @@ public:
   static constexpr uint INTEGRATOR_STUPID_PT = 0;
   static constexpr uint INTEGRATOR_SHADOW_PT = 1;
   static constexpr uint INTEGRATOR_MIS_PT    = 2;
+  static constexpr uint INTEGRATOR_RT        = 3;
 
   static constexpr uint RAY_FLAG_IS_DEAD      = 0x80000000;
   static constexpr uint RAY_FLAG_OUT_OF_SCENE = 0x40000000;
@@ -145,6 +156,7 @@ protected:
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
+  BsdfSample MaterialEvalWhitted(int a_materialId, float3 v, float3 n, float2 tc);
   BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc);
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
@@ -177,11 +189,13 @@ protected:
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
   RectLightSource m_light;
+  std::vector<PointLightSource> m_pointLights;
   float4          m_envColor = float4(0,0,0,1);
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
 
   float naivePtTime  = 0.0f;
-  float shadowPtTime = 0.0f; 
+  float shadowPtTime = 0.0f;
+  float raytraceTime = 0.0f;
 
   //// textures
   //

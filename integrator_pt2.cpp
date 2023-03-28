@@ -30,6 +30,47 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+BsdfSample Integrator::MaterialEvalWhitted(int a_materialId, float3 v, float3 n, float2 tc)
+{
+  const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
+
+  uint  type             = m_materials[a_materialId].brdfType;
+  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
+  const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
+  const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
+  float alpha            = m_materials[a_materialId].alpha;
+  const float fresnelIOR = m_materials[a_materialId].ior;
+
+  // if glossiness in 1 (roughness is 0), use special case mirror brdf
+  if(roughness == 0.0f && type == BRDF_TYPE_GGX)
+    type = BRDF_TYPE_MIRROR;
+
+  const float  lambertVal = INV_PI;
+
+  BsdfSample res;
+  res.color     = lambertVal * color;
+
+  if(type != BRDF_TYPE_LAMBERT)
+  {
+    res.direction = reflect((-1.0f) * v, n);
+    res.flags     = RAY_EVENT_S;
+
+    const float cosThetaOut = dot(res.direction, n);
+    if (cosThetaOut <= 1e-6f)
+      res.color += float3(0.0f, 0.0f, 0.0f);
+    else
+      res.color += specular * (1.0f / std::max(cosThetaOut, 1e-6f));
+  }
+  else
+  {
+    res.flags = RAY_FLAG_IS_DEAD;
+  }
+
+  return res;
+}
+
+
 BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -316,10 +357,22 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
+void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
+{
+  auto start = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for default(shared)
+  for(uint i=0;i<tid;i++)
+    for(int j=0;j<a_passNum;j++)
+      RayTrace(i, out_color);
+  raytraceTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+}
+
 void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
 {
   if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
     a_out[0] = naivePtTime;
   else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
     a_out[0] = shadowPtTime;
+  else if(std::string(a_funcName) == "RayTrace" || std::string(a_funcName) == "RayTraceBlock")
+    a_out[0] = raytraceTime;
 }

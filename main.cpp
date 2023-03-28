@@ -71,7 +71,9 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+//    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    std::cout << "VULKAN IMPL. NOT GENERATED!" << std::endl;
+    exit(1);
   }
   else
     pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
@@ -171,6 +173,32 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
+
+  if(integratorType == "raytracing" || integratorType == "all")
+  {
+    std::cout << "[main]: RayBlock ... " << std::endl;
+    memset(realColor.data(), 0, sizeof(float) * 4 * realColor.size());
+    pImpl->SetIntegratorType(Integrator::INTEGRATOR_RT);
+    pImpl->UpdateMembersPlainData();
+    pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+
+    pImpl->GetExecutionTime("RayTraceBlock", timings);
+    std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+    std::cout << "RayTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+    std::cout << "RayTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+
+    if(saveHDR)
+    {
+      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+    }
+    else
+    {
+      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_misrt.bmp";
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+    }
+  }
+
 
   return 0;
 }

@@ -26,6 +26,12 @@ typedef struct SurfaceHitT
   float2 uv;
 }SurfaceHit;
 
+struct PointLightSource
+{
+  float4 pos;
+  float4 intensity;
+};
+
 struct RectLightSource
 {
   float4 pos;

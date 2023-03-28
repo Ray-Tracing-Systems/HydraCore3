@@ -42,16 +42,16 @@ else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
 endif()
 
-add_executable(hydra main.cpp 
+add_executable(hydra main.cpp
                      integrator_pt1.cpp
                      integrator_pt2.cpp
                      integrator_pt_scene.cpp
                      imageutils.cpp 
                      external/miniz.c
                      ../LiteMath/Image2d.cpp
-                     integrator_pt1_generated.cpp
-                     integrator_pt1_generated_init.cpp 
-                     integrator_pt1_generated_ds.cpp 
+#                     integrator_pt1_generated.cpp
+#                     integrator_pt1_generated_init.cpp
+#                     integrator_pt1_generated_ds.cpp
                      ../vkutils/geom/cmesh.cpp
                      ../vkutils/vk_utils.cpp
                      ../vkutils/vk_copy.cpp
