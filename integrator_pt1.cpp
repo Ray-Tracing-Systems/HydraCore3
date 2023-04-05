@@ -268,11 +268,11 @@ void Integrator::kernel_EvalPointLightSource(uint tid, const float4* rayPosAndNe
     if(!inShadow)
     {
       const BsdfSample matSam = MaterialEvalWhitted(matId, (-1.0f)*ray_dir, hit.norm, hit.uv);
-      *out_shadeColor = to_float4(to_float3(m_pointLights[light_id].intensity) * matSam.color, 0.0f);
+      *out_shadeColor += to_float4(to_float3(m_pointLights[light_id].intensity) * matSam.color / (hitDist * hitDist), 0.0f);
     }
     else
     {
-      *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+      *out_shadeColor += float4(0.0f, 0.0f, 0.0f, 1.0f);
     }
   }
 }
