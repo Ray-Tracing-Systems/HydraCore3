@@ -253,6 +253,7 @@ void Integrator::kernel_EvalPointLightSource(uint tid, const float4* rayPosAndNe
   hit.norm = to_float3(data2);
   hit.uv   = float2(data1.w, data2.w);
 
+  *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
   for(int light_id = 0; light_id < m_pointLights.size(); ++light_id)
   {
