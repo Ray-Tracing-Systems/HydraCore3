@@ -49,9 +49,9 @@ add_executable(hydra main.cpp
                      imageutils.cpp 
                      external/miniz.c
                      ../LiteMath/Image2d.cpp
-#                     integrator_pt1_generated.cpp
-#                     integrator_pt1_generated_init.cpp
-#                     integrator_pt1_generated_ds.cpp
+                     integrator_pt1_generated.cpp
+                     integrator_pt1_generated_init.cpp
+                     integrator_pt1_generated_ds.cpp
                      ../vkutils/geom/cmesh.cpp
                      ../vkutils/vk_utils.cpp
                      ../vkutils/vk_copy.cpp

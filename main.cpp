@@ -71,9 +71,7 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-//    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
-    std::cout << "VULKAN IMPL. NOT GENERATED!" << std::endl;
-    exit(1);
+    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
     pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
