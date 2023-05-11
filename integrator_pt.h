@@ -26,7 +26,7 @@ public:
     m_light.norm = float4(0,-1,0,0);
   }
 
-  ~Integrator() { m_pAccelStruct = nullptr; }
+  virtual ~Integrator() { m_pAccelStruct = nullptr; }
 
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
@@ -42,7 +42,9 @@ public:
   }
 
   void InitRandomGens(int a_maxThreads);
-  virtual int LoadScene(const char* bvhPath);
+
+  void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
+  virtual bool LoadScene(const char* bvhPath);
 
   void PackXY         (uint tidX, uint tidY);
   void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) );
