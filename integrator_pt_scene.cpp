@@ -4,7 +4,7 @@
 #include "cmesh.h"
 using cmesh::SimpleMesh;
 
-#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
+//#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
 #include "hydraxml.h"
 
 #include <string>
