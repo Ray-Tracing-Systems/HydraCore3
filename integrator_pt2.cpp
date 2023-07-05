@@ -142,20 +142,20 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       {
         pdfSelect *= 1.0f - alpha;
         
-        // (2) now select between specular and diffise via rands.w
-        //
-        float fDielectric = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);
-        //float fDielectric = 1.0f - pbrtFresnelDiffuseMult(ggxDir, v, n);
-
-        if(type == BRDF_TYPE_LAMBERT)
-          fDielectric = 0.0f;
+        const float f_i     = FrDielectricPBRT(dot(v,n), fresnelIOR, 1.0f); 
+        const float m_specular_sampling_weight = m_materials[a_materialId].data[MI_SSW];
         
-        const float choicePdf = 0.5f; // fDielectric;
-        if(rands.w < choicePdf) // specular
+        float prob_specular = f_i * m_specular_sampling_weight;
+        float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+        prob_specular = prob_specular / (prob_specular + prob_diffuse);
+        prob_diffuse  = 1.f - prob_specular;
+        
+        const float choicePdf = prob_specular;
+        if(rands.w < prob_specular) // specular
         {
           pdfSelect *= choicePdf;
           res.direction = ggxDir;
-          res.color     = ggxVal*coat*fDielectric*(1.0f - alpha);
+          res.color     = ggxVal*coat; //*(1.0f - alpha);
           res.pdf       = ggxPdf;
           res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
         } 
@@ -163,11 +163,49 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         {
           pdfSelect *= (1.0f-choicePdf); // lambert
           res.direction = lambertDir;
-          res.color     = lambertVal*color*(1.0f - fDielectric)*(1.0f - alpha);
+          res.color     = lambertVal*color; //*(1.0f - alpha);
           //res.color     = lambertVal*color*pbrtFresnelDiffuseMult(ggxDir, v, n)*(1.0f - alpha);
           res.pdf       = lambertPdf;
           res.flags     = RAY_FLAG_HAS_NON_SPEC;
+          
+          const float m_inv_eta_2 = 1.f / (fresnelIOR * fresnelIOR);
+          const float m_fdr_int   = m_materials[a_materialId].data[MI_FDR_INT];
+          const float f_o = FrDielectricPBRT(dot(lambertDir,n), fresnelIOR, 1.0f); 
+          res.color /= 1.f - m_fdr_int;
+          res.color *= m_inv_eta_2 * (1.f - f_i) * (1.f - f_o) / prob_diffuse;
         }
+
+        //Float f_o = std::get<0>(fresnel(Frame3f::cos_theta(bs.wo), Float(m_eta)));
+        //UnpolarizedSpectrum value = m_diffuse_reflectance->eval(si, sample_diffuse);
+        //value /= 1.f - (m_nonlinear ? (value * m_fdr_int) : m_fdr_int);
+        //value *= m_inv_eta_2 * (1.f - f_i) * (1.f - f_o) / prob_diffuse;
+        
+        //// (2) now select between specular and diffise via rands.w
+        ////
+        //float fDielectric = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);
+        ////float fDielectric = 1.0f - pbrtFresnelDiffuseMult(ggxDir, v, n);
+        //
+        //if(type == BRDF_TYPE_LAMBERT)
+        //  fDielectric = 0.0f;
+        //
+        //const float choicePdf = 0.5f; // fDielectric;
+        //if(rands.w < choicePdf) // specular
+        //{
+        //  pdfSelect *= choicePdf;
+        //  res.direction = ggxDir;
+        //  res.color     = ggxVal*coat*fDielectric*(1.0f - alpha);
+        //  res.pdf       = ggxPdf;
+        //  res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+        //} 
+        //else
+        //{
+        //  pdfSelect *= (1.0f-choicePdf); // lambert
+        //  res.direction = lambertDir;
+        //  res.color     = lambertVal*color*(1.0f - fDielectric)*(1.0f - alpha);
+        //  //res.color     = lambertVal*color*pbrtFresnelDiffuseMult(ggxDir, v, n)*(1.0f - alpha);
+        //  res.pdf       = lambertPdf;
+        //  res.flags     = RAY_FLAG_HAS_NON_SPEC;
+        //}
       }
       
       res.pdf *= pdfSelect;

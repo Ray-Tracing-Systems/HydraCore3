@@ -46,6 +46,7 @@ add_executable(hydra main.cpp
                      integrator_pt1.cpp
                      integrator_pt2.cpp
                      integrator_pt_scene.cpp
+                     mi_materials.cpp 
                      imageutils.cpp 
                      external/miniz.c
                      ../LiteMath/Image2d.cpp

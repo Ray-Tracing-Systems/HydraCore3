@@ -20,10 +20,12 @@ struct BsdfEval
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 enum BRDF_TYPES { BRDF_TYPE_LAMBERT         = 1, 
-                  BRDF_TYPE_GGX             = 2, 
-                  BRDF_TYPE_GLTF            = 5,
-                  BRDF_TYPE_GLASS           = 6,
-                  BRDF_TYPE_MIRROR          = 7,
+                  BRDF_TYPE_GGX             = 2,
+
+                  BRDF_TYPE_MI_SMOOTH_PLASTIC = 4, 
+                  BRDF_TYPE_GLTF              = 5,
+                  BRDF_TYPE_GLASS             = 6,
+                  BRDF_TYPE_MIRROR            = 7,
                   BRDF_TYPE_LIGHT_SOURCE = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -35,6 +37,15 @@ enum MATERIAL_EVENT {
   RAY_EVENT_TOUT      = 32, ///< Indicates Transparensy Outside of water or glass or e.t.c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
   RAY_EVENT_TNINGLASS = 64,
 };
+
+static constexpr uint MI_ETA       = 0; // ScalarFloat m_eta;
+static constexpr uint MI_INV_ETA_2 = 1; // ScalarFloat m_inv_eta_2;
+static constexpr uint MI_FDR_INT   = 2; // ScalarFloat m_fdr_int;
+static constexpr uint MI_FDR_EXT   = 3; // ScalarFloat m_fdr_ext;
+static constexpr uint MI_SSW       = 4; // Float m_specular_sampling_weight;
+
+static constexpr uint CUSTOM_DATA_SIZE = 8;
+
 
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
 // The BRDFs **share** the parameters for roughness and base color.
@@ -58,7 +69,10 @@ struct GLTFMaterial
   float dummy1;
   float dummy2;
   float dummy3;
+
+  float data[CUSTOM_DATA_SIZE];
 };
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
