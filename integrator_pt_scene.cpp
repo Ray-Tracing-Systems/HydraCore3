@@ -4,6 +4,8 @@
 #include "cmesh.h"
 using cmesh::SimpleMesh;
 
+#include "mi_materials.h"
+
 //#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
 #include "hydraxml.h"
 
@@ -317,6 +319,8 @@ bool Integrator::LoadScene(const char* scehePath)
         mat.alpha     = length(reflColor)/( length(reflColor) + length3f(color) );
         mat.coatColor = float4(0,0,0,0);                                            // disable coating for such blend type
       }
+
+      SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
     }
     else if(length(reflColor) > 1e-5f)
     {

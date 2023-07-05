@@ -10,13 +10,34 @@
             "request": "launch",
             "program": "${workspaceFolder}/cmake-build-release/hydra",
             "args"   : ["--cpu",
-                        //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        //"-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite.exr",
-                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/instanced_objects.xml",
-                        "-integrator", "mispt", 
-                        "-spp", "16", "-spp-naive-mul", "4"],
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
+                        "-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y05_sphere_hydra3_plastic.exr",
+                        //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
+                        "-integrator", "naivept", 
+                        "-spp", "1024", "-spp-naive-mul", "1"],
             "stopAtEntry": false,
             "cwd"    : "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+
+        {
+            "name": "(debug) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cmake-build-debug/hydra",
+            "args"   : ["--сpu", "-integrator", "naivept",
+                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -53,27 +74,7 @@
                 }
             ]
         },
-        
-        {
-            "name": "(debug) Launch",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-debug/hydra",
-            "args"   : ["--gpu", "-integrator", "all",
-                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/instanced_objects.xml"],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
+    
 
         {
             "name": "test_103",
