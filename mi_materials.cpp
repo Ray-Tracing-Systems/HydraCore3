@@ -54,10 +54,7 @@ void SetMiPlastic(GLTFMaterial* material, float int_ior, float ext_ior, float3 d
   material->coatColor = to_float4(specular_reflectance,0);
   
   const float m_eta = int_ior / ext_ior;
-  material->ior                = m_eta;
-  material->data[MI_ETA]       = m_eta;
-  material->data[MI_INV_ETA_2] = 1.f / (m_eta * m_eta);
-  
+  material->ior              = m_eta;  
   material->data[MI_FDR_INT] = mi::fresnel_diffuse_reflectance(1.f / m_eta);
   material->data[MI_FDR_EXT] = mi::fresnel_diffuse_reflectance(m_eta);
  

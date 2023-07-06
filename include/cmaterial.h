@@ -38,11 +38,9 @@ enum MATERIAL_EVENT {
   RAY_EVENT_TNINGLASS = 64,
 };
 
-static constexpr uint MI_ETA       = 0; // ScalarFloat m_eta;
-static constexpr uint MI_INV_ETA_2 = 1; // ScalarFloat m_inv_eta_2;
-static constexpr uint MI_FDR_INT   = 2; // ScalarFloat m_fdr_int;
-static constexpr uint MI_FDR_EXT   = 3; // ScalarFloat m_fdr_ext;
-static constexpr uint MI_SSW       = 4; // Float m_specular_sampling_weight;
+static constexpr uint MI_FDR_INT   = 0; // ScalarFloat m_fdr_int;
+static constexpr uint MI_FDR_EXT   = 1; // ScalarFloat m_fdr_ext;
+static constexpr uint MI_SSW       = 2; // Float m_specular_sampling_weight;
 
 static constexpr uint CUSTOM_DATA_SIZE = 8;
 
@@ -57,12 +55,12 @@ struct GLTFMaterial
   uint   texId[4];    ///< texture id
 
   float4 baseColor;   ///< color for both lambert and emissive lights; baseColor.w store emission
-  float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
   float4 coatColor;   ///< in our implementation we allow different color for coating (fresnel) and diffuse
+  float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
 
   uint  brdfType;     ///<
   uint  lightId;      ///< identifier of light if this material is light  
-  float alpha;        ///< blend factor between lambert and reflection : alpha*baseColor + (1.0f-alpha)*baseColor
+  float alpha;        ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
   float glosiness;    ///< material glosiness or intensity for lights, take color from baseColor
 
   float ior;
@@ -216,7 +214,6 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
 //  return 0.5f*(rParl2 + rPerp2);
 //}
 
-
 static inline float fresnelSlick(float VdotH)
 {
   const float tmp = 1.0f - std::abs(VdotH);
@@ -231,17 +228,5 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
   return f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
-
-static inline float hydraFresnelDiel(float VdotH, float ior, float roughness) 
-{
-  return FrDielectricPBRT(std::abs(VdotH), 1.0f, ior);  
-}
-
-static inline float hydraFresnelDiel2(float3 l, float3 v, float3 n, float ior, float roughness) 
-{
-  const float cosThetaL = std::abs(dot(l,n)); 
-  const float cosThetaV = std::abs(dot(v,n));
-  return std::sqrt(FrDielectricPBRT(cosThetaL, 1.0f, ior)*FrDielectricPBRT(cosThetaV, 1.0f, ior));  
-}
 
 #endif

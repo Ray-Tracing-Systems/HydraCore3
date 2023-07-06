@@ -149,7 +149,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         
         // (2) now select between specular and diffise via rands.w
         //
-        const float f_i     = hydraFresnelDiel(dot(v,n), fresnelIOR, 1.0f); 
+        const float f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR); 
         const float m_specular_sampling_weight = m_materials[a_materialId].data[MI_SSW];
         
         float prob_specular = f_i * m_specular_sampling_weight;
@@ -176,40 +176,11 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
           
           if(type != BRDF_TYPE_LAMBERT) // Plastic
           {
-            const float m_inv_eta_2 = 1.f / (fresnelIOR * fresnelIOR);
             const float m_fdr_int   = m_materials[a_materialId].data[MI_FDR_INT];
-            const float f_o = hydraFresnelDiel(dot(lambertDir,n), fresnelIOR, 1.0f); 
-            res.color /= 1.f - m_fdr_int;
-            res.color *= m_inv_eta_2 * (1.f - f_i) * (1.f - f_o);
+            const float f_o = FrDielectricPBRT(std::abs(dot(lambertDir,n)), 1.0f, fresnelIOR); 
+            res.color *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
           }
         }
-
-        // (2) now select between specular and diffise via rands.w
-        //
-        //float fDielectric = hydraFresnelDiel(dot(v,n), fresnelIOR, roughness);    
-        //if(type == BRDF_TYPE_LAMBERT)
-        //  fDielectric = 0.0f;
-        //
-        //const float choicePdf = 0.5f; // fDielectric;
-        //if(rands.w < choicePdf) // specular
-        //{
-        //  pdfSelect *= choicePdf;
-        //  res.direction = ggxDir;
-        //  res.color     = ggxVal*coat*fDielectric*(1.0f - alpha);
-        //  res.pdf       = ggxPdf;
-        //  res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
-        //} 
-        //else
-        //{
-        //  pdfSelect *= (1.0f-choicePdf); // lambert
-        //  res.direction = lambertDir;
-        //  float f_o = hydraFresnelDiel(dot(lambertDir,n), fresnelIOR, 1.0f); 
-        //  if(type == BRDF_TYPE_LAMBERT)
-        //    f_o = 0.0f;
-        //  res.color     = lambertVal*color*(1.0f - fDielectric)*(1.0f - alpha)*(1.0f-f_o);
-        //  res.pdf       = lambertPdf;
-        //  res.flags     = RAY_FLAG_HAS_NON_SPEC;
-        //}
       }
       
       res.pdf *= pdfSelect;
@@ -218,9 +189,6 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     case BRDF_TYPE_MIRROR:
     {
       res.direction = reflect((-1.0f)*v, n);
-      //if (dot(res.direction, n) > 0.0f)
-      //  res.direction = (-1.0f)*v;
-
       // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
       //
       const float cosThetaOut = dot(res.direction, n);
@@ -284,31 +252,21 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
         VdotH  = dot(v,n);
       }
 
-      float lambertVal = lambertEvalBSDF(l, v, n);
+      float lambertVal       = lambertEvalBSDF(l, v, n);
       const float lambertPdf = lambertEvalPDF (l, v, n); 
-      
-      const float f_i = FrDielectricPBRT(dot(v,n), fresnelIOR, 1.0f);
-      const float f_o = FrDielectricPBRT(dot(l,n), fresnelIOR, 1.0f);  
 
-      const float m_specular_sampling_weight = m_materials[a_materialId].data[MI_SSW];
-      float prob_specular = f_i * m_specular_sampling_weight;
-      float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-      prob_specular = prob_specular / (prob_specular + prob_diffuse);
-      prob_diffuse  = 1.f - prob_specular;
-      const float choicePdf = prob_specular;
-      
       if(type != BRDF_TYPE_LAMBERT) // Plastic
       {
-        const float m_inv_eta_2 = 1.f / (fresnelIOR * fresnelIOR);
-        const float m_fdr_int   = m_materials[a_materialId].data[MI_FDR_INT];
-        lambertVal /= 1.f - m_fdr_int;
-        lambertVal *= m_inv_eta_2 * (1.f - f_i) * (1.f - f_o);
+        const float f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
+        const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
+        const float m_fdr_int = m_materials[a_materialId].data[MI_FDR_INT];
+        lambertVal *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
       }
 
       const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
       const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
-      const float  dielectricPdf = (1.0f-choicePdf)*lambertPdf + choicePdf*ggxPdf;
+      const float  dielectricPdf = lambertPdf + ggxPdf;
       const float3 dielectricVal = lambertVal*color + ggxVal*coat;
 
       res.color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
