@@ -88,11 +88,6 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
 
-  if(type == BRDF_TYPE_GLTF)
-  {
-    int a = 2; //
-  }
-
   // if glosiness in 1 (roughness is 0), use special case mirror brdf
   if(roughness == 0.0f && type == BRDF_TYPE_GGX)
     type = BRDF_TYPE_MIRROR;
@@ -276,7 +271,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
       const float  dielectricPdf = lambertPdf*prob_diffuse + ggxPdf*prob_specular;
-      const float3 dielectricVal = lambertVal*color + ggxVal*coat;
+      const float3 dielectricVal = lambertVal*color + ggxVal*coat*f_i;
 
       res.color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
       res.pdf   = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf

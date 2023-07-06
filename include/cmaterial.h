@@ -22,10 +22,9 @@ struct BsdfEval
 enum BRDF_TYPES { BRDF_TYPE_LAMBERT         = 1, 
                   BRDF_TYPE_GGX             = 2,
 
-                  BRDF_TYPE_MI_SMOOTH_PLASTIC = 4, 
-                  BRDF_TYPE_GLTF              = 5,
-                  BRDF_TYPE_GLASS             = 6,
-                  BRDF_TYPE_MIRROR            = 7,
+                  BRDF_TYPE_GLTF            = 5,
+                  BRDF_TYPE_GLASS           = 6,
+                  BRDF_TYPE_MIRROR          = 7,
                   BRDF_TYPE_LIGHT_SOURCE = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
