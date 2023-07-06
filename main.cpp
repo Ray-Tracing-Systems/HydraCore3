@@ -171,7 +171,8 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
-
+  
+  /*
   if(integratorType == "raytracing" || integratorType == "all")
   {
     std::cout << "[main]: RayBlock ... " << std::endl;
@@ -195,7 +196,7 @@ int main(int argc, const char** argv)
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_misrt.bmp";
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
-  }
+  }*/
 
 
   return 0;
