@@ -149,9 +149,17 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
         
         float prob_specular = f_i * m_specular_sampling_weight;
         float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-        prob_specular = prob_specular / (prob_specular + prob_diffuse);
-        prob_diffuse  = 1.f - prob_specular;
-        
+        if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
+        {
+          prob_specular = prob_specular / (prob_specular + prob_diffuse);
+          prob_diffuse  = 1.f - prob_specular;
+        }
+        else
+        {
+          prob_diffuse  = 1.0f;
+          prob_specular = 0.0f;
+        }
+
         float choicePdf = (type == BRDF_TYPE_LAMBERT) ? 0.0f : prob_specular;
         if(rands.w < prob_specular) // specular
         {
@@ -254,8 +262,12 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
 
       float prob_diffuse  = 1.0f;
       float prob_specular = 0.0f;
-
-      if(type != BRDF_TYPE_LAMBERT) // Plastic
+      
+      if(type == BRDF_TYPE_GGX)
+      {
+        
+      }
+      else if(type == BRDF_TYPE_GLTF) // Plastic
       {
         const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
         const float m_fdr_int = m_materials[a_materialId].data[MI_FDR_INT];
@@ -264,7 +276,13 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
         const float m_specular_sampling_weight = m_materials[a_materialId].data[MI_SSW];
         prob_specular = f_i * m_specular_sampling_weight;
         prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-        prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
+        if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
+          prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
+        else
+        {
+          prob_diffuse  = 1.0f;
+          prob_specular = 0.0f;
+        }
       }
 
       const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
@@ -375,7 +393,7 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
-#pragma omp parallel for default(shared)
+  #pragma omp parallel for default(shared)
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
       RayTrace(i, out_color);
