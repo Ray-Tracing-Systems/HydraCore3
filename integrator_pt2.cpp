@@ -262,6 +262,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
 
       float prob_diffuse  = 1.0f;
       float prob_specular = 0.0f;
+      float coeffLambertPdf = 1.0f;
       
       if(type == BRDF_TYPE_GGX)
       {
@@ -271,7 +272,9 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       {
         const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
         const float m_fdr_int = m_materials[a_materialId].data[MI_FDR_INT];
-        lambertVal *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+        const float coeff = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+        lambertVal *= coeff;
+        coeffLambertPdf = coeff; 
 
         const float m_specular_sampling_weight = m_materials[a_materialId].data[MI_SSW];
         prob_specular = f_i * m_specular_sampling_weight;
@@ -288,7 +291,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
       const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
-      const float  dielectricPdf = lambertPdf*prob_diffuse + ggxPdf*prob_specular;
+      const float  dielectricPdf = lambertPdf*coeffLambertPdf + 2.0f*ggxPdf*f_i;
       const float3 dielectricVal = lambertVal*color + ggxVal*coat*f_i;
 
       res.color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
