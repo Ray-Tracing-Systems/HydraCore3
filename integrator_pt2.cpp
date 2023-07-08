@@ -35,38 +35,17 @@ BsdfSample Integrator::MaterialEvalWhitted(int a_materialId, float3 v, float3 n,
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-  uint  type             = m_materials[a_materialId].brdfType;
+  uint  type             = m_materials[a_materialId].mtype;
   const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
   const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
   const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
   float alpha            = m_materials[a_materialId].alpha;
   const float fresnelIOR = m_materials[a_materialId].ior;
 
-  // if glossiness in 1 (roughness is 0), use special case mirror brdf
-  if(roughness == 0.0f && type == BRDF_TYPE_GGX)
-    type = BRDF_TYPE_MIRROR;
-
   const float  lambertVal = INV_PI;
 
   BsdfSample res;
-  res.color     = lambertVal * color;
-
-  if(type != BRDF_TYPE_LAMBERT)
-  {
-    res.direction = reflect((-1.0f) * v, n);
-    res.flags     = RAY_EVENT_S;
-
-    const float cosThetaOut = dot(res.direction, n);
-    if (cosThetaOut <= 1e-6f)
-      res.color += float3(0.0f, 0.0f, 0.0f);
-    else
-      res.color += specular * (1.0f / std::max(cosThetaOut, 1e-6f));
-  }
-  else
-  {
-    res.flags = RAY_FLAG_IS_DEAD;
-  }
-
+  res.color  = lambertVal * color;
   return res;
 }
 
@@ -76,34 +55,33 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-        uint   type      = m_materials[a_materialId].brdfType;
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
-  const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
-  const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
-  float  alpha           = m_materials[a_materialId].alpha;
-  const float fresnelIOR = m_materials[a_materialId].ior;
+        uint   mtype     = m_materials[a_materialId].mtype;
+  const uint   cflags    = m_materials[a_materialId].cflags;
+
+  const float3 color      = to_float3(m_materials[a_materialId].baseColor)*texColor;
+  const float3 specular   = to_float3(m_materials[a_materialId].metalColor);
+  const float3 coat       = to_float3(m_materials[a_materialId].coatColor);
+  const float  roughness  = 1.0f - m_materials[a_materialId].glosiness;
+  float        alpha      = m_materials[a_materialId].alpha;
+  const float  fresnelIOR = m_materials[a_materialId].ior;
 
   // TODO: read color     from texture
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
 
-  // if glosiness in 1 (roughness is 0), use special case mirror brdf
-  if(roughness == 0.0f && type == BRDF_TYPE_GGX)
-    type = BRDF_TYPE_MIRROR;
-
   BsdfSample res;
-  switch(type)
+  switch(mtype)
   {
-    case BRDF_TYPE_GLTF:
-    case BRDF_TYPE_GGX:
-    case BRDF_TYPE_LAMBERT:
-    default:
+    case MAT_TYPE_GLTF:
     {
+      if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal component set
+        alpha = 1.0f;
+
       float3 ggxDir;
       float  ggxPdf; 
       float  ggxVal;
-      if(roughness == 0.0f) // perfect specular reflection in coating layer
+
+      if(roughness == 0.0f) // perfect specular reflection in coating or metal layer
       {
         const float3 pefReflDir = reflect((-1.0f)*v, n);
         const float cosThetaOut = dot(pefReflDir, n);
@@ -124,9 +102,6 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
 
       float VdotH = dot(v,normalize(v + ggxDir));
 
-      if(type == BRDF_TYPE_GGX) // assume GGX-based metal
-        alpha = 1.0f;
-
       // (1) select between metal and dielectric via rands.z
       //
       float pdfSelect = 1.0f;
@@ -134,7 +109,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       {
         pdfSelect *= alpha;
         res.direction = ggxDir;
-        res.color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness);
+        res.color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
         res.pdf       = ggxPdf;
         res.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
       }
@@ -160,7 +135,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
           prob_specular = 0.0f;
         }
 
-        float choicePdf = (type == BRDF_TYPE_LAMBERT) ? 0.0f : prob_specular;
+        float choicePdf = ((cflags & GLTF_COMPONENT_COAT) == 0) ? 0.0f : prob_specular; // if don't have coal layer, never select it
         if(rands.w < prob_specular) // specular
         {
           pdfSelect *= choicePdf;
@@ -177,9 +152,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
           res.pdf       = lambertPdf;
           res.flags     = RAY_FLAG_HAS_NON_SPEC;
           
-          if(type != BRDF_TYPE_LAMBERT) // Plastic
+          if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
           {
-            const float m_fdr_int   = m_materials[a_materialId].data[MI_FDR_INT];
+            const float m_fdr_int = m_materials[a_materialId].data[MI_FDR_INT];
             const float f_o = FrDielectricPBRT(std::abs(dot(lambertDir,n)), 1.0f, fresnelIOR); 
             res.color *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
           }
@@ -189,20 +164,8 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       res.pdf *= pdfSelect;
     }
     break;
-    case BRDF_TYPE_MIRROR:
-    {
-      res.direction = reflect((-1.0f)*v, n);
-      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-      //
-      const float cosThetaOut = dot(res.direction, n);
-      if (cosThetaOut <= 1e-6f)
-        res.color = float3(0.0f, 0.0f, 0.0f);
-      else
-        res.color = specular*(1.0f/std::max(cosThetaOut, 1e-6f));
-      
-      res.pdf       = 1.0f;
-      res.flags     = RAY_EVENT_S;
-    }
+
+    default:
     break;
   }
 
@@ -214,7 +177,9 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
 
-        uint type        = m_materials[a_materialId].brdfType;
+        uint mtype       = m_materials[a_materialId].mtype;
+  const uint cflags      = m_materials[a_materialId].cflags;
+
   const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
   const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
   const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
@@ -225,20 +190,16 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   // TODO: read color     from texture
   // TODO: read roughness from texture
   // TODO: read alpha     from texture
- 
-  // if glosiness in 1 (roughness is 0), use special case mirror brdf
-  if(roughness == 0.0f && type == BRDF_TYPE_GGX) 
-    type = BRDF_TYPE_MIRROR;
 
   BsdfEval res;
-  switch(type)
+  res.color = float3(0,0,0);
+  res.pdf   = 0.0f;
+
+  switch(mtype)
   {
-    case BRDF_TYPE_GLTF:
-    case BRDF_TYPE_GGX:
-    case BRDF_TYPE_LAMBERT:
-    default:
+    case MAT_TYPE_GLTF:
     {
-      if(type == BRDF_TYPE_GGX) // assume GGX-based metal
+      if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
         alpha = 1.0f;
       
       float ggxVal, ggxPdf, VdotH; 
@@ -263,11 +224,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       float prob_specular = 0.0f;
       float coeffLambertPdf = 1.0f;
       
-      if(type == BRDF_TYPE_GGX)
-      {
-        
-      }
-      else if(type == BRDF_TYPE_GLTF) // Plastic
+      if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
       {
         f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
         const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
@@ -298,11 +255,8 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       res.pdf   = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
     }
     break;
-    case BRDF_TYPE_MIRROR:
-    {
-      res.color = float3(0,0,0);
-      res.pdf   = 0.0f;
-    }
+
+    default:
     break;
   }
   return res;

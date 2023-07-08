@@ -8,7 +8,7 @@ import cv2
 from logger import Log, Status
 from colorama import Fore
 
-PATH_TO_TESTS = "/home/frol/PROG/HydraRepos3/HydraAPI-tests"
+PATH_TO_TESTS = "/home/frol/PROG/HydraRepos/HydraAPI-tests"
 TEST_CPU      = False
 
 ############################################################################################################

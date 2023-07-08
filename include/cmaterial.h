@@ -19,18 +19,19 @@ struct BsdfEval
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum BRDF_TYPES { BRDF_TYPE_LAMBERT         = 1, 
-                  BRDF_TYPE_GGX             = 2,
+enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1, 
+                      GLTF_COMPONENT_COAT    = 2,
+                      GLTF_COMPONENT_METAL   = 4 }; // bit fields
 
-                  BRDF_TYPE_GLTF            = 5,
-                  BRDF_TYPE_GLASS           = 6,
-                  BRDF_TYPE_MIRROR          = 7,
-                  BRDF_TYPE_LIGHT_SOURCE = 0xEFFFFFFF };
+enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
+                      MAT_TYPE_GLASS         = 2,
+                      MAT_TYPE_MIRROR        = 3,
+                      MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
-  RAY_EVENT_S         = 1,  ///< Indicates Specular reflection or refraction (check for RAY_EVENT_T)
-  RAY_EVENT_D         = 2,  ///< Indicates Diffuse  reflection or translucent (check for RAY_EVENT_T)
-  RAY_EVENT_G         = 4,  ///< Indicates GLossy   reflection or refraction (check for RAY_EVENT_T)
+  RAY_EVENT_S         = 1,  ///< Indicates Specular reflection or refraction  (additionally check for RAY_EVENT_T)
+  RAY_EVENT_D         = 2,  ///< Indicates Diffuse  reflection or translucent (additionally check for RAY_EVENT_T)
+  RAY_EVENT_G         = 4,  ///< Indicates Glossy   reflection or refraction  (additionally check for RAY_EVENT_T)
   RAY_EVENT_T         = 8,  ///< Indicates Transparensy or reftacrion. 
   RAY_EVENT_V         = 16, ///< Indicates Volume scattering, not used for a while
   RAY_EVENT_TOUT      = 32, ///< Indicates Transparensy Outside of water or glass or e.t.c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
@@ -57,15 +58,15 @@ struct GLTFMaterial
   float4 coatColor;   ///< in our implementation we allow different color for coating (fresnel) and diffuse
   float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
 
-  uint  brdfType;     ///<
-  uint  lightId;      ///< identifier of light if this material is light  
+  uint  mtype;        ///< one of 'MATERIAL_TYPES'
+  uint  cflags;       ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
+  uint  lightId;      ///< identifier of light if this material is light 
+  uint  dummy1;
+   
   float alpha;        ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
   float glosiness;    ///< material glosiness or intensity for lights, take color from baseColor
-
   float ior;
-  float dummy1;
   float dummy2;
-  float dummy3;
 
   float data[CUSTOM_DATA_SIZE];
 };

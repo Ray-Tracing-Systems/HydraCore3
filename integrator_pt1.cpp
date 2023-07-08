@@ -306,7 +306,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
   // process light hit case
   //
-  if(m_materials[matId].brdfType == BRDF_TYPE_LIGHT_SOURCE)
+  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
     const float lightIntensity = m_materials[matId].baseColor.w;
     float misWeight = 1.0f;
@@ -401,7 +401,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
 
   // process light hit case
   //
-  if(m_materials[matId].brdfType == BRDF_TYPE_LIGHT_SOURCE)
+  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
     const float lightIntensity = m_materials[matId].baseColor.w;
 

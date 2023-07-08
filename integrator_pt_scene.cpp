@@ -251,7 +251,7 @@ bool Integrator::LoadScene(const char* scehePath)
   {
     std::wstring name = materialNode.attribute(L"name").as_string();
     GLTFMaterial mat = {};
-    mat.brdfType     = BRDF_TYPE_LAMBERT;
+    mat.mtype        = MAT_TYPE_GLTF;
     mat.alpha        = 0.0f;
     mat.coatColor    = float4(1,1,1,0); 
     mat.metalColor   = float4(0,0,0,0);  
@@ -303,44 +303,51 @@ bool Integrator::LoadScene(const char* scehePath)
     if(!hasFresnel)
       fresnelIOR = 0.0f;
     
-    if(length(reflColor) > 1e-5f && (length(to_float3(color)) > 1e-5f || hasFresnel))
+    if(length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f || hasFresnel)
     {
-      mat.brdfType   = BRDF_TYPE_GLTF;
+      mat.mtype      = MAT_TYPE_GLTF;
       mat.baseColor  = color;
       mat.coatColor  = to_float4(reflColor, 0.0f);
-      mat.metalColor = to_float4(reflColor, 0.0f);
+      mat.lightId    = uint(-1);
+
       if(hasFresnel)
       {
-        mat.alpha     = 0.0f;
-        mat.coatColor = float4(1,1,1,0);
+        mat.alpha      = 0.0f;
+        mat.coatColor  = to_float4(reflColor, 0.0f);
+        mat.metalColor = float4(0,0,0,0); 
+        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
       }
       else
       {
-        mat.alpha     = length(reflColor)/( length(reflColor) + length3f(color) );
-        mat.coatColor = float4(0,0,0,0);                                            // disable coating for such blend type
+        mat.alpha      = length(reflColor)/( length(reflColor) + length3f(color) );
+        mat.coatColor  = float4(0,0,0,0); 
+        mat.metalColor = to_float4(reflColor, 0.0f);                                           // disable coating for such blend type
+        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL;
       }
 
       SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
     }
     else if(length(reflColor) > 1e-5f)
     {
-      mat.brdfType   = BRDF_TYPE_GGX;
+      mat.mtype      = MAT_TYPE_GLTF;
+      mat.cflags     = GLTF_COMPONENT_METAL;
       mat.metalColor = to_float4(reflColor, 0.0f);
+      mat.coatColor  = float4(0,0,0,0); 
       mat.alpha      = 1.0f;
     }
     else if(length(to_float3(color)) > 1e-5f)
     {
-      mat.brdfType   = BRDF_TYPE_LAMBERT;
+      mat.mtype      = MAT_TYPE_GLTF;
+      mat.cflags     = GLTF_COMPONENT_LAMBERT;
       mat.baseColor  = color;
       mat.alpha      = 0.0f;
     }
+    
+    if(color[3] > 1e-5f)
+      mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
 
     mat.glosiness  = glosiness;
     mat.ior        = fresnelIOR;
-    if(color[3] > 1e-5f)
-    {
-      mat.brdfType = BRDF_TYPE_LIGHT_SOURCE;
-    }
     m_materials.push_back(mat);
   }
 
