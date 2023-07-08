@@ -258,8 +258,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       float lambertVal       = lambertEvalBSDF(l, v, n);
       const float lambertPdf = lambertEvalPDF (l, v, n); 
 
-      const float f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
-
+      float f_i = 1.0f;
       float prob_diffuse  = 1.0f;
       float prob_specular = 0.0f;
       float coeffLambertPdf = 1.0f;
@@ -270,6 +269,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       }
       else if(type == BRDF_TYPE_GLTF) // Plastic
       {
+        f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
         const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
         const float m_fdr_int = m_materials[a_materialId].data[MI_FDR_INT];
         const float coeff = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
@@ -367,8 +367,10 @@ void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 }
 
 void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
-{
+{ 
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(uint i=0;i<tid;i++)
     CastSingleRay(i, out_color);
 }
@@ -376,7 +378,9 @@ void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
 void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
       NaivePathTrace(i, out_color);
@@ -386,7 +390,9 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
 void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
       PathTrace(i, out_color);
@@ -396,7 +402,9 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(uint i=0;i<tid;i++)
     for(int j=0;j<a_passNum;j++)
       RayTrace(i, out_color);

@@ -33,11 +33,12 @@ link_directories("../RayTracing/lib")
 
 add_compile_definitions(USE_VOLK)
 
-#uncomment this to detect broken memory problems via gcc sanitizers
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
-
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")
+  message(STATUS "Debug is ON!")
+  add_definitions(-D_DEBUG)
+  #uncomment this to detect broken memory problems via gcc sanitizers
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
 endif()

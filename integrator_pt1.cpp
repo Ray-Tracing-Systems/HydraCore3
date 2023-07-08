@@ -468,6 +468,11 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   float4 color = *a_accumColor;
   //if(x == 511 && (y == 1024-340-1))
   //  color = float4(0,0,1,0);
+  //if(!std::isfinite(color.x) || !std::isfinite(color.y) || !std::isfinite(color.z))
+  //{
+  //  int a = 2;
+  //  std::cout << "(x,y) = " << x << ", " << y << std::endl; 
+  //}
  
   out_color[y*m_winWidth+x] += color;
   m_randomGens[tid] = *gen;
