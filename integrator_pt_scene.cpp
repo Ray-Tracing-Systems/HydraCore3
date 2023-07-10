@@ -340,6 +340,8 @@ bool Integrator::LoadScene(const char* scehePath)
       mat.mtype      = MAT_TYPE_GLTF;
       mat.cflags     = GLTF_COMPONENT_LAMBERT;
       mat.baseColor  = color;
+      mat.coatColor  = float4(0,0,0,0); 
+      mat.metalColor = float4(0,0,0,0);    
       mat.alpha      = 0.0f;
     }
     

@@ -270,13 +270,16 @@ float4 Integrator::GetEnvironmentColorAndPdf(float3 a_dir)
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 {
   const int remapListId  = m_remapInst[a_instId];
+  if(remapListId == -1)
+    return a_mId;
+    
   const int r_offset     = m_allRemapListsOffsets[remapListId];
   const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
   const int2 offsAndSize = int2(r_offset, r_size);
   
   uint res = a_mId;
   
-  // for (int i = 0; i < offsAndSize.y; i++) // #TODO: change to binery search
+  // for (int i = 0; i < offsAndSize.y; i++) // linear search version
   // {
   //   int idRemapFrom = m_allRemapLists[offsAndSize.x + i * 2 + 0];
   //   int idRemapTo   = m_allRemapLists[offsAndSize.x + i * 2 + 1];
@@ -287,7 +290,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   // }
 
   int low  = 0;
-  int high = offsAndSize.y - 1;
+  int high = offsAndSize.y - 1;              // binary search version
   
   while (low <= high)
   {
