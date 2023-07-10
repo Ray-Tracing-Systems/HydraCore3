@@ -120,9 +120,10 @@ class REQ_H3(REQ):
   
 reqs = []
 
-reqs.append( REQ_H2("mat: lambert", ["test_101"], naivemul = 16) )
-reqs.append( REQ_H2("mat: mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
-reqs.append( REQ_H2("mat: lambert_texture", ["test_103"]) )
+reqs.append( REQ_H2("mat_lambert", ["test_101"], naivemul = 16) )
+reqs.append( REQ_H2("mat_mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
+reqs.append( REQ_H2("mat_lambert_texture", ["test_103"]) )
+reqs.append( REQ_H2("mat_emission", ["test_123"], inregrators = ["naivept","mispt"]) )
 
 reqs.append( REQ_H3("SmoothPlastic", ["smooth_plastic/SmoothPlastic_sphere_hydra.xml",  "smooth_plastic/SmoothPlastic_cornell_hydra.xml"],
                                      ["SmoothPlastic/SmoothPlastic_sphere_mitsuba.png", "SmoothPlastic/SmoothPlastic_cornell_mitsuba.png"], naivemul = 16))

@@ -255,18 +255,29 @@ bool Integrator::LoadScene(const char* scehePath)
     mat.alpha        = 0.0f;
     mat.coatColor    = float4(1,1,1,0); 
     mat.metalColor   = float4(0,0,0,0);  
+    mat.lightId      = uint(-1);
+    
+    auto nodeEmiss = materialNode.child(L"emission");
 
     // read Hydra or GLTF materials
     //
     float4 color(0.0f, 0.0f, 0.0f, 0.0f);
-    if(materialNode.attribute(L"light_id") != nullptr)
+
+    if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
     {
-      auto node = materialNode.child(L"emission").child(L"color");
-      color   = to_float4(hydra_xml::readval3f(node), 0.0f);
-      color.w = 0.333334f*(color.x + color.y + color.z);
+      auto node = nodeEmiss.child(L"color");
+      color   = to_float4(hydra_xml::readval3f(node), 1.0f);
 
       //TODO: process emissive texture
       HydraSampler emissiveSampler = ReadSamplerFromColorNode(materialNode.child(L"emission"));
+      
+      mat.baseColor = color;
+      if(materialNode.attribute(L"light_id") == nullptr)
+        mat.lightId = uint(-1);
+      else
+        mat.lightId = uint(materialNode.attribute(L"light_id").as_int()); // for correct process of "-1"
+      
+      mat.mtype = MAT_TYPE_LIGHT_SOURCE;
     }
 
     auto nodeDiff = materialNode.child(L"diffuse").child(L"color");

@@ -54,7 +54,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 880 && y == 512)
+  if(x == 256 && y == 512-324-1)
   {
     int a = 2;
   }
@@ -313,17 +313,22 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   //
   if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
-    const float lightIntensity = m_materials[matId].baseColor.w;
+    const float3 lightIntensity = to_float3(m_materials[matId].baseColor);
+    const uint lightId          = m_materials[matId].lightId;
+    float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
+
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
     {
       if(bounce > 0)
       {
-        const int lightId   = 0; // #TODO: get light id from material info
-        const float lgtPdf  = LightPdfSelectRev(lightId)*LightEvalPDF(lightId, ray_pos, ray_dir, &hit);
-        misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
-        if (prevPdfW <= 0.0f) // specular bounce
-          misWeight = 1.0f;
+        if(lightId != 0xFFFFFFFF)
+        {
+          const float lgtPdf  = LightPdfSelectRev(lightId)*LightEvalPDF(lightId, ray_pos, ray_dir, &hit);
+          misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
+          if (prevPdfW <= 0.0f) // specular bounce
+            misWeight = 1.0f;
+        }
       }
     }
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
@@ -331,12 +336,11 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     
     float4 currAccumColor       = *accumColor;
     float4 currAccumThroughput = *accumThoroughput;
+  
     
-    const float lightDirectionAtten = dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f;
-    
-    currAccumColor.x += currAccumThroughput.x * lightIntensity * misWeight * lightDirectionAtten;
-    currAccumColor.y += currAccumThroughput.y * lightIntensity * misWeight * lightDirectionAtten;
-    currAccumColor.z += currAccumThroughput.z * lightIntensity * misWeight * lightDirectionAtten;
+    currAccumColor.x += currAccumThroughput.x * lightIntensity.x * misWeight * lightDirectionAtten;
+    currAccumColor.y += currAccumThroughput.y * lightIntensity.y * misWeight * lightDirectionAtten;
+    currAccumColor.z += currAccumThroughput.z * lightIntensity.z * misWeight * lightDirectionAtten;
     if(bounce > 0)
       currAccumColor.w *= prevPdfA;
     

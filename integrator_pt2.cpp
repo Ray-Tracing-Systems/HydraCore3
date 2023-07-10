@@ -70,6 +70,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read alpha     from texture
 
   BsdfSample res;
+  res.color = float3(0,0,0);
+  res.pdf   = 1.0f;
+  
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -272,7 +275,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   const int remapListId  = m_remapInst[a_instId];
   if(remapListId == -1)
     return a_mId;
-    
+
   const int r_offset     = m_allRemapListsOffsets[remapListId];
   const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
   const int2 offsAndSize = int2(r_offset, r_size);
