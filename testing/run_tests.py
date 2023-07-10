@@ -102,20 +102,21 @@ class REQ_H3(REQ):
     self.naivem = naivemul
 
   def test(req, gpu_id=0):
-    image_ref  = cv2.imread(PATH_TO_HYDRA3_SCENS + "/Report/Images/" + req.ref_path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
-    scene_path = PATH_TO_HYDRA3_SCENS + "/" + req.scn_path
-    devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
-    test_name = req.name
-    for dev_type in devices:
-      Log().info("  rendering scene: '{0}', dev_type='{1}', dev_id = '{2}'".format(test_name, dev_type, gpu_id))
-      for inregrator in req.integs:
-        outp = PATH_TO_HYDRA3_SCENS + "/Report/Images/" + test_name  + "/z_" + dev_type + inregrator + ".bmp"
-        args = ["./cmake-build-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
-        args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
-        args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
-        args = args + ["--" + dev_type]
-        #print(args)
-        req.run(test_name, args, image_ref, outp, inregrator)
+    for (scnp, imgp) in zip(req.scn_path, req.ref_path):
+      image_ref  = cv2.imread(PATH_TO_HYDRA3_SCENS + "/Report/Images/" + imgp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      scene_path = PATH_TO_HYDRA3_SCENS + "/" + scnp
+      devices   = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
+      test_name = req.name
+      for dev_type in devices:
+        Log().info("  rendering scene: '{0}', dev_type='{1}', dev_id = '{2}'".format(test_name, dev_type, gpu_id))
+        for inregrator in req.integs:
+          outp = PATH_TO_HYDRA3_SCENS + "/Report/Images/" + test_name  + "/z_" + dev_type + inregrator + ".bmp"
+          args = ["./cmake-build-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
+          args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
+          args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
+          args = args + ["--" + dev_type]
+          #print(args)
+          req.run(test_name, args, image_ref, outp, inregrator)
   
 reqs = []
 
@@ -123,8 +124,8 @@ reqs.append( REQ_H2("mat: lambert", ["test_101"], naivemul = 16) )
 reqs.append( REQ_H2("mat: mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
 reqs.append( REQ_H2("mat: lambert_texture", ["test_103"]) )
 
-reqs.append( REQ_H3("SmoothPlastic", "smooth_plastic/SmoothPlastic_sphere_hydra.xml",  "SmoothPlastic/SmoothPlastic_sphere_mitsuba.png",  naivemul = 16) )
-reqs.append( REQ_H3("SmoothPlastic", "smooth_plastic/SmoothPlastic_cornell_hydra.xml", "SmoothPlastic/SmoothPlastic_cornell_mitsuba.png", naivemul = 16) )
+reqs.append( REQ_H3("SmoothPlastic", ["smooth_plastic/SmoothPlastic_sphere_hydra.xml",  "smooth_plastic/SmoothPlastic_cornell_hydra.xml"],
+                                     ["SmoothPlastic/SmoothPlastic_sphere_mitsuba.png", "SmoothPlastic/SmoothPlastic_cornell_mitsuba.png"], naivemul = 16))
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
