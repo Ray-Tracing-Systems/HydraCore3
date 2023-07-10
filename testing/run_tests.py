@@ -37,6 +37,24 @@ class REQ:
   
   def test(req, gpu_id=0):
     pass
+  
+  def run(req, test_name, args, image_ref, outp, inregrator):
+    try:
+      res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)      
+      image_mis    = cv2.imread(outp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      PSNR         = cv2.PSNR(image_ref,image_mis)
+      color        = Fore.GREEN
+      message      = "[PASSED]"
+      if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
+      if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
+      Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
+    except Exception as e:
+      Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
+      return
+    if res.returncode != 0:
+      Log().status_info("{}: launch".format(test_name), status=Status.FAILED)
+      Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
+      return
 
 class REQ_H2(REQ):
   def __init__(self, name, tests, imsize = (512,512), inregrators = ["naivept","shadowpt","mispt"], naivemul = 4):
@@ -59,23 +77,7 @@ class REQ_H2(REQ):
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
           args = args + ["--" + dev_type]
-          #print(args)
-          try:
-            res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)      
-            image_mis    = cv2.imread(outp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
-            PSNR         = cv2.PSNR(image_ref,image_mis)
-            color        = Fore.GREEN
-            message      = "[PASSED]"
-            if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
-            if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
-            Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
-          except Exception as e:
-            Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
-            return
-          if res.returncode != 0:
-            Log().status_info("{}: launch".format(test_name), status=Status.FAILED)
-            Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
-            return
+          req.run(test_name, args, image_ref, outp, inregrator)
       if TEST_CPU:
         Log().info("  compare CPU/GPU:")
         for inregrator in req.integs:
@@ -103,31 +105,17 @@ class REQ_H3(REQ):
     image_ref  = cv2.imread(PATH_TO_HYDRA3_SCENS + "/Report/Images/" + req.ref_path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
     scene_path = PATH_TO_HYDRA3_SCENS + "/" + req.scn_path
     devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
+    test_name = req.name
     for dev_type in devices:
-      Log().info("  rendering scene: '{0}', dev_type='{1}', dev_id = '{2}'".format(req.name, dev_type, gpu_id))
+      Log().info("  rendering scene: '{0}', dev_type='{1}', dev_id = '{2}'".format(test_name, dev_type, gpu_id))
       for inregrator in req.integs:
-        outp = PATH_TO_HYDRA3_SCENS + "/Report/Images/" + req.name  + "/z_" + dev_type + inregrator + ".bmp"
+        outp = PATH_TO_HYDRA3_SCENS + "/Report/Images/" + test_name  + "/z_" + dev_type + inregrator + ".bmp"
         args = ["./cmake-build-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
         args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
         args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
         args = args + ["--" + dev_type]
         #print(args)
-        try:
-          res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)      
-          image_mis    = cv2.imread(outp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
-          PSNR         = cv2.PSNR(image_ref,image_mis)
-          color        = Fore.GREEN
-          message      = "[PASSED]"
-          if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
-          if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
-          Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
-        except Exception as e:
-          Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
-          return
-        if res.returncode != 0:
-          Log().status_info("{}: launch".format(test_name), status=Status.FAILED)
-          Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
-          return
+        req.run(test_name, args, image_ref, outp, inregrator)
   
 reqs = []
 
