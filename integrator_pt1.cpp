@@ -313,7 +313,10 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   //
   if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
-    const float3 lightIntensity = to_float3(m_materials[matId].baseColor);
+    const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
+    const float3 texColor  = to_float3(m_textures[ m_materials[matId].texId[0] ]->sample(texCoordT));
+
+    const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
     const uint lightId          = m_materials[matId].lightId;
     float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
 

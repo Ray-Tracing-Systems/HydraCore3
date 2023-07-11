@@ -265,11 +265,22 @@ bool Integrator::LoadScene(const char* scehePath)
 
     if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
     {
-      auto node = nodeEmiss.child(L"color");
-      color   = to_float4(hydra_xml::readval3f(node), 1.0f);
+      auto nodeEmissColor = nodeEmiss.child(L"color");
+      color   = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
 
-      //TODO: process emissive texture
-      HydraSampler emissiveSampler = ReadSamplerFromColorNode(materialNode.child(L"emission"));
+      HydraSampler emissiveSampler = ReadSamplerFromColorNode(nodeEmissColor);
+      auto p = texCache.find(emissiveSampler);
+      if(p == texCache.end())
+      {
+        texCache[emissiveSampler] = uint(m_textures.size());
+        const uint32_t texId = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
+        m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], emissiveSampler.sampler));
+        p = texCache.find(emissiveSampler);
+      }
+      
+      mat.row0 [0]  = emissiveSampler.row0;
+      mat.row1 [0]  = emissiveSampler.row1;
+      mat.texId[0]  = p->second;
       
       mat.baseColor = color;
       if(materialNode.attribute(L"light_id") == nullptr)
@@ -280,16 +291,16 @@ bool Integrator::LoadScene(const char* scehePath)
       mat.mtype = MAT_TYPE_LIGHT_SOURCE;
     }
 
-    auto nodeDiff = materialNode.child(L"diffuse").child(L"color");
-    if(nodeDiff != nullptr)
+    auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
+    if(nodeDiffColor != nullptr)
     {
-      color = to_float4(hydra_xml::readval3f(nodeDiff), 0.0f);
-      HydraSampler diffSampler = ReadSamplerFromColorNode(nodeDiff);
+      color = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
+      HydraSampler diffSampler = ReadSamplerFromColorNode(nodeDiffColor);
       auto p = texCache.find(diffSampler);
       if(p == texCache.end())
       {
         texCache[diffSampler] = uint(m_textures.size());
-        const uint32_t texId  = nodeDiff.child(L"texture").attribute(L"id").as_uint();
+        const uint32_t texId  = nodeDiffColor.child(L"texture").attribute(L"id").as_uint();
         m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], diffSampler.sampler));
         p = texCache.find(diffSampler);
       }

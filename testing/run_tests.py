@@ -157,7 +157,7 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/smooth_plast
                                            
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
-
+reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
