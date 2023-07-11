@@ -121,6 +121,19 @@ class REQ_HX(REQ):
   
 reqs = []
 
+
+reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
+                                            PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
+                                            PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml", 
+                                            PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00002.xml"],
+
+                                           [PATH_TO_HYDRA2_TESTS + "/tests_images/test_078/w_ref.png", 
+                                            PATH_TO_HYDRA2_TESTS + "/tests_images/test_078/w_ref2.png",
+                                            PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref.png", 
+                                            PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref2.png"], 
+                                            imsize = [(512,512), (512,512), (512,512), (512,512)], naivemul = 1))
+
+
 reqs.append( REQ_HX("mat_lambert", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_101/statex_00001.xml",  
                                     PATH_TO_HYDRA3_SCENS + "/Lambert/Lambert_cornell_hydra.xml"],
                                    [PATH_TO_HYDRA2_TESTS + "/tests_images/test_101/w_ref.png", 
@@ -137,12 +150,14 @@ reqs.append( REQ_HX("mat_emission", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_123/s
                                      naivemul = 16, inregrators = ["naivept","mispt"]))
 
 reqs.append( REQ_H2("mat_mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
-reqs.append( REQ_H2("mat_lambert_texture", ["test_103"]) )
 
 reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/smooth_plastic/SmoothPlastic_sphere_hydra.xml",  
                                            PATH_TO_HYDRA3_SCENS + "/smooth_plastic/SmoothPlastic_cornell_hydra.xml"],
                                           [PATH_TO_HYDRA3_SCENS + "/Report/Images/SmoothPlastic/SmoothPlastic_sphere_mitsuba.png", 
                                            PATH_TO_HYDRA3_SCENS + "/Report/Images/SmoothPlastic/SmoothPlastic_cornell_mitsuba.png"], naivemul = 16))
+                                           
+reqs.append( REQ_H2("mat_lambert_texture", ["test_103"]) )
+
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
