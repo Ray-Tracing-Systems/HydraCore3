@@ -21,11 +21,11 @@ struct BsdfEval
 
 enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1, 
                       GLTF_COMPONENT_COAT    = 2,
-                      GLTF_COMPONENT_METAL   = 4 }; // bit fields
+                      GLTF_COMPONENT_METAL   = 4,
+                      GLTF_METAL_PERF_MIRROR = 8, }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,
-                      MAT_TYPE_MIRROR        = 3,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {

@@ -411,12 +411,6 @@ bool Integrator::LoadScene(const char* scehePath)
       m_light.size      = float2(sizeX, sizeZ);
       m_light.intensity = to_float4(color*power,0);
     }
-
-    PointLightSource light{};
-    light.pos       = lightInst.matrix * float4(0,0,0,1);
-    light.intensity = to_float4(color * power,0);
-
-    m_pointLights.push_back(light);
   }
 
   //// (2) load meshes

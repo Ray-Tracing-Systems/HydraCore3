@@ -1,6 +1,9 @@
 #include "integrator_pt.h"
 #include "include/crandom.h"
 
+#include "include/cmaterial.h"
+#include "include/cmat_gltf.h"
+
 #include <chrono>
 #include <string>
 
@@ -34,11 +37,11 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
 
-        uint   mtype     = m_materials[a_materialId].mtype;
+  const uint   mtype     = m_materials[a_materialId].mtype;
   const uint   cflags    = m_materials[a_materialId].cflags;
 
-  const float3 color      = to_float3(m_materials[a_materialId].baseColor)*texColor;
   const float3 specular   = to_float3(m_materials[a_materialId].metalColor);
   const float3 coat       = to_float3(m_materials[a_materialId].coatColor);
   const float  roughness  = 1.0f - m_materials[a_materialId].glosiness;
@@ -83,14 +86,13 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       const float  lambertPdf = lambertEvalPDF(lambertDir, v, n);
       const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
 
-      float VdotH = dot(v,normalize(v + ggxDir));
-
       // (1) select between metal and dielectric via rands.z
       //
       float pdfSelect = 1.0f;
       if(rands.z < alpha) // select metall
       {
         pdfSelect *= alpha;
+        const float  VdotH = dot(v,normalize(v + ggxDir));
         res.direction = ggxDir;
         res.color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
         res.pdf       = ggxPdf;
@@ -146,6 +148,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       
       res.pdf *= pdfSelect;
     }
+    //gltfSampleAndEval(m_materials.data(), a_materialId, rands, v, n, tc, color, &res);
     break;
 
     default:

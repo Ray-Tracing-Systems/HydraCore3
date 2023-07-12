@@ -8,6 +8,15 @@
 using namespace LiteMath;
 #endif
 
+static constexpr uint RAY_FLAG_IS_DEAD      = 0x80000000;
+static constexpr uint RAY_FLAG_OUT_OF_SCENE = 0x40000000;
+static constexpr uint RAY_FLAG_HIT_LIGHT    = 0x20000000;
+static constexpr uint RAY_FLAG_HAS_NON_SPEC = 0x10000000; // at least one bounce was non specular
+//static constexpr uint RAY_FLAG_DUMMY        = 0x08000000;
+//static constexpr uint RAY_FLAG_DUMMY        = 0x04000000;
+//static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
+//static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -25,12 +34,6 @@ typedef struct SurfaceHitT
   float3 norm;
   float2 uv;
 }SurfaceHit;
-
-struct PointLightSource
-{
-  float4 pos;
-  float4 intensity;
-};
 
 struct RectLightSource
 {
