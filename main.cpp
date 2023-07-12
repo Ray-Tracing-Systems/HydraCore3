@@ -172,8 +172,7 @@ int main(int argc, const char** argv)
     }
   }
   
-  /*
-  if(integratorType == "raytracing" || integratorType == "all")
+  if(integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt")
   {
     std::cout << "[main]: RayBlock ... " << std::endl;
     memset(realColor.data(), 0, sizeof(float) * 4 * realColor.size());
@@ -193,10 +192,10 @@ int main(int argc, const char** argv)
     }
     else
     {
-      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_misrt.bmp";
+      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.bmp";
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
-  }*/
+  }
 
 
   return 0;

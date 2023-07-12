@@ -44,6 +44,7 @@ else()
 endif()
 
 add_executable(hydra main.cpp
+                     integrator_rt.cpp
                      integrator_pt1.cpp
                      integrator_pt2.cpp
                      integrator_pt_scene.cpp

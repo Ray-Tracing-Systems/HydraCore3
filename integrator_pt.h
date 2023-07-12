@@ -47,10 +47,11 @@ public:
   virtual bool LoadScene(const char* bvhPath);
 
   void PackXY         (uint tidX, uint tidY);
-  void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) );
-  void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) );
-  void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) );
-  void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) );
+  void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color
+  void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! whitted ray tracing
+
+  void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
+  void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
@@ -70,7 +71,8 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags);        
+  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags);
+  void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, uint* rayFlags);        
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
@@ -83,18 +85,13 @@ public:
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_shadeColor,
                          float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
-  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_shadeColor,
-                        float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, RandomGen* a_gen,
-                        uint* rayFlags);
+  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
+                        float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, 
                                 const uint* rayFlags, 
                                 RandomGen* a_gen, float4* out_shadeColor);
-
-  void kernel_EvalPointLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                   const float4* in_hitPart1, const float4* in_hitPart2,
-                                   const uint* rayFlags, RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                              float4* accumColor);
@@ -103,6 +100,8 @@ public:
 
   void kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
                                 float4* out_color);
+
+  void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -158,7 +157,9 @@ protected:
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
-  BsdfSample MaterialEvalWhitted(int a_materialId, float3 v, float3 n, float2 tc);
+  BsdfSample MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc);
+  float3     MaterialEvalWhitted  (int a_materialId, float3 l, float3 v, float3 n, float2 tc);
+
   BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc);
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
