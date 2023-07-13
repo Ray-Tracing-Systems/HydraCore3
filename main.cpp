@@ -7,8 +7,10 @@
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
+#ifdef USE_VULKAN
 #include "vk_context.h"
 std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
+#endif
 
 int main(int argc, const char** argv)
 {
@@ -67,6 +69,7 @@ int main(int argc, const char** argv)
   std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
 
   bool onGPU = args.hasOption("--gpu");
+  #ifdef USE_VULKAN
   if(onGPU)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
@@ -74,6 +77,7 @@ int main(int argc, const char** argv)
     pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
+  #endif
     pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
   
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -174,9 +178,10 @@ int main(int argc, const char** argv)
   
   if(integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt")
   {
+    PASS_NUMBER = 1;               // must be always one for RT currently
+    const float normConst = 1.0f;  // must be always one for RT currently
     std::cout << "[main]: RayBlock ... " << std::endl;
-    memset(realColor.data(), 0, sizeof(float) * 4 * realColor.size());
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_RT);
+   
     pImpl->UpdateMembersPlainData();
     pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
 

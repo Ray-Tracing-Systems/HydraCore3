@@ -186,8 +186,7 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #pragma omp parallel for default(shared)
   #endif
   for(uint i=0;i<tid;i++)
-    for(int j=0;j<a_passNum;j++)
-      RayTrace(i, out_color);
+    RayTrace(i, out_color);
   raytraceTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 

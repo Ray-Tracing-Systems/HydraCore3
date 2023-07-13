@@ -108,7 +108,6 @@ public:
   static constexpr uint INTEGRATOR_STUPID_PT = 0;
   static constexpr uint INTEGRATOR_SHADOW_PT = 1;
   static constexpr uint INTEGRATOR_MIS_PT    = 2;
-  static constexpr uint INTEGRATOR_RT        = 3;
 
   static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)      != 0; }
   static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC) != 0; }

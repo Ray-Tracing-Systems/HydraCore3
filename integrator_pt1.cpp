@@ -132,7 +132,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   //TODO: apply transform matrix 
   //samplePos = matrix3x3f_mult_float3(pMatrix, samplePos) + lightPos(pLight); // translate to world light position
 
-  const float  hitDist   = sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
+  const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
 
   const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
