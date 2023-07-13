@@ -3,16 +3,16 @@
 #include "crandom.h"
 #include "cmaterial.h"
 
-static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, int a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
-                                     const float3 color,
+static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 rands, float3 v, float3 n, float2 tc, 
+                                     float3 color,
                                      BsdfSample* pRes)
 {
-  const uint   cflags     = a_materials[a_materialId].cflags;
-  const float3 specular   = to_float3(a_materials[a_materialId].metalColor);
-  const float3 coat       = to_float3(a_materials[a_materialId].coatColor);
-  const float  roughness  = 1.0f - a_materials[a_materialId].glosiness;
-  float        alpha      = a_materials[a_materialId].alpha;
-  const float  fresnelIOR = a_materials[a_materialId].ior;
+  const uint   cflags     = a_materials[0].cflags;                // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
+  const float3 specular   = to_float3(a_materials[0].metalColor); // PLEASE! use 'a_materials[0].' 
+  const float3 coat       = to_float3(a_materials[0].coatColor);  // PLEASE! use 'a_materials[0].' 
+  const float  roughness  = 1.0f -    a_materials[0].glosiness;   // PLEASE! use 'a_materials[0].' 
+  float        alpha      = a_materials[0].alpha;                 // PLEASE! use 'a_materials[0].' 
+  const float  fresnelIOR = a_materials[0].ior;                   // PLEASE! use 'a_materials[0].' 
 
   if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal component set
     alpha = 1.0f;
@@ -59,7 +59,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, int a_mate
     // (2) now select between specular and diffise via rands.w
     //
     const float f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR); 
-    const float m_specular_sampling_weight = a_materials[a_materialId].data[MI_SSW];
+    const float m_specular_sampling_weight = a_materials[0].data[MI_SSW];
     
     float prob_specular = f_i * m_specular_sampling_weight;
     float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
@@ -92,11 +92,78 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, int a_mate
       
       if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
       {
-        const float m_fdr_int = a_materials[a_materialId].data[MI_FDR_INT];
+        const float m_fdr_int = a_materials[0].data[MI_FDR_INT];
         const float f_o = FrDielectricPBRT(std::abs(dot(lambertDir,n)), 1.0f, fresnelIOR); 
         pRes->color *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
       }
     }
   }   
   pRes->pdf *= pdfSelect;
+}
+
+
+static void gltfEval(const GLTFMaterial* a_materials, float3 l, float3 v, float3 n, float2 tc, 
+                     float3 color, 
+                     BsdfEval* res)
+{
+  const uint cflags      = a_materials[0].cflags;
+
+  const float3 specular  = to_float3(a_materials[0].metalColor);
+  const float3 coat      = to_float3(a_materials[0].coatColor);
+  const float roughness  = 1.0f -    a_materials[0].glosiness;
+        float alpha      = a_materials[0].alpha;
+  const float fresnelIOR = a_materials[0].ior;
+
+  if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
+    alpha = 1.0f;
+      
+  float ggxVal, ggxPdf, VdotH; 
+  if(roughness != 0.0f) // perfect specular reflection in coating layer
+  {
+    ggxVal = ggxEvalBSDF(l, v, n, roughness);
+    ggxPdf = ggxEvalPDF (l, v, n, roughness);
+    VdotH  = dot(v,normalize(v + l));
+  }
+  else
+  {
+    ggxVal = 0.0f;
+    ggxPdf = 0.0f;
+    VdotH  = dot(v,n);
+  }
+
+  float lambertVal       = lambertEvalBSDF(l, v, n);
+  const float lambertPdf = lambertEvalPDF (l, v, n);
+  float f_i = 1.0f;
+  float prob_diffuse  = 1.0f;
+  float prob_specular = 0.0f;
+  float coeffLambertPdf = 1.0f;
+      
+  if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
+  {
+    f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
+    const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
+    const float m_fdr_int = a_materials[0].data[MI_FDR_INT];
+    const float coeff = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+    lambertVal *= coeff;
+    coeffLambertPdf = coeff; 
+    const float m_specular_sampling_weight = a_materials[0].data[MI_SSW];
+    prob_specular = f_i * m_specular_sampling_weight;
+    prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
+      prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
+    else
+    {
+      prob_diffuse  = 1.0f;
+      prob_specular = 0.0f;
+    }
+  }
+
+  const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
+  const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
+      
+  const float  dielectricPdf = lambertPdf*coeffLambertPdf + 2.0f*ggxPdf*f_i;
+  const float3 dielectricVal = lambertVal*color + ggxVal*coat*f_i;
+
+  res->color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
+  res->pdf   = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
 }
