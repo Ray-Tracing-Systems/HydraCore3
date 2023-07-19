@@ -5,7 +5,10 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 1) clone https://github.com/Ray-Tracing-Systems/kernel_slicer
 2) clone this repo inside "apps" folder of kernel_slicer
 3) if build only CPU version: disable Vulkan by '-DUSE_VULKAN=OFF'
-4) if build both CPU and GPU versions, run kernel_slicer with 'HydraCore3/GLSL' config and then build solution normally with Cmake
+4) if build both CPU and GPU versions:
+   * run kernel_slicer with 'HydraCore3/GLSL' config
+   * build shaders (by calling 'shaders_generated/build.sh')
+   * build solution normally with CMake
 
 # Development pipeline
 1) Select/Find/Make a reference image to you feature
