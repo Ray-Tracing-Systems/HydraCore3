@@ -17,5 +17,6 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
    * You have to run tests from 'HydraAPI-tests' repo to generate scene files
    * If you don't have access to some closed test repo which is used in test, please comment out such tests. Otherwise clone these repos.
    * Currently you have to set two variables in script: 'PATH_TO_HYDRA2_TESTS' and 'PATH_TO_HYDRA3_SCENS' (the last one is currently closed)
+   * read [testing script doc](testing/testing_doc.md)
 5) Add you feature to specitication in specification: 'HydraAPI-tests/doc/doc_hydra_standart/hydra_spec.tex' 
 
