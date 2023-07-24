@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 #include "integrator_pt.h"
 #include "ArgParser.h"
@@ -40,6 +41,13 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-out"))
     imageOut = args.getOptionValue<std::string>("-out");
+
+  std::filesystem::path out_path {imageOut};
+  auto dir = out_path.parent_path();
+  if(!dir.empty() && !std::filesystem::exists(dir))
+  {
+    std::filesystem::create_directories(dir);
+  }
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos;
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));

@@ -6,7 +6,31 @@ option(USE_VULKAN "Enable Vulkan implementation" ON)
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-set(CMAKE_CXX_STANDARD 17)
+add_library(project_options INTERFACE)
+target_compile_features(project_options INTERFACE cxx_std_17)
+
+# compiler warnings
+add_library(project_warnings INTERFACE)
+
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(project_warnings)
+
+# sanitizer options
+include(cmake/Sanitizers.cmake)
+enable_sanitizers(project_options)
+
+
+set(GENERATOR_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root output directory for all artifacts")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-debug)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-debug)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-debug)
+else()
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
+endif()
+
 
 find_package(OpenMP)
 
@@ -108,12 +132,12 @@ set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SO
 set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  target_link_libraries(hydra LINK_PUBLIC
+  target_link_libraries(hydra LINK_PUBLIC project_options project_warnings
                               ${LINKED_VULKAN} volk dl
                               ${EMBREE_LIBS}
                               )
 else()
-  target_link_libraries(hydra LINK_PUBLIC
+  target_link_libraries(hydra LINK_PUBLIC project_options project_warnings
                               ${LINKED_VULKAN} OpenMP::OpenMP_CXX volk dl
                               ${EMBREE_LIBS}
                               )
