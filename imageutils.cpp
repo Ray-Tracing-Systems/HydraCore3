@@ -3,17 +3,18 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <cmath>
 #include <algorithm>
 
-#include <sys/types.h>
-#include <dirent.h>
-#include <errno.h>
-#include <math.h>
-
 #if defined(_WIN32)
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
+    #ifndef NOMINMAX
+    #define NOMINMAX
+    #endif
+#else
+//    #include <sys/types.h>
+//    #include <dirent.h>
+//    #include <errno.h>
+//    #include <math.h>
 #endif
 
 #define TINYEXR_IMPLEMENTATION
@@ -93,7 +94,7 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
 
 static inline float clamp(float u, float a, float b) { return std::min(std::max(a, u), b); }
 
-static inline uint RealColorToUint32(float real_color[4])
+static inline unsigned RealColorToUint32(float real_color[4])
 {
   float  r = real_color[0]*255.0f;
   float  g = real_color[1]*255.0f;

@@ -61,13 +61,13 @@ include_directories("external"
 link_directories("external/CrossRT/lib")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")
   message(STATUS "Debug is ON!")
   add_definitions(-D_DEBUG)
   #uncomment this to detect broken memory problems via gcc sanitizers
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fPIC -Wno-attributes")
 endif()
 
 
@@ -83,7 +83,8 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/ray_tracing/vk_rt_utils.cpp
         external/vkutils/geom/vk_mesh.cpp
         external/CrossRT/VulkanRTX.cpp
-        external/LiteScene/scene_mgr.cpp)
+        external/LiteScene/scene_mgr.cpp
+        external/vkutils/geom/cmesh.cpp)
 
 set(VULKAN_SRC
         integrator_pt1_generated.cpp
@@ -94,8 +95,7 @@ set(LOADER_EXTERNAL_SRC
         external/tinyexr/miniz.c
         external/LiteScene/pugixml.cpp
         external/LiteScene/hydraxml.cpp
-        external/LiteScene/cmesh4.cpp
-        external/vkutils/geom/cmesh.cpp)
+        external/LiteScene/cmesh4.cpp)
 
 set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
@@ -129,15 +129,31 @@ endif()
 
 set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
-set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  link_directories("${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64")
+  set(EMBREE_LIBS ${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+  link_directories(${CMAKE_SOURCE_DIR}/external/CrossRT/lib)
+  set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
+endif()
+
+
 
 target_link_libraries(hydra LINK_PUBLIC project_options project_warnings)
 
 if(USE_VULKAN)
-  target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS} dl)
+  target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})
 else()
-  target_link_libraries(hydra LINK_PUBLIC ${EMBREE_LIBS} dl)
+  target_link_libraries(hydra LINK_PUBLIC ${EMBREE_LIBS})
 endif ()
+
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # add windows specific options here
+  add_custom_command(TARGET hydra POST_BUILD COMMAND ${CMAKE_COMMAND}
+          -E copy_directory "${PROJECT_SOURCE_DIR}/external/CrossRT/bin_win64" $<TARGET_FILE_DIR:hydra>)
+else()
+  target_link_libraries(hydra LINK_PUBLIC dl)
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   # add debug specific options here
