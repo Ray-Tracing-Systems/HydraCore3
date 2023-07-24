@@ -82,7 +82,8 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/vk_descriptor_sets.cpp
         external/vkutils/ray_tracing/vk_rt_utils.cpp
         external/vkutils/geom/vk_mesh.cpp
-        external/CrossRT/VulkanRTX.cpp)
+        external/CrossRT/VulkanRTX.cpp
+        external/LiteScene/scene_mgr.cpp)
 
 set(VULKAN_SRC
         integrator_pt1_generated.cpp
@@ -91,7 +92,6 @@ set(VULKAN_SRC
 
 set(LOADER_EXTERNAL_SRC
         external/tinyexr/miniz.c
-        external/LiteScene/scene_mgr.cpp
         external/LiteScene/pugixml.cpp
         external/LiteScene/hydraxml.cpp
         external/LiteScene/cmesh4.cpp
@@ -118,12 +118,12 @@ if(USE_VULKAN)
                        ${LOADER_EXTERNAL_SRC}
                        ${OTHER_EXTERNAL_SRC})
 
-  set(LINKED_VULKAN ${Vulkan_LIBRARY})
+#  set(LINKED_VULKAN ${Vulkan_LIBRARY})
 else()
   add_executable(hydra ${CORE_SRC}
                        ${LOADER_EXTERNAL_SRC}
                        ${OTHER_EXTERNAL_SRC})
-  set(LINKED_VULKAN "")
+#  set(LINKED_VULKAN "")
 endif()
 
 
@@ -131,14 +131,16 @@ set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SO
 
 set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  target_link_libraries(hydra LINK_PUBLIC project_options project_warnings
-                              ${LINKED_VULKAN} volk dl
-                              ${EMBREE_LIBS}
-                              )
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings)
+
+if(USE_VULKAN)
+  target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS} dl)
 else()
-  target_link_libraries(hydra LINK_PUBLIC project_options project_warnings
-                              ${LINKED_VULKAN} OpenMP::OpenMP_CXX volk dl
-                              ${EMBREE_LIBS}
-                              )
+  target_link_libraries(hydra LINK_PUBLIC ${EMBREE_LIBS} dl)
+endif ()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # add debug specific options here
+else()
+  target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
 endif()
