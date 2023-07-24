@@ -7,7 +7,7 @@
 #include <limits>
 
 #include "CrossRT.h"
-#include "scene_mgr.h" // RTX implementation of acceleration structures
+#include "LiteScene/scene_mgr.h" // RTX implementation of acceleration structures
 
 class VulkanRTX : public ISceneObject
 {
