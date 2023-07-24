@@ -10,11 +10,6 @@
     #ifndef NOMINMAX
     #define NOMINMAX
     #endif
-#else
-//    #include <sys/types.h>
-//    #include <dirent.h>
-//    #include <errno.h>
-//    #include <math.h>
 #endif
 
 #define TINYEXR_IMPLEMENTATION
