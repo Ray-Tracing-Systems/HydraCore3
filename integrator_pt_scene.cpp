@@ -1,13 +1,13 @@
 #include "integrator_pt.h"
 #include "include/crandom.h"
 
-#include "cmesh.h"
-using cmesh::SimpleMesh;
+#include "LiteScene/cmesh4.h"
+using cmesh4::SimpleMesh;
 
 #include "mi_materials.h"
 
 //#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
-#include "hydraxml.h"
+#include "LiteScene/hydraxml.h"
 
 #include <string>
 #include <cstdint>
@@ -427,7 +427,7 @@ bool Integrator::LoadScene(const char* scehePath)
   for(auto meshPath : scene.MeshFiles())
   {
     std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
-    auto currMesh = cmesh::LoadMeshFromVSGF(meshPath.c_str());
+    auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
     auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
     
     m_matIdOffsets.push_back(m_matIdByPrimId.size());
