@@ -38,7 +38,6 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -126,11 +125,11 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float2 uv = rndFloat2_Pseudo(a_gen); // todo: select ligt id also ... 
   
-  const float2 sampleOff = 2.0f*(float2(-0.5f,-0.5f) + uv)*m_light.size;
-  const float3 samplePos = to_float3(m_light.pos) + float3(sampleOff.x, -1e-5f*std::max(m_light.size.x, m_light.size.y), sampleOff.y);
+//  const float2 sampleOff = 2.0f*(float2(-0.5f,-0.5f) + uv)*m_light.size;
+  const float2 sampleOff = uv * m_light.size * 2.0f - 1.0f;
+  float3 samplePos = float3(sampleOff.x, 0.0f, sampleOff.y); // -1e-5f*std::max(m_light.size.x, m_light.size.y)
 
-  //TODO: apply transform matrix 
-  //samplePos = matrix3x3f_mult_float3(pMatrix, samplePos) + lightPos(pLight); // translate to world light position
+  samplePos = mul3x3x3(m_light.matrix, samplePos) + epsilonOfPos(samplePos) * to_float3(m_light.norm) + to_float3(m_light.pos); // translate to world light position
 
   const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
 
@@ -193,7 +192,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
     const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
     const uint lightId          = m_materials[matId].lightId;
-    float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
+    const float lightCos        = dot(to_float3(*rayDirAndFar), to_float3(m_light.norm));
+    float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : lightCos < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
@@ -202,7 +202,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       {
         if(lightId != 0xFFFFFFFF)
         {
-          const float lgtPdf  = LightPdfSelectRev(lightId)*LightEvalPDF(lightId, ray_pos, ray_dir, &hit);
+          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, &hit);
           misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
           if (prevPdfW <= 0.0f) // specular bounce
             misWeight = 1.0f;

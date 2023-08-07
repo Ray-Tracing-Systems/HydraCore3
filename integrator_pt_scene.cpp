@@ -407,9 +407,13 @@ bool Integrator::LoadScene(const char* scehePath)
     }
     else if(shape == L"rect")
     {
-      m_light.pos       = lightInst.matrix*float4(0,0,0,1);
+      m_light.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      m_light.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       m_light.size      = float2(sizeX, sizeZ);
       m_light.intensity = to_float4(color*power,0);
+      m_light.matrix    = make_float3x3_by_columns(to_float3(lightInst.matrix.col(0)),
+                                                   to_float3(lightInst.matrix.col(1)),
+                                                   to_float3(lightInst.matrix.col(2)));
     }
   }
 
