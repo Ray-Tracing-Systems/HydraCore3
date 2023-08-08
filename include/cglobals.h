@@ -40,9 +40,9 @@ struct RectLightSource
   float4 pos;
   float4 intensity;
   float4 norm;
-  float2 size;
-  float2 dummy;
   float3x3 matrix;
+  float2 size;
+  float dummy;
 };
 
 static inline float3 EyeRayDirNormalized(float x, float y, float4x4 a_mViewProjInv)

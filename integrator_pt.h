@@ -22,8 +22,7 @@ public:
   Integrator(int a_maxThreads = 1)
   {
     InitRandomGens(a_maxThreads);
-    m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } ); 
-    m_light.norm = float4(0,-1,0,0);
+    m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
   }
 
   virtual ~Integrator() { m_pAccelStruct = nullptr; }
@@ -78,12 +77,13 @@ public:
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, uint* rayFlags);
+                        float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
 
-  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_shadeColor,
-                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
+  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
+                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                         float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
@@ -173,6 +173,7 @@ protected:
   std::vector<int>             m_remapInst;
   std::vector<int>             m_allRemapLists;
   std::vector<int>             m_allRemapListsOffsets;
+  std::vector<uint32_t>        m_instIdToLightInstId;
 
   float4x4                     m_projInv;
   float4x4                     m_worldViewInv;
@@ -181,7 +182,7 @@ protected:
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
-  RectLightSource m_light;
+  std::vector<RectLightSource> m_lights;
   float4          m_envColor = float4(0,0,0,1);
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
 

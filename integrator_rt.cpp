@@ -197,9 +197,9 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   }
 
   float4 shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-  //for(int light_id = 0; light_id < m_pointLights.size(); ++light_id)
+  for(int lightId = 0; lightId < m_lights.size(); ++lightId)
   {
-    const float3 lightPos = to_float3(m_light.pos);
+    const float3 lightPos = to_float3(m_lights[lightId].pos);
     const float hitDist   = sqrt(dot(hit.pos - lightPos, hit.pos - lightPos));
 
     const float3 shadowRayDir = normalize(lightPos - hit.pos);
@@ -207,11 +207,11 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
 
     const bool inShadow = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist * 0.9995f));
 
-    if(!inShadow && dot(shadowRayDir, to_float3(m_light.norm)) < 0.0f)
+    if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f)
     {
       const float3 matSamColor = MaterialEvalWhitted(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
       const float cosThetaOut  = std::max(dot(shadowRayDir, hit.norm), 0.0f);
-      shadeColor += to_float4(to_float3(m_light.intensity) * matSamColor*cosThetaOut / (hitDist * hitDist), 0.0f);
+      shadeColor += to_float4(to_float3(m_lights[lightId].intensity) * matSamColor*cosThetaOut / (hitDist * hitDist), 0.0f);
     }
   }
 
@@ -278,7 +278,8 @@ void Integrator::RayTrace(uint tid, float4* out_color)
   for(int depth = 0; depth < m_traceDepth; depth++)
   {
     float4 hitPart1, hitPart2;
-    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &rayFlags);
+    uint instId;
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
 

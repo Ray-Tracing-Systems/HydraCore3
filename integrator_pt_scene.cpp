@@ -388,8 +388,10 @@ bool Integrator::LoadScene(const char* scehePath)
     break; // take first cam
   }
 
-  // load first light
+  // load lights
   //
+  m_instIdToLightInstId.resize(scene.GetInstancesNum(), -1);
+
   for(auto lightInst : scene.InstancesLights())
   {
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
@@ -407,13 +409,31 @@ bool Integrator::LoadScene(const char* scehePath)
     }
     else if(shape == L"rect")
     {
-      m_light.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
-      m_light.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      m_light.size      = float2(sizeX, sizeZ);
-      m_light.intensity = to_float4(color*power,0);
-      m_light.matrix    = make_float3x3_by_columns(to_float3(lightInst.matrix.col(0)),
-                                                   to_float3(lightInst.matrix.col(1)),
-                                                   to_float3(lightInst.matrix.col(2)));
+      RectLightSource lightSource{};
+
+      auto matrix = lightInst.matrix;
+
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = to_float4(color*power,0);
+
+      // extract scale and rotation from transformation matrix
+      float3 scale;
+      for(int i = 0; i < 3; ++i)
+      {
+        float4 vec = matrix.col(i);
+        scale[i] = length3f(vec);
+
+        for(int j = 0; j < 3; ++j)
+          matrix.col(i)[j] /= scale[i];
+      }
+      lightSource.matrix    = make_float3x3_by_columns(to_float3(matrix.col(0)),
+                                                       to_float3(matrix.col(1)),
+                                                       to_float3(matrix.col(2)));
+
+      lightSource.size      = float2(sizeX * scale.x, sizeZ * scale.z);
+
+      m_lights.push_back(lightSource);
     }
   }
 
@@ -460,6 +480,8 @@ bool Integrator::LoadScene(const char* scehePath)
     m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
     m_remapInst.push_back(inst.rmapId);
+
+    m_instIdToLightInstId[inst.instId] = inst.lightInstId;
   }
 
   m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
