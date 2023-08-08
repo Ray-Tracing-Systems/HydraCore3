@@ -36,8 +36,10 @@ namespace hydra_xml
   
   struct Instance
   {
+    uint32_t           instId = uint32_t(-1);
     uint32_t           geomId = uint32_t(-1); ///< geom id
     uint32_t           rmapId = uint32_t(-1); ///< remap list id, todo: add function to get real remap list by id
+    uint32_t           lightInstId = uint32_t(-1);
     LiteMath::float4x4 matrix;                ///< transform matrix
     pugi::xml_node     node;
   };
@@ -127,9 +129,11 @@ namespace hydra_xml
     Instance operator*() const 
     { 
       Instance inst;
+      inst.instId = m_iter->attribute(L"id").as_uint();
       inst.geomId = m_iter->attribute(L"mesh_id").as_uint();
       inst.rmapId = m_iter->attribute(L"rmap_id").as_uint();
       inst.matrix = float4x4FromString(m_iter->attribute(L"matrix").as_string());
+      inst.lightInstId = m_iter->attribute(L"linst_id").empty() ? uint32_t(-1) : m_iter->attribute(L"linst_id").as_uint();
       inst.node   = (*m_iter);
       return inst;
     }
@@ -318,6 +322,8 @@ namespace hydra_xml
       else
         return pFound->second; 
     }
+
+    size_t GetInstancesNum() const { return m_numInstances; }
     
   private:
     void parseInstancedMeshes(pugi::xml_node a_scenelib, pugi::xml_node a_geomlib);
@@ -335,6 +341,8 @@ namespace hydra_xml
     pugi::xml_document m_xmlDoc;
 
     std::unordered_map<std::string, std::vector<LiteMath::float4x4> > m_instancesPerMeshLoc;
+
+    size_t m_numInstances = 0;
   };
 
   

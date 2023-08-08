@@ -133,7 +133,9 @@ namespace hydra_xml
     for (pugi::xml_node inst = scene.first_child(); inst != nullptr; inst = inst.next_sibling())
     {
       if (std::wstring(inst.name()) == L"instance_light")
-        break;
+        continue;
+
+      m_numInstances += 1;
 
       auto mesh_id = inst.attribute(L"mesh_id").as_string();
       auto matrix = std::wstring(inst.attribute(L"matrix").as_string());
