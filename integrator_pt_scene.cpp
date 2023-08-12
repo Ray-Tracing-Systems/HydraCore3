@@ -427,9 +427,9 @@ bool Integrator::LoadScene(const char* scehePath)
         for(int j = 0; j < 3; ++j)
           matrix.col(i)[j] /= scale[i];
       }
-      lightSource.matrix    = make_float3x3_by_columns(to_float3(matrix.col(0)),
-                                                       to_float3(matrix.col(1)),
-                                                       to_float3(matrix.col(2)));
+      
+      lightSource.matrix = matrix;
+      lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
 
       lightSource.size      = float2(sizeX * scale.x, sizeZ * scale.z);
 

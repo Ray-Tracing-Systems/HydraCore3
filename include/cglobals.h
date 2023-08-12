@@ -37,12 +37,12 @@ typedef struct SurfaceHitT
 
 struct RectLightSource
 {
-  float4 pos;
-  float4 intensity;
-  float4 norm;
-  float3x3 matrix;
-  float2 size;
-  float dummy;
+  float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
+  float4   pos;       ///<! translation aclually stored here
+  float4   intensity;
+  float4   norm;
+  float2   size;
+  float    dummy;
 };
 
 static inline float3 EyeRayDirNormalized(float x, float y, float4x4 a_mViewProjInv)
