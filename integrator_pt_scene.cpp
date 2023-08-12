@@ -414,8 +414,8 @@ bool Integrator::LoadScene(const char* scehePath)
       auto matrix = lightInst.matrix;
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
-      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = to_float4(color*power,0);
+      lightSource.norm      = to_float4(mul3x3(lightInst.matrix, float3(0.0f, -1.0f, 0.0f)), 0.0f);
+      lightSource.intensity = to_float4(color*power, 0);
 
       // extract scale and rotation from transformation matrix
       float3 scale;
@@ -475,13 +475,21 @@ bool Integrator::LoadScene(const char* scehePath)
   m_normMatrices.clear(); m_normMatrices.reserve(1000);
   m_remapInst.clear();    m_remapInst.reserve(1000);
   m_pAccelStruct->ClearScene();
+  uint32_t realInstId = 0;
   for(auto inst : scene.InstancesGeom())
   {
+    if(inst.instId != realInstId)
+    {
+      std::cout << "[Integrator::LoadScene]: WARNING, bad instance id: written in xml: inst.instId is '" <<  inst.instId << "', realInstId by node order is '" << realInstId << "'" << std::endl;
+      std::cout << "[Integrator::LoadScene]: -->      instances must be written in a sequential order, perform 'inst.instId = realInstId'" << std::endl;
+      inst.instId = realInstId;
+    }
     m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
     m_remapInst.push_back(inst.rmapId);
 
     m_instIdToLightInstId[inst.instId] = inst.lightInstId;
+    realInstId++;
   }
 
   m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()

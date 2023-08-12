@@ -199,8 +199,14 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
     const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
     const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].lightId;
-    const float lightCos        = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
-    float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : lightCos < 0.0f ? 1.0f : 0.0f;
+    
+    float lightCos = 1.0f;
+    float lightDirectionAtten = 1.0f;
+    if(lightId != 0xFFFFFFFF)
+    {
+      lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
+      lightDirectionAtten = lightCos < 0.0f ? 1.0f : 0.0f;
+    }
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
