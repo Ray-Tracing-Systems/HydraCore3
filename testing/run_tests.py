@@ -73,7 +73,7 @@ class REQ_H2(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
         for inregrator in req.integs:
           outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/z_" + dev_type + inregrator + ".bmp"
-          args = ["./cmake-build-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
+          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
           args = args + ["--" + dev_type]
@@ -112,7 +112,7 @@ class REQ_HX(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
         for inregrator in req.integs:
           outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + ".bmp"
-          args = ["./cmake-build-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
+          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
@@ -134,9 +134,9 @@ reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_
 
 
 reqs.append( REQ_HX("mat_lambert", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_101/statex_00001.xml",  
-                                    PATH_TO_HYDRA3_SCENS + "/Lambert/Lambert_cornell_hydra.xml"],
+                                    PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Lambert_cornell_hydra.xml"],
                                    [PATH_TO_HYDRA2_TESTS + "/tests_images/test_101/w_ref.png", 
-                                    PATH_TO_HYDRA3_SCENS + "/Report/Images/Lambert/Lambert_cornell_mitsuba.png"], 
+                                    PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Images/Lambert_cornell_mitsuba.png"],  
                                     imsize = [(512,512), (1024,1024)], naivemul = 16))
 
 reqs.append( REQ_HX("mat_emission", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_123/statex_00001.xml",  
@@ -150,10 +150,10 @@ reqs.append( REQ_HX("mat_emission", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_123/s
 
 reqs.append( REQ_H2("mat_mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
 
-reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/smooth_plastic/SmoothPlastic_sphere_hydra.xml",  
-                                           PATH_TO_HYDRA3_SCENS + "/smooth_plastic/SmoothPlastic_cornell_hydra.xml"],
-                                          [PATH_TO_HYDRA3_SCENS + "/Report/Images/SmoothPlastic/SmoothPlastic_sphere_mitsuba.png", 
-                                           PATH_TO_HYDRA3_SCENS + "/Report/Images/SmoothPlastic/SmoothPlastic_cornell_mitsuba.png"], naivemul = 16))
+reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/PlasticSmooth_sphere_hydra2.xml",  
+                                           PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
+                                          [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/Images/PlasticSmooth_sphere_mitsuba.png",  
+                                           PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/Images/PlasticSmooth_cornell_mitsuba.png"], naivemul = 16)) 
                                            
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )

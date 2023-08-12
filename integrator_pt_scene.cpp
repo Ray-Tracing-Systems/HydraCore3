@@ -414,8 +414,8 @@ bool Integrator::LoadScene(const char* scehePath)
       auto matrix = lightInst.matrix;
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
-      lightSource.norm      = to_float4(mul3x3(lightInst.matrix, float3(0.0f, -1.0f, 0.0f)), 0.0f);
-      lightSource.intensity = to_float4(color*power, 0);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = to_float4(color*power,0);
 
       // extract scale and rotation from transformation matrix
       float3 scale;
@@ -431,7 +431,7 @@ bool Integrator::LoadScene(const char* scehePath)
       lightSource.matrix = matrix;
       lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
 
-      lightSource.size      = float2(sizeX * scale.x, sizeZ * scale.z);
+      lightSource.size = float2(sizeX * scale.x, sizeZ * scale.z);
 
       m_lights.push_back(lightSource);
     }
