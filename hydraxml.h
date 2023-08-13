@@ -278,9 +278,9 @@ namespace hydra_xml
     ~HydraScene() = default;  
     
     #if defined(__ANDROID__)
-    int LoadState(AAssetManager* mgr, const std::string &path);
+    int LoadState(AAssetManager* mgr, const std::string& path, const std::string& scnDir = "");
     #else
-    int LoadState(const std::string &path);
+    int LoadState(const std::string& path, const std::string& scnDir = "");
     #endif  
 
     //// use this functions with C++11 range for 

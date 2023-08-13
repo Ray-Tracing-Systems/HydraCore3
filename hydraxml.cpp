@@ -33,7 +33,7 @@ namespace hydra_xml
   }
 
 #if defined(__ANDROID__)
-  int HydraScene::LoadState(AAssetManager* mgr, const std::string &path)
+  int HydraScene::LoadState(AAssetManager* mgr, const std::string& path, const std::string& scnDir)
   {
     AAsset* asset = AAssetManager_open(mgr, path.c_str(), AASSET_MODE_STREAMING);
     if (!asset)
@@ -64,6 +64,8 @@ namespace hydra_xml
 
     auto pos = path.find_last_of(L'/');
     m_libraryRootDir = path.substr(0, pos);
+    if(scnDir != "")
+      m_libraryRootDir = scnDir;
 
     auto texturesLib  = xmlDoc.child(L"textures_lib");
     auto materialsLib = xmlDoc.child(L"materials_lib");
@@ -87,7 +89,7 @@ namespace hydra_xml
     return 0;
   }
 #else
-  int HydraScene::LoadState(const std::string &path)
+  int HydraScene::LoadState(const std::string& path, const std::string& scnDir)
   {
     auto loaded = m_xmlDoc.load_file(path.c_str());
 
@@ -102,8 +104,17 @@ namespace hydra_xml
       return -1;
     }
 
-    auto pos = path.find_last_of(L'/');
+    #ifdef WIN32
+    size_t pos = path.find_last_of("\\");
+    if(pos == std::string::npos)
+      pos = path.find_last_of("/");
+    #else
+    size_t pos = path.find_last_of('/');
+    #endif
+
     m_libraryRootDir = path.substr(0, pos);
+    if(scnDir != "")
+      m_libraryRootDir = scnDir;
 
     m_texturesLib  = m_xmlDoc.child(L"textures_lib");
     m_materialsLib = m_xmlDoc.child(L"materials_lib");
