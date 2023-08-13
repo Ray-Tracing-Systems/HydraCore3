@@ -130,8 +130,8 @@ namespace hydra_xml
     { 
       Instance inst;
       inst.instId = m_iter->attribute(L"id").as_uint();
-      inst.geomId = m_iter->attribute(L"mesh_id").as_uint();
-      inst.rmapId = m_iter->attribute(L"rmap_id").as_uint();
+      inst.geomId = uint32_t(m_iter->attribute(L"mesh_id").as_int()); // because we must process -1 case separately!
+      inst.rmapId = uint32_t(m_iter->attribute(L"rmap_id").as_int()); // because we must process -1 case separately!
       inst.matrix = float4x4FromString(m_iter->attribute(L"matrix").as_string());
       inst.lightInstId = m_iter->attribute(L"linst_id").empty() ? uint32_t(-1) : m_iter->attribute(L"linst_id").as_uint();
       inst.node   = (*m_iter);
