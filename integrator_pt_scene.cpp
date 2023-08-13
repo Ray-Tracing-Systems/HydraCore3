@@ -232,8 +232,8 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     tex.height = texNode.attribute(L"height").as_uint();
     if(tex.width != 0 && tex.height != 0)
     {
-      size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
-      tex.bpp    = byteSize / size_t(tex.width*tex.height);
+      const size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
+      tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
     }
     texturesInfo.push_back(tex);
   }

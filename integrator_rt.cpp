@@ -61,6 +61,11 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
                                       (float(y))/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
 
+  if(x == 444 && y == 256)
+  {
+    int a = 2;
+  }
+
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   *rayPosAndNear = to_float4(rayPos, 0.0f);
