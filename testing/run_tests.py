@@ -116,10 +116,13 @@ class REQ_HX(REQ):
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
+          if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
+            args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
           #print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
   
 reqs = []
+
 
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
@@ -132,9 +135,8 @@ reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_
                                             PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref2.png"], 
                                             imsize = [(512,512), (512,512), (512,512), (512,512)], naivemul = 1))
 
-
 reqs.append( REQ_HX("mat_lambert", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_101/statex_00001.xml",  
-                                    PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Lambert_cornell_hydra.xml"],
+                                    PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Lambert_cornell_hydra2.xml"],
                                    [PATH_TO_HYDRA2_TESTS + "/tests_images/test_101/w_ref.png", 
                                     PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Images/Lambert_cornell_mitsuba.png"],  
                                     imsize = [(512,512), (1024,1024)], naivemul = 16))

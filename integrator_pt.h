@@ -43,7 +43,7 @@ public:
   void InitRandomGens(int a_maxThreads);
 
   void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
-  virtual bool LoadScene(const char* bvhPath);
+  virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
 
   void PackXY         (uint tidX, uint tidY);
   void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color

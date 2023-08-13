@@ -195,13 +195,16 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool Integrator::LoadScene(const char* scehePath)
-{   
+bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
+{ 
+  std::string scenePathStr(a_scehePath);
+  std::string sceneDirStr(a_sncDir);  
   hydra_xml::HydraScene scene;
-  auto loadRes = scene.LoadState(scehePath);
+  
+  auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
   if(loadRes != 0)
   {
-    std::cout << "Integrator::LoadScene failed: '" << scehePath << "'" << std::endl; 
+    std::cout << "Integrator::LoadScene failed: '" << a_scehePath << "'" << std::endl; 
     exit(0);
   }
 
@@ -209,7 +212,6 @@ bool Integrator::LoadScene(const char* scehePath)
   texturesInfo.resize(0);
   texturesInfo.reserve(100);
 
-  std::string scenePathStr(scehePath);
   #ifdef WIN32
   size_t endPos = scenePathStr.find_last_of("\\");
   if(endPos == std::string::npos)
@@ -218,7 +220,7 @@ bool Integrator::LoadScene(const char* scehePath)
   size_t endPos = scenePathStr.find_last_of('/');
   #endif
 
-  std::string sceneFolder = scenePathStr.substr(0, endPos);
+  const std::string sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
 
   //// (0) load textures info
   //

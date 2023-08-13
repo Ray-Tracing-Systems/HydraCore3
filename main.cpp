@@ -27,6 +27,7 @@ int main(int argc, const char** argv)
   int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
 
   std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
+  std::string sceneDir  = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut  = "z_out.bmp";
   std::string integratorType = "mispt";
   float gamma = 2.4f; // out gamma, special value, see save image functions
@@ -45,9 +46,10 @@ int main(int argc, const char** argv)
   std::filesystem::path out_path {imageOut};
   auto dir = out_path.parent_path();
   if(!dir.empty() && !std::filesystem::exists(dir))
-  {
     std::filesystem::create_directories(dir);
-  }
+ 
+  if(args.hasOption("-scn_dir"))
+    sceneDir = args.getOptionValue<std::string>("-scn_dir");
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos;
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
@@ -93,7 +95,7 @@ int main(int argc, const char** argv)
 
   pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
-  pImpl->LoadScene(scenePath.c_str());
+  pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pImpl->CommitDeviceData();
 
   PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
