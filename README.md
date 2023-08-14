@@ -1,14 +1,19 @@
 # HydraCore3
 Modern rendering core: spec, vulkan (by kernel_slicer) and other
 
-# Build
+# Build (CPU)
+1) clone this repo with all its submodules
+   * git clone --recurse-submodules git@github.com:Ray-Tracing-Systems/HydraCore3.git
+   * or use git submodule init && git submodule apdate after clone
+2) Disable Vulkan by '-DUSE_VULKAN=OFF'
+3) Build normally with Cmake 
+
+# Build (CPU and GPU) [currently Linux only]
 1) clone https://github.com/Ray-Tracing-Systems/kernel_slicer
-2) clone this repo inside "apps" folder of kernel_slicer
-3) if build only CPU version: disable Vulkan by '-DUSE_VULKAN=OFF'
-4) if build both CPU and GPU versions:
-   * run kernel_slicer with 'HydraCore3/GLSL' config
-   * build shaders (by calling 'shaders_generated/build.sh')
-   * build solution normally with CMake
+2) Build kernel_slicer
+3) run kernel_slicer with 'Launch (HydraCore3/GLSL/External)' config
+4) build shaders (by calling 'shaders_generated/build.sh')
+5) build solution normally with CMake
 
 # Development pipeline
 1) Select/Find/Make a reference image to you feature
