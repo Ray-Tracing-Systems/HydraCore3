@@ -19,10 +19,11 @@ struct BsdfEval
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1, 
-                      GLTF_COMPONENT_COAT    = 2,
-                      GLTF_COMPONENT_METAL   = 4,
-                      GLTF_METAL_PERF_MIRROR = 8, }; // bit fields
+enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1, 
+                      GLTF_COMPONENT_COAT      = 2,
+                      GLTF_COMPONENT_METAL     = 4,
+                      GLTF_METAL_PERF_MIRROR   = 8, 
+                      GLTF_COMPONENT_ORENNAYAR = 16, }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,
@@ -38,9 +39,10 @@ enum MATERIAL_EVENT {
   RAY_EVENT_TNINGLASS = 64,
 };
 
-static constexpr uint MI_FDR_INT   = 0; // ScalarFloat m_fdr_int;
-static constexpr uint MI_FDR_EXT   = 1; // ScalarFloat m_fdr_ext;
-static constexpr uint MI_SSW       = 2; // Float m_specular_sampling_weight;
+static constexpr uint MI_FDR_INT         = 0; // ScalarFloat m_fdr_int;
+static constexpr uint MI_FDR_EXT         = 1; // ScalarFloat m_fdr_ext;
+static constexpr uint MI_SSW             = 2; // Float m_specular_sampling_weight;
+static constexpr uint MI_ORENNAYAR_ROUGH = 3; // roughness
 
 static constexpr uint CUSTOM_DATA_SIZE = 8;
 
@@ -73,6 +75,7 @@ struct GLTFMaterial
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Lambert BRDF
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float3 lambertSample(float2 rands, float3 v, float3 n)
@@ -88,6 +91,90 @@ static inline float lambertEvalPDF(float3 l, float3 v, float3 n)
 static inline float lambertEvalBSDF(float3 l, float3 v, float3 n)
 {
   return INV_PI;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PBRT routine
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float cosPhiPBRT(const float3 w, const float sintheta)
+{
+  if (sintheta == 0.0f)
+    return 1.0f;
+  else
+    return clamp(w.x / sintheta, -1.0f, 1.0f);
+}
+
+static inline float sinPhiPBRT(const float3 w, const float sintheta)
+{
+  if (sintheta == 0.0f)
+    return 0.0f;
+  else
+    return clamp(w.y / sintheta, -1.0f, 1.0f);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Oren-Nayar BRDF from PBRT
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float orennayarFunc(const float3 a_l, const float3 a_v, const float3 a_n, const float a_roughness)
+{
+  const float cosTheta_wi = dot(a_l, a_n);
+  const float cosTheta_wo = dot(a_v, a_n);
+
+  const float sinTheta_wi = sqrt(fmax(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
+  const float sinTheta_wo = sqrt(fmax(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
+
+  const float sigma  = a_roughness * HALF_PI; //Radians(sig)
+  const float sigma2 = sigma * sigma;
+  const float A      = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
+  const float B      = 0.45f * sigma2 / (sigma2 + 0.09f);
+
+  ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
+  // wo = a_v = -ray_dir
+  // wi = a_l = newDir
+  //
+  float3 nx, ny, nz = a_n;
+  CoordinateSystem(nz, &nx, &ny);
+
+  ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
+
+  // Compute cosine term of Oren-Nayar model
+  float maxcos = 0.0F;
+
+  if (sinTheta_wi > 1e-4 && sinTheta_wo > 1e-4)
+  {
+    const float3 wo     = float3(-dot(a_v, nx), -dot(a_v, ny), -dot(a_v, nz));
+    const float3 wi     = float3(-dot(a_l, nx), -dot(a_l, ny), -dot(a_l, nz));
+    const float sinphii = sinPhiPBRT(wi, sinTheta_wi);
+    const float cosphii = cosPhiPBRT(wi, sinTheta_wi);
+    const float sinphio = sinPhiPBRT(wo, sinTheta_wo);
+    const float cosphio = cosPhiPBRT(wo, sinTheta_wo);
+    const float dcos    = cosphii * cosphio + sinphii * sinphio;
+    maxcos              = fmax(0.0F, dcos);
+  }
+
+  // Compute sine and tangent terms of Oren-Nayar model
+  float sinalpha = 0.0F, tanbeta = 0.0F;
+
+  if (fabs(cosTheta_wi) > fabs(cosTheta_wo))
+  {
+    sinalpha = sinTheta_wo;
+    tanbeta  = sinTheta_wi / fmax(fabs(cosTheta_wi), DEPSILON);
+  }
+  else
+  {
+    sinalpha = sinTheta_wi;
+    tanbeta  = sinTheta_wo / fmax(fabs(cosTheta_wo), DEPSILON);
+  }
+
+  return (A + B * maxcos * sinalpha * tanbeta);
+}
+
+
+static inline float orennayarEvalPDF(const float3 l, const float3 n)
+{
+  return fabs(dot(l, n)) * INV_PI;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

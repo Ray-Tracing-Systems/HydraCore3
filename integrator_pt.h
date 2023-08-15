@@ -46,11 +46,20 @@ public:
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
 
   void PackXY         (uint tidX, uint tidY);
+
+#ifdef KERNEL_SLICER
   void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! whitted ray tracing
 
   void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
+#else
+  void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
+  void RayTrace       (uint tid, float4* out_color); ///<! whitted ray tracing
+
+  void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
+  void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
+#endif
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);

@@ -23,11 +23,11 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
 
   if(roughness == 0.0f) // perfect specular reflection in coating or metal layer
   {
-    const float3 pefReflDir = reflect((-1.0f)*v, n);
+    const float3 pefReflDir = reflect((-1.0f) * v, n);
     const float cosThetaOut = dot(pefReflDir, n);
-    ggxDir = pefReflDir;
-    ggxVal = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f/std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-    ggxPdf = 1.0f;
+    ggxDir                  = pefReflDir;
+    ggxVal                  = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f/std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+    ggxPdf                  = 1.0f;
   }
   else
   {
@@ -45,12 +45,12 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
   float pdfSelect = 1.0f;
   if(rands.z < alpha) // select metall
   {
-    pdfSelect *= alpha;
+    pdfSelect         *= alpha;
     const float  VdotH = dot(v,normalize(v + ggxDir));
-    pRes->direction = ggxDir;
-    pRes->color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
-    pRes->pdf       = ggxPdf;
-    pRes->flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+    pRes->direction    = ggxDir;
+    pRes->color        = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
+    pRes->pdf          = ggxPdf;
+    pRes->flags        = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   }
   else                // select dielectric
   {
@@ -62,7 +62,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
     const float m_specular_sampling_weight = a_materials[0].data[MI_SSW];
     
     float prob_specular = f_i * m_specular_sampling_weight;
-    float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    float prob_diffuse  = (1.0f - f_i) * (1.0f - m_specular_sampling_weight);
     if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
     {
       prob_specular = prob_specular / (prob_specular + prob_diffuse);
@@ -76,7 +76,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
     float choicePdf = ((cflags & GLTF_COMPONENT_COAT) == 0) ? 0.0f : prob_specular; // if don't have coal layer, never select it
     if(rands.w < prob_specular) // specular
     {
-      pdfSelect *= choicePdf;
+      pdfSelect      *= choicePdf;
       pRes->direction = ggxDir;
       pRes->color     = ggxVal*coat*(1.0f - alpha)*f_i;
       pRes->pdf       = ggxPdf;
@@ -84,17 +84,20 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
     } 
     else
     {
-      pdfSelect *= (1.0f-choicePdf); // lambert
+      pdfSelect      *= (1.0f-choicePdf); // lambert
       pRes->direction = lambertDir;
-      pRes->color     = lambertVal*color*(1.0f - alpha);
+      pRes->color     = lambertVal * color * (1.0f - alpha);
       pRes->pdf       = lambertPdf;
       pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
-      
+            
+      if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+        pRes->color *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[MI_ORENNAYAR_ROUGH]);
+            
       if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
       {
         const float m_fdr_int = a_materials[0].data[MI_FDR_INT];
-        const float f_o = FrDielectricPBRT(std::abs(dot(lambertDir,n)), 1.0f, fresnelIOR); 
-        pRes->color *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+        const float f_o       = FrDielectricPBRT(std::abs(dot(lambertDir, n)), 1.0f, fresnelIOR);
+        pRes->color          *= (1.0f - f_i) * (1.0f - f_o) / (fresnelIOR * fresnelIOR * (1.0f - m_fdr_int));
       }
     }
   }   
@@ -103,8 +106,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
 
 
 static void gltfEval(const GLTFMaterial* a_materials, float3 l, float3 v, float3 n, float2 tc, 
-                     float3 color, 
-                     BsdfEval* res)
+                     float3 color, BsdfEval* res)
 {
   const uint cflags      = a_materials[0].cflags;
 
@@ -133,22 +135,29 @@ static void gltfEval(const GLTFMaterial* a_materials, float3 l, float3 v, float3
 
   float lambertVal       = lambertEvalBSDF(l, v, n);
   const float lambertPdf = lambertEvalPDF (l, v, n);
-  float f_i = 1.0f;
-  float prob_diffuse  = 1.0f;
-  float prob_specular = 0.0f;
-  float coeffLambertPdf = 1.0f;
+  float f_i              = 1.0f;
+  float prob_diffuse     = 1.0f;
+  float prob_specular    = 0.0f;
+  float coeffLambertPdf  = 1.0f;
+
+  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+  {
+    lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[MI_ORENNAYAR_ROUGH]);
+  }
+
       
   if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
   {
-    f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
-    const float f_o = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
-    const float m_fdr_int = a_materials[0].data[MI_FDR_INT];
-    const float coeff = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
-    lambertVal *= coeff;
-    coeffLambertPdf = coeff; 
+    f_i                                    = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
+    const float f_o                        = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
+    const float m_fdr_int                  = a_materials[0].data[MI_FDR_INT];
+    const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+    lambertVal                            *= coeff;
+    coeffLambertPdf                        = coeff; 
     const float m_specular_sampling_weight = a_materials[0].data[MI_SSW];
-    prob_specular = f_i * m_specular_sampling_weight;
-    prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    prob_specular                          = f_i * m_specular_sampling_weight;
+    prob_diffuse                           = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    
     if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
       prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
     else
@@ -161,8 +170,8 @@ static void gltfEval(const GLTFMaterial* a_materials, float3 l, float3 v, float3
   const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
   const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
-  const float  dielectricPdf = lambertPdf*coeffLambertPdf + 2.0f*ggxPdf*f_i;
-  const float3 dielectricVal = lambertVal*color + ggxVal*coat*f_i;
+  const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
+  const float3 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
 
   res->color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
   res->pdf   = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
