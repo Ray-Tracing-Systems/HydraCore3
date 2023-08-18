@@ -23,7 +23,7 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       GLTF_COMPONENT_COAT      = 2,
                       GLTF_COMPONENT_METAL     = 4,
                       GLTF_METAL_PERF_MIRROR   = 8, 
-                      GLTF_COMPONENT_ORENNAYAR = 16, }; // bit fields
+                      GLTF_COMPONENT_ORENNAYAR = 16 }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,
@@ -50,7 +50,7 @@ static constexpr uint CUSTOM_DATA_SIZE = 8;
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
 // The BRDFs **share** the parameters for roughness and base color.
 
-struct GLTFMaterial
+struct Material
 {
   float4 row0[1];     ///< texture matrix
   float4 row1[1];     ///< texture matrix

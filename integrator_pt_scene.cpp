@@ -252,7 +252,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   for(auto materialNode : scene.MaterialNodes())
   {
     std::wstring name = materialNode.attribute(L"name").as_string();
-    GLTFMaterial mat = {};
+    Material mat = {};
     mat.mtype        = MAT_TYPE_GLTF;
     mat.alpha        = 0.0f;
     mat.coatColor    = float4(1,1,1,0); 
@@ -294,11 +294,14 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     }
 
     auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
+    auto nodeDiffRough = materialNode.child(L"diffuse").child(L"roughness");
+
     if(nodeDiffColor != nullptr)
     {
-      color = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
-      HydraSampler diffSampler = ReadSamplerFromColorNode(nodeDiffColor);
-      auto p = texCache.find(diffSampler);
+      color                        = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
+      HydraSampler diffSampler     = ReadSamplerFromColorNode(nodeDiffColor);
+      auto p                       = texCache.find(diffSampler);
+      
       if(p == texCache.end())
       {
         texCache[diffSampler] = uint(m_textures.size());
@@ -312,10 +315,11 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       mat.texId[0]  = p->second;
     }
 
+
     float3 reflColor = float3(0,0,0);
     float glosiness  = 1.0f;
     float fresnelIOR = 1.5f;
-    auto nodeRefl = materialNode.child(L"reflectivity");
+    auto nodeRefl    = materialNode.child(L"reflectivity");
     if(nodeRefl != nullptr)
     {
       reflColor  = hydra_xml::readval3f(nodeRefl.child(L"color"));
@@ -372,6 +376,12 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     if(color[3] > 1e-5f)
       mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
 
+    if (nodeDiffRough != nullptr)
+    {
+      mat.data[MI_ORENNAYAR_ROUGH] = hydra_xml::readval1f(nodeDiffRough);
+      mat.cflags |= GLTF_COMPONENT_ORENNAYAR;
+    }
+
     mat.glosiness  = glosiness;
     mat.ior        = fresnelIOR;
     m_materials.push_back(mat);
@@ -397,11 +407,10 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   for(auto lightInst : scene.InstancesLights())
   {
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
-    const float sizeX = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
-    const float sizeZ = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
-    float power = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
-    if(power == 0.0f)
-      power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
+    const float sizeX        = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
+    const float sizeZ        = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
+    float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
+    if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
 
     float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
 
@@ -511,7 +520,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   
   // (5) load render settings
   //
-  for(auto sett : scene.Settings())
+  for(const auto& sett : scene.Settings())
   {
     m_traceDepth = sett.depth;
     m_spp        = sett.spp;

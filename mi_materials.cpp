@@ -46,7 +46,7 @@ namespace mi
   }
 };
 
-void SetMiPlastic(GLTFMaterial* material, float int_ior, float ext_ior, float3 diffuse_reflectance, float3 specular_reflectance)
+void SetMiPlastic(Material* material, float int_ior, float ext_ior, float3 diffuse_reflectance, float3 specular_reflectance)
 { 
   material->baseColor = to_float4(diffuse_reflectance,0);
   material->coatColor = to_float4(specular_reflectance,0);
