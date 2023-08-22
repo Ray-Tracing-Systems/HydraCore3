@@ -3,8 +3,9 @@
 #include "crandom.h"
 #include "cmaterial.h"
 
-static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc, 
-                                     float3 color, BsdfSample* pRes)
+
+static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
+  float3 n, float2 tc, float3 color, BsdfSample* pRes)
 {
   const uint   cflags     = a_materials[0].cflags;                // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const float3 specular   = to_float3(a_materials[0].metalColor); // PLEASE! use 'a_materials[0].' 
@@ -140,9 +141,8 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   float coeffLambertPdf  = 1.0f;
 
   if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-  {
     lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[MI_ORENNAYAR_ROUGH]);
-  }
+
       
   if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
   {
