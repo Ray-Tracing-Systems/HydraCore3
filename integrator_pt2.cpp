@@ -119,7 +119,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   {
     const int mid         = low + ((high - low) / 2);
     const int idRemapFrom = m_allRemapLists[offsAndSize.x + mid * 2 + 0];
-    if (idRemapFrom >= a_mId)
+    if (uint(idRemapFrom) >= a_mId)
       high = mid - 1;
     else //if(a[mid]<i)
       low = mid + 1;
@@ -129,7 +129,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   {
     const int idRemapFrom = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 0];
     const int idRemapTo   = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 1];
-    res                   = (idRemapFrom == a_mId) ? uint(idRemapTo) : a_mId;
+    res                   = (uint(idRemapFrom) == a_mId) ? uint(idRemapTo) : a_mId;
   }
 
   return res;
@@ -141,8 +141,8 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 {
   #pragma omp parallel for default(shared)
-  for(int y=0;y<tidY;y++)
-    for(int x=0;x<tidX;x++)
+  for(uint y=0;y<tidY;y++)
+    for(uint x=0;x<tidX;x++)
       PackXY(x, y);
 }
 
@@ -162,9 +162,9 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
   #pragma omp parallel for default(shared)
   #endif
   for(uint i=0;i<tid;i++)
-    for(int j=0;j<a_passNum;j++)
+    for(uint j=0;j<a_passNum;j++)
       NaivePathTrace(i, out_color);
-  naivePtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+  naivePtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
 void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
@@ -174,9 +174,9 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #pragma omp parallel for default(shared)
   #endif
   for(uint i=0;i<tid;i++)
-    for(int j=0;j<a_passNum;j++)
+    for(uint j=0;j<a_passNum;j++)
       PathTrace(i, out_color);
-  shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
@@ -187,7 +187,7 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #endif
   for(uint i=0;i<tid;i++)
     RayTrace(i, out_color);
-  raytraceTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+  raytraceTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
 void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])

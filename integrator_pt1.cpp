@@ -127,7 +127,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float2 uv = rndFloat2_Pseudo(a_gen);
   const float rndId = rndFloat1_Pseudo(a_gen);
 
-  int lightId = int(std::floor(rndId * m_lights.size()));
+  int lightId = int(std::floor(rndId * float(m_lights.size())));
   
   const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + uv) * m_lights[lightId].size;
 
@@ -146,7 +146,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   
   if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f)
   {
-    const float lightPickProb = 1.0f / m_lights.size();
+    const float lightPickProb = 1.0f / float(m_lights.size());
     const float pdfA          = 1.0f / (4.0f * m_lights[lightId].size.x * m_lights[lightId].size.y);
     const float cosVal        = std::max(dot(shadowRayDir, (-1.0f)*to_float3(m_lights[lightId].norm)), 0.0f);
     const float lgtPdfW       = PdfAtoW(pdfA, hitDist, cosVal);
@@ -322,7 +322,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
 
-  for(int depth = 0; depth < m_traceDepth+1; depth++) 
+  for(uint depth = 0; depth < m_traceDepth + 1; ++depth) 
   {
     float4 shadeColor, hitPart1, hitPart2;
     uint instId = 0;
@@ -352,7 +352,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
 
-  for(int depth = 0; depth < m_traceDepth; depth++) 
+  for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;
     uint instId;

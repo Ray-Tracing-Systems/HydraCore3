@@ -49,7 +49,7 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
 {
   *accumColor        = make_float4(0,0,0,1);
   *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
+  //RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
 
   const uint XY = packedXY[tid];
@@ -60,11 +60,6 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
   float3 rayDir = EyeRayDirNormalized((float(x))/float(m_winWidth), 
                                       (float(y))/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
-
-  if(x == 444 && y == 256)
-  {
-    int a = 2;
-  }
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
@@ -131,10 +126,10 @@ float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, flo
 
 BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc)
 { 
-  uint  type             = m_materials[a_materialId].mtype;
+  //uint  type             = m_materials[a_materialId].mtype;
   const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
   const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
-  const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
+  //const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
   float alpha            = m_materials[a_materialId].alpha;
   
   const float3 pefReflDir = reflect((-1.0f)*v, n);
@@ -167,7 +162,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   // process surface hit case
   //
   const float3 ray_dir = to_float3(*rayDirAndFar);
-  const float3 ray_pos = to_float3(*rayPosAndNear);
+  //const float3 ray_pos = to_float3(*rayPosAndNear);
 
   const float4 data1 = *in_hitPart1;
   const float4 data2 = *in_hitPart2;
@@ -202,7 +197,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   }
 
   float4 shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-  for(int lightId = 0; lightId < m_lights.size(); ++lightId)
+  for(uint lightId = 0; lightId < m_lights.size(); ++lightId)
   {
     const float3 lightPos = to_float3(m_lights[lightId].pos);
     const float hitDist   = sqrt(dot(hit.pos - lightPos, hit.pos - lightPos));
@@ -280,7 +275,7 @@ void Integrator::RayTrace(uint tid, float4* out_color)
   kernel_InitEyeRay3(tid, m_packedXY.data(), 
                      &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &rayFlags);
 
-  for(int depth = 0; depth < m_traceDepth; depth++)
+  for(uint depth = 0; depth < m_traceDepth; depth++)
   {
     float4 hitPart1, hitPart2;
     uint instId;

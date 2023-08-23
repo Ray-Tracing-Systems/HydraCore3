@@ -51,12 +51,14 @@ if(USE_VULKAN)
   add_compile_definitions(USE_VULKAN)
 endif()
 
-include_directories(${Vulkan_INCLUDE_DIR})
-include_directories("external"
-                    "external/tinyexr"
-                    "external/vkutils"
+
+# try to silence warnings for include files from these dirs
+include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
+include_directories(SYSTEM "external/tinyexr"
                     "external/volk"
-                    "external/LiteMath"
+                    "external/LiteMath")
+include_directories("external"
+                    "external/vkutils"
                     "external/CrossRT")
 
 link_directories("external/CrossRT/lib")
@@ -92,8 +94,9 @@ set(VULKAN_SRC
         integrator_pt1_generated_init.cpp
         integrator_pt1_generated_ds.cpp )
 
+add_library(miniz external/tinyexr/miniz.c)
+
 set(LOADER_EXTERNAL_SRC
-        external/tinyexr/miniz.c
         external/LiteScene/pugixml.cpp
         external/LiteScene/hydraxml.cpp
         external/LiteScene/cmesh4.cpp)
@@ -140,7 +143,7 @@ endif()
 
 
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})

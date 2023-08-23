@@ -455,9 +455,9 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
     auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
     auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
-    
-    m_matIdOffsets.push_back(m_matIdByPrimId.size());
-    m_vertOffset.push_back(m_vNorm4f.size());
+
+    m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
+    m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
 
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
@@ -504,10 +504,10 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   m_allRemapListsOffsets.reserve(m_normMatrices.size()); // approx size for all reamp lists ... 
   for(auto remapList : scene.RemapLists())
   {
-    m_allRemapListsOffsets.push_back(m_allRemapLists.size());
+    m_allRemapListsOffsets.push_back(static_cast<int>(m_allRemapLists.size()));
     m_allRemapLists.insert(m_allRemapLists.end(), remapList.begin(), remapList.end());
   }
-  m_allRemapListsOffsets.push_back(m_allRemapLists.size()); // put size of the list remap list
+  m_allRemapListsOffsets.push_back(static_cast<int>(m_allRemapLists.size())); // put size of the list remap list
   
   // (5) load render settings
   //
