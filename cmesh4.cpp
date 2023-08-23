@@ -38,7 +38,7 @@ cmesh4::SimpleMesh cmesh4::CreateQuad(const int a_sizeX, const int a_sizeY, cons
   cmesh4::SimpleMesh res(vertNum, quadsNum*2*3);
 
   const float edgeLength  = a_size / float(a_sizeX);
-  const float edgeLength2 = sqrtf(2.0f)*edgeLength;
+  //const float edgeLength2 = sqrtf(2.0f)*edgeLength;
 
   // put vertices
   //
@@ -174,9 +174,9 @@ void cmesh4::SaveMeshToVSGF(const char* a_fileName, const SimpleMesh& a_mesh)
 
   Header header;
   header.fileSizeInBytes = sizeof(header) + a_mesh.SizeInBytes();
-  header.verticesNum     = a_mesh.VerticesNum();
-  header.indicesNum      = a_mesh.IndicesNum();
-  header.materialsNum    = a_mesh.matIndices.size();
+  header.verticesNum     = static_cast<uint32_t>(a_mesh.VerticesNum());
+  header.indicesNum      = static_cast<uint32_t>(a_mesh.IndicesNum());
+  header.materialsNum    = static_cast<uint32_t>(a_mesh.matIndices.size());
   header.flags           = 0;
 
   if(a_mesh.vNorm4f.size() == 0)
@@ -203,7 +203,7 @@ void cmesh4::SaveMeshToVSGF(const char* a_fileName, const SimpleMesh& a_mesh)
 
 float cmesh4::SimpleMesh::GetAvgTriArea() const
 {
-  long double res = 0.0f;
+  double res = 0.0;
   for(size_t i = 0; i < TrianglesNum(); i++)
   {
     uint32_t indA = indices[i * 3 + 0];
@@ -218,20 +218,20 @@ float cmesh4::SimpleMesh::GetAvgTriArea() const
     LiteMath::float3 edge2A = normalize(C - A);
 
     float area = 0.5f * sqrtf(powf(edge1A.y * edge2A.z - edge1A.z * edge2A.y, 2) +
-        powf(edge1A.z * edge2A.x - edge1A.x * edge2A.z, 2) +
-        powf(edge1A.x * edge2A.y - edge1A.y * edge2A.x, 2));
+                              powf(edge1A.z * edge2A.x - edge1A.x * edge2A.z, 2) +
+                              powf(edge1A.x * edge2A.y - edge1A.y * edge2A.x, 2));
 
     res += area;
   }
 
-  res /= TrianglesNum();
+  res /= static_cast<double>(TrianglesNum());
 
   return float(res);
 }
 
 float cmesh4::SimpleMesh::GetAvgTriPerimeter() const
 {
-  long double res = 0.0f;
+  double res = 0.0;
   for(size_t i = 0; i < TrianglesNum(); i++)
   {
     uint32_t indA = indices[i * 3 + 0];
@@ -249,7 +249,7 @@ float cmesh4::SimpleMesh::GetAvgTriPerimeter() const
     res += edge1len + edge2len + edge3len;
   }
 
-  res /= TrianglesNum();
+  res /= static_cast<double>(TrianglesNum());
 
   return float(res);
 }

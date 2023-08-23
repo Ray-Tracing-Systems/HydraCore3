@@ -98,8 +98,8 @@ struct SceneManager
   std::vector<VkSampler> GetTextureSamplers() const { return m_samplers; }
   std::vector<VkImageView>  GetTextureViews() const { return m_textureViews; }
 
-  uint32_t MeshesNum()    const {return m_meshInfos.size();}
-  uint32_t InstancesNum() const {return m_instanceInfos.size();}
+  uint32_t MeshesNum()    const {return static_cast<uint32_t>(m_meshInfos.size());}
+  uint32_t InstancesNum() const {return static_cast<uint32_t>(m_instanceInfos.size());}
 
   hydra_xml::Camera GetCamera(uint32_t camId) const;
   MeshInfo GetMeshInfo(uint32_t meshId) const {assert(meshId < m_meshInfos.size()); return m_meshInfos[meshId];}

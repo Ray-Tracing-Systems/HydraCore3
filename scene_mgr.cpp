@@ -19,8 +19,8 @@ VkTransformMatrixKHR transformMatrixFromFloat4x4(const LiteMath::float4x4 &m)
 
 SceneManager::SceneManager(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId,
   std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper, LoaderConfig a_config) :
-                m_device(a_device), m_physDevice(a_physDevice), m_graphicsQId(a_graphicsQId),
-                m_pCopyHelper(a_pCopyHelper), m_config(a_config)
+                m_config(a_config), m_device(a_device), m_physDevice(a_physDevice),  m_graphicsQId(a_graphicsQId),
+                m_pCopyHelper(a_pCopyHelper)
 {
   vkGetDeviceQueue(m_device, m_graphicsQId, 0, &m_graphicsQ);
 
@@ -135,8 +135,8 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
   std::copy(meshData.matIndices.begin(), meshData.matIndices.end(), m_matIDs.begin() + old_size);
 
   MeshInfo info;
-  info.m_vertNum = meshData.VerticesNum();
-  info.m_indNum  = meshData.IndicesNum();
+  info.m_vertNum = static_cast<uint32_t>(meshData.VerticesNum());
+  info.m_indNum  = static_cast<uint32_t>(meshData.IndicesNum());
 
   info.m_vertexOffset = m_totalVertices;
   info.m_indexOffset  = m_totalIndices;
@@ -149,7 +149,7 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
 
   m_meshInfos.push_back(info);
 
-  return m_meshInfos.size() - 1;
+  return static_cast<uint32_t>(m_meshInfos.size() - 1);
 }
 
 uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshData)
@@ -172,7 +172,7 @@ uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float
   m_instanceMatrices.push_back(matrix);
 
   InstanceInfo info;
-  info.inst_id       = m_instanceMatrices.size() - 1;
+  info.inst_id       = static_cast<uint32_t>(m_instanceMatrices.size() - 1);
   info.mesh_id       = meshId;
   info.renderMark    = markForRender;
   info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
@@ -492,7 +492,7 @@ void SceneManager::BuildTLAS()
 
   VkDeviceOrHostAddressConstKHR instBufferDeviceAddress{};
   instBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, instancesBuffer);
-  m_pBuilderV2->BuildTLAS(geometryInstances.size(), instBufferDeviceAddress);
+  m_pBuilderV2->BuildTLAS(static_cast<uint32_t>(geometryInstances.size()), instBufferDeviceAddress);
 
   if (instancesAlloc != VK_NULL_HANDLE)
   {
