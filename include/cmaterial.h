@@ -39,38 +39,55 @@ enum MATERIAL_EVENT {
   RAY_EVENT_TNINGLASS = 64,
 };
 
-static constexpr uint MI_FDR_INT         = 0; // ScalarFloat m_fdr_int;
-static constexpr uint MI_FDR_EXT         = 1; // ScalarFloat m_fdr_ext;
-static constexpr uint MI_SSW             = 2; // Float m_specular_sampling_weight;
-static constexpr uint MI_ORENNAYAR_ROUGH = 3; // roughness
+////////////////////////////////
+// Indexes for materials
+// 
+// Custom for all materials
+static constexpr uint UINT_MTYPE                  = 0;  ///< one of 'MATERIAL_TYPES'
+static constexpr uint UINT_CFLAGS                 = 1;  ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
+static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light if this material is light 
 
-static constexpr uint CUSTOM_DATA_SIZE = 8;
-
-
+// GLTF
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
 // The BRDFs **share** the parameters for roughness and base color.
+// colors
+static constexpr uint GLTF_COLOR_BASE             = 0;  ///< color for both lambert and emissive lights; baseColor.w store emission
+static constexpr uint GLTF_COLOR_COAT             = 1;  ///< in our implementation we allow different color for coating (fresnel) and diffuse
+static constexpr uint GLTF_COLOR_METAL            = 2;  ///< in our implementation we allow different color for metals and diffuse
+                                                        
+// custom                                               
+static constexpr uint GLTF_FLOAT_MI_FDR_INT       = 3;  ///< ScalarFloat m_fdr_int;
+static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = 4;  ///< ScalarFloat m_fdr_ext;
+static constexpr uint GLTF_FLOAT_MI_SSW           = 5;  ///< Float m_specular_sampling_weight;
+static constexpr uint GLTF_FLOAT_ALPHA            = 6;  ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
+static constexpr uint GLTF_FLOAT_GLOSINESS        = 7;  ///< material glosiness or intensity for lights, take color from baseColor
+static constexpr uint GLTF_FLOAT_IOR              = 8;  ///< index of refraction for reflection Fresnel
+static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = 9;  ///< roughness for Oren-Nayar
+static constexpr uint GLTF_UINT_TEXID0            = 10; ///< texture id
+
+// GLASS
+// colors
+static constexpr uint GLASS_COLOR_REFLECT         = 0;    
+static constexpr uint GLASS_COLOR_TRANSP          = 1;  
+
+// custom 
+static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = 3;
+static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = 4;
+static constexpr uint GLASS_FLOAT_IOR             = 5;
+
+
+// The size is taken according to the largest indexes
+static constexpr uint COLOR_DATA_SIZE             = 6;
+static constexpr uint CUSTOM_DATA_SIZE            = 11;
 
 struct Material
 {
+  float4 colors[COLOR_DATA_SIZE]; ///< colors data
+
   float4 row0[1];     ///< texture matrix
   float4 row1[1];     ///< texture matrix
-  uint   texId[4];    ///< texture id
-
-  float4 baseColor;   ///< color for both lambert and emissive lights; baseColor.w store emission
-  float4 coatColor;   ///< in our implementation we allow different color for coating (fresnel) and diffuse
-  float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
-
-  uint  mtype;        ///< one of 'MATERIAL_TYPES'
-  uint  cflags;       ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
-  uint  lightId;      ///< identifier of light if this material is light 
-  uint  dummy1;
-   
-  float alpha;        ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
-  float glosiness;    ///< material glosiness or intensity for lights, take color from baseColor
-  float ior;
-  float dummy2;
-
-  float data[CUSTOM_DATA_SIZE];
+      
+  float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
 
 
@@ -125,7 +142,7 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   const float sinTheta_wi = sqrt(fmax(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
   const float sinTheta_wo = sqrt(fmax(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
 
-  const float sigma  = a_roughness * HALF_PI; //Radians(sig)
+  const float sigma  = a_roughness * M_PI * 0.5f; //Radians(sig)
   const float sigma2 = sigma * sigma;
   const float A      = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
   const float B      = 0.45f * sigma2 / (sigma2 + 0.09f);
@@ -187,9 +204,9 @@ static inline float3 SphericalDirectionPBRT(const float sintheta, const float co
 
 static inline float GGX_Distribution(const float cosThetaNH, const float alpha)
 {
-  const float alpha2  = alpha * alpha;
-  const float NH_sqr  = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
-  const float den     = NH_sqr * alpha2 + (1.0f - NH_sqr);
+  const float alpha2 = alpha * alpha;
+  const float NH_sqr = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
+  const float den    = NH_sqr * alpha2 + (1.0f - NH_sqr);
   return alpha2 / std::max((float)(M_PI) * den * den, 1e-6f);
 }
 
@@ -202,7 +219,7 @@ static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
   //const float G          = 1.0f / (1.0f + lambda);
 
   // Optimized and equal to the commented-out formulas on top.
-  const float cosTheta_sqr = clamp(cosThetaN*cosThetaN, 0.0f, 1.0f);
+  const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
   const float tan2         = (1.0f - cosTheta_sqr) / std::max(cosTheta_sqr, 1e-6f);
   const float GP           = 2.0f / (1.0f + std::sqrt(1.0f + alpha * alpha * tan2));
   return GP;

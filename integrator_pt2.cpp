@@ -39,9 +39,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // implicit strategy
 
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const uint   mtype     = m_materials[a_materialId].mtype;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
+  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
   // TODO: read other parameters from texture
 
@@ -69,9 +69,9 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   // explicit strategy
 
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const uint mtype       = m_materials[a_materialId].mtype;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
+  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
   // TODO: read other parameters from texture
 

@@ -49,7 +49,7 @@ static inline RefractResult myRefractGgx(const float3 a_rayDir, float3 a_normal,
 static inline float3 GgxVndf(float3 wo, float roughness, float u1, float u2)
 {
   // -- Stretch the view vector so we are sampling as though
-  // -- roughness==1
+  // -- roughnessTransp==1
   const float3 v = normalize(make_float3(wo.x * roughness, wo.y * roughness, wo.z));
 
   // -- Build an orthonormal basis with v, t1, and t2
@@ -86,44 +86,6 @@ static inline float SmithGGXMaskingShadowing(const float dotNL, const float dotN
   return 2.0f * dotNL * dotNV / fmax(denomA + denomB, 1e-6f);
 }
 
-static inline float GGX_HeightCorrelatedGeomShadMask(const float dotNV, const float dotNL, const float alpha)
-{
-  // Height-Correlated Masking and Shadowing function
-  // Masking
-  const float tanWo = sqrt(1.0f - dotNV * dotNV) / dotNV;
-  const float aWo = 1.0f / (alpha * tanWo);
-  const float lambdaWo = (-1.0f + sqrt(1.0f + 1.0f / (aWo * aWo))) / 2.0f;
-  // Shadowing
-  const float tanWi = sqrt(1.0f - dotNL * dotNL) / dotNL;
-  const float aWi = 1.0f / (alpha * tanWi);
-  const float lambdaWi = (-1.0f + sqrt(1.0f + 1.0f / (aWi * aWi))) / 2.0f;
-  // Full
-  const float G = 1.0f / (1.0f + lambdaWo + lambdaWi);
-  return G;
-}
-
-static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
-{
-  // Height - Correlated G.
-  //const float tanNV      = sqrt(1.0f - cosThetaN * cosThetaN) / cosThetaN;
-  //const float a          = 1.0f / (alpha * tanNV);
-  //const float lambda     = (-1.0f + sqrt(1.0f + 1.0f / (a*a))) / 2.0f;
-  //const float G          = 1.0f / (1.0f + lambda);
-
-  // Optimized and equal to the commented-out formulas on top.
-  const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
-  const float tan2 = (1.0f - cosTheta_sqr) / fmax(cosTheta_sqr, 1e-6f);
-  const float GP = 2.0f / (1.0f + sqrt(1.0f + alpha * alpha * tan2));
-  return GP;
-}
-
-static inline float GGX_Distribution(const float cosThetaNH, const float alpha)
-{
-  const float alpha2 = alpha * alpha;
-  const float NH_sqr = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
-  const float den = NH_sqr * alpha2 + (1.0f - NH_sqr);
-  return alpha2 / fmax(M_PI * den * den, 1e-6f);
-}
 
 
 // implicit strategy
@@ -133,15 +95,14 @@ static inline void glassSampleAndEval(const Material* a_materials, float4 a_rand
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
 
-  const uint   cflags     = a_materials[0].cflags;                
-  const float3 specular   = to_float3(a_materials[0].metalColor);  
-  const float3 coat       = to_float3(a_materials[0].coatColor);   
-  const float  roughness  = clamp(1.0f - a_materials[0].glosiness, 0.0f, 1.0f);
-  float        alpha      = a_materials[0].alpha;                            
-  const float  ior        = a_materials[0].ior; 
+  const float3 colorReflect = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
+  const float3 colorTransp  = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
+  const float  roughTransp  = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
+  const float  ior          = a_materials[0].data[GLASS_FLOAT_IOR]; 
 
-  const float  roughSqr   = roughness * roughness;
-  const float3 normal2    = a_hitFromInside ? (-1.0f) * a_normal : a_normal;
+  const float  roughSqr        = roughTransp * roughTransp;
+  const bool   a_hitFromInside = dot(a_normal, a_rayDir) < 0.0f; // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
+  const float3 normal2         = a_hitFromInside ? (-1.0f) * a_normal : a_normal;
 
   bool   spec             = true;
   float  Pss              = 1.0f;                          // Pass single-scattering.
@@ -150,7 +111,7 @@ static inline void glassSampleAndEval(const Material* a_materials, float4 a_rand
 
   RefractResult refrData  = myRefractGgx(a_rayDir, normal2, ior, 1.0f, a_rands.z);
 
-  if (roughness > 1e-5f)
+  if (roughTransp > 1e-5f)
   {
     spec           = false;
     float eta      = 1.0f / ior;
@@ -194,7 +155,7 @@ static inline void glassSampleAndEval(const Material* a_materials, float4 a_rand
     const float G2 = SmithGGXMaskingShadowing(dotNL, dotNV, roughSqr);
 
     // Abbreviated formula without PDF.
-    Pss = G2 / fmax(G1, 1e-6f);
+    Pss *= G2 / fmax(G1, 1e-6f);
 
     // Complete formulas with PDF, if we ever make an explicit strategy for glass.
     //const float3 h    = normalize(v + l); // half vector.
@@ -217,7 +178,7 @@ static inline void glassSampleAndEval(const Material* a_materials, float4 a_rand
     //a_pRes->pdf        = Dv * jacob;
 
     // Pass multi-scattering. (not supported yet)
-    //Pms = GetMultiscatteringFrom3dTable(a_globals->m_essTranspTable, roughness, dotNV, 1.0f / eta, 64, 64, 64, color);
+    //Pms = GetMultiscatteringFrom3dTable(a_globals->m_essTranspTable, roughTransp, dotNV, 1.0f / eta, 64, 64, 64, color);
   }
 
   const float cosThetaOut = dot(refrData.rayDir, a_normal);
@@ -227,9 +188,10 @@ static inline void glassSampleAndEval(const Material* a_materials, float4 a_rand
 
   // only camera paths are multiplied by this factor, and etas are swapped because radiance
   // flows in the opposite direction. See SmallVCM and or Veach adjoint bsdf.
+  const bool a_isFwdDir       = true; // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
   const float adjointBtdfMult = a_isFwdDir ? 1.0f : (refrData.eta * refrData.eta);
 
-  if (refrData.success) a_pRes->color = coat * adjointBtdfMult * Pss * Pms * cosMult;
+  if (refrData.success) a_pRes->color = colorTransp * adjointBtdfMult * Pss * Pms * cosMult;
   else                  a_pRes->color = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
 
   if (spec)             a_pRes->flags = (RAY_EVENT_S | RAY_EVENT_T);

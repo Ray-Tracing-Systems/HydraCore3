@@ -169,31 +169,31 @@ protected:
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
-  std::vector<Material>    m_materials;
-  std::vector<uint32_t>        m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
-  std::vector<uint32_t>        m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
-  std::vector<uint32_t>        m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
-  std::vector<uint32_t>        m_packedXY;
-
-  std::vector<uint32_t>        m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
-  std::vector<float4>          m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float2>          m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
-  
-  std::vector<int>             m_remapInst;
-  std::vector<int>             m_allRemapLists;
-  std::vector<int>             m_allRemapListsOffsets;
-  std::vector<uint32_t>        m_instIdToLightInstId;
-
-  float4x4                     m_projInv;
-  float4x4                     m_worldViewInv;
-  std::vector<RandomGen>       m_randomGens;
-  std::vector<float4x4>        m_normMatrices; ///< per instance normal matrix, local to world
+  std::vector<Material>         m_materials;
+  std::vector<uint32_t>         m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
+  std::vector<uint32_t>         m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
+  std::vector<uint32_t>         m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
+  std::vector<uint32_t>         m_packedXY;
+                                
+  std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
+  std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
+  std::vector<float2>           m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+                                
+  std::vector<int>              m_remapInst;
+  std::vector<int>              m_allRemapLists;
+  std::vector<int>              m_allRemapListsOffsets;
+  std::vector<uint32_t>         m_instIdToLightInstId;
+                                
+  float4x4                      m_projInv;
+  float4x4                      m_worldViewInv;
+  std::vector<RandomGen>        m_randomGens;
+  std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
-  std::vector<RectLightSource> m_lights;
-  float4          m_envColor = float4(0,0,0,1);
-  uint m_intergatorType = INTEGRATOR_STUPID_PT;
+  std::vector<RectLightSource>  m_lights;
+  float4                        m_envColor = float4(0,0,0,1);
+  uint                          m_intergatorType = INTEGRATOR_STUPID_PT;
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;
