@@ -55,7 +55,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
       break;
     case MAT_TYPE_GLASS:
-      glassSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+      glassSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res);
       break;
     default:
     break;

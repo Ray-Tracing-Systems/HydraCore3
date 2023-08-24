@@ -2,6 +2,7 @@
 #define RTC_MATERIAL
 
 #include "cglobals.h"
+#include <algorithm>
 
 struct BsdfSample
 {
@@ -46,6 +47,7 @@ enum MATERIAL_EVENT {
 static constexpr uint UINT_MTYPE                  = 0;  ///< one of 'MATERIAL_TYPES'
 static constexpr uint UINT_CFLAGS                 = 1;  ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
 static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light if this material is light 
+static constexpr uint UINT_MAIN_LAST_IND          = 3;  ///< the last general index
 
 // GLTF
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
@@ -54,31 +56,35 @@ static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light
 static constexpr uint GLTF_COLOR_BASE             = 0;  ///< color for both lambert and emissive lights; baseColor.w store emission
 static constexpr uint GLTF_COLOR_COAT             = 1;  ///< in our implementation we allow different color for coating (fresnel) and diffuse
 static constexpr uint GLTF_COLOR_METAL            = 2;  ///< in our implementation we allow different color for metals and diffuse
-                                                        
+static constexpr uint GLTF_COLOR_LAST_IND         = GLTF_COLOR_METAL;
+
 // custom                                               
-static constexpr uint GLTF_FLOAT_MI_FDR_INT       = 3;  ///< ScalarFloat m_fdr_int;
-static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = 4;  ///< ScalarFloat m_fdr_ext;
-static constexpr uint GLTF_FLOAT_MI_SSW           = 5;  ///< Float m_specular_sampling_weight;
-static constexpr uint GLTF_FLOAT_ALPHA            = 6;  ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
-static constexpr uint GLTF_FLOAT_GLOSINESS        = 7;  ///< material glosiness or intensity for lights, take color from baseColor
-static constexpr uint GLTF_FLOAT_IOR              = 8;  ///< index of refraction for reflection Fresnel
-static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = 9;  ///< roughness for Oren-Nayar
-static constexpr uint GLTF_UINT_TEXID0            = 10; ///< texture id
+static constexpr uint GLTF_FLOAT_MI_FDR_INT       = UINT_MAIN_LAST_IND + 0; ///< ScalarFloat m_fdr_int;
+static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = UINT_MAIN_LAST_IND + 1; ///< ScalarFloat m_fdr_ext;
+static constexpr uint GLTF_FLOAT_MI_SSW           = UINT_MAIN_LAST_IND + 2; ///< Float m_specular_sampling_weight;
+static constexpr uint GLTF_FLOAT_ALPHA            = UINT_MAIN_LAST_IND + 3; ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
+static constexpr uint GLTF_FLOAT_GLOSINESS        = UINT_MAIN_LAST_IND + 4; ///< material glosiness or intensity for lights, take color from baseColor
+static constexpr uint GLTF_FLOAT_IOR              = UINT_MAIN_LAST_IND + 5; ///< index of refraction for reflection Fresnel
+static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = UINT_MAIN_LAST_IND + 6; ///< roughness for Oren-Nayar
+static constexpr uint GLTF_UINT_TEXID0            = UINT_MAIN_LAST_IND + 7; ///< texture id
+static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_UINT_TEXID0;
 
 // GLASS
 // colors
 static constexpr uint GLASS_COLOR_REFLECT         = 0;    
 static constexpr uint GLASS_COLOR_TRANSP          = 1;  
+static constexpr uint GLASS_COLOR_LAST_IND        = GLASS_COLOR_TRANSP;
 
 // custom 
-static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = 3;
-static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = 4;
-static constexpr uint GLASS_FLOAT_IOR             = 5;
+static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = UINT_MAIN_LAST_IND + 0;
+static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = UINT_MAIN_LAST_IND + 1;
+static constexpr uint GLASS_FLOAT_IOR             = UINT_MAIN_LAST_IND + 2;
+static constexpr uint GLASS_CUSTOM_LAST_IND       = GLASS_FLOAT_IOR;
 
 
 // The size is taken according to the largest indexes
-static constexpr uint COLOR_DATA_SIZE             = 6;
-static constexpr uint CUSTOM_DATA_SIZE            = 11;
+static constexpr uint COLOR_DATA_SIZE             = std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND) + 1;
+static constexpr uint CUSTOM_DATA_SIZE            = std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND) + 1;
 
 struct Material
 {

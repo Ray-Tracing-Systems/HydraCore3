@@ -11,7 +11,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
   const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float3 specular   = to_float3(a_materials[0].colors[GLTF_COLOR_METAL]); 
   const float3 coat       = to_float3(a_materials[0].colors[GLTF_COLOR_COAT]);  
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_ALPHA], 0.0f, 1.0f);   
+  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
   float        alpha      = a_materials[0].data[GLTF_FLOAT_ALPHA];                 
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
   
@@ -112,7 +112,7 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float3 specular   = to_float3(a_materials[0].colors[GLTF_COLOR_METAL]);
   const float3 coat       = to_float3(a_materials[0].colors[GLTF_COLOR_COAT]);
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_ALPHA], 0.0f, 1.0f);
+  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
         float  alpha      = a_materials[0].data[GLTF_FLOAT_ALPHA];
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
 

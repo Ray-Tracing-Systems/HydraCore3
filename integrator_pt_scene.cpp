@@ -253,14 +253,13 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   {
     std::wstring name            = materialNode.attribute(L"name").as_string();
     Material mat                 = {};
-    float a = as_float(MAT_TYPE_GLTF);
     mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
     mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
     mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,0); 
     mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);  
     mat.data[UINT_LIGHTID]       = as_float(uint(-1));
     
-    auto nodeEmiss = materialNode.child(L"emission");
+    auto nodeEmiss               = materialNode.child(L"emission");
 
     // read Hydra or GLTF materials
     //
@@ -268,17 +267,17 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
     if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
     {
-      auto nodeEmissColor = nodeEmiss.child(L"color");
-      color   = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
+      auto nodeEmissColor          = nodeEmiss.child(L"color");
+      color                        = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
 
       HydraSampler emissiveSampler = ReadSamplerFromColorNode(nodeEmissColor);
-      auto p = texCache.find(emissiveSampler);
+      auto p                       = texCache.find(emissiveSampler);
       if(p == texCache.end())
       {
         texCache[emissiveSampler] = uint(m_textures.size());
-        const uint32_t texId = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
+        const uint32_t texId      = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
         m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], emissiveSampler.sampler));
-        p = texCache.find(emissiveSampler);
+        p                         = texCache.find(emissiveSampler);
       }
       
       mat.row0 [0]                = emissiveSampler.row0;
@@ -401,7 +400,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
 
     if(color[3] > 1e-5f)
-      mat.data[UINT_MTYPE]    = as_float(MAT_TYPE_LIGHT_SOURCE);
+      mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
 
     if (nodeDiffRough != nullptr)
     {
@@ -409,8 +408,8 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       mat.data[UINT_CFLAGS] = as_float(as_uint(mat.data[UINT_CFLAGS]) | GLTF_COMPONENT_ORENNAYAR);
     }
 
-    mat.data[GLTF_FLOAT_ALPHA]  = reflGlossiness;
-    mat.data[GLTF_FLOAT_IOR]    = fresnelIOR;
+    mat.data[GLTF_FLOAT_GLOSINESS] = reflGlossiness;
+    mat.data[GLTF_FLOAT_IOR]       = fresnelIOR;
     m_materials.push_back(mat);
   }
 
@@ -460,7 +459,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       for(int i = 0; i < 3; ++i)
       {
         float4 vec = matrix.col(i);
-        scale[i] = length3f(vec);
+        scale[i]   = length3f(vec);
 
         for(int j = 0; j < 3; ++j)
           matrix.col(i)[j] /= scale[i];
