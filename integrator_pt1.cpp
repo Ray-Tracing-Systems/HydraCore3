@@ -124,8 +124,8 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float2 uv = rndFloat2_Pseudo(a_gen);
-  const float rndId = rndFloat1_Pseudo(a_gen);
+  const float2 uv   = rndFloat2_Pseudo(a_gen);
+  const float rndId = clamp(rndFloat1_Pseudo(a_gen), 0.0f, 0.9999f);
 
   int lightId = int(std::floor(rndId * m_lights.size()));
   

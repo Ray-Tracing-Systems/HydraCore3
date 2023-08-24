@@ -211,43 +211,69 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   const float  roughTransp     = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
   const float  ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
 
-  const float  dotNV           = dot(a_normal, a_viewDir);
-  const bool   a_hitFromInside = dotNV > 0.0f;                       // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
-  const float3 normal2         = a_hitFromInside ? (-1.0f) * a_normal : a_normal;
-
-  float3 ggxDir;
-  float  ggxPdf;
-  float  ggxVal;
-
-  if (roughReflect == 0.0f) // perfect specular reflection
-  {
-    const float3 pefReflDir = reflect((-1.0f) * a_viewDir, a_normal);
-    const float cosThetaOut = dot(pefReflDir, a_normal);
-    ggxDir                  = pefReflDir;
-    ggxVal                  = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-    ggxPdf                  = 1.0f;
-  }
-  else
-  {
-    ggxDir = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, a_normal, roughReflect);
-    ggxPdf = ggxEvalPDF(ggxDir, a_viewDir, a_normal, roughReflect);
-    ggxVal = ggxEvalBSDF(ggxDir, a_viewDir, a_normal, roughReflect);
-  }
-
-  // select between specular and transparency via a_rands.w
-  //
+  const float  dotNV           = dot(a_normal, (-1.0f) * a_viewDir);
+  //const bool   a_hitFromInside = dotNV < 0.0f;                       // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
+  //const float3 normal2         = a_hitFromInside ? (-1.0f) * a_normal : a_normal;
+      
   const float fresnel = FrDielectricPBRT(std::abs(dotNV), 1.0f, ior);
 
   if (a_rands.w < fresnel) // reflection
   {
-    a_pRes->direction = ggxDir;
-    a_pRes->color     = ggxVal * colorReflect;// * fresnel;
-    a_pRes->pdf       = ggxPdf;
-    a_pRes->flags     = (roughReflect == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+    float3 ggxDir;
+    float  ggxPdf;
+    float  ggxVal;
+
+    if (roughReflect == 0.0f) 
+    {
+      const float3 pefReflDir = reflect((-1.0f) * a_viewDir, a_normal);
+      const float cosThetaOut = dot(pefReflDir, a_normal);
+      ggxDir                  = pefReflDir;
+      ggxVal                  = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+      ggxPdf                  = 1.0f;
+    }
+    else
+    {
+      ggxDir                  = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, a_normal, roughReflect);
+      ggxPdf                  = ggxEvalPDF(ggxDir, a_viewDir, a_normal, roughReflect);
+      ggxVal                  = ggxEvalBSDF(ggxDir, a_viewDir, a_normal, roughReflect);
+    }
+
+    a_pRes->direction         = ggxDir;
+    a_pRes->color             = ggxVal * colorReflect;
+    a_pRes->pdf               = ggxPdf;
+    a_pRes->flags             = (roughReflect == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   }
-  else                     // transparency
+  else  // transparency
   {
-    refractionGlassSampleAndEval(colorTransp, ior, roughTransp, a_normal, normal2, a_rands, a_viewDir, a_pRes);
+    //refractionGlassSampleAndEval(colorTransp, ior, roughTransp, a_normal, a_normal, a_rands, a_viewDir, a_pRes);
+
+    float3 ggxDir;
+    float  ggxPdf;
+    float  ggxVal;
+    bool   spec = true;
+
+    if (roughTransp == 0.0f) 
+    {
+      bool   spec = false;
+
+      const float3 pefTransDir = refract((-1.0f) * a_viewDir, a_normal, ior);
+      const float cosThetaOut  = dot(pefTransDir, a_normal);
+      ggxDir                   = pefTransDir;
+      ggxVal                   = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+      ggxPdf                   = 1.0f;
+    }
+    else
+    {
+      ggxDir                   = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, a_normal, roughTransp);
+      ggxPdf                   = ggxEvalPDF(ggxDir, a_viewDir, a_normal, roughTransp);
+      ggxVal                   = ggxEvalBSDF(ggxDir, a_viewDir, a_normal, roughTransp);
+    }
+
+    a_pRes->direction          = ggxDir;
+    a_pRes->color              = ggxVal * colorReflect;
+    a_pRes->pdf                = ggxPdf;
+    if (spec) a_pRes->flags = (RAY_EVENT_S | RAY_EVENT_T);
+    else      a_pRes->flags = (RAY_EVENT_G | RAY_EVENT_T);
   }
 }
 

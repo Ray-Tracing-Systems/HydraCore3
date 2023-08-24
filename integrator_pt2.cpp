@@ -176,14 +176,35 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
 
 void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start               = std::chrono::high_resolution_clock::now();
+  auto start2              = std::chrono::high_resolution_clock::now();
+  
+  const int allCountSample = tid * a_passNum;
+  int countSample          = 0;
+
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(int i = 0; i < tid; i++)
-    for(int j = 0; j < a_passNum; j++)
+  for (int i = 0; i < tid; i++)
+  {
+
+    for (int j = 0; j < a_passNum; j++)
+    {
       PathTrace((uint)i, out_color);
-  shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+      countSample++;
+    }
+    
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.f;
+
+    if (duration > 2)
+    {
+      std::cout << "progress: " << (float)countSample / (float)allCountSample * 100.0f << "                    \r";
+      start2 = std::chrono::high_resolution_clock::now();
+    }
+  }
+
+  std::cout << std::endl;
+  shadowPtTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
