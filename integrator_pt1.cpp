@@ -241,8 +241,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   
   const float4 uv         = rndFloat4_Pseudo(a_gen);
   const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv);
-  const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-20f));
-  const float  cosTheta   = dot(matSam.direction, hit.norm);
+  const float3 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
+  const float  cosTheta   = dot(matSam.dir, hit.norm);
 
   MisData nextBounceData;                   // remember current pdfW for next bounce
   nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; //
@@ -269,8 +269,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     *accumThoroughput = currThoroughput*cosTheta*to_float4(bxdfVal, 0.0f); 
   }
 
-  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f); // todo: use flatNormal for offset
-  *rayDirAndFar  = to_float4(matSam.direction, MAXFLOAT);
+  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
+  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 

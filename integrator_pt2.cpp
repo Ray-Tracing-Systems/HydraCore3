@@ -43,7 +43,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read other parameters from texture
 
   BsdfSample res;
-  res.color = float3(0,0,0);
+  res.val = float3(0,0,0);
   res.pdf   = 1.0f;
   
   switch(mtype)

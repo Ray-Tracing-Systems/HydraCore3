@@ -47,8 +47,8 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
   {
     pdfSelect *= alpha;
     const float  VdotH = dot(v,normalize(v + ggxDir));
-    pRes->direction = ggxDir;
-    pRes->color     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
+    pRes->dir = ggxDir;
+    pRes->val     = ggxVal*alpha*hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
     pRes->pdf       = ggxPdf;
     pRes->flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   }
@@ -77,16 +77,16 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
     if(rands.w < prob_specular) // specular
     {
       pdfSelect *= choicePdf;
-      pRes->direction = ggxDir;
-      pRes->color     = ggxVal*coat*(1.0f - alpha)*f_i;
+      pRes->dir = ggxDir;
+      pRes->val     = ggxVal*coat*(1.0f - alpha)*f_i;
       pRes->pdf       = ggxPdf;
       pRes->flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
     } 
     else
     {
       pdfSelect *= (1.0f-choicePdf); // lambert
-      pRes->direction = lambertDir;
-      pRes->color     = lambertVal*color*(1.0f - alpha);
+      pRes->dir = lambertDir;
+      pRes->val     = lambertVal*color*(1.0f - alpha);
       pRes->pdf       = lambertPdf;
       pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
       
@@ -94,7 +94,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
       {
         const float m_fdr_int = a_materials[0].data[MI_FDR_INT];
         const float f_o = FrDielectricPBRT(std::abs(dot(lambertDir,n)), 1.0f, fresnelIOR); 
-        pRes->color *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+        pRes->val *= (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
       }
     }
   }   

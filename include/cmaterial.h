@@ -5,8 +5,8 @@
 
 struct BsdfSample
 {
-  float3 color;
-  float3 direction;
+  float3 val;
+  float3 dir;
   float  pdf; 
   uint   flags;
 };

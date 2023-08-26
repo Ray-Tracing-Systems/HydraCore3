@@ -146,8 +146,8 @@ BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 
   //}
 
   BsdfSample res;
-  res.direction = pefReflDir;
-  res.color     = reflColor;
+  res.dir = pefReflDir;
+  res.val     = reflColor;
   res.pdf       = 1.0f;
   res.flags     = RAY_EVENT_S;
   return res;
@@ -221,8 +221,8 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   }
 
   const BsdfSample matSam = MaterialSampleWhitted(matId, (-1.0f)*ray_dir, hit.norm, hit.uv);
-  const float3 bxdfVal    = matSam.color;
-  const float  cosTheta   = dot(matSam.direction, hit.norm);
+  const float3 bxdfVal    = matSam.val;
+  const float  cosTheta   = dot(matSam.dir, hit.norm);
 
   const float4 currThoroughput = *accumThoroughput;
   float4 currAccumColor        = *accumColor;
@@ -234,8 +234,8 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   *accumColor       = currAccumColor;
   *accumThoroughput = currThoroughput * cosTheta * to_float4(bxdfVal, 0.0f);
 
-  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f);
-  *rayDirAndFar  = to_float4(matSam.direction, MAXFLOAT);
+  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f);
+  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 

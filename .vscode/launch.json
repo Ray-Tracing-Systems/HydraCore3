@@ -9,7 +9,7 @@
             "type"   : "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin-release/hydra",
-            "args"   : ["--gpu",
+            "args"   : ["--cpu",
                         //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
                         //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
                         //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
