@@ -49,9 +49,10 @@ if(USE_VULKAN)
 
   add_compile_definitions(USE_VOLK)
   add_compile_definitions(USE_VULKAN)
+  
+  include_directories(${Vulkan_INCLUDE_DIR})
 endif()
 
-include_directories(${Vulkan_INCLUDE_DIR})
 include_directories("external"
                     "external/tinyexr"
                     "external/vkutils"
