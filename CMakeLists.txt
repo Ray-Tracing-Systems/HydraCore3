@@ -53,16 +53,10 @@ if(USE_VULKAN)
   include_directories(${Vulkan_INCLUDE_DIR})
 endif()
 
-<<<<<<< HEAD
-include_directories("external"
-                    "external/tinyexr"
-                    "external/vkutils"
-=======
 
 # try to silence warnings for include files from these dirs
 include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
 include_directories(SYSTEM "external/tinyexr"
->>>>>>> fix-warnings
                     "external/volk"
                     "external/LiteMath")
 include_directories("external"
