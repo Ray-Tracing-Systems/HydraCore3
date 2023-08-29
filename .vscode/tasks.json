@@ -37,4 +37,15 @@
             ]
         },
 
+        {
+            "label": "CleanBuilt",
+            "type": "shell",
+            "command": "cd build && rm -rf *",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+
     ]
+}
