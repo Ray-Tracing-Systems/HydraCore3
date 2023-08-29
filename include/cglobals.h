@@ -111,13 +111,13 @@ static inline float3 MapSampleToCosineDistribution(float r1, float r2, float3 di
   if(power >= 1e6f)
     return direction;
 
-  const float sin_phi = sin(M_TWOPI * r1);
-  const float cos_phi = cos(M_TWOPI * r1);
+  const float sin_phi = std::sin(M_TWOPI * r1);
+  const float cos_phi = std::cos(M_TWOPI * r1);
 
   //sincos(2.0f*r1*3.141592654f, &sin_phi, &cos_phi);
 
-  const float cos_theta = pow(1.0f - r2, 1.0f / (power + 1.0f));
-  const float sin_theta = sqrt(1.0f - cos_theta*cos_theta);
+  const float cos_theta = std::pow(1.0f - r2, 1.0f / (power + 1.0f));
+  const float sin_theta = std::sqrt(1.0f - cos_theta*cos_theta);
 
   float3 deviation;
   deviation.x = sin_theta*cos_phi;

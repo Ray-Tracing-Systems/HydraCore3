@@ -95,7 +95,7 @@ static inline float lambertEvalBSDF(float3 l, float3 v, float3 n)
 
 static inline float3 SphericalDirectionPBRT(const float sintheta, const float costheta, const float phi) 
 { 
-  return float3(sintheta * cos(phi), sintheta * sin(phi), costheta); 
+  return float3(sintheta * std::cos(phi), sintheta * std::sin(phi), costheta); 
 }
 
 static inline float GGX_Distribution(const float cosThetaNH, const float alpha)

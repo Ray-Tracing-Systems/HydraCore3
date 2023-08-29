@@ -327,7 +327,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     if(!hasFresnel)
       fresnelIOR = 0.0f;
     
-    if(length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f || hasFresnel)
+    if((length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f) || hasFresnel)
     {
       mat.mtype      = MAT_TYPE_GLTF;
       mat.baseColor  = color;

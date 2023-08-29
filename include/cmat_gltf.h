@@ -63,7 +63,7 @@ static inline void gltfSampleAndEval(const GLTFMaterial* a_materials, float4 ran
     
     float prob_specular = f_i * m_specular_sampling_weight;
     float prob_diffuse  = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-    if(prob_diffuse != 0.0f && prob_diffuse != 0.0f)
+    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
     {
       prob_specular = prob_specular / (prob_specular + prob_diffuse);
       prob_diffuse  = 1.f - prob_specular;
