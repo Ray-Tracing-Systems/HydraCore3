@@ -1,44 +1,6 @@
 {
     "version": "0.2.0",
     "configurations": [
-<<<<<<< HEAD
-        {
-            "name"   : "Launch",
-            "type"   : "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin-release/hydra",
-            "args"   : ["--cpu",
-                        //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_cornell_hydra_rough_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_sphere_hydra_rough_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/07_sphere_hydra_metal.xml",
-                        //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y06_sphere_hydra3_rough_plastic.exr",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
-                        //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y05_cornell_hydra3_plastic.exr",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/bunny_cornell.xml",
-                        "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_124/statex_00001.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_070/statex_00001.xml",
-                        "-integrator", "mispt", 
-                        "-spp", "256", "-spp-naive-mul", "1"],
-            "stopAtEntry": false,
-            "cwd"    : "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-=======
     {
         "name": "CPU render",
         "type": "cppdbg",
@@ -46,7 +8,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu",
                  "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
-                 "-integrator", "mispt", 
+                 "-integrator", "naivept", 
                  "-spp", "32", 
                  "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
@@ -68,9 +30,9 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
-                //  "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
-                 "-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
-                 "-integrator", "mispt", 
+                 "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
+                 //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
+                 "-integrator", "naivept", 
                  "-spp", "32", 
                  "-out", "out_gpu.bmp"],
         "stopAtEntry": false,
@@ -122,7 +84,6 @@
             }
         ]
     },
->>>>>>> fix-warnings
 
     {
         "name": "(debug) Launch",
