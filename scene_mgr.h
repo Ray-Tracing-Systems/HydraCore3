@@ -133,8 +133,8 @@ private:
 
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
 
-  uint32_t m_totalVertices = 0u;
-  uint32_t m_totalIndices  = 0u;
+  size_t m_totalVertices = 0u;
+  size_t m_totalIndices  = 0u;
 
   VkBuffer m_geoVertBuf        = VK_NULL_HANDLE;
   VkBuffer m_geoIdxBuf         = VK_NULL_HANDLE;

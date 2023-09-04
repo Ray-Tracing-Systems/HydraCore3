@@ -151,12 +151,12 @@ cmesh4::SimpleMesh cmesh4::LoadMeshFromVSGF(const char* a_fileName)
   if(!(header.flags & HAS_NO_NORMALS))
     input.read((char*)res.vNorm4f.data(), res.vNorm4f.size()*sizeof(float)*4);
   else
-    memset(res.vNorm4f.data(), 0, res.vNorm4f.size()*sizeof(float)*4);            // #TODO: calc at flat normals in this case
+    std::fill(res.vNorm4f.begin(), res.vNorm4f.end(), LiteMath::float4{});   // #TODO: calc at flat normals in this case        
 
   if(header.flags & HAS_TANGENT)
     input.read((char*)res.vTang4f.data(), res.vTang4f.size()*sizeof(float)*4);
   else
-    memset(res.vTang4f.data(), 0, res.vTang4f.size()*sizeof(float)*4);
+    std::fill(res.vTang4f.begin(), res.vTang4f.end(), LiteMath::float4{});
 
   input.read((char*)res.vTexCoord2f.data(), res.vTexCoord2f.size()*sizeof(float)*2);
   input.read((char*)res.indices.data(),    res.indices.size()*sizeof(unsigned int));
@@ -203,7 +203,7 @@ void cmesh4::SaveMeshToVSGF(const char* a_fileName, const SimpleMesh& a_mesh)
 
 float cmesh4::SimpleMesh::GetAvgTriArea() const
 {
-  double res = 0.0;
+  float res = 0.0;
   for(size_t i = 0; i < TrianglesNum(); i++)
   {
     uint32_t indA = indices[i * 3 + 0];
@@ -224,14 +224,14 @@ float cmesh4::SimpleMesh::GetAvgTriArea() const
     res += area;
   }
 
-  res /= static_cast<double>(TrianglesNum());
+  res /= static_cast<float>(TrianglesNum());
 
   return float(res);
 }
 
 float cmesh4::SimpleMesh::GetAvgTriPerimeter() const
 {
-  double res = 0.0;
+  float res = 0.0;
   for(size_t i = 0; i < TrianglesNum(); i++)
   {
     uint32_t indA = indices[i * 3 + 0];
@@ -249,7 +249,7 @@ float cmesh4::SimpleMesh::GetAvgTriPerimeter() const
     res += edge1len + edge2len + edge3len;
   }
 
-  res /= static_cast<double>(TrianglesNum());
+  res /= static_cast<float>(TrianglesNum());
 
   return float(res);
 }

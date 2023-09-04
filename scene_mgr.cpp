@@ -138,8 +138,8 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
   info.m_vertNum = static_cast<uint32_t>(meshData.VerticesNum());
   info.m_indNum  = static_cast<uint32_t>(meshData.IndicesNum());
 
-  info.m_vertexOffset = m_totalVertices;
-  info.m_indexOffset  = m_totalIndices;
+  info.m_vertexOffset = static_cast<int32_t>(m_totalVertices);
+  info.m_indexOffset  = static_cast<uint32_t>(m_totalIndices);
 
   info.m_vertexBufOffset = info.m_vertexOffset * m_pMeshData->SingleVertexSize();
   info.m_indexBufOffset  = info.m_indexOffset  * m_pMeshData->SingleIndexSize();
