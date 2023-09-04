@@ -114,7 +114,8 @@ int main(int argc, const char** argv)
   if(integratorType == "naivept" || integratorType == "all")
   {
     std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
-    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
     pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
@@ -144,7 +145,9 @@ int main(int argc, const char** argv)
   if(integratorType == "shadowpt" || integratorType == "all")
   {
     std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
-    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    
+    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
@@ -164,7 +167,9 @@ int main(int argc, const char** argv)
   if(integratorType == "mispt" || integratorType == "all")
   {
     std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
-    memset(realColor.data(), 0, sizeof(float)*4*realColor.size());
+    
+    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
@@ -189,8 +194,10 @@ int main(int argc, const char** argv)
   if(integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt")
   {
     PASS_NUMBER = 1;               // must be always one for RT currently
-    const float normConst = 1.0f;  // must be always one for RT currently
+    const float normConstRT = 1.0f;  // must be always one for RT currently
     std::cout << "[main]: RayBlock ... " << std::endl;
+
+    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
    
     pImpl->UpdateMembersPlainData();
     pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
@@ -203,12 +210,12 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, true);
     }
     else
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.bmp";
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
     }
   }
 

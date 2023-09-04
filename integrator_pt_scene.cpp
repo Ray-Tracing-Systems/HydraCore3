@@ -456,6 +456,8 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
     auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
+    (void)geomId; // silence unused var. warning
+
     m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
     m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
 

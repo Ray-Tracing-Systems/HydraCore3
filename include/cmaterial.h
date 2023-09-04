@@ -77,16 +77,21 @@ struct GLTFMaterial
 
 static inline float3 lambertSample(float2 rands, float3 v, float3 n)
 {
-   return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
+  (void)v;
+  return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
 }
 
 static inline float lambertEvalPDF(float3 l, float3 v, float3 n) 
 { 
+  (void)v;
   return std::abs(dot(l, n)) * INV_PI;
 }
 
 static inline float lambertEvalBSDF(float3 l, float3 v, float3 n)
 {
+  (void)l;
+  (void)v;
+  (void)n;
   return INV_PI;
 }
 
@@ -222,6 +227,8 @@ static inline float fresnelSlick(float VdotH)
 
 static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
 {
+  (void)roughness;
+  
   if(ior == 0.0f) // fresnel reflactance is disabled
     return f0;
 
