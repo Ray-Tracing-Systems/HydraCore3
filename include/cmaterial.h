@@ -5,8 +5,8 @@
 
 struct BsdfSample
 {
-  float3 color;
-  float3 direction;
+  float3 val;
+  float3 dir;
   float  pdf; 
   uint   flags;
 };
@@ -80,16 +80,21 @@ struct Material
 
 static inline float3 lambertSample(float2 rands, float3 v, float3 n)
 {
-   return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
+  (void)v;
+  return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
 }
 
 static inline float lambertEvalPDF(float3 l, float3 v, float3 n) 
 { 
+  (void)v;
   return std::abs(dot(l, n)) * INV_PI;
 }
 
 static inline float lambertEvalBSDF(float3 l, float3 v, float3 n)
 {
+  (void)l;
+  (void)v;
+  (void)n;
   return INV_PI;
 }
 
@@ -182,7 +187,7 @@ static inline float orennayarEvalPDF(const float3 l, const float3 n)
 
 static inline float3 SphericalDirectionPBRT(const float sintheta, const float costheta, const float phi) 
 { 
-  return float3(sintheta * cos(phi), sintheta * sin(phi), costheta); 
+  return float3(sintheta * std::cos(phi), sintheta * std::sin(phi), costheta); 
 }
 
 static inline float GGX_Distribution(const float cosThetaNH, const float alpha)
@@ -309,6 +314,8 @@ static inline float fresnelSlick(float VdotH)
 
 static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
 {
+  (void)roughness;
+  
   if(ior == 0.0f) // fresnel reflactance is disabled
     return f0;
 

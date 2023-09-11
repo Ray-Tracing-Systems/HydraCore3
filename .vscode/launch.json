@@ -1,123 +1,164 @@
 {
-    // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
-    // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
-    // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name"   : "Launch",
-            "type"   : "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin-release/hydra",
-            "args"   : ["--gpu",
-                        //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_cornell_hydra_rough_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_sphere_hydra_rough_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/07_sphere_hydra_metal.xml",
-                        //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y06_sphere_hydra3_rough_plastic.exr",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
-                        //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y05_cornell_hydra3_plastic.exr",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/bunny_cornell.xml",
-                        "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_124/statex_00001.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_070/statex_00001.xml",
-                        "-integrator", "mispt", 
-                        "-spp", "256", "-spp-naive-mul", "1"],
-            "stopAtEntry": false,
-            "cwd"    : "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
+    {
+        "name": "CPU render",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu",
+                 "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
+                 "-integrator", "naivept", 
+                 "-spp", "32", 
+                 "-out", "out_cpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "GPU render",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
+                 //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
+                 "-integrator", "naivept", 
+                 "-spp", "32", 
+                 "-out", "out_gpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name"   : "Launch",
+        "type"   : "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args"   : ["--gpu",
+                    //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_cornell_hydra_rough_plastic.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/06_sphere_hydra_rough_plastic.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/07_sphere_hydra_metal.xml",
+                    //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y06_sphere_hydra3_rough_plastic.exr",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_cornell_hydra_plastic.xml",
+                    //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y05_cornell_hydra3_plastic.exr",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/bunny_cornell.xml",
+                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_124/statex_00001.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_070/statex_00001.xml",
+                    "-integrator", "mispt", 
+                    "-spp", "256", "-spp-naive-mul", "1"],
+        "stopAtEntry": false,
+        "cwd"    : "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
 
-        {
-            "name": "(debug) Launch",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin-debug/hydra",
-            "args"   : ["--сpu", "-integrator", "raytracing", "-width", "512", "-height", "512", "-spp", "1",
-                        "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml",
-                        //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
-                        ],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
+    {
+        "name": "(debug) Launch",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args"   : ["--сpu", "-integrator", "raytracing", "-width", "512", "-height", "512", "-spp", "1",
+                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml",
+                    //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                    ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
 
-        {
-            "name"   : "Launch (RT)",
-            "type"   : "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-release/hydra",
-            "args"   : ["--cpu",
-                        //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
-                        //"-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite.exr",
-                        "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/instanced_objects.xml",
-                        "-integrator", "raytracing", 
-                        "-spp", "1", "-spp-naive-mul", "4"],
-            "stopAtEntry": false,
-            "cwd"    : "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-    
+    {
+        "name"   : "Launch (RT)",
+        "type"   : "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/cmake-build-release/hydra",
+        "args"   : ["--cpu",
+                    //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
+                    //"-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite.exr",
+                    "-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/instanced_objects.xml",
+                    "-integrator", "raytracing", 
+                    "-spp", "1", "-spp-naive-mul", "4"],
+        "stopAtEntry": false,
+        "cwd"    : "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
 
-        {
-            "name": "test_103",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/cmake-build-release/hydra",
-            "args": ["-in", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_f/test_103/statex_00001.xml", 
-                     "-out", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_images/test_103/z_out_h3_gpu.bmp", 
-                     "-integrator", "mispt", 
-                     "-spp", "1024", 
-                     "--gpu_id", "0", 
-                     "--gpu",
-                     ],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ]
-        },
 
-        
-
+    {
+        "name": "test_103",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/cmake-build-release/hydra",
+        "args": ["-in", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_f/test_103/statex_00001.xml", 
+                    "-out", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_images/test_103/z_out_h3_gpu.bmp", 
+                    "-integrator", "mispt", 
+                    "-spp", "1024", 
+                    "--gpu_id", "0", 
+                    "--gpu",
+                    ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     ]
 }

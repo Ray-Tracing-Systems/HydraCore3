@@ -43,7 +43,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read other parameters from texture
 
   BsdfSample res;
-  res.color = float3(0,0,0);
+  res.val = float3(0,0,0);
   res.pdf   = 1.0f;
   
   switch(mtype)
@@ -119,7 +119,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   {
     const int mid         = low + ((high - low) / 2);
     const int idRemapFrom = m_allRemapLists[offsAndSize.x + mid * 2 + 0];
-    if (idRemapFrom >= a_mId)
+    if (uint(idRemapFrom) >= a_mId)
       high = mid - 1;
     else //if(a[mid]<i)
       low = mid + 1;
@@ -129,7 +129,7 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   {
     const int idRemapFrom = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 0];
     const int idRemapTo   = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 1];
-    res                   = (idRemapFrom == a_mId) ? uint(idRemapTo) : a_mId;
+    res                   = (uint(idRemapFrom) == a_mId) ? uint(idRemapTo) : a_mId;
   }
 
   return res;
@@ -141,8 +141,8 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 {
   #pragma omp parallel for default(shared)
-  for(int y=0;y<tidY;y++)
-    for(int x=0;x<tidX;x++)
+  for(uint y=0;y<tidY;y++)
+    for(uint x=0;x<tidX;x++)
       PackXY(x, y);
 }
 

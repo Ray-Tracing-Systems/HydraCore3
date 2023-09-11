@@ -19,6 +19,18 @@
             ]
         },
         {
+            "label": "RebuildCurrent",
+            "type": "shell",
+            "command": "cmake --build build --clean-first --target all",  // --config Release 
+            "group": "build"
+        },
+        {
+            "label": "CleanCurrent",
+            "type": "shell",
+            "command": "cmake --build build --target clean",
+            "group": "build"
+        },
+        {
             "label": "Build Kernels (GLSL)",
             "type": "shell",
             "command": "cd shaders_generated && bash build.sh",
@@ -37,4 +49,15 @@
             ]
         },
 
+        {
+            "label": "CleanBuilt",
+            "type": "shell",
+            "command": "cd build && rm -rf *",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+
     ]
+}
