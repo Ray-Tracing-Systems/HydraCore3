@@ -3,6 +3,7 @@
 
 #include "include/cmaterial.h"
 #include "include/cmat_gltf.h"
+#include "include/cmat_glass.h"
 
 #include <chrono>
 #include <string>
@@ -35,10 +36,12 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 
 BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc)
 {
+  // implicit strategy
+
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const uint   mtype     = m_materials[a_materialId].mtype;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
+  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
   // TODO: read other parameters from texture
 
@@ -49,9 +52,11 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
-    gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
-    break;
-
+      gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+      break;
+    case MAT_TYPE_GLASS:
+      glassSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res);
+      break;
     default:
     break;
   }
@@ -61,10 +66,12 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
 
 BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
+  // explicit strategy
+
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
-  const uint mtype       = m_materials[a_materialId].mtype;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
+  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
   // TODO: read other parameters from texture
 
@@ -75,10 +82,10 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
-    gltfEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
-             &res);
-    break;
-
+      gltfEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
+      break;
+    case MAT_TYPE_GLASS:
+      glassEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
     default:
     break;
   }
@@ -169,14 +176,35 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
 
 void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
 {
-  auto start = std::chrono::high_resolution_clock::now();
+  auto start               = std::chrono::high_resolution_clock::now();
+  auto start2              = std::chrono::high_resolution_clock::now();
+  
+  const int allCountSample = tid * a_passNum;
+  int countSample          = 0;
+
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(int i = 0; i < tid; i++)
-    for(int j = 0; j < a_passNum; j++)
+  for (int i = 0; i < tid; i++)
+  {
+
+    for (int j = 0; j < a_passNum; j++)
+    {
       PathTrace((uint)i, out_color);
-  shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+      countSample++;
+    }
+    
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.f;
+
+    if (duration > 2)
+    {
+      std::cout << "progress: " << (float)countSample / (float)allCountSample * 100.0f << "                    \r";
+      start2 = std::chrono::high_resolution_clock::now();
+    }
+  }
+
+  std::cout << std::endl;
+  shadowPtTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)

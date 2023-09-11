@@ -251,15 +251,15 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   m_materials.reserve(100);
   for(auto materialNode : scene.MaterialNodes())
   {
-    std::wstring name = materialNode.attribute(L"name").as_string();
-    Material mat = {};
-    mat.mtype        = MAT_TYPE_GLTF;
-    mat.alpha        = 0.0f;
-    mat.coatColor    = float4(1,1,1,0); 
-    mat.metalColor   = float4(0,0,0,0);  
-    mat.lightId      = uint(-1);
+    std::wstring name            = materialNode.attribute(L"name").as_string();
+    Material mat                 = {};
+    mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
+    mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
+    mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,0); 
+    mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);  
+    mat.data[UINT_LIGHTID]       = as_float(uint(-1));
     
-    auto nodeEmiss = materialNode.child(L"emission");
+    auto nodeEmiss               = materialNode.child(L"emission");
 
     // read Hydra or GLTF materials
     //
@@ -267,30 +267,30 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
     if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
     {
-      auto nodeEmissColor = nodeEmiss.child(L"color");
-      color   = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
+      auto nodeEmissColor          = nodeEmiss.child(L"color");
+      color                        = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
 
       HydraSampler emissiveSampler = ReadSamplerFromColorNode(nodeEmissColor);
-      auto p = texCache.find(emissiveSampler);
+      auto p                       = texCache.find(emissiveSampler);
       if(p == texCache.end())
       {
         texCache[emissiveSampler] = uint(m_textures.size());
-        const uint32_t texId = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
+        const uint32_t texId      = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
         m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], emissiveSampler.sampler));
-        p = texCache.find(emissiveSampler);
+        p                         = texCache.find(emissiveSampler);
       }
       
-      mat.row0 [0]  = emissiveSampler.row0;
-      mat.row1 [0]  = emissiveSampler.row1;
-      mat.texId[0]  = p->second;
+      mat.row0 [0]                = emissiveSampler.row0;
+      mat.row1 [0]                = emissiveSampler.row1;
+      mat.data[GLTF_UINT_TEXID0]  = as_float(p->second);
       
-      mat.baseColor = color;
+      mat.colors[GLTF_COLOR_BASE] = color;
       if(materialNode.attribute(L"light_id") == nullptr)
-        mat.lightId = uint(-1);
+        mat.data[UINT_LIGHTID] = as_float(uint(-1));
       else
-        mat.lightId = uint(materialNode.attribute(L"light_id").as_int()); // for correct process of "-1"
+        mat.data[UINT_LIGHTID] = as_float(uint(materialNode.attribute(L"light_id").as_int())); // for correct process of "-1"
       
-      mat.mtype = MAT_TYPE_LIGHT_SOURCE;
+      mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
     }
 
     auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
@@ -310,80 +310,106 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
         p = texCache.find(diffSampler);
       }
       
-      mat.row0 [0]  = diffSampler.row0;
-      mat.row1 [0]  = diffSampler.row1;
-      mat.texId[0]  = p->second;
+      mat.row0 [0]                = diffSampler.row0;
+      mat.row1 [0]                = diffSampler.row1;
+      mat.data[GLTF_UINT_TEXID0]  = as_float(p->second);
     }
 
 
-    float3 reflColor = float3(0,0,0);
-    float glosiness  = 1.0f;
-    float fresnelIOR = 1.5f;
-    auto nodeRefl    = materialNode.child(L"reflectivity");
+    float3 reflColor      = float3(0,0,0);
+    float  reflGlossiness = 1.0f;
+    float  fresnelIOR     = 1.5f;
+
+    auto nodeRefl     = materialNode.child(L"reflectivity");
     if(nodeRefl != nullptr)
     {
-      reflColor  = hydra_xml::readval3f(nodeRefl.child(L"color"));
-      glosiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
-      fresnelIOR = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
+      reflColor      = hydra_xml::readval3f(nodeRefl.child(L"color"));
+      reflGlossiness = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
+      fresnelIOR     = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
     }
-
+    
     const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);
     if(!hasFresnel)
       fresnelIOR = 0.0f;
     
-    if((length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f) || hasFresnel)
+    float3 transpColor      = float3(0, 0, 0);
+    float  transpGlossiness = 1.0f;
+    float  transpIOR        = 1.5f;
+
+    auto nodeTransp = materialNode.child(L"transparency");
+    if (nodeTransp != nullptr)
     {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.baseColor  = color;
-      mat.coatColor  = to_float4(reflColor, 0.0f);
-      mat.lightId    = uint(-1);
+      transpColor      = hydra_xml::readval3f(nodeTransp.child(L"color"));
+      transpGlossiness = hydra_xml::readval1f(nodeTransp.child(L"glossiness"));
+      transpIOR        = hydra_xml::readval1f(nodeTransp.child(L"ior"));
+    }
+
+    if(length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f || hasFresnel)
+    {
+      mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
+      mat.colors[GLTF_COLOR_BASE]  = color;
+      mat.colors[GLTF_COLOR_COAT]  = to_float4(reflColor, 0.0f);
+      mat.data[UINT_LIGHTID]       = as_float(uint(-1));
 
       if(hasFresnel)
       {
-        mat.alpha      = 0.0f;
-        mat.coatColor  = to_float4(reflColor, 0.0f);
-        mat.metalColor = float4(0,0,0,0); 
-        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
+        mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
+        mat.colors[GLTF_COLOR_COAT]  = to_float4(reflColor, 0.0f);
+        mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0); 
+        mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT);
       }
       else
       {
-        mat.alpha      = length(reflColor)/( length(reflColor) + length3f(color) );
-        mat.coatColor  = float4(0,0,0,0); 
-        mat.metalColor = to_float4(reflColor, 0.0f);                                           // disable coating for such blend type
-        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL;
+        mat.data[GLTF_FLOAT_ALPHA]   = length(reflColor)/( length(reflColor) + length3f(color) );
+        mat.colors[GLTF_COLOR_COAT]  = float4(0,0,0,0); 
+        mat.colors[GLTF_COLOR_METAL] = to_float4(reflColor, 0.0f);                               // disable coating for such blend type
+        mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL);
       }
 
       SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
     }
     else if(length(reflColor) > 1e-5f)
     {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.cflags     = GLTF_COMPONENT_METAL;
-      mat.metalColor = to_float4(reflColor, 0.0f);
-      mat.coatColor  = float4(0,0,0,0); 
-      mat.alpha      = 1.0f;
+      mat.data[UINT_MTYPE]           = as_float(MAT_TYPE_GLTF);
+      mat.data[UINT_CFLAGS]          = as_float(GLTF_COMPONENT_METAL);
+      mat.colors[GLTF_COLOR_METAL]   = to_float4(reflColor, 0.0f);
+      mat.colors[GLTF_COLOR_COAT]    = float4(0,0,0,0); 
+      mat.data[GLTF_FLOAT_ALPHA]     = 1.0f;
     }
     else if(length(to_float3(color)) > 1e-5f)
     {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.cflags     = GLTF_COMPONENT_LAMBERT;
-      mat.baseColor  = color;
-      mat.coatColor  = float4(0,0,0,0); 
-      mat.metalColor = float4(0,0,0,0);    
-      mat.alpha      = 0.0f;
+      mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
+      mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT);
+      mat.colors[GLTF_COLOR_BASE]  = color;
+      mat.colors[GLTF_COLOR_COAT]  = float4(0,0,0,0); 
+      mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);    
+      mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
     }
     
+    // Glass
+    if (length(reflColor) > 1e-5f && length(transpColor) > 1e-5f)
+    {
+      mat.data[UINT_MTYPE]                = as_float(MAT_TYPE_GLASS);      
+      mat.colors[GLASS_COLOR_REFLECT]     = to_float4(reflColor, 0.0f);
+      mat.colors[GLASS_COLOR_TRANSP]      = to_float4(transpColor, 0.0f);      
+      mat.data[GLASS_FLOAT_GLOSS_REFLECT] = reflGlossiness;
+      mat.data[GLASS_FLOAT_GLOSS_TRANSP]  = transpGlossiness;
+      mat.data[GLASS_FLOAT_IOR]           = fresnelIOR;
+    }
+
+
+
     if(color[3] > 1e-5f)
-      mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
+      mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
 
     if (nodeDiffRough != nullptr)
     {
-      mat.data[MI_ORENNAYAR_ROUGH] = hydra_xml::readval1f(nodeDiffRough);
-      mat.cflags |= GLTF_COMPONENT_ORENNAYAR;
+      mat.data[GLTF_FLOAT_ROUGH_ORENNAYAR] = hydra_xml::readval1f(nodeDiffRough);
+      mat.data[UINT_CFLAGS] = as_float(as_uint(mat.data[UINT_CFLAGS]) | GLTF_COMPONENT_ORENNAYAR);
     }
 
-    mat.glosiness  = glosiness;
-    mat.ior        = fresnelIOR;
+    mat.data[GLTF_FLOAT_GLOSINESS] = reflGlossiness;
+    mat.data[GLTF_FLOAT_IOR]       = fresnelIOR;
     m_materials.push_back(mat);
   }
 
@@ -433,7 +459,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       for(int i = 0; i < 3; ++i)
       {
         float4 vec = matrix.col(i);
-        scale[i] = length3f(vec);
+        scale[i]   = length3f(vec);
 
         for(int j = 0; j < 3; ++j)
           matrix.col(i)[j] /= scale[i];

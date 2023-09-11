@@ -105,7 +105,7 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
   }
 
   const uint32_t matId = m_matIdByPrimId[m_matIdOffsets[lhit.geomId] + lhit.primId];
-  const float4 mdata   = m_materials[matId].baseColor;
+  const float4 mdata   = m_materials[matId].colors[GLTF_COLOR_BASE];
   const float3 color   = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata);
 
   const uint XY = in_pakedXY[tid];
@@ -119,18 +119,18 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
 float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   return lambertEvalBSDF(l, v, n)*color;
 }
 
 BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc)
 { 
-  //uint  type             = m_materials[a_materialId].mtype;
-  const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
-  const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
-  //const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
-  float alpha            = m_materials[a_materialId].alpha;
+  const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
+  const float3 specular  = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
+  const float3 coat      = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
+  const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
+  float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
   
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float3 reflColor  = alpha*specular + (1.0f - alpha)*coat;
@@ -174,13 +174,13 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
 
   // process light hit case
   //
-  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
+  if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
-    const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor  = to_float3(m_textures[ m_materials[matId].texId[0] ]->sample(texCoordT));
+    const float2 texCoordT      = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
+    const float3 texColor       = to_float3(m_textures[ as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
 
-    const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
-    const uint lightId          = m_materials[matId].lightId;
+    const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
+    const uint lightId          = as_uint(m_materials[matId].data[UINT_LIGHTID]);
     float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
 
 
