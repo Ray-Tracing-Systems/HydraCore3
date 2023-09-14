@@ -45,7 +45,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
   *gen           = genLocal;
 }
 
@@ -270,7 +270,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
-  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 

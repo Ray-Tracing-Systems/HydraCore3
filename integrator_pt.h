@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <cfloat>
 
 #include "CrossRT.h" // special include for ray tracing
 #include "Image2d.h" // special include for textures

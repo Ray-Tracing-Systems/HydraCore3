@@ -39,7 +39,7 @@ void Integrator::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPo
                   &rayPos, &rayDir);
   
   *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
 }
 
 void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY, 
@@ -64,7 +64,7 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
 }
 
 
@@ -230,7 +230,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   *accumThoroughput = currThoroughput * cosTheta * to_float4(bxdfVal, 0.0f);
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f);
-  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
