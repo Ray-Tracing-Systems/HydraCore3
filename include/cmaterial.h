@@ -6,10 +6,11 @@
 
 struct BsdfSample
 {
-  float3 val;
-  float3 dir;
+  float3 color;
+  float3 direction;
   float  pdf; 
   uint   flags;
+  float  ior;
 };
 
 struct BsdfEval
@@ -101,7 +102,7 @@ struct Material
 // Lambert BRDF
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static inline float3 lambertSample(float2 rands, float3 v, float3 n)
+static inline float3 lambertSample(const float2 rands, const float3 v, const float3 n)
 {
   (void)v;
   return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
@@ -238,7 +239,7 @@ static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static inline float3 ggxSample(float2 rands, float3 v, float3 n, float roughness)
+static inline float3 ggxSample(const float2 rands, const float3 v, const float3 n, const float roughness)
 {
   const float roughSqr = roughness * roughness;
     
@@ -255,7 +256,7 @@ static inline float3 ggxSample(float2 rands, float3 v, float3 n, float roughness
   return normalize(wi.x * nx + wi.y * ny + wi.z * nz); // back to normal coordinate system
 }
 
-static inline float ggxEvalPDF(float3 l, float3 v, float3 n, float roughness) 
+static inline float ggxEvalPDF(const float3 l, const float3 v, const float3 n, const float roughness)
 { 
   const float dotNV = dot(n, v);
   const float dotNL = dot(n, l);
@@ -271,7 +272,7 @@ static inline float ggxEvalPDF(float3 l, float3 v, float3 n, float roughness)
   return  D * dotNH / (4.0f * std::max(dotHV,1e-6f));
 }
 
-static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
+static inline float ggxEvalBSDF(const float3 l, const float3 v, const float3 n, const float roughness)
 {
   if(std::abs(dot(l, n)) < 1e-5f)
     return 0.0f; 
@@ -297,7 +298,7 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
 {
   cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
   // Potentially swap indices of refraction
-  bool entering = cosThetaI > 0.f;
+  bool entering = cosThetaI > 0.0f;
   if (!entering) 
   {
     const float tmp = etaI;
@@ -329,13 +330,13 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
 //  return 0.5f*(rParl2 + rPerp2);
 //}
 
-static inline float fresnelSlick(float VdotH)
+static inline float fresnelSlick(const float VdotH)
 {
   const float tmp = 1.0f - std::abs(VdotH);
   return (tmp*tmp)*(tmp*tmp)*tmp;
 }
 
-static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
+static inline float3 hydraFresnelCond(const float3 f0, const float VdotH, const float ior, const float roughness)
 {
   (void)roughness;
   

@@ -421,6 +421,8 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
     auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
       
+    m_proj         = proj;
+    m_worldView    = worldView;
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
     break; // take first cam

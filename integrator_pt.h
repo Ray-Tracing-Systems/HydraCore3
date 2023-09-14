@@ -111,6 +111,7 @@ public:
                                 float4* out_color);
 
   void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
+  void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -159,7 +160,7 @@ protected:
   BsdfSample MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (int a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc); 
+  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev); 
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
@@ -184,8 +185,11 @@ protected:
   std::vector<int>              m_allRemapListsOffsets;
   std::vector<uint32_t>         m_instIdToLightInstId;
                                 
+  float4x4                      m_proj;
+  float4x4                      m_worldView;
   float4x4                      m_projInv;
   float4x4                      m_worldViewInv;
+
   std::vector<RandomGen>        m_randomGens;
   std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
 

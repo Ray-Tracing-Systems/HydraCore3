@@ -240,18 +240,18 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const float4 uv         = rndFloat4_Pseudo(a_gen);
-  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv);
-  const float3 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
-  const float  cosTheta   = dot(matSam.dir, hit.norm);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev);
+  const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-20f));
+  const float  cosTheta   = dot(matSam.direction, hit.norm);
 
-  MisData nextBounceData;                   // remember current pdfW for next bounce
-  nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; //
-  nextBounceData.cosTheta     = cosTheta;   //
-  *misPrev = nextBounceData;                //
+  MisData nextBounceData      = *misPrev;        // remember current pdfW for next bounce
+  nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; 
+  nextBounceData.cosTheta     = cosTheta;   
+  *misPrev                    = nextBounceData;
 
   if(m_intergatorType == INTEGRATOR_STUPID_PT)
   {
-    *accumThoroughput *= cosTheta*to_float4(bxdfVal, 0.0f); 
+    *accumThoroughput *= cosTheta * to_float4(bxdfVal, 0.0f); 
   }
   else if(m_intergatorType == INTEGRATOR_SHADOW_PT || m_intergatorType == INTEGRATOR_MIS_PT)
   {
@@ -269,8 +269,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     *accumThoroughput = currThoroughput*cosTheta*to_float4(bxdfVal, 0.0f); 
   }
 
-  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
-  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
+  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f); // todo: use flatNormal for offset
+  *rayDirAndFar  = to_float4(matSam.direction, MAXFLOAT);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
@@ -318,7 +318,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis;
+  MisData   mis      = makeInitialMisData();
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
 
@@ -348,9 +348,12 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis;
+  MisData   mis      = makeInitialMisData();
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
+    
+  std::vector<float3> rayPos;
+  std::vector<float4> rayColor;
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -366,6 +369,9 @@ void Integrator::PathTrace(uint tid, float4* out_color)
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
+    rayPos.push_back(float3(rayPosAndNear.x, rayPosAndNear.y, rayPosAndNear.z));
+    rayColor.push_back(rayPosAndNear);
+
     if(isDeadRay(rayFlags))
       break;
   }
@@ -373,7 +379,8 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                        &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
-                           out_color);
-                           
+  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
+  
+  // Debug draw ray path
+  kernel_ContributePathRayToImage3(out_color, rayColor, rayPos);
 }

@@ -209,6 +209,8 @@ typedef struct MisDataT
 {
   float matSamplePdf; ///< previous angle pdf (pdfW) that were used for sampling material. if < 0, then material sample was pure specular 
   float cosTheta;     ///< previous dot(matSam.direction, hit.norm)
+  float ior;          ///< previous ior
+  float dummy;        ///< dummy for 4 float
 } MisData;
 
 static inline bool isSpecular(const MisData* data) { return (data->matSamplePdf < 0.0f); }
@@ -217,6 +219,7 @@ static inline MisData makeInitialMisData()
 {
   MisData data;
   data.matSamplePdf = 1.0f;
+  data.ior          = 1.0f; // start from air
   return data;
 }
 
