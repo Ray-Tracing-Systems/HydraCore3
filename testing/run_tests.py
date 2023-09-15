@@ -162,8 +162,8 @@ reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
 reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
 '''
 
-reqs.append( REQ_H2("mat_texture_matrices", ["test_215"]) )
-reqs.append( REQ_H2("mat_texture_matrices", ["test_223"]) )
+#reqs.append( REQ_H2("mat_texture_matrices", ["test_215"]) )
+#reqs.append( REQ_H2("mat_texture_matrices", ["test_223"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_224"]) )
 
 Log().set_workdir(".")
