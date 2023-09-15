@@ -35,7 +35,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, 
-  float2 tc, MisData* a_misPrev)
+  float2 tc, MisData* a_misPrev, const uint a_currRayFlags)
 {
   // implicit strategy
 
@@ -47,9 +47,10 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read other parameters from texture
 
   BsdfSample res;
-  res.color = float3(0,0,0);
-  res.pdf   = 1.0f;
-  
+  res.color  = float3(0,0,0);
+  res.pdf    = 1.0f;
+  res.flags  = a_currRayFlags;
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -191,29 +192,29 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #endif
   for (int i = 0; i < tid; ++i)
   {
-    const uint XY = m_packedXY[i];
-    const uint x  = (XY & 0x0000FFFF);
-    const uint y  = (XY & 0xFFFF0000) >> 16;
+    //const uint XY = m_packedXY[i];
+    //const uint x  = (XY & 0x0000FFFF);
+    //const uint y  = (XY & 0xFFFF0000) >> 16;
 
-    if (x == 150 && y == 500)
-    {
+    //if (x == 150 && y == 400)
+    //{
       for (int j = 0; j < a_passNum; ++j)
       {
         PathTrace((uint)i, out_color);
         countSample++;
       }      
-    }
+    //}
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start2).count() / 1000.f;
 
     if (duration > 2)
     {
-      std::cout << "progress: " << (float)countSample / (float)allCountSample * 100.0f << "                    \r";
+      std::cout << "progress: " << (float)countSample / (float)allCountSample * 100.0f << std::endl;
       start2 = std::chrono::high_resolution_clock::now();
     }
   }
 
   std::cout << std::endl;
-  shadowPtTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
+  shadowPtTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count()/1000.f;
 }
 
 void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)

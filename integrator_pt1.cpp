@@ -53,7 +53,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
                                  float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags)
 {
-  const uint currRayFlags = *rayFlags;
+  uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
     
@@ -87,20 +87,25 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
   
     // transform surface point with matrix and flip normal if needed
     //
-    hitNorm = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm = flipNorm * hitNorm;
-  
+    hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
+    const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+    hitNorm                = flipNorm * hitNorm;
+    
+    if (flipNorm < 0.0f)
+      currRayFlags |= RAY_FLAG_HAS_INV_NORMAL;
+    else
+      currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
+
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
-    *rayFlags  = packMatId(currRayFlags, midRemaped);
-    *out_hit1  = to_float4(hitPos,  hitTexCoord.x); 
-    *out_hit2  = to_float4(hitNorm, hitTexCoord.y);
-    *out_instId = hit.instId;
+    *rayFlags              = packMatId(currRayFlags, midRemaped);
+    *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
+    *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
+    *out_instId            = hit.instId;
   }
   else
-    *rayFlags = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE) ;
+    *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
 
@@ -240,7 +245,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const float4 uv         = rndFloat4_Pseudo(a_gen);
-  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
   const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = dot(matSam.direction, hit.norm);
 
@@ -382,5 +387,5 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
   
   // Debug draw ray path
-  kernel_ContributePathRayToImage3(out_color, rayColor, rayPos);
+  //kernel_ContributePathRayToImage3(out_color, rayColor, rayPos);
 }

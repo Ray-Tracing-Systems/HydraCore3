@@ -119,9 +119,10 @@ public:
   static constexpr uint INTEGRATOR_SHADOW_PT = 1;
   static constexpr uint INTEGRATOR_MIS_PT    = 2;
 
-  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)      != 0; }
-  static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC) != 0; }
-  static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE) != 0; }
+  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
+  static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
+  static inline bool hasInvNormal  (uint a_flags)  { return (a_flags & RAY_FLAG_HAS_INV_NORMAL) != 0; }
+  static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
 
   static inline uint extractMatId(uint a_flags)    { return (a_flags & 0x00FFFFFF); }       
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
@@ -160,7 +161,7 @@ protected:
   BsdfSample MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (int a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev); 
+  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev, const uint a_currRayFlags); 
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 

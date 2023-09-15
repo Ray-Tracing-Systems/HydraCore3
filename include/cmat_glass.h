@@ -3,7 +3,6 @@
 #include "crandom.h"
 #include "cmaterial.h"
 
-
 typedef struct RefractResultT
 {
   float3 rayDir;
@@ -27,17 +26,17 @@ static inline RefractResult myRefract(const float3 a_rayDir, float3 a_normal,
     res.eta = 1.0f / res.eta;
   }
 
-  const float dotVN = cosTheta * (-1.0f);
-  const float k     = 1.0f - res.eta * res.eta * (1.0f - cosTheta * cosTheta);
+  const float dotVN    = cosTheta * (-1.0f);  
+  const float radicand = 1.0f + res.eta * res.eta * (cosTheta * cosTheta - 1.0f);
 
-  if (k > 0.0f)
+  if (radicand > 0.0f) // refract
   {
-    res.rayDir  = normalize(res.eta * a_rayDir + (res.eta * cosTheta - sqrt(k)) * a_normal); // refract
+    res.rayDir    = normalize(res.eta * a_rayDir + (res.eta * cosTheta - sqrt(radicand)) * a_normal); 
     res.success = true;
   }
-  else
+  else // internal reflect
   {
-    res.rayDir  = normalize((a_normal * dotVN * (-2.0f)) + a_rayDir);            // internal reflect
+    res.rayDir  = normalize((a_normal * dotVN * (-2.0f)) + a_rayDir); 
     res.success = false;
     res.eta     = 1.0f;
   }
@@ -90,22 +89,27 @@ static inline float SmithGGXMaskingShadowing(const float dotNL, const float dotN
 
 
 static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, const float a_inputIor, 
-  const float a_outputIor, const float a_roughTransp, const float3 a_normal, const float3 a_normal2,
+  const float a_outputIor, const float a_roughTransp, const float3 a_normal, const float3 a_fixNormal,
   const float4 a_rands, const float3 a_rayDir, BsdfSample* a_pRes)
 {
-  const float  roughSqr = a_roughTransp * a_roughTransp;
+  const float roughSqr = a_roughTransp * a_roughTransp;
 
   bool   spec = true;
   float  Pss  = 1.0f;                          // Pass single-scattering.
   float3 Pms  = make_float3(1.0f, 1.0f, 1.0f); // Pass multi-scattering
-  a_pRes->pdf = 1.0f;
 
-  RefractResult refrData = myRefract(a_rayDir, a_normal2, a_inputIor, a_outputIor);
+  RefractResult refrData;
 
-  if (a_roughTransp > 1e-5f)
+  if (a_roughTransp < 1e-5f)
+    refrData = myRefract(a_rayDir, a_fixNormal, a_inputIor, a_outputIor);
+  else
   {
     spec                 = false;
-    const float eta      = a_inputIor / a_outputIor;
+    float eta            = a_inputIor / a_outputIor;
+    const float cosTheta = dot(a_fixNormal, a_rayDir) * (-1.0f);
+
+    if (cosTheta < 0.0f)
+      eta = 1.0f / eta;
 
     float3 nx, ny, nz = a_normal;
     CoordinateSystem(nz, &nx, &ny);
@@ -172,13 +176,14 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   const float cosMult     = 1.0f / fmax(fabs(cosThetaOut), 1e-6f);
 
   a_pRes->direction = refrData.rayDir;
+  a_pRes->pdf       = 1.0f;
 
   // only camera paths are multiplied by this factor, and etas are swapped because radiance
   // flows in the opposite direction. See SmallVCM and or Veach adjoint bsdf.
   const bool a_isFwdDir       = true; // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
   const float adjointBtdfMult = a_isFwdDir ? 1.0f : (refrData.eta * refrData.eta);
 
-  if (refrData.success) a_pRes->color = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; //refrData.rayDir * 4.0f * cosMult;
+  if (refrData.success) a_pRes->color = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; 
   else                  a_pRes->color = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
 
   if (spec)             a_pRes->flags = (RAY_EVENT_S | RAY_EVENT_T);
@@ -195,44 +200,43 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   float3 a_viewDir, float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-
   const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
   const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
   const float  roughReflect    = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_REFLECT], 0.0f, 1.0f);
   const float  roughTransp     = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
   float        ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
 
-  const float  dotNV           = dot(a_normal, a_viewDir); ///< a_viewDir - direction to the incoming ray
-  const bool   a_hitFromInside = dotNV < 0.0f;             // an easy way to understand that we are in volume
-  float3 invNormal             = a_normal;
-  if (a_hitFromInside)
+  float3 fixNormal             = a_normal;
+
+  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL)
   {
-    invNormal     = (-1.0f) * a_normal;
-    ior         = 1.0f; // exit from the volume
+    fixNormal = (-1.0f) * a_normal;
+    ior = 1.0f;
+    std::swap(a_misPrev->ior, ior);
   }
 
+  const float  dotNV  = dot(a_normal, a_viewDir);
+  const float fresnel = (a_misPrev->ior == ior) ? 0.0f : FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
 
-  const float fresnel = (a_misPrev->ior == ior) ? 0.0f : FrDielectricPBRT(fabs(dotNV), a_misPrev->ior, ior);
-
-
-  float3 dir;
-  float  val;
-  float  pdf;
 
   if (a_rands.w < fresnel) // reflection
   {
-    if (roughReflect == 0.0f) 
+    float3 dir;
+    float  val = 1.0f;
+    float  pdf = 1.0f;
+
+    if (roughReflect < 1e-5f)
     {
-      dir                     = reflect((-1.0f) * a_viewDir, a_normal);
-      const float cosThetaOut = dot(dir, a_normal);
+      dir                     = reflect((-1.0f) * a_viewDir, fixNormal);
+      const float cosThetaOut = dot(dir, fixNormal);
       val                     = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
       pdf                     = 1.0f;
     }
     else
     {
-      dir                     = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, a_normal, roughReflect);
-      val                     = ggxEvalBSDF(dir, a_viewDir, a_normal, roughReflect);
-      pdf                     = ggxEvalPDF(dir, a_viewDir, a_normal, roughReflect);
+      dir                     = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, fixNormal, roughReflect);
+      val                     = ggxEvalBSDF(dir, a_viewDir, fixNormal, roughReflect);
+      pdf                     = ggxEvalPDF(dir, a_viewDir, fixNormal, roughReflect);
     }
 
     a_pRes->direction         = dir;
@@ -242,7 +246,7 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   }
   else  // transparency
   {
-    refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, invNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
+    refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
     a_misPrev->ior = ior;
   }
 }
