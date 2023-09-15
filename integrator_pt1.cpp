@@ -322,7 +322,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
 
-  for(uint depth = 0; depth < m_traceDepth + 1; ++depth) 
+  for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
     float4 shadeColor, hitPart1, hitPart2;
     uint instId = 0;
