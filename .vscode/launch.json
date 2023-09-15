@@ -49,6 +49,30 @@
         ]
     },
     {
+        "name": "Bunny",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in",  "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Images/z_hydra3.bmp",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                 "-integrator", "mispt", 
+                 "-spp", "2048"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
         "name"   : "Launch",
         "type"   : "cppdbg",
         "request": "launch",
@@ -113,7 +137,7 @@
         "name"   : "Launch (RT)",
         "type"   : "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/cmake-build-release/hydra",
+        "program": "${workspaceFolder}/bin-release/hydra",
         "args"   : ["--cpu",
                     //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
                     //"-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite.exr",
@@ -136,14 +160,14 @@
 
 
     {
-        "name": "test_103",
+        "name": "test_101",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/cmake-build-release/hydra",
-        "args": ["-in", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_f/test_103/statex_00001.xml", 
-                    "-out", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_images/test_103/z_out_h3_gpu.bmp", 
-                    "-integrator", "mispt", 
-                    "-spp", "1024", 
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_101/statex_00001.xml", 
+                    "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_101/z_out_h3_gpu.bmp", 
+                    "-integrator", "all", "-width", "512", "-height", "512",
+                    "-spp", "4096", 
                     "--gpu_id", "0", 
                     "--gpu",
                     ],
