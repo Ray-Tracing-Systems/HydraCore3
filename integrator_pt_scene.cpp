@@ -430,7 +430,10 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
           matrix.col(i)[j] /= scale[i];
       }
 
-      lightSource.matrix = matrix;
+      //lightSource.matrix = matrix;
+      lightSource.matrix.set_col(0, matrix.get_col(2));   // why do we need to swap x and z?
+      lightSource.matrix.set_col(1, matrix.get_col(1));   // why do we need to swap x and z?
+      lightSource.matrix.set_col(2, matrix.get_col(0));   // why do we need to swap x and z?
       lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
       lightSource.size = float2(sizeX * scale.x, sizeZ * scale.z);
 
