@@ -130,11 +130,19 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   int lightId = int(std::floor(rndId * float(m_lights.size())));
   
   const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + uv) * m_lights[lightId].size;
-
   float3 samplePos = float3(sampleOff.x, 0.0f, sampleOff.y); // -1e-5f*std::max(m_light.size.x, m_light.size.y)
+  //float3 samplePos;
+  //{
+  //  const float offsetX = uv.x * 2.0f - 1.0f;
+  //  const float offsetY = uv.y * 2.0f - 1.0f;
+  //  const float2 lightSize = m_lights[lightId].size;
+  //  samplePos.x = offsetX*lightSize.x;
+  //  samplePos.y = 0.0f;
+  //  samplePos.z = offsetY*lightSize.y;
+  //}
 
   samplePos = mul3x3(m_lights[lightId].matrix, samplePos) +
-              epsilonOfPos(samplePos) * to_float3(m_lights[lightId].norm) +
+              epsilonOfPos(to_float3(m_lights[lightId].pos)) * to_float3(m_lights[lightId].norm) +
               to_float3(m_lights[lightId].pos);
 
   const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
