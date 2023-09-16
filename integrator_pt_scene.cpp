@@ -195,6 +195,162 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+GLTFMaterial ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                     std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  GLTFMaterial mat = {};
+  mat.mtype        = MAT_TYPE_GLTF;
+  mat.alpha        = 0.0f;
+  mat.coatColor    = float4(1,1,1,0); 
+  mat.metalColor   = float4(0,0,0,0);  
+  mat.lightId      = uint(-1);
+  
+  auto nodeEmiss = materialNode.child(L"emission");
+
+  // read Hydra or GLTF materials
+  //
+  float4 color(0.0f, 0.0f, 0.0f, 0.0f);
+
+  if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
+  {
+    auto nodeEmissColor = nodeEmiss.child(L"color");
+    color   = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
+
+    HydraSampler emissiveSampler = ReadSamplerFromColorNode(nodeEmissColor);
+    auto p = texCache.find(emissiveSampler);
+    if(p == texCache.end())
+    {
+      texCache[emissiveSampler] = uint(textures.size());
+      const uint32_t texId = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
+      textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], emissiveSampler.sampler));
+      p = texCache.find(emissiveSampler);
+    }
+    
+    mat.row0 [0]  = emissiveSampler.row0;
+    mat.row1 [0]  = emissiveSampler.row1;
+    mat.texId[0]  = p->second;
+    
+    mat.baseColor = color;
+    if(materialNode.attribute(L"light_id") == nullptr)
+      mat.lightId = uint(-1);
+    else
+      mat.lightId = uint(materialNode.attribute(L"light_id").as_int()); // for correct process of "-1"
+    
+    mat.mtype = MAT_TYPE_LIGHT_SOURCE;
+  }
+
+  auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
+  if(nodeDiffColor != nullptr)
+  {
+    color = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
+    HydraSampler diffSampler = ReadSamplerFromColorNode(nodeDiffColor);
+    auto p = texCache.find(diffSampler);
+    if(p == texCache.end())
+    {
+      texCache[diffSampler] = uint(textures.size());
+      const uint32_t texId  = nodeDiffColor.child(L"texture").attribute(L"id").as_uint();
+      textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], diffSampler.sampler));
+      p = texCache.find(diffSampler);
+    }
+    
+    mat.row0 [0]  = diffSampler.row0;
+    mat.row1 [0]  = diffSampler.row1;
+    mat.texId[0]  = p->second;
+  }
+
+  float3 reflColor = float3(0,0,0);
+  float glosiness  = 1.0f;
+  float fresnelIOR = 1.5f;
+  auto nodeRefl = materialNode.child(L"reflectivity");
+  if(nodeRefl != nullptr)
+  {
+    reflColor  = hydra_xml::readval3f(nodeRefl.child(L"color"));
+    glosiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
+    fresnelIOR = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
+  }
+
+  const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);
+  if(!hasFresnel)
+    fresnelIOR = 0.0f;
+  
+  if((length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f) || hasFresnel)
+  {
+    mat.mtype      = MAT_TYPE_GLTF;
+    mat.baseColor  = color;
+    mat.coatColor  = to_float4(reflColor, 0.0f);
+    mat.lightId    = uint(-1);
+
+    if(hasFresnel)
+    {
+      mat.alpha      = 0.0f;
+      mat.coatColor  = to_float4(reflColor, 0.0f);
+      mat.metalColor = float4(0,0,0,0); 
+      mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
+    }
+    else
+    {
+      mat.alpha      = length(reflColor)/( length(reflColor) + length3f(color) );
+      mat.coatColor  = float4(0,0,0,0); 
+      mat.metalColor = to_float4(reflColor, 0.0f);                                           // disable coating for such blend type
+      mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL;
+    }
+
+    SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
+  }
+  else if(length(reflColor) > 1e-5f)
+  {
+    mat.mtype      = MAT_TYPE_GLTF;
+    mat.cflags     = GLTF_COMPONENT_METAL;
+    mat.metalColor = to_float4(reflColor, 0.0f);
+    mat.coatColor  = float4(0,0,0,0); 
+    mat.alpha      = 1.0f;
+  }
+  else if(length(to_float3(color)) > 1e-5f)
+  {
+    mat.mtype      = MAT_TYPE_GLTF;
+    mat.cflags     = GLTF_COMPONENT_LAMBERT;
+    mat.baseColor  = color;
+    mat.coatColor  = float4(0,0,0,0); 
+    mat.metalColor = float4(0,0,0,0);    
+    mat.alpha      = 0.0f;
+  }
+  
+  if(color[3] > 1e-5f)
+    mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
+
+  mat.glosiness  = glosiness;
+  mat.ior        = fresnelIOR;
+  
+  return mat;
+}
+
+GLTFMaterial LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                                        std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                        std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  GLTFMaterial mat = {};
+  mat.mtype        = MAT_TYPE_CONDUCTOR;
+  mat.alpha        = 0.0f;
+  mat.coatColor    = float4(1,1,1,0); 
+  mat.metalColor   = float4(0,0,0,0);  
+  mat.lightId      = uint(-1);
+
+  auto nodeBSDF = materialNode.child(L"bsdf");
+
+  auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+  auto alpha_u   = materialNode.child(L"alpha_u").attribute(L"val").as_float();
+  auto alpha_v   = materialNode.child(L"alpha_v").attribute(L"val").as_float();
+  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
+  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
+
+  mat.metalColor = {alpha_u, alpha_v, eta, k};
+
+  return mat;
+}
+
 bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 { 
   std::string scenePathStr(a_scehePath);
@@ -249,131 +405,22 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   //
   m_materials.resize(0);
   m_materials.reserve(100);
+
+  const std::wstring hydraOldMatTypeStr {L"hydra_material"};
+  const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
+
   for(auto materialNode : scene.MaterialNodes())
   {
-    std::wstring name = materialNode.attribute(L"name").as_string();
     GLTFMaterial mat = {};
-    mat.mtype        = MAT_TYPE_GLTF;
-    mat.alpha        = 0.0f;
-    mat.coatColor    = float4(1,1,1,0); 
-    mat.metalColor   = float4(0,0,0,0);  
-    mat.lightId      = uint(-1);
-    
-    auto nodeEmiss = materialNode.child(L"emission");
-
-    // read Hydra or GLTF materials
-    //
-    float4 color(0.0f, 0.0f, 0.0f, 0.0f);
-
-    if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
+    auto mat_type = materialNode.attribute(L"type").as_string();
+    if(mat_type == hydraOldMatTypeStr)
     {
-      auto nodeEmissColor = nodeEmiss.child(L"color");
-      color   = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
-
-      HydraSampler emissiveSampler = ReadSamplerFromColorNode(nodeEmissColor);
-      auto p = texCache.find(emissiveSampler);
-      if(p == texCache.end())
-      {
-        texCache[emissiveSampler] = uint(m_textures.size());
-        const uint32_t texId = nodeEmissColor.child(L"texture").attribute(L"id").as_uint();
-        m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], emissiveSampler.sampler));
-        p = texCache.find(emissiveSampler);
-      }
-      
-      mat.row0 [0]  = emissiveSampler.row0;
-      mat.row1 [0]  = emissiveSampler.row1;
-      mat.texId[0]  = p->second;
-      
-      mat.baseColor = color;
-      if(materialNode.attribute(L"light_id") == nullptr)
-        mat.lightId = uint(-1);
-      else
-        mat.lightId = uint(materialNode.attribute(L"light_id").as_int()); // for correct process of "-1"
-      
-      mat.mtype = MAT_TYPE_LIGHT_SOURCE;
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures);
     }
-
-    auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
-    if(nodeDiffColor != nullptr)
+    else if(mat_type == roughConductorMatTypeStr)
     {
-      color = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
-      HydraSampler diffSampler = ReadSamplerFromColorNode(nodeDiffColor);
-      auto p = texCache.find(diffSampler);
-      if(p == texCache.end())
-      {
-        texCache[diffSampler] = uint(m_textures.size());
-        const uint32_t texId  = nodeDiffColor.child(L"texture").attribute(L"id").as_uint();
-        m_textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], diffSampler.sampler));
-        p = texCache.find(diffSampler);
-      }
-      
-      mat.row0 [0]  = diffSampler.row0;
-      mat.row1 [0]  = diffSampler.row1;
-      mat.texId[0]  = p->second;
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
     }
-
-    float3 reflColor = float3(0,0,0);
-    float glosiness  = 1.0f;
-    float fresnelIOR = 1.5f;
-    auto nodeRefl = materialNode.child(L"reflectivity");
-    if(nodeRefl != nullptr)
-    {
-      reflColor  = hydra_xml::readval3f(nodeRefl.child(L"color"));
-      glosiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
-      fresnelIOR = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
-    }
-
-    const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);
-    if(!hasFresnel)
-      fresnelIOR = 0.0f;
-    
-    if((length(reflColor) > 1e-5f && length(to_float3(color)) > 1e-5f) || hasFresnel)
-    {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.baseColor  = color;
-      mat.coatColor  = to_float4(reflColor, 0.0f);
-      mat.lightId    = uint(-1);
-
-      if(hasFresnel)
-      {
-        mat.alpha      = 0.0f;
-        mat.coatColor  = to_float4(reflColor, 0.0f);
-        mat.metalColor = float4(0,0,0,0); 
-        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
-      }
-      else
-      {
-        mat.alpha      = length(reflColor)/( length(reflColor) + length3f(color) );
-        mat.coatColor  = float4(0,0,0,0); 
-        mat.metalColor = to_float4(reflColor, 0.0f);                                           // disable coating for such blend type
-        mat.cflags     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL;
-      }
-
-      SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
-    }
-    else if(length(reflColor) > 1e-5f)
-    {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.cflags     = GLTF_COMPONENT_METAL;
-      mat.metalColor = to_float4(reflColor, 0.0f);
-      mat.coatColor  = float4(0,0,0,0); 
-      mat.alpha      = 1.0f;
-    }
-    else if(length(to_float3(color)) > 1e-5f)
-    {
-      mat.mtype      = MAT_TYPE_GLTF;
-      mat.cflags     = GLTF_COMPONENT_LAMBERT;
-      mat.baseColor  = color;
-      mat.coatColor  = float4(0,0,0,0); 
-      mat.metalColor = float4(0,0,0,0);    
-      mat.alpha      = 0.0f;
-    }
-    
-    if(color[3] > 1e-5f)
-      mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
-
-    mat.glosiness  = glosiness;
-    mat.ior        = fresnelIOR;
     m_materials.push_back(mat);
   }
 

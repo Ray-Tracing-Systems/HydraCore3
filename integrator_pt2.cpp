@@ -3,6 +3,7 @@
 
 #include "include/cmaterial.h"
 #include "include/cmat_gltf.h"
+#include "include/cmat_conductor.h"
 
 #include <chrono>
 #include <string>
@@ -52,6 +53,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
     break;
 
+    case MAT_TYPE_CONDUCTOR:
+    conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+
     default:
     break;
   }
@@ -78,6 +82,10 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
     gltfEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
              &res);
     break;
+
+    case MAT_TYPE_CONDUCTOR: 
+    conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
+             &res);
 
     default:
     break;

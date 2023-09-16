@@ -24,8 +24,9 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1,
                       GLTF_COMPONENT_METAL   = 4,
                       GLTF_METAL_PERF_MIRROR = 8, }; // bit fields
 
-enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
-                      MAT_TYPE_GLASS         = 2,
+enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
+                      MAT_TYPE_GLASS     = 2,
+                      MAT_TYPE_CONDUCTOR = 3,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -203,6 +204,17 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
   const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
+}
+
+static inline float FrComplexConductor(float cosThetaI, complex eta)
+{
+  float sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaT = sinThetaI / (eta * eta);
+  complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
+
+  complex r_parl = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+  complex r_perp = (cosThetaI - eta * cosThetaT) / (cosThetaI + eta * cosThetaT);
+  return (complex_norm(r_parl) + complex_norm(r_perp)) / 2.0f;
 }
 
 //static inline float fresnelConductor(float cosTheta, float eta, float roughness)
