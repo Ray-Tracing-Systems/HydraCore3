@@ -91,10 +91,8 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
     hitNorm                = flipNorm * hitNorm;
     
-    if (flipNorm < 0.0f)
-      currRayFlags |= RAY_FLAG_HAS_INV_NORMAL;
-    else
-      currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
+    if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
+    else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
 
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);

@@ -175,8 +175,8 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   const float cosThetaOut = dot(refrData.rayDir, a_normal);
   const float cosMult     = 1.0f / fmax(fabs(cosThetaOut), 1e-6f);
 
-  a_pRes->direction = refrData.rayDir;
-  a_pRes->pdf       = 1.0f;
+  a_pRes->direction       = refrData.rayDir;
+  a_pRes->pdf             = 1.0f;
 
   // only camera paths are multiplied by this factor, and etas are swapped because radiance
   // flows in the opposite direction. See SmallVCM and or Veach adjoint bsdf.
@@ -186,70 +186,178 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   if (refrData.success) a_pRes->color = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; 
   else                  a_pRes->color = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
 
-  if (spec)             a_pRes->flags = (RAY_EVENT_S | RAY_EVENT_T);
-  else                  a_pRes->flags = (RAY_EVENT_G | RAY_EVENT_T);
+  if (spec)             a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
+  else                  a_pRes->flags |= (RAY_EVENT_G | RAY_EVENT_T);
 
   if      (refrData.success  && cosThetaOut >= -1e-6f) a_pRes->color = make_float3(0.0f, 0.0f, 0.0f); // refraction/transparency must be under surface!
   else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->color = make_float3(0.0f, 0.0f, 0.0f); // reflection happened in wrong way
 }
 
+// Code from bing chat (chatGPT4)
+// 
+// Функция для вычисления отраженного вектора
+static inline float3 reflect2(float3 v, float3 n)
+{
+  return v - 2.0f * dot(v, n) * n;
+}
 
-// implicit strategy
+// Функция для вычисления преломленного вектора
+static inline float3 refract2(float3 v, float3 n, float relativeIor) 
+{
+  // Вычисляем косинус угла падения света
+  float cosi = dot((-1.0f) * v, n);
+  // Вычисляем квадратный корень из единицы минус квадрат относительного показателя преломления умноженный на единицу минус квадрат косинуса угла падения
+  float k = sqrt(1.0f - relativeIor * relativeIor * (1.0f - cosi * cosi));
+  // Проверяем, есть ли полное внутреннее отражение
+  if (k < 0) 
+  {
+    // Если полное внутреннее отражение, то возвращаем отраженный вектор
+    return reflect2(v, n);
+  }
+  else 
+  {
+    // Иначе возвращаем преломленный вектор
+    return relativeIor * v + (relativeIor * cosi - k) * n;
+  }
+}
 
+// Функция для вычисления коэффициента Френеля
+static inline float fresnel2(float3 v, float3 n, float ior)
+{
+  // Вычисляем угол падения света
+  const float cosi = dot(v, n);
+  // Вычисляем угол преломления света по закону Снеллиуса
+  const float sint = sqrt(1.0f - cosi * cosi) / ior;
+  // Проверяем, есть ли полное внутреннее отражение
+  if (sint > 1.0f) 
+  {
+    // Если да, то возвращаем коэффициент отражения равный 1
+    return 1.0f;
+  }
+  else 
+  {
+    // Иначе вычисляем угол преломления света
+    const float cost = sqrt(1.0f - sint * sint);
+    // Вычисляем коэффициенты отражения для параллельной и перпендикулярной поляризации по формулам Френеля
+    const float Rp   = (ior * cosi - cost) / (ior * cosi + cost);
+    const float Rs   = (cosi - ior * cost) / (cosi + ior * cost);
+    // Возвращаем среднее значение этих коэффициентов
+    return (Rp * Rp + Rs * Rs) * 0.5f;
+  }
+}
+
+// Функция для вычисления цвета стекла
 static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
   float3 a_viewDir, float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
   const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
-  const float  roughReflect    = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_REFLECT], 0.0f, 1.0f);
-  const float  roughTransp     = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
   float        ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
 
   float3 fixNormal             = a_normal;
+  float relativeIor            = a_misPrev->ior / ior;
 
-  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL)
+  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
   {
-    fixNormal = (-1.0f) * a_normal;
-    ior = 1.0f;
-    std::swap(a_misPrev->ior, ior);
+    fixNormal      = (-1.0f) * a_normal;
+
+    //if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
+    //relativeIor = 1.0f / relativeIor;
   }
 
-  const float  dotNV  = dot(a_normal, a_viewDir);
-  const float fresnel = (a_misPrev->ior == ior) ? 0.0f : FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
 
+  // Вычисляем коэффициенты Френеля для отражения и преломления
+  //const float fresnel = fresnel2((-1.0f) * a_viewDir, fixNormal, relativeIor);
+  const float  dotNV  = dot(a_normal, a_viewDir);
+  const float fresnel = FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
+
+
+  float3 dir;
 
   if (a_rands.w < fresnel) // reflection
   {
-    float3 dir;
-    float  val = 1.0f;
-    float  pdf = 1.0f;
-
-    if (roughReflect < 1e-5f)
-    {
-      dir                     = reflect((-1.0f) * a_viewDir, fixNormal);
-      const float cosThetaOut = dot(dir, fixNormal);
-      val                     = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-      pdf                     = 1.0f;
-    }
-    else
-    {
-      dir                     = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, fixNormal, roughReflect);
-      val                     = ggxEvalBSDF(dir, a_viewDir, fixNormal, roughReflect);
-      pdf                     = ggxEvalPDF(dir, a_viewDir, fixNormal, roughReflect);
-    }
-
-    a_pRes->direction         = dir;
-    a_pRes->color             = val * colorReflect;
-    a_pRes->pdf               = pdf;
-    a_pRes->flags             = (roughReflect == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+    dir = reflect2((-1.0f) * a_viewDir, fixNormal);
+    a_pRes->color = colorReflect;
   }
-  else  // transparency
+  else
   {
-    refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
-    a_misPrev->ior = ior;
+    dir = refract2((-1.0f) * a_viewDir, a_normal, relativeIor);
+    a_pRes->color = colorTransp;
   }
+  a_misPrev->ior = ior;
+
+  const float cosThetaOut = std::fabs(dot(dir, a_normal));
+  
+  a_pRes->color    /= std::max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+  a_pRes->direction = dir;
+  a_pRes->pdf       = 1.0f;
 }
+
+
+// implicit strategy
+
+//static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
+//  float3 a_viewDir, float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
+//{
+//  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
+//  const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
+//  const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
+//  const float  roughReflect    = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_REFLECT], 0.0f, 1.0f);
+//  const float  roughTransp     = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
+//  float        ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
+//  
+//  float3 fixNormal             = a_normal;
+//
+//  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
+//  {
+//    fixNormal      = (-1.0f) * a_normal;
+//
+//    if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
+//      a_misPrev->ior = 1.0f;
+//    else
+//      ior = 1.0f / ior;
+//  }
+//
+//  const float  dotNV  = dot(a_normal, a_viewDir);
+//  const float fresnel = FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
+//
+//
+//  if (a_rands.w < fresnel) // reflection
+//  {
+//    float3 dir;
+//    float  val = 1.0f;
+//    float  pdf = 1.0f;
+//
+//    if (roughReflect < 0.01f)
+//    {
+//      dir                     = reflect((-1.0f) * a_viewDir, fixNormal);
+//      const float cosThetaOut = dot(dir, fixNormal);
+//      val                     = (cosThetaOut <= 1e-6f) ? 1.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+//    }
+//    else
+//    {
+//      dir                     = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, fixNormal, roughReflect);
+//      val                     = ggxEvalBSDF(dir, a_viewDir, fixNormal, roughReflect);
+//      pdf                     = ggxEvalPDF(dir, a_viewDir, fixNormal, roughReflect);
+//    }
+//
+//    a_pRes->direction         = dir;
+//    a_pRes->color             = val * colorReflect;
+//    a_pRes->pdf               = pdf;
+//    a_pRes->flags            |= (roughReflect < 0.01f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+//  }
+//  else  // transparency
+//  {
+//    //if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // exit from volume
+//    //{
+//    //  std::swap(a_misPrev->ior, ior);      
+//    //}
+//
+//    refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
+//    a_misPrev->ior = ior;
+//  }
+//}
 
 
 // explicit strategy
