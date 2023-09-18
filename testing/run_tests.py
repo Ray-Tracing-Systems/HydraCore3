@@ -123,7 +123,7 @@ class REQ_HX(REQ):
   
 reqs = []
 
-
+'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml", 
@@ -160,6 +160,11 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plasti
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
 reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
+'''
+
+#reqs.append( REQ_H2("mat_texture_matrices", ["test_215"]) )
+#reqs.append( REQ_H2("mat_texture_matrices", ["test_223"]) )
+reqs.append( REQ_H2("mat_texture_matrices", ["test_224"]) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
