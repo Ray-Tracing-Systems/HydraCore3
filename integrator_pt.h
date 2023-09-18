@@ -3,6 +3,7 @@
 
 #include "include/cglobals.h" // We assume that all code that should pe passed to kernels will be just included both for CPU and OpenCL
 #include "include/crandom.h"
+#include "include/clight.h"
 #include "include/cmaterial.h"
 
 #include <vector>
@@ -143,6 +144,7 @@ protected:
   uint m_dummy2     = 0;
   uint m_dummy3     = 0;
 
+  LightSample LightSampleRev(int a_lightId, float2 rands);
   float LightPdfSelectRev(int a_lightId);
   float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
 

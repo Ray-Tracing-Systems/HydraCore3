@@ -1,9 +1,7 @@
 #ifndef BASIC_PROJ_LOGIC_H
 #define BASIC_PROJ_LOGIC_H
 
-//#define LAYOUT_STD140
 #include "LiteMath.h"
-
 #ifndef __OPENCL_VERSION__
 using namespace LiteMath;
 #endif
@@ -34,21 +32,6 @@ typedef struct SurfaceHitT
   float3 norm;
   float2 uv;
 }SurfaceHit;
-
-static constexpr uint LIGHT_GEOM_RECT   = 1; 
-static constexpr uint LIGHT_GEOM_DISC   = 2;
-static constexpr uint LIGHT_GEOM_SPHERE = 3;
-
-struct LightSource
-{
-  float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
-  float4   pos;       ///<! translation aclually stored here
-  float4   intensity;
-  float4   norm;
-  float2   size;
-  uint     geomType;
-  float    dummy;
-};
 
 static inline float3 EyeRayDirNormalized(float x, float y, float4x4 a_mViewProjInv)
 {

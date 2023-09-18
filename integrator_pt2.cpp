@@ -13,9 +13,20 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
+
+LightSample Integrator::LightSampleRev(int a_lightId, float2 rands)
+{
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
+  };
+}
+
 float Integrator::LightPdfSelectRev(int a_lightId) 
 { 
-  return 1.0f;
+  return 1.0f/float(m_lights.size()); // uniform select
 }
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)

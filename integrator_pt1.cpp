@@ -124,22 +124,13 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float2 uv = rndFloat2_Pseudo(a_gen);
-  const float rndId = rndFloat1_Pseudo(a_gen);
+  const float2 rands = rndFloat2_Pseudo(a_gen); // use rndFloat4 ?
+  const float rndId  = rndFloat1_Pseudo(a_gen); // use rndFloat4 ?
 
   int lightId = int(std::floor(rndId * float(m_lights.size())));
   
-  const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + uv) * m_lights[lightId].size;
+  const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * m_lights[lightId].size;
   float3 samplePos = float3(sampleOff.x, 0.0f, sampleOff.y); // -1e-5f*std::max(m_light.size.x, m_light.size.y)
-  //float3 samplePos;
-  //{
-  //  const float offsetX = uv.x * 2.0f - 1.0f;
-  //  const float offsetY = uv.y * 2.0f - 1.0f;
-  //  const float2 lightSize = m_lights[lightId].size;
-  //  samplePos.x = offsetX*lightSize.x;
-  //  samplePos.y = 0.0f;
-  //  samplePos.z = offsetY*lightSize.y;
-  //}
 
   samplePos = mul3x3(m_lights[lightId].matrix, samplePos) +
               epsilonOfPos(to_float3(m_lights[lightId].pos)) * to_float3(m_lights[lightId].norm) +
