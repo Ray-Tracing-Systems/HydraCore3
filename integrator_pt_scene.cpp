@@ -409,15 +409,16 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     {
       m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
     }
-    else if(shape == L"rect")
+    else if(shape == L"rect" || shape == L"disk")
     {
-      RectLightSource lightSource{};
+      LightSource lightSource{};
 
       auto matrix = lightInst.matrix;
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = (shape == L"rect") ? LIGHT_GEOM_RECT : LIGHT_GEOM_DISC;
 
       // extract scale and rotation from transformation matrix
       float3 scale;
@@ -436,6 +437,22 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       lightSource.matrix.set_col(2, matrix.get_col(0));   // why do we need to swap x and z?
       lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
       lightSource.size = float2(sizeX * scale.x, sizeZ * scale.z);
+
+      m_lights.push_back(lightSource);
+    }
+    else if (shape == L"sphere")
+    {
+      const float radius = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
+
+      LightSource lightSource{};
+
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
+      lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = LIGHT_GEOM_SPHERE;
+
+      lightSource.matrix = float4x4{};
+      lightSource.size = float2(radius, radius);
 
       m_lights.push_back(lightSource);
     }

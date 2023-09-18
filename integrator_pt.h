@@ -183,7 +183,7 @@ protected:
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
-  std::vector<RectLightSource> m_lights;
+  std::vector<LightSource> m_lights;
   float4          m_envColor = float4(0,0,0,1);
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
 
