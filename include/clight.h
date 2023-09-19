@@ -1,9 +1,6 @@
 #pragma once
 
-#include "LiteMath.h"
-#ifndef __OPENCL_VERSION__
-using namespace LiteMath;
-#endif
+#include "cglobals.h"
 
 static constexpr uint LIGHT_GEOM_RECT   = 1; 
 static constexpr uint LIGHT_GEOM_DISC   = 2;
@@ -48,14 +45,6 @@ static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, floa
   return res;
 }
 
-static inline LightSample lightSampleRev(const LightSource* a_pLight, float2 rands)
-{
-  switch(a_pLight->geomType)
-  {
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(a_pLight, rands);
-    default:                return areaLightSampleRev(a_pLight, rands);
-  };
-}
 
 
 //hydra2:

@@ -13,6 +13,11 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
+static inline float DistanceSquared(float3 a, float3 b)
+{
+  const float3 diff = b - a;
+  return dot(diff, diff);
+}
 
 LightSample Integrator::LightSampleRev(int a_lightId, float2 rands)
 {
@@ -31,11 +36,35 @@ float Integrator::LightPdfSelectRev(int a_lightId)
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
 {
+  const uint   gtype  = m_lights[a_lightId].geomType;
   const float3 lpos   = pSurfaceHit->pos;
   const float3 lnorm  = pSurfaceHit->norm;
-  const float hitDist = length(illuminationPoint - lpos);
-  const float pdfA    = 1.0f / (4.0f * m_lights[a_lightId].size.x * m_lights[a_lightId].size.y);
-  const float cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+  
+  const float3 diffV  = lpos - illuminationPoint;
+  const float hitDist = length(diffV);
+  const float3 dirToV = diffV/hitDist;
+  
+  float pdfA, cosVal;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      const float lradius = m_lights[a_lightId].size.x;
+      //if (DistanceSquared(illuminationPoint, lpos) - lradius*lradius <= 0.0f)
+      //  return 1.0f; // 
+      pdfA   = 1.0f / (4.0f*3.1415926535f*lradius*lradius);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    default:
+    {
+      pdfA    = 1.0f / (4.0f * m_lights[a_lightId].size.x * m_lights[a_lightId].size.y);
+      cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    }
+    break;
+  };
+
   return PdfAtoW(pdfA, hitDist, cosVal);
 }
 
