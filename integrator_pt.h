@@ -144,9 +144,9 @@ protected:
   uint m_dummy2     = 0;
   uint m_dummy3     = 0;
 
-  LightSample LightSampleRev(int a_lightId, float2 rands);
-  float LightPdfSelectRev(int a_lightId);
-  float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
+  float3 LightSampleRev(int a_lightId, float2 rands);
+  float  LightPdfSelectRev(int a_lightId);
+  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
