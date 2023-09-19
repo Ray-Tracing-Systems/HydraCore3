@@ -24,7 +24,6 @@ static inline float3 areaLightSampleRev(const LightSource* a_pLight, float2 rand
   return mul3x3(a_pLight[0].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[0].pos) + epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm);
 }
 
-
 static inline float3 sphereLightSampleRev(const LightSource* a_pLight, float2 rands)
 {
   const float theta = 2.0f * M_PI * rands.x;
@@ -32,8 +31,7 @@ static inline float3 sphereLightSampleRev(const LightSource* a_pLight, float2 ra
   const float x     = std::sin(phi) * std::cos(theta);
   const float y     = std::sin(phi) * std::sin(theta);
   const float z     = std::cos(phi);
-
-  const float3 lcenter   = to_float3(a_pLight[0].pos);
-  const float  lradius   = a_pLight[0].size.x;
-  return lcenter + lradius*1.0001f*make_float3(x, y, z);
+  const float3 lcenter = to_float3(a_pLight[0].pos);
+  const float  lradius = a_pLight[0].size.x;
+  return lcenter + (lradius*1.000001f)*make_float3(x, y, z);
 }
