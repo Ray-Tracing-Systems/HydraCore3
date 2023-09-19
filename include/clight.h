@@ -26,7 +26,13 @@ struct LightSample
 
 static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2 rands)
 {
-  const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[0].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
+  float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[0].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
+  if(a_pLight[0].geomType == LIGHT_GEOM_DISC)
+  {
+    const float offsetX = rands.x * 2.0f - 1.0f;
+    const float offsetY = rands.y * 2.0f - 1.0f;
+    sampleOff = MapSamplesToDisc(float2(offsetX, offsetY))*a_pLight[0].size.x; 
+  }
   const float3 samplePos = mul3x3(a_pLight[0].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[0].pos) + epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm);
   LightSample res;
   res.pos  = samplePos;

@@ -437,7 +437,14 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
       lightSource.matrix.set_col(2, matrix.get_col(0));   // why do we need to swap x and z?
       lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
       lightSource.size = float2(sizeX * scale.x, sizeZ * scale.z);
-      lightSource.pdfA = 1.0f / (4.0f * lightSource.size.x * lightSource.size.y);
+
+      if(shape == L"disk")
+      {
+        lightSource.size.x = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
+        lightSource.pdfA   = 1.0f / (LiteMath::M_PI * lightSource.size.x * lightSource.size.x);
+      }
+      else
+        lightSource.pdfA = 1.0f / (4.0f * lightSource.size.x * lightSource.size.y);
 
       m_lights.push_back(lightSource);
     }
