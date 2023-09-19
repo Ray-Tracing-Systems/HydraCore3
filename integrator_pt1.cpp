@@ -128,17 +128,16 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   const int lightId  = int(std::floor(rndId * float(m_lights.size())));
   
-  const float3 samplePos = LightSampleRev(lightId, rands);
-  const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
+  const LightSample lSam = LightSampleRev(lightId, rands);
+  const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
 
-  const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;
+  const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
   const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   
-  if(!inShadow && (dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE)) 
+  if(!inShadow && dot(shadowRayDir, lSam.norm) < 0.0f) 
   {
-    const float3 lnorm      = (m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? normalize(samplePos - to_float3(m_lights[lightId].norm)) : to_float3(m_lights[lightId].norm); 
-    const float  lgtPdfW    = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, samplePos, lnorm);
+    const float  lgtPdfW    = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
     const BsdfEval bsdfV    = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
     const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     const float misWeight   = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;

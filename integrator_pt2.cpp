@@ -13,7 +13,7 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-float3 Integrator::LightSampleRev(int a_lightId, float2 rands)
+LightSample Integrator::LightSampleRev(int a_lightId, float2 rands)
 {
   const uint gtype = m_lights[a_lightId].geomType;
   switch(gtype)

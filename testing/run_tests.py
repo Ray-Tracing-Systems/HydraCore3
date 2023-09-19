@@ -160,9 +160,10 @@ reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
 reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
 
-reqs.append( REQ_H2("mat_texture_matrices", ["test_215"]) )
-reqs.append( REQ_H2("mat_texture_matrices", ["test_223"]) )
-reqs.append( REQ_H2("mat_texture_matrices", ["test_224"]) )
+reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
+reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
+reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
+reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))

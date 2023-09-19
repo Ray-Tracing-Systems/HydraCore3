@@ -93,7 +93,7 @@
                     "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_201/statex_00001.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_124/statex_00001.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_070/statex_00001.xml",
-                    "-integrator", "shadowpt", "-width", "512", "-height", "512",
+                    "-integrator", "all", "-width", "512", "-height", "512",
                     "-spp", "256", "-spp-naive-mul", "1"],
         "stopAtEntry": false,
         "cwd"    : "${workspaceFolder}",
