@@ -13,7 +13,6 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-
 float3 Integrator::LightSampleRev(int a_lightId, float2 rands)
 {
   const uint gtype = m_lights[a_lightId].geomType;
@@ -29,21 +28,9 @@ float Integrator::LightPdfSelectRev(int a_lightId)
   return 1.0f/float(m_lights.size()); // uniform select
 }
 
-//float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
-//{
-//  const float3 lpos   = pSurfaceHit->pos;
-//  const float3 lnorm  = pSurfaceHit->norm;
-//  const float hitDist = length(illuminationPoint - lpos);
-//  const float pdfA    = 1.0f / (4.0f * m_lights[a_lightId].size.x * m_lights[a_lightId].size.y);
-//  const float cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
-//  return PdfAtoW(pdfA, hitDist, cosVal);
-//}
-
-float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
+float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
 {
   const uint gtype    = m_lights[a_lightId].geomType;
-  const float3 lpos   = pSurfaceHit->pos;
-  const float3 lnorm  = pSurfaceHit->norm;
   const float hitDist = length(illuminationPoint - lpos);
   
   float cosVal = 1.0f;
@@ -56,9 +43,26 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
     cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
     break;
   };
-
+  
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
+
+//static inline float sphereLightEvalPDF(__global const PlainLight* pLight, float3 illuminatingPoint, float3 lpos, float3 lnorm)
+//{
+//  float  lradius = pLight->data[SPHERE_LIGHT_RADIUS];
+//  float3 lcenter = lightPos(pLight);
+//
+//  if (DistanceSquared(illuminatingPoint, lcenter) - lradius*lradius <= 0.0f)
+//    return 1.0f; // 
+//
+//  const float  pdfA   = 1.0f / pLight->data[PLIGHT_SURFACE_AREA];
+//  const float  dist   = length(lpos - illuminatingPoint);
+//
+//  const float3 dirToV    = normalize(lpos - illuminatingPoint);
+//  const float cosAtLight = fabs(dot(dirToV, lnorm));
+//
+//  return PdfAtoW(pdfA, dist, cosAtLight);
+//}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

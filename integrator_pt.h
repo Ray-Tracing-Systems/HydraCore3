@@ -146,7 +146,17 @@ protected:
 
   float3 LightSampleRev(int a_lightId, float2 rands);
   float  LightPdfSelectRev(int a_lightId);
-  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
+
+  /**
+  \brief offset reflected ray position by epsilon;
+  \param  a_lightId   - light id
+  \param  ray_pos     - surface point from which we shoot shadow ray (i.e. ShadowRayPos)
+  \param  ray_dir     - direction of the shadow ray                  (i.e. shadowRayDir)
+  \param  lpos        - position on light surface
+  \param  lnorm       - normal   on light surface
+  \return PdfW (solid-angle probability density) for sampling target light from point 'ray_pos' with direction 'ray_dir' to surface point on light (lpos, lnorm)
+  */
+  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
