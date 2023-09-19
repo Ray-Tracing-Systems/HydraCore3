@@ -30,13 +30,19 @@ float Integrator::LightPdfSelectRev(int a_lightId)
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
 {
-  const uint gtype    = m_lights[a_lightId].geomType;
-  const float hitDist = length(illuminationPoint - lpos);
+  const uint gtype     = m_lights[a_lightId].geomType;
+  const float hitDist  = length(illuminationPoint - lpos);
   
   float cosVal = 1.0f;
   switch(gtype)
   {
     case LIGHT_GEOM_SPHERE:
+    {
+      const float  lradius = m_lights[a_lightId].size.x;
+      const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      const float3 dirToV  = normalize(lpos - illuminationPoint);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
     break;
 
     default:
@@ -46,23 +52,6 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
   
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
-
-//static inline float sphereLightEvalPDF(__global const PlainLight* pLight, float3 illuminatingPoint, float3 lpos, float3 lnorm)
-//{
-//  float  lradius = pLight->data[SPHERE_LIGHT_RADIUS];
-//  float3 lcenter = lightPos(pLight);
-//
-//  if (DistanceSquared(illuminatingPoint, lcenter) - lradius*lradius <= 0.0f)
-//    return 1.0f; // 
-//
-//  const float  pdfA   = 1.0f / pLight->data[PLIGHT_SURFACE_AREA];
-//  const float  dist   = length(lpos - illuminatingPoint);
-//
-//  const float3 dirToV    = normalize(lpos - illuminatingPoint);
-//  const float cosAtLight = fabs(dot(dirToV, lnorm));
-//
-//  return PdfAtoW(pdfA, dist, cosAtLight);
-//}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

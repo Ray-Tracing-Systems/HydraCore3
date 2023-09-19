@@ -21,44 +21,19 @@ struct LightSource
 static inline float3 areaLightSampleRev(const LightSource* a_pLight, float2 rands)
 {
   const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[0].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
-  float3 samplePos = float3(sampleOff.x, 0.0f, sampleOff.y);
-
-  samplePos = mul3x3(a_pLight[0].matrix, samplePos) +
-              epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm) +
-              to_float3(a_pLight[0].pos);
-  
-  return samplePos;
+  return mul3x3(a_pLight[0].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[0].pos) + epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm);
 }
 
 
 static inline float3 sphereLightSampleRev(const LightSource* a_pLight, float2 rands)
 {
-  return float3(0,0,0);
+  const float theta = 2.0f * M_PI * rands.x;
+  const float phi   = std::acos(1.0f - 2.0f * rands.y);
+  const float x     = std::sin(phi) * std::cos(theta);
+  const float y     = std::sin(phi) * std::sin(theta);
+  const float z     = std::cos(phi);
+
+  const float3 lcenter   = to_float3(a_pLight[0].pos);
+  const float  lradius   = a_pLight[0].size.x;
+  return lcenter + lradius*1.0001f*make_float3(x, y, z);
 }
-
-
-
-//hydra2:
-//static inline void SphereLightSampleRev(__global const PlainLight* pLight, float3 rands, float3 illuminatingPoint,
-//                                        __private ShadowSample* a_out)
-//{
-//  const float theta = 2.0f * M_PI * rands.x;
-//  const float phi   = acos(1.0f - 2.0f * rands.y);
-//  const float x     = sin(phi) * cos(theta);
-//  const float y     = sin(phi) * sin(theta);
-//  const float z     = cos(phi);
-//
-//  const float3 lcenter = lightPos(pLight);
-//  const float  lradius = pLight->data[SPHERE_LIGHT_RADIUS];
-//
-//  const float3 samplePos = lcenter + lradius*make_float3(x, y, z);
-//  const float3 lightNorm = normalize(samplePos - lcenter);
-//  const float3 dirToV    = normalize(samplePos - illuminatingPoint);
-//
-//  a_out->isPoint    = false;
-//  a_out->pos        = samplePos;
-//  a_out->color      = sphereLightGetIntensity(pLight);
-//  a_out->pdf        = sphereLightEvalPDF(pLight, illuminatingPoint, samplePos, lightNorm);
-//  a_out->maxDist    = length(samplePos - illuminatingPoint);
-//  a_out->cosAtLight = fabs(dot(lightNorm, dirToV));
-//}

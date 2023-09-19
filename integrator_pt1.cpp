@@ -135,7 +135,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
   const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   
-  if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f) // TODO: correct cos val evaluation for spherical light ...
+  if(!inShadow && (dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE)) 
   {
     const float  lgtPdfW    = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, samplePos, to_float3(m_lights[lightId].norm));
     const BsdfEval bsdfV    = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
@@ -189,7 +189,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     if(lightId != 0xFFFFFFFF)
     {
       lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
-      lightDirectionAtten = lightCos < 0.0f ? 1.0f : 0.0f;
+      lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
     }
 
     float misWeight = 1.0f;
