@@ -29,9 +29,19 @@ float Integrator::LightPdfSelectRev(int a_lightId)
   return 1.0f/float(m_lights.size()); // uniform select
 }
 
+//float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
+//{
+//  const float3 lpos   = pSurfaceHit->pos;
+//  const float3 lnorm  = pSurfaceHit->norm;
+//  const float hitDist = length(illuminationPoint - lpos);
+//  const float pdfA    = 1.0f / (4.0f * m_lights[a_lightId].size.x * m_lights[a_lightId].size.y);
+//  const float cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+//  return PdfAtoW(pdfA, hitDist, cosVal);
+//}
+
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
 {
-  const uint gtype = m_lights[a_lightId].geomType;
+  const uint gtype    = m_lights[a_lightId].geomType;
   const float3 lpos   = pSurfaceHit->pos;
   const float3 lnorm  = pSurfaceHit->norm;
   const float hitDist = length(illuminationPoint - lpos);

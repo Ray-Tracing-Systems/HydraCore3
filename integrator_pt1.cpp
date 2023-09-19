@@ -129,9 +129,6 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const int lightId  = int(std::floor(rndId * float(m_lights.size())));
   
   const float3 samplePos = LightSampleRev(lightId, rands);
-  //const float3 dirToV    = normalize(samplePos - hit.pos);
-  //const float3 lightNorm = normalize(samplePos - lcenter);
-  //(m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? std::abs(dot(shadowRayDir, to_float3(m_lights[lightId].norm))) :
   const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
 
   const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;
@@ -140,23 +137,22 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   
   if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f)
   {
-    const float lightPickProb = LightPdfSelectRev(lightId);
-    const float pdfA          = m_lights[lightId].pdfA;
-    float       cosAtLight    = std::max(dot(shadowRayDir, (-1.0f)*to_float3(m_lights[lightId].norm)), 0.0f);
-    if(m_lights[lightId].geomType == LIGHT_GEOM_SPHERE)
+    float cosAtLight = std::max(dot(shadowRayDir, (-1.0f)*to_float3(m_lights[lightId].norm)), 0.0f);
+    SurfaceHit lightSurfaceHit;
     {
-      const float3 lcenterToLightSample = normalize(samplePos - to_float3(m_lights[lightId].pos));
-      cosAtLight = std::abs(dot(shadowRayDir, lcenterToLightSample));
+      lightSurfaceHit.pos  = samplePos;
+      lightSurfaceHit.norm = to_float3(m_lights[lightId].norm);
+      lightSurfaceHit.uv   = float2(0,0);
     }
-    const float lgtPdfW       = PdfAtoW(pdfA, hitDist, cosAtLight);
-    const BsdfEval bsdfV      = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
-    const float cosThetaOut   = std::max(dot(shadowRayDir, hit.norm), 0.0f);
-    const float misWeight     = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
+    const float  lgtPdfW    = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, &lightSurfaceHit);
+    const BsdfEval bsdfV    = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
+    const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
+    const float misWeight   = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
 
     if(cosAtLight <= 0.0f)
       *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
     else
-      *out_shadeColor = to_float4((1.0f/lightPickProb)*(to_float3(m_lights[lightId].intensity)*bsdfV.color/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
+      *out_shadeColor = to_float4((to_float3(m_lights[lightId].intensity)*bsdfV.color/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
   }
   else
     *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
