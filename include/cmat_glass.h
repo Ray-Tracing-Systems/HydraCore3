@@ -194,34 +194,23 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
 }
 
 // Code from bing chat (chatGPT4)
-// 
-// Функция для вычисления отраженного вектора
-static inline float3 reflect2(float3 v, float3 n)
-{
-  return v - 2.0f * dot(v, n) * n;
+
+static inline float3 reflect2(const float3 dir, const float3 n)
+{  
+  return dir - 2.0f * dot(dir, n) * n;  // dir - vector from light
 }
 
-// Функция для вычисления преломленного вектора
-static inline float3 refract2(float3 v, float3 n, float relativeIor) 
-{
-  // Вычисляем косинус угла падения света
-  float cosi = dot((-1.0f) * v, n);
-  // Вычисляем квадратный корень из единицы минус квадрат относительного показателя преломления умноженный на единицу минус квадрат косинуса угла падения
-  float k = sqrt(1.0f - relativeIor * relativeIor * (1.0f - cosi * cosi));
-  // Проверяем, есть ли полное внутреннее отражение
-  if (k < 0) 
-  {
-    // Если полное внутреннее отражение, то возвращаем отраженный вектор
-    return reflect2(v, n);
-  }
-  else 
-  {
-    // Иначе возвращаем преломленный вектор
-    return relativeIor * v + (relativeIor * cosi - k) * n;
-  }
+static inline float3 refract2(const float3 dir, const float3 n, const float relativeIor)
+{  
+  const float cosi = dot(dir, n);  // dir - vector from light. The normal should always look at the light vector.
+  const float eta  = 1.0f / relativeIor; // Since the incoming vector and the normal are directed in the same direction.
+  const float k    = 1.0f - eta * eta * (1.0f - cosi * cosi);
+  if (k < 0)       
+    return reflect2(dir, n); // full internal reflection 
+  else         
+    return eta * dir - (eta * cosi + std::sqrt(k)) * n; // the refracted vector    
 }
 
-// Функция для вычисления коэффициента Френеля
 static inline float fresnel2(float3 v, float3 n, float ior)
 {
   // Вычисляем угол падения света
@@ -246,46 +235,46 @@ static inline float fresnel2(float3 v, float3 n, float ior)
   }
 }
 
-// Функция для вычисления цвета стекла
+// Функция для вычисления стекла
 static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
-  float3 a_viewDir, float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
+  const float3 a_viewDir, const float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
   const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
-  float        ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
+  const float  ior             = a_materials[0].data[GLASS_FLOAT_IOR];
 
-  float3 fixNormal             = a_normal;
-  float relativeIor            = a_misPrev->ior / ior;
+  const float3 rayDir          = (-1.0f) * a_viewDir;
+  float3 origNormal            = a_normal; // the normal flips higher and always looks at the beam
+  float relativeIor            = ior / a_misPrev->ior;
 
   if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
   {
-    fixNormal      = (-1.0f) * a_normal;
+    origNormal = (-1.0f) * a_normal; // returning the original normal
 
-    //if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
-    //relativeIor = 1.0f / relativeIor;
+    if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
+      relativeIor = 1.0f / ior;
   }
 
 
   // Вычисляем коэффициенты Френеля для отражения и преломления
-  //const float fresnel = fresnel2((-1.0f) * a_viewDir, fixNormal, relativeIor);
-  const float  dotNV  = dot(a_normal, a_viewDir);
-  const float fresnel = FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
-
+  const float fresnel = fresnel2(a_viewDir, a_normal, relativeIor);
 
   float3 dir;
 
   if (a_rands.w < fresnel) // reflection
   {
-    dir = reflect2((-1.0f) * a_viewDir, fixNormal);
-    a_pRes->color = colorReflect;
+    dir            = reflect2(rayDir, a_normal);
+    a_pRes->color  =  colorReflect;
+    a_pRes->flags |= RAY_EVENT_S;
   }
   else
   {
-    dir = refract2((-1.0f) * a_viewDir, a_normal, relativeIor);
-    a_pRes->color = colorTransp;
+    dir            = refract2(rayDir, a_normal, relativeIor);
+    a_pRes->color  = colorTransp;
+    a_misPrev->ior = ior;
+    a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   }
-  a_misPrev->ior = ior;
 
   const float cosThetaOut = std::fabs(dot(dir, a_normal));
   
@@ -349,12 +338,8 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
 //  }
 //  else  // transparency
 //  {
-//    //if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // exit from volume
-//    //{
-//    //  std::swap(a_misPrev->ior, ior);      
-//    //}
 //
-//    refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
+    //refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
 //    a_misPrev->ior = ior;
 //  }
 //}
