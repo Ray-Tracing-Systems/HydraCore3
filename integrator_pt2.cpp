@@ -54,7 +54,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     break;
 
     case MAT_TYPE_CONDUCTOR:
-    conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+    conductorSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
 
     default:
     break;
@@ -84,7 +84,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
     break;
 
     case MAT_TYPE_CONDUCTOR: 
-    conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
+    conductorEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
              &res);
 
     default:
