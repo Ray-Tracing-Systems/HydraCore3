@@ -181,64 +181,64 @@ static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
 
 static inline float CosTheta(float3 w) 
 {
-    return w.z;
+  return w.z;
 }
 static inline float Cos2Theta(float3 w) 
 {
-    return w.z * w.z;
+  return w.z * w.z;
 }
 static inline float AbsCosTheta(float3 w) 
 {
-    return std::abs(w.z);
+  return std::abs(w.z);
 }
 
 static inline float Sin2Theta(float3 w) 
 {
-    return std::max(0.0f, 1.0f - Cos2Theta(w));
+  return std::max(0.0f, 1.0f - Cos2Theta(w));
 }
 static inline float SinTheta(float3 w) 
 {
-    return std::sqrt(Sin2Theta(w));
+  return std::sqrt(Sin2Theta(w));
 }
 
 static inline float TanTheta(float3 w) 
 {
-    return SinTheta(w) / CosTheta(w);
+  return SinTheta(w) / CosTheta(w);
 }
 static inline float Tan2Theta(float3 w) 
 {
-    return Sin2Theta(w) / Cos2Theta(w);
+  return Sin2Theta(w) / Cos2Theta(w);
 }
 
 static inline float CosPhi(float3 w) 
 {
-    float sinTheta = SinTheta(w);
-    return (sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1.0f, 1.0f);
+  float sinTheta = SinTheta(w);
+  return (sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1.0f, 1.0f);
 }
 
 static inline float SinPhi(float3 w) 
 {
-    float sinTheta = SinTheta(w);
-    return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
+  float sinTheta = SinTheta(w);
+  return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
 }
 
 static inline float2 SampleUniformDiskPolar(float2 u) 
 {
-    float r = std::sqrt(u[0]);
-    float theta = M_TWOPI * u[1];
-    return {r * std::cos(theta), r * std::sin(theta)};
+  float r = std::sqrt(u[0]);
+  float theta = M_TWOPI * u[1];
+  return {r * std::cos(theta), r * std::sin(theta)};
 }
 
 static inline float trD(float3 wm, float2 alpha)  
 {
-    float tan2Theta = Tan2Theta(wm);
-    if (std::isinf(tan2Theta))
-        return 0;
-    float cos4Theta = Cos2Theta(wm) * Cos2Theta(wm);
-    if (cos4Theta < 1e-16f)
-        return 0;
-    float e = tan2Theta * ((CosPhi(wm) / alpha.x) * (CosPhi(wm) / alpha.x) + (SinPhi(wm) / alpha.y) * (SinPhi(wm) / alpha.y));
-    return 1.0f / (M_PI * alpha.x * alpha.y * cos4Theta * (1 + e) * (1 + e));
+  float tan2Theta = Tan2Theta(wm);
+  if (std::isinf(tan2Theta))
+      return 0;
+  float cos4Theta = Cos2Theta(wm) * Cos2Theta(wm);
+  if (cos4Theta < 1e-16f)
+      return 0;
+  float e = tan2Theta * ((CosPhi(wm) / alpha.x) * (CosPhi(wm) / alpha.x) + (SinPhi(wm) / alpha.y) * (SinPhi(wm) / alpha.y));
+  return 1.0f / (M_PI * alpha.x * alpha.y * cos4Theta * (1 + e) * (1 + e));
 }
 
 static inline bool trEffectivelySmooth(float2 alpha) 
@@ -248,11 +248,11 @@ static inline bool trEffectivelySmooth(float2 alpha)
 
 static inline float trLambda(float3 w, float2 alpha)  
 {
-    float tan2Theta = Tan2Theta(w);
-    if (std::isinf(tan2Theta))
-      return 0;
-    float alpha2 = (CosPhi(w) * alpha.x) * (CosPhi(w) * alpha.x) + (SinPhi(w) * alpha.y) * (SinPhi(w) * alpha.y);
-    return (std::sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
+  float tan2Theta = Tan2Theta(w);
+  if (std::isinf(tan2Theta))
+    return 0;
+  float alpha2 = (CosPhi(w) * alpha.x) * (CosPhi(w) * alpha.x) + (SinPhi(w) * alpha.y) * (SinPhi(w) * alpha.y);
+  return (std::sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
 }
 
 static inline float trG1(float3 w, float2 alpha) 
@@ -267,7 +267,7 @@ static inline float trG(float3 wo, float3 wi, float2 alpha)
 
 static inline float trD(float3 w, float3 wm, float2 alpha) 
 {
-  return trG1(w, alpha) / abs(w.z) * trD(wm, alpha) * std::abs(dot(w, wm));
+  return trG1(w, alpha) / AbsCosTheta(w) * trD(wm, alpha) * std::abs(dot(w, wm));
 }
 
 static inline float trPDF(float3 w, float3 wm, float2 alpha) 

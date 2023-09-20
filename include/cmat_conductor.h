@@ -110,7 +110,7 @@ static void conductorRoughEval(const GLTFMaterial* a_materials, float3 l, float3
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   pRes->color = float3(val, val, val); 
-  pRes->pdf = 0.0f;
+  pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }
 
 static inline void conductorSampleAndEval(const GLTFMaterial* a_materials, float4 rands, float3 v, float3 n, float2 tc, 
