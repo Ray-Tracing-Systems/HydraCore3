@@ -28,11 +28,11 @@ float Integrator::LightPdfSelectRev(int a_lightId)
   return 1.0f/float(m_lights.size()); // uniform select
 }
 
-static inline float DistanceSquared(float3 a, float3 b)
-{
-  const float3 diff = b - a;
-  return dot(diff, diff);
-}
+//static inline float DistanceSquared(float3 a, float3 b)
+//{
+//  const float3 diff = b - a;
+//  return dot(diff, diff);
+//}
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
 {
@@ -46,8 +46,8 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
     {
       const float  lradius = m_lights[a_lightId].size.x;
       const float3 lcenter = to_float3(m_lights[a_lightId].pos);
-      if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
-        return 1.0f;
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
       const float3 dirToV  = normalize(lpos - illuminationPoint);
       cosVal = std::abs(dot(dirToV, lnorm));
     }
