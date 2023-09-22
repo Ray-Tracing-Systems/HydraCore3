@@ -35,6 +35,26 @@ static void conductorSmoothEval(const GLTFMaterial* a_materials, float3 l, float
   pRes->pdf = 0.0f;
 }
 
+
+static float conductorRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior)
+{
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return 0.0f;
+  }
+
+  float cosTheta_o = AbsCosTheta(wo);
+  float cosTheta_i = AbsCosTheta(wi);
+  if (cosTheta_i == 0 || cosTheta_o == 0)
+    return 0.0f;
+
+  float F = FrComplexConductor(std::abs(dot(wo, wm)), ior);
+  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+
+  return val;
+}
+
+
 static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, float4 rands, float3 v, float3 n, float2 tc, 
                                                 float3 color,
                                                 BsdfSample* pRes)
@@ -59,19 +79,11 @@ static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, 
     return;
   }
 
-  float pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
-
-  float cosTheta_o = AbsCosTheta(wo);
-  float cosTheta_i = AbsCosTheta(wi);
-  if (cosTheta_i == 0 || cosTheta_o == 0)
-      return;
-
-  float F = FrComplexConductor(std::abs(dot(wo, wm)), complex{eta, k});
-  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
 
   pRes->val = float3(val, val, val); 
   pRes->dir = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
-  pRes->pdf = pdf;
+  pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->flags = RAY_EVENT_S;
 }
 
@@ -87,29 +99,25 @@ static void conductorRoughEval(const GLTFMaterial* a_materials, float3 l, float3
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
+
   const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
   const float3 wi = float3(dot(l, nx), dot(l, ny), dot(l, nz));
 
   if(wo.z * wi.z < 0.0f)
     return;
 
-  float cosTheta_o = AbsCosTheta(wo);
-  float cosTheta_i = AbsCosTheta(wi); 
-  // float cosTheta_o = std::abs(dot(n, v));
-  // float cosTheta_i = std::abs(dot(n, l)); 
-  if (cosTheta_i == 0 || cosTheta_o == 0)
-    return; 
-
-  float3 wm = wo + wi;
-  if (dot(wm, wm) == 0)
+  float3 wm_tmp = wo + wi;
+  if (dot(wm_tmp, wm_tmp) == 0)
       return;
 
-  wm = normalize(wm);
+  float3 wm = normalize(wm_tmp);
 
-  float F = FrComplexConductor(std::abs(dot(wo, wm)), complex{eta, k});
-  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
+
 
   pRes->color = float3(val, val, val); 
+
+  wm = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }
 

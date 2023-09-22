@@ -222,6 +222,11 @@ static inline float SinPhi(float3 w)
   return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
 }
 
+static inline float3 FaceForward(float3 v, float3 n2) 
+{
+    return (dot(v, n2) < 0.f) ? (-1.0f) * v : v;
+}
+
 static inline float2 SampleUniformDiskPolar(float2 u) 
 {
   float r = std::sqrt(u[0]);
