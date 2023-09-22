@@ -124,40 +124,33 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float2 uv = rndFloat2_Pseudo(a_gen);
-  const float rndId = rndFloat1_Pseudo(a_gen);
-
-  int lightId = int(std::floor(rndId * float(m_lights.size())));
+  const float2 rands = rndFloat2_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const int lightId  = int(std::floor(rndId * float(m_lights.size())));
   
-  const float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + uv) * m_lights[lightId].size;
+  const LightSample lSam = LightSampleRev(lightId, rands, hit.pos);
+  const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
 
-  float3 samplePos = float3(sampleOff.x, 0.0f, sampleOff.y); // -1e-5f*std::max(m_light.size.x, m_light.size.y)
-
-  samplePos = mul3x3(m_lights[lightId].matrix, samplePos) +
-              epsilonOfPos(samplePos) * to_float3(m_lights[lightId].norm) +
-              to_float3(m_lights[lightId].pos);
-
-  const float  hitDist   = std::sqrt(dot(hit.pos - samplePos, hit.pos - samplePos));
-
-  const float3 shadowRayDir = normalize(samplePos - hit.pos); // explicitSam.direction;
+  const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-
-  const bool inShadow = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   
-  if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f)
+  if(!inShadow && dot(shadowRayDir, lSam.norm) < 0.0f) 
   {
-    const float lightPickProb = 1.0f / float(m_lights.size());
-    const float pdfA          = 1.0f / (4.0f * m_lights[lightId].size.x * m_lights[lightId].size.y);
-    const float cosVal        = std::max(dot(shadowRayDir, (-1.0f)*to_float3(m_lights[lightId].norm)), 0.0f);
-    const float lgtPdfW       = PdfAtoW(pdfA, hitDist, cosVal);
-    const BsdfEval bsdfV      = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
-    const float cosThetaOut   = std::max(dot(shadowRayDir, hit.norm), 0.0f);
-    const float misWeight     = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
-
-    if(cosVal <= 0.0f)
-      *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    else
-      *out_shadeColor = to_float4((1.0f/lightPickProb)*(to_float3(m_lights[lightId].intensity)*bsdfV.color/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
+    const BsdfEval bsdfV    = MaterialEval(matId, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
+    const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
+    
+    float  lgtPdfW          = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
+    float misWeight         = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
+    const bool  isDirect    = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
+    
+    if(isDirect)
+    {
+      misWeight = 1.0f;
+      lgtPdfW   = 1.0f;
+    }
+    
+    *out_shadeColor          = to_float4((to_float3(m_lights[lightId].intensity)*bsdfV.color/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
   }
   else
     *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -205,7 +198,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     if(lightId != 0xFFFFFFFF)
     {
       lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
-      lightDirectionAtten = lightCos < 0.0f ? 1.0f : 0.0f;
+      lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
     }
 
     float misWeight = 1.0f;
@@ -215,7 +208,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       {
         if(lightId != 0xFFFFFFFF)
         {
-          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, &hit);
+          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm);
           misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
           if (prevPdfW <= 0.0f) // specular bounce
             misWeight = 1.0f;

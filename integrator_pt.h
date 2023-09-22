@@ -3,6 +3,7 @@
 
 #include "include/cglobals.h" // We assume that all code that should pe passed to kernels will be just included both for CPU and OpenCL
 #include "include/crandom.h"
+#include "include/clight.h"
 #include "include/cmaterial.h"
 
 #include <vector>
@@ -143,8 +144,19 @@ protected:
   uint m_dummy2     = 0;
   uint m_dummy3     = 0;
 
+  LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const SurfaceHit* pSurfaceHit);
+
+  /**
+  \brief offset reflected ray position by epsilon;
+  \param  a_lightId   - light id
+  \param  ray_pos     - surface point from which we shoot shadow ray (i.e. ShadowRayPos)
+  \param  ray_dir     - direction of the shadow ray                  (i.e. shadowRayDir)
+  \param  lpos        - position on light surface
+  \param  lnorm       - normal   on light surface
+  \return PdfW (solid-angle probability density) for sampling target light from point 'ray_pos' with direction 'ray_dir' to surface point on light (lpos, lnorm)
+  */
+  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
@@ -183,7 +195,7 @@ protected:
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
-  std::vector<RectLightSource> m_lights;
+  std::vector<LightSource> m_lights;
   float4          m_envColor = float4(0,0,0,1);
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
 

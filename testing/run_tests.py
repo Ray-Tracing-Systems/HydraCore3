@@ -73,7 +73,7 @@ class REQ_H2(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
         for inregrator in req.integs:
           outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/z_" + dev_type + inregrator + ".bmp"
-          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
+          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
           args = args + ["--" + dev_type]
@@ -112,7 +112,7 @@ class REQ_HX(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
         for inregrator in req.integs:
           outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + ".bmp"
-          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem), "-gamma", "2.2"]
+          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
@@ -122,7 +122,6 @@ class REQ_HX(REQ):
           req.run(test_name, args, image_ref, outp, inregrator)
   
 reqs = []
-
 
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
@@ -160,6 +159,12 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plasti
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
 reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
+
+reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
+reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
+reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
+reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
+reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 16) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))

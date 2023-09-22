@@ -1,9 +1,7 @@
 #ifndef BASIC_PROJ_LOGIC_H
 #define BASIC_PROJ_LOGIC_H
 
-//#define LAYOUT_STD140
 #include "LiteMath.h"
-
 #ifndef __OPENCL_VERSION__
 using namespace LiteMath;
 #endif
@@ -34,16 +32,6 @@ typedef struct SurfaceHitT
   float3 norm;
   float2 uv;
 }SurfaceHit;
-
-struct RectLightSource
-{
-  float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
-  float4   pos;       ///<! translation aclually stored here
-  float4   intensity;
-  float4   norm;
-  float2   size;
-  float2   dummy;
-};
 
 static inline float3 EyeRayDirNormalized(float x, float y, float4x4 a_mViewProjInv)
 {
@@ -142,6 +130,56 @@ static inline float3 MapSampleToCosineDistribution(float r1, float r2, float3 di
     res = (-1.0f)*nx*deviation.x + ny*deviation.y - nz*deviation.z;
     //belowSurface = true;
   }
+
+  return res;
+}
+
+/**
+\brief  transform float2 sample in rect [-1,1]x[-1,1] to disc centered at (0,0) with radius == 1. 
+\param  xy - input sample in rect [-1,1]x[-1,1]
+\return position in disc
+*/
+static inline float2 MapSamplesToDisc(float2 xy)
+{
+  float x = xy.x;
+  float y = xy.y;
+
+  float r = 0;
+  float phi = 0;
+
+  float2 res = xy;
+
+  if (x>y && x>-y)
+  {
+    r = x;
+    phi = 0.25f*3.141592654f*(y / x);
+  }
+
+  if (x < y && x > -y)
+  {
+    r = y;
+    phi = 0.25f*3.141592654f*(2.0f - x / y);
+  }
+
+  if (x < y && x < -y)
+  {
+    r = -x;
+    phi = 0.25f*3.141592654f*(4.0f + y / x);
+  }
+
+  if (x >y && x<-y)
+  {
+    r = -y;
+    phi = 0.25f*3.141592654f*(6 - x / y);
+  }
+
+  //float sin_phi, cos_phi;
+  //sincosf(phi, &sin_phi, &cos_phi);
+  float sin_phi = sin(phi);
+  float cos_phi = cos(phi);
+
+  res.x = r*sin_phi;
+  res.y = r*cos_phi;
 
   return res;
 }
