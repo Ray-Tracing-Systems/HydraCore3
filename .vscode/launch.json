@@ -210,5 +210,55 @@
             }
         ]
     },
+
+    {
+        "name": "sponza",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/01_sponza/statex_00001.xml", 
+                 "-out", "z_sponza.bmp", 
+                 "-integrator", "mispt", "-width", "512", "-height", "512",
+                 "-spp", "256", 
+                 "--cpu",
+                ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "cry_sponza",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/02_cry_sponza/statex_00001.xml", 
+                 "-out", "z_cry_sponza.bmp", 
+                 "-integrator", "mispt", "-width", "1024", "-height", "1024",
+                 "-spp", "1024", 
+                 "--gpu",
+                ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     ]
 }

@@ -13,11 +13,12 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-LightSample Integrator::LightSampleRev(int a_lightId, float2 rands)
+LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint)
 {
   const uint gtype = m_lights[a_lightId].geomType;
   switch(gtype)
   {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
     case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
     default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
   };

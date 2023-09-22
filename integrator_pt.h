@@ -144,7 +144,7 @@ protected:
   uint m_dummy2     = 0;
   uint m_dummy3     = 0;
 
-  LightSample LightSampleRev(int a_lightId, float2 rands);
+  LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
 
   /**

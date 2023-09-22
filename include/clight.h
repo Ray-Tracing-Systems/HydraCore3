@@ -5,6 +5,7 @@
 static constexpr uint LIGHT_GEOM_RECT   = 1; 
 static constexpr uint LIGHT_GEOM_DISC   = 2;
 static constexpr uint LIGHT_GEOM_SPHERE = 3;
+static constexpr uint LIGHT_GEOM_DIRECT = 4;
 
 struct LightSource
 {
@@ -55,3 +56,42 @@ static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, floa
   res.norm = normalize(samplePos - lcenter);
   return res;
 }
+
+static inline LightSample directLightSampleRev(const LightSource* a_pLight, float2 rands, float3 illuminationPoint)
+{
+  const float3 norm = to_float3(a_pLight[0].norm);
+  LightSample res;
+  res.pos  = illuminationPoint - norm*100000.0f;
+  res.norm = norm;
+  return res;
+}
+
+//static inline void DirectLightSampleRev(__global const PlainLight* pLight, float3 rands, float3 illuminatingPoint,
+//                                        __private ShadowSample* a_out)
+//{
+//  float3 lpos = lightPos(pLight);
+//  float3 norm = lightNorm(pLight);
+//
+//  float pdfW = 1.0f;
+//  if (pLight->data[DIRECT_LIGHT_SSOFTNESS] > 1e-5f)
+//  {
+//    const float cosAlpha = pLight->data[DIRECT_LIGHT_ALPHA_COS];
+//    norm = MapSamplesToCone(cosAlpha, make_float2(rands.x, rands.y), norm);
+//    //pdfW = 1.0f / (2.0f * M_PI * (1.0f - cosAlpha));
+//  }
+//
+//  float3 AC    = illuminatingPoint - lpos;
+//  float  CBLen = dot(normalize(AC), norm)*length(AC);
+//
+//  float3 samplePos = illuminatingPoint - norm*CBLen;
+//  float hitDist    = CBLen; // length(samplePos - illuminatingPoint);
+//
+//  const float3 color = lightBaseColor(pLight)*directLightAttenuation(pLight, illuminatingPoint);
+//
+//  a_out->isPoint    = true; // (pdfW == 1.0f);
+//  a_out->pos        = samplePos;
+//  a_out->color      = color*pdfW;
+//  a_out->pdf        = pdfW;
+//  a_out->maxDist    = hitDist;
+//  a_out->cosAtLight = 1.0f;
+//}

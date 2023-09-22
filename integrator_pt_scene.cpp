@@ -396,6 +396,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
   for(auto lightInst : scene.InstancesLights())
   {
+    const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
     const float sizeX = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
     const float sizeZ = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
@@ -406,9 +407,18 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
     auto matrix  = lightInst.matrix;
 
-    if(lightInst.lightNode.attribute(L"type").as_string() == std::wstring(L"sky"))
+    if(ltype == std::wstring(L"sky"))
     {
       m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
+    }
+    else if(ltype == std::wstring(L"directional"))
+    {
+      LightSource lightSource{};
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = LIGHT_GEOM_DIRECT;
+      m_lights.push_back(lightSource);
     }
     else if(shape == L"rect" || shape == L"disk")
     {
