@@ -317,8 +317,8 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
     x += x_inc;
     y += y_inc;
   }
-
-  a_outColor[(int)(a_pos1.y)*a_winWidth + (int)(a_pos1.x)] = float4(0, a_spp, 0, 0);
+  if (a_pos1.x >= 0 && a_pos1.x <= a_winWidth - 1 && a_pos1.y >= 0 && a_pos1.y <= a_winHeight - 1)
+    a_outColor[(int)(a_pos1.y)*a_winWidth + (int)(a_pos1.x)] = float4(0, a_spp, 0, 0);
 }
 
 void Integrator::kernel_ContributePathRayToImage3(float4* out_color, 
@@ -348,7 +348,7 @@ void Integrator::kernel_ContributePathRayToImage3(float4* out_color,
     const float4 rayColor1 = float4(tanh(a_rayPos[i - 1].x * scaleSize), tanh(a_rayPos[i - 1].y * scaleSize), tanh(a_rayPos[i - 1].z * scaleSize), 0) * 0.5f + 0.5f;
     const float4 rayColor2 = float4(tanh(a_rayPos[i - 0].x * scaleSize), tanh(a_rayPos[i - 0].y * scaleSize), tanh(a_rayPos[i - 0].z * scaleSize), 0) * 0.5f + 0.5f;
         
-    drawLine(pos1, pos2, out_color, m_winWidth, m_winHeight, rayColor1, rayColor2, false, true, m_spp);
+    drawLine(pos1, pos2, out_color, m_winWidth, m_winHeight, rayColor1, rayColor2, true, true, m_spp);
   }
 }
 

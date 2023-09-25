@@ -26,8 +26,7 @@ int main(int argc, const char** argv)
   int PASS_NUMBER     = 1024;
   int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
 
-  std::string scenePath      = "d:/GitRepo/ComparisonRender/Tests/Glass/001/Glass-sphere_gloss-1_cornell_hydra3.xml"; 
-  //std::string scenePath      = "d:/GitRepo/ComparisonRender/Tests/Glass/004/Glass_gloss-1_cornell_hydra3.xml"; 
+  std::string scenePath      = "d:/GitRepo/ComparisonRender/Tests/Glass/004/Glass_gloss-1_cornell_hydra3.xml"; 
   std::string sceneDir       = "d:/GitRepo/ComparisonRender/";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";

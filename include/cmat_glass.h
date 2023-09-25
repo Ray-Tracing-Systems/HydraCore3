@@ -193,49 +193,48 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->color = make_float3(0.0f, 0.0f, 0.0f); // reflection happened in wrong way
 }
 
-// Code from bing chat (chatGPT4)
 
 static inline float3 reflect2(const float3 dir, const float3 n)
 {  
-  return dir - 2.0f * dot(dir, n) * n;  // dir - vector from light
+  return normalize(dir - 2.0f * dot(dir, n) * n);  // dir - vector from light
 }
 
 static inline float3 refract2(const float3 dir, const float3 n, const float relativeIor)
 {  
-  const float cosi = dot(dir, n);  // dir - vector from light. The normal should always look at the light vector.
+  const float cosi = dot(dir, n);        // dir - vector from light. The normal should always look at the light vector.
   const float eta  = 1.0f / relativeIor; // Since the incoming vector and the normal are directed in the same direction.
   const float k    = 1.0f - eta * eta * (1.0f - cosi * cosi);
   if (k < 0)       
     return reflect2(dir, n); // full internal reflection 
   else         
-    return eta * dir - (eta * cosi + std::sqrt(k)) * n; // the refracted vector    
+    return normalize(eta * dir - (eta * cosi + std::sqrt(k)) * n); // the refracted vector    
 }
 
 static inline float fresnel2(float3 v, float3 n, float ior)
 {
-  // Вычисляем угол падения света
+  // Calculating the angle of incidence of light
   const float cosi = dot(v, n);
-  // Вычисляем угол преломления света по закону Снеллиуса
+  // We calculate the angle of refraction of light according to the Snellius law
   const float sint = sqrt(1.0f - cosi * cosi) / ior;
-  // Проверяем, есть ли полное внутреннее отражение
+  // Check if there is a complete internal reflection
   if (sint > 1.0f) 
   {
-    // Если да, то возвращаем коэффициент отражения равный 1
+    // If yes, then we return the reflection coefficient equal to 1
     return 1.0f;
   }
   else 
   {
-    // Иначе вычисляем угол преломления света
+    // Otherwise we calculate the angle of refraction of light
     const float cost = sqrt(1.0f - sint * sint);
-    // Вычисляем коэффициенты отражения для параллельной и перпендикулярной поляризации по формулам Френеля
+    // We calculate the reflection coefficients for parallel and perpendicular polarization using Fresnel formulas
     const float Rp   = (ior * cosi - cost) / (ior * cosi + cost);
     const float Rs   = (cosi - ior * cost) / (cosi + ior * cost);
-    // Возвращаем среднее значение этих коэффициентов
+    // We return the average value of these coefficients
     return (Rp * Rp + Rs * Rs) * 0.5f;
   }
 }
 
-// Функция для вычисления стекла
+
 static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
   const float3 a_viewDir, const float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
 {
@@ -246,6 +245,7 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
 
   const float3 rayDir          = (-1.0f) * a_viewDir;
   float3 origNormal            = a_normal; // the normal flips higher and always looks at the beam
+
   float relativeIor            = ior / a_misPrev->ior;
 
   if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
@@ -256,8 +256,6 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
       relativeIor = 1.0f / ior;
   }
 
-
-  // Вычисляем коэффициенты Френеля для отражения и преломления
   const float fresnel = fresnel2(a_viewDir, a_normal, relativeIor);
 
   float3 dir;

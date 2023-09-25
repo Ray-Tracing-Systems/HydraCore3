@@ -51,6 +51,20 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   res.pdf    = 1.0f;
   res.flags  = a_currRayFlags;
 
+  //if (dot(normalize(v), v) < 0.9999f)
+  //  std::cout << "Warning! This is an unnormalized a_viewDir: (" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
+  //if (dot(normalize(n), n) < 0.9999f)
+  //  std::cout << "Warning! This is an unnormalized normal: (" << n.x << ", " << n.y << ", " << n.z << ")" << std::endl;
+
+  //if (std::isnan(n.x) || std::isnan(n.y) || std::isnan(n.z))
+  //  std::cout << "Warning! The normal has the value NaN: (" << n.x << ", " << n.y << ", " << n.z << ")" << std::endl;
+
+  //if (n.x == 0 && n.y == 0 && n.z == 0)
+  //  std::cout << "Warning! The normal has a zero value: (" << n.x << ", " << n.y << ", " << n.z << ")" << std::endl;
+
+  //if (!std::isfinite(n.x) || !std::isfinite(n.y) || !std::isfinite(n.z))
+  //  std::cout << "Warning! The normal has an infinite value: (" << n.x << ", " << n.y << ", " << n.z << ")" << std::endl;
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -62,6 +76,12 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     default:
     break;
   }
+
+  //if (!std::isfinite(res.color.x) || !std::isfinite(res.color.y) || !std::isfinite(res.color.z))
+  //  std::cout << "Warning! The res.color has an infinite value: (" << res.color.x << ", " << res.color.y << ", " << res.color.z << ")" << std::endl;
+
+  //res.direction = (-1.0f) * v;
+  //res.color     = abs(v);
 
   return res;
 }
@@ -75,8 +95,8 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
-  // TODO: read other parameters from texture
 
+  // TODO: read other parameters from texture
   BsdfEval res;
   res.color = float3(0,0,0);
   res.pdf   = 0.0f;
@@ -196,7 +216,7 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
     //const uint x  = (XY & 0x0000FFFF);
     //const uint y  = (XY & 0xFFFF0000) >> 16;
 
-    //if (x == 150 && y == 400)
+    //if (x == 560 && y == 560)
     //{
       for (int j = 0; j < a_passNum; ++j)
       {

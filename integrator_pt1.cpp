@@ -245,7 +245,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   const float4 uv         = rndFloat4_Pseudo(a_gen);
   const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
   const float3 bxdfVal    = matSam.color * (1.0f / std::max(matSam.pdf, 1e-20f));
-  const float  cosTheta   = dot(matSam.direction, hit.norm);
+  const float  cosTheta   = std::abs(dot(matSam.direction, hit.norm)); 
 
   MisData nextBounceData      = *misPrev;        // remember current pdfW for next bounce
   nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; 
@@ -355,8 +355,8 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
     
-  std::vector<float3> rayPos;
-  std::vector<float4> rayColor;
+  //std::vector<float3> rayPos;
+  //std::vector<float4> rayColor;
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -372,8 +372,8 @@ void Integrator::PathTrace(uint tid, float4* out_color)
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
-    rayPos.push_back(float3(rayPosAndNear.x, rayPosAndNear.y, rayPosAndNear.z));
-    rayColor.push_back(rayPosAndNear);
+    //rayPos.push_back(float3(rayPosAndNear.x, rayPosAndNear.y, rayPosAndNear.z));
+    //rayColor.push_back(rayPosAndNear);
 
     if(isDeadRay(rayFlags))
       break;
