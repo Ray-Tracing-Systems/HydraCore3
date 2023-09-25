@@ -14,19 +14,53 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-float Integrator::LightPdfSelectRev(int a_lightId) 
-{ 
-  return 1.0f;
+LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint)
+{
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
+  };
 }
 
-float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const SurfaceHit* pSurfaceHit)
+float Integrator::LightPdfSelectRev(int a_lightId) 
+{ 
+  return 1.0f/float(m_lights.size()); // uniform select
+}
+
+//static inline float DistanceSquared(float3 a, float3 b)
+//{
+//  const float3 diff = b - a;
+//  return dot(diff, diff);
+//}
+
+float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
 {
-  const float3 lpos   = pSurfaceHit->pos;
-  const float3 lnorm  = pSurfaceHit->norm;
+  const uint gtype    = m_lights[a_lightId].geomType;
   const float hitDist = length(illuminationPoint - lpos);
-  const float pdfA    = 1.0f / (4.0f * m_lights[a_lightId].size.x * m_lights[a_lightId].size.y);
-  const float cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
-  return PdfAtoW(pdfA, hitDist, cosVal);
+  
+  float cosVal = 1.0f;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      const float  lradius = m_lights[a_lightId].size.x;
+      const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
+      const float3 dirToV  = normalize(lpos - illuminationPoint);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    default:
+    cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    break;
+  };
+  
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

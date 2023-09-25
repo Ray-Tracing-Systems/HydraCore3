@@ -8,7 +8,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu",
                  "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
-                 "-integrator", "naivept", 
+                 "-integrator", "mispt", 
                  "-spp", "32", 
                  "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
@@ -32,9 +32,33 @@
         "args": ["--gpu",
                  "-in", "../HydraAPI-tests/tests_f/test_215/statex_00001.xml",
                  //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
-                 "-integrator", "naivept", 
+                 "-integrator", "mispt", 
                  "-spp", "32", 
                  "-out", "out_gpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "Bunny",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in",  "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Images/z_hydra3.bmp",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                 "-integrator", "mispt", 
+                 "-spp", "2048"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -53,7 +77,7 @@
         "type"   : "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args"   : ["--gpu",
+        "args"   : ["--cpu",
                     //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
                     //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/02_cornell_hydra_mirror.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
@@ -66,10 +90,10 @@
                     //"-out", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/y05_cornell_hydra3_plastic.exr",
                     //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/05_sphere_hydra_plastic.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/scenes/01_simple_scenes/bunny_cornell.xml",
-                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
+                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_223/statex_00001.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_124/statex_00001.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_070/statex_00001.xml",
-                    "-integrator", "mispt", 
+                    "-integrator", "shadowpt", "-width", "512", "-height", "512",
                     "-spp", "256", "-spp-naive-mul", "1"],
         "stopAtEntry": false,
         "cwd"    : "${workspaceFolder}",
@@ -90,8 +114,8 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args"   : ["--сpu", "-integrator", "raytracing", "-width", "512", "-height", "512", "-spp", "1",
-                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
+        "args"   : ["--сpu", "-integrator", "mispt", "-width", "512", "-height", "512", "-spp", "1",
+                    "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_246/statex_00001.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml",
                     //"-in", "/home/frol/PROG/HydraRepos/comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra2.xml", "-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
                     ],
@@ -113,7 +137,7 @@
         "name"   : "Launch (RT)",
         "type"   : "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/cmake-build-release/hydra",
+        "program": "${workspaceFolder}/bin-release/hydra",
         "args"   : ["--cpu",
                     //"-in", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/03_sphere_hydra_pbr_lite_spec.xml",
                     //"-out", "/home/frol/PROG/msu-graphics-group/scenes/01_simple_scenes/y03_sphere_hydra3_pbr_lite.exr",
@@ -136,17 +160,93 @@
 
 
     {
-        "name": "test_103",
+        "name": "test_101",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/cmake-build-release/hydra",
-        "args": ["-in", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_f/test_103/statex_00001.xml", 
-                    "-out", "/home/frol/PROG/HydraRepos4/HydraAPI-tests/tests_images/test_103/z_out_h3_gpu.bmp", 
-                    "-integrator", "mispt", 
-                    "-spp", "1024", 
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_101/statex_00001.xml", 
+                    "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_101/z_out_h3_gpu.bmp", 
+                    "-integrator", "all", "-width", "512", "-height", "512",
+                    "-spp", "4096", 
                     "--gpu_id", "0", 
                     "--gpu",
                     ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "test_224",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_224/statex_00001.xml", 
+                    "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_224/hydra3.bmp", 
+                    "-integrator", "all", "-width", "512", "-height", "512",
+                    "-spp", "4096", 
+                    "--gpu_id", "0", 
+                    "--gpu",
+                    ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "sponza",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/01_sponza/statex_00001.xml", 
+                 "-out", "z_sponza.bmp", 
+                 "-integrator", "mispt", "-width", "512", "-height", "512",
+                 "-spp", "256", 
+                 "--cpu",
+                ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "cry_sponza",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["-in", "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/02_cry_sponza/statex_00001.xml", 
+                 "-out", "z_cry_sponza.bmp", 
+                 "-integrator", "mispt", "-width", "1024", "-height", "1024",
+                 "-spp", "1024", 
+                 "--gpu",
+                ],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

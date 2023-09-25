@@ -434,6 +434,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
   for(auto lightInst : scene.InstancesLights())
   {
+    const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
     const float sizeX        = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
     const float sizeZ        = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
@@ -441,37 +442,82 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
 
     float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
+    auto matrix  = lightInst.matrix;
 
-    if(lightInst.lightNode.attribute(L"type").as_string() == std::wstring(L"sky"))
+    if(ltype == std::wstring(L"sky"))
     {
       m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
     }
-    else if(shape == L"rect")
+    else if(ltype == std::wstring(L"directional"))
     {
-      RectLightSource lightSource{};
-
-      auto matrix = lightInst.matrix;
+      LightSource lightSource{};
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = LIGHT_GEOM_DIRECT;
+      m_lights.push_back(lightSource);
+    }
+    else if(shape == L"rect" || shape == L"disk")
+    {
+      LightSource lightSource{};
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = (shape == L"rect") ? LIGHT_GEOM_RECT : LIGHT_GEOM_DISC;
 
       // extract scale and rotation from transformation matrix
       float3 scale;
       for(int i = 0; i < 3; ++i)
       {
         float4 vec = matrix.col(i);
-        scale[i]   = length3f(vec);
-
-        for(int j = 0; j < 3; ++j)
-          matrix.col(i)[j] /= scale[i];
+        scale[i] = length3f(vec);
       }
-      
-      lightSource.matrix = matrix;
-      lightSource.matrix.set_col(3, float4(0, 0, 0, 1.0f));
 
-      lightSource.size = float2(sizeX * scale.x, sizeZ * scale.z);
+      lightSource.matrix.set_col(0, matrix.get_col(2)); // why this matrix has swapped (x,z) ?
+      lightSource.matrix.set_col(1, matrix.get_col(1)); // why this matrix has swapped (x,z) ?
+      lightSource.matrix.set_col(2, matrix.get_col(0)); // why this matrix has swapped (x,z) ?
+      lightSource.matrix.set_col(3, float4(0,0,0,1));
+      lightSource.size = float2(sizeX, sizeZ);
 
+      if(shape == L"disk")
+      {
+        lightSource.size.x = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
+        lightSource.pdfA   = 1.0f / (LiteMath::M_PI * lightSource.size.x *lightSource.size.x * scale.x * scale.z);
+      }
+      else
+        lightSource.pdfA   = 1.0f / (4.0f * lightSource.size.x * lightSource.size.y * scale.x * scale.z);
+
+      m_lights.push_back(lightSource);
+    }
+    else if (shape == L"sphere")
+    {
+      float radius = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
+      float3 scale; 
+      for(int i = 0; i < 3; ++i)
+      {
+        float4 vec = matrix.col(i);
+        scale[i] = length3f(vec);
+      }
+
+      radius = radius*scale.x; // support for uniform scale, assume scale.x == scale.y == scale.z
+      if(std::abs(scale.x - scale.y) > 1e-5f || std::abs(scale.x - scale.z) > 1e-5f)
+      {
+        std::cout << "[Integrator::LoadScene]: ALERT!" << std::endl;
+        std::cout << "[Integrator::LoadScene]: non uniform scale for spherical light instance matrix is not supported: (" << scale.x << ", " << scale.y << ", " << scale.z << ")" << std::endl; 
+      }
+
+      LightSource lightSource{};
+      {
+        lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+        lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
+        lightSource.intensity = to_float4(color*power,0);
+        lightSource.geomType  = LIGHT_GEOM_SPHERE;
+  
+        lightSource.matrix    = float4x4{};
+        lightSource.size      = float2(radius, radius);
+        lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
+      }
       m_lights.push_back(lightSource);
     }
   }
