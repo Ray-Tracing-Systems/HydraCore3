@@ -81,10 +81,10 @@ static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, 
 
   float val = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
 
-  pRes->val = float3(val, val, val); 
-  pRes->dir = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
-  pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
-  pRes->flags = RAY_EVENT_G;
+  pRes->val   = float3(val, val, val); 
+  pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
+  pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+  pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
 
