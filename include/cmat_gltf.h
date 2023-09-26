@@ -48,8 +48,8 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
   {
     pdfSelect         *= alpha;
     const float  VdotH = dot(v,normalize(v + ggxDir));
-    pRes->direction    = ggxDir;
-    pRes->color        = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
+    pRes->dir    = ggxDir;
+    pRes->val        = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
     pRes->pdf          = ggxPdf;
     pRes->flags        = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   }
@@ -78,27 +78,27 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
     if(rands.w < prob_specular) // specular
     {
       pdfSelect      *= choicePdf;
-      pRes->direction = ggxDir;
-      pRes->color     = ggxVal*coat*(1.0f - alpha)*f_i;
+      pRes->dir       = ggxDir;
+      pRes->val       = ggxVal*coat*(1.0f - alpha)*f_i;
       pRes->pdf       = ggxPdf;
       pRes->flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
     } 
     else
     {
       pdfSelect      *= (1.0f-choicePdf); // lambert
-      pRes->direction = lambertDir;
-      pRes->color     = lambertVal * color * (1.0f - alpha);
+      pRes->dir       = lambertDir;
+      pRes->val       = lambertVal * color * (1.0f - alpha);
       pRes->pdf       = lambertPdf;
       pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
             
       if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-        pRes->color *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+        pRes->val *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
             
       if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
       {
         const float m_fdr_int = a_materials[0].data[GLTF_FLOAT_MI_FDR_INT];
         const float f_o       = FrDielectricPBRT(std::abs(dot(lambertDir, n)), 1.0f, fresnelIOR);
-        pRes->color          *= (1.0f - f_i) * (1.0f - f_o) / (fresnelIOR * fresnelIOR * (1.0f - m_fdr_int));
+        pRes->val          *= (1.0f - f_i) * (1.0f - f_o) / (fresnelIOR * fresnelIOR * (1.0f - m_fdr_int));
       }
     }
   }   
@@ -171,6 +171,6 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
   const float3 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
 
-  res->color = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
-  res->pdf   = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
+  res->val = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
+  res->pdf = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
 }

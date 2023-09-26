@@ -175,7 +175,7 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   const float cosThetaOut = dot(refrData.rayDir, a_normal);
   const float cosMult     = 1.0f / fmax(fabs(cosThetaOut), 1e-6f);
 
-  a_pRes->direction       = refrData.rayDir;
+  a_pRes->dir             = refrData.rayDir;
   a_pRes->pdf             = 1.0f;
 
   // only camera paths are multiplied by this factor, and etas are swapped because radiance
@@ -183,14 +183,14 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   const bool a_isFwdDir       = true; // It should come from somewhere on top, but it has not yet been implemented, we are making a fake.
   const float adjointBtdfMult = a_isFwdDir ? 1.0f : (refrData.eta * refrData.eta);
 
-  if (refrData.success) a_pRes->color = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; 
-  else                  a_pRes->color = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
+  if (refrData.success) a_pRes->val = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; 
+  else                  a_pRes->val = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
 
   if (spec)             a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   else                  a_pRes->flags |= (RAY_EVENT_G | RAY_EVENT_T);
 
-  if      (refrData.success  && cosThetaOut >= -1e-6f) a_pRes->color = make_float3(0.0f, 0.0f, 0.0f); // refraction/transparency must be under surface!
-  else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->color = make_float3(0.0f, 0.0f, 0.0f); // reflection happened in wrong way
+  if      (refrData.success  && cosThetaOut >= -1e-6f) a_pRes->val = make_float3(0.0f, 0.0f, 0.0f); // refraction/transparency must be under surface!
+  else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->val = make_float3(0.0f, 0.0f, 0.0f); // reflection happened in wrong way
 }
 
 
@@ -263,21 +263,21 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   if (a_rands.w < fresnel) // reflection
   {
     dir            = reflect2(rayDir, a_normal);
-    a_pRes->color  =  colorReflect;
+    a_pRes->val    =  colorReflect;
     a_pRes->flags |= RAY_EVENT_S;
   }
   else
   {
     dir            = refract2(rayDir, a_normal, relativeIor);
-    a_pRes->color  = colorTransp;
+    a_pRes->val    = colorTransp;
     a_misPrev->ior = ior;
     a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   }
 
   const float cosThetaOut = std::fabs(dot(dir, a_normal));
   
-  a_pRes->color    /= std::max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-  a_pRes->direction = dir;
+  a_pRes->val      /= std::max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+  a_pRes->dir       = dir;
   a_pRes->pdf       = 1.0f;
 }
 
@@ -348,6 +348,6 @@ static void glassEval(const Material* a_materials, float3 l, float3 v, float3 n,
   float3 color, BsdfEval* res)
 {
   // because we don't want to sample this material with shadow rays
-  res->color = make_float3(0.0f, 0.0f, 0.0f);  
+  res->val   = make_float3(0.0f, 0.0f, 0.0f);
   res->pdf   = 0.0f;
 }

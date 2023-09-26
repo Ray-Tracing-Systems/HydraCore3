@@ -246,7 +246,7 @@ static inline float misWeightHeuristic(float a, float b)
 typedef struct MisDataT
 {
   float matSamplePdf; ///< previous angle pdf (pdfW) that were used for sampling material. if < 0, then material sample was pure specular 
-  float cosTheta;     ///< previous dot(matSam.direction, hit.norm)
+  float cosTheta;     ///< previous dot(matSam.dir, hit.norm)
   float ior;          ///< previous ior
   float dummy;        ///< dummy for 4 float
 } MisData;
