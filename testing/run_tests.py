@@ -47,6 +47,7 @@ class REQ:
     try:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       output  = res.stdout.decode('utf-8')
+      #print(output)
       pattern = r'PathTraceBlock\(exec\) = (\d+\.\d+) ms'
       match   = re.search(pattern, output) 
       if match:
@@ -177,14 +178,16 @@ class REQ_HP(REQ):
 
 reqs = []
 
-#reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
-#                                  "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/01_sponza/statex_00001.xml",
-#                                  "/home/frol/PROG/msu-graphics-group/scenes/classic_scenes/02_cry_sponza/statex_00001.xml"],
-#                                 [PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z0_gpumispt.bmp", 
-#                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z1_gpumispt.bmp",
-#                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
-#                                  [(1024,1024), (1024,1024), (1024,1024)]))
+'''
+reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/01_sponza/statex_00001.xml",
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/02_cry_sponza/statex_00001.xml"],
+                                 [PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z0_gpumispt.bmp", 
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z1_gpumispt.bmp",
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
+                                  [(1024,1024), (1024,1024), (1024,1024)]))
 
+'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml", 

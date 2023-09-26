@@ -8,7 +8,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
                 "-in", "../comparisonrender/Tests/Conductor/0002/Rough-uv01-sphere-hydra3.xml",
-                 "-integrator", "shadowpt", 
+                 "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "1024"],
