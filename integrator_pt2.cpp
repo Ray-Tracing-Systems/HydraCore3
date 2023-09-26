@@ -78,9 +78,13 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read other parameters from texture
 
   BsdfSample res;
-  res.val = float3(0,0,0);
-  res.pdf   = 1.0f;
-  
+  {
+    res.val   = float3(0,0,0);
+    res.pdf   = 1.0f;
+    res.dir   = float3(0,1,0);
+    res.flags = 0;
+  }
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -115,9 +119,11 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   // TODO: read other parameters from texture
 
   BsdfEval res;
-  res.color = float3(0,0,0);
-  res.pdf   = 0.0f;
-
+  {
+    res.color = float3(0,0,0);
+    res.pdf   = 0.0f;
+  }
+  
   switch(mtype)
   {
     case MAT_TYPE_GLTF:

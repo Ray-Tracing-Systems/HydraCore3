@@ -120,33 +120,3 @@ static void conductorRoughEval(const GLTFMaterial* a_materials, float3 l, float3
   wm = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }
-
-static inline void conductorSampleAndEval(const GLTFMaterial* a_materials, float4 rands, float3 v, float3 n, float2 tc, 
-                                          float3 color,
-                                          BsdfSample* pRes)
-{
-  const float2 alpha  = float2(a_materials[0].metalColor[0], a_materials[0].metalColor[1]);
-  if(trEffectivelySmooth(alpha))
-  {
-    conductorSmoothSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
-  }
-  else
-  {
-    conductorRoughSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
-  }
-}
-
-static inline void conductorEval(const GLTFMaterial* a_materials, float3 l, float3 v, float3 n, float2 tc, 
-                                float3 color, 
-                                BsdfEval* pRes)
-{
-  const float2 alpha  = float2(a_materials[0].metalColor[0], a_materials[0].metalColor[1]);
-  if(trEffectivelySmooth(alpha))
-  {
-    conductorSmoothEval(a_materials, l, v, n, tc, color, pRes);
-  }
-  else
-  {
-    conductorRoughEval(a_materials, l, v, n, tc, color, pRes);
-  }
-}
