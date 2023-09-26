@@ -5,8 +5,6 @@
 #include "include/cmat_gltf.h"
 #include "include/cmat_conductor.h"
 
-#include "utils.h"
-
 #include <chrono>
 #include <string>
 
@@ -90,7 +88,15 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
     break;
 
     case MAT_TYPE_CONDUCTOR:
-    conductorSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+    {
+      //conductorSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+      const float2 alpha = float2(m_materials[a_materialId].metalColor[0], m_materials[a_materialId].metalColor[1]);
+      if(trEffectivelySmooth(alpha))
+        conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+      else
+        conductorRoughSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+    }
+    break;
 
     default:
     break;
@@ -120,8 +126,15 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
     break;
 
     case MAT_TYPE_CONDUCTOR: 
-    conductorEval(m_materials.data() + a_materialId, l, v, n, tc, color, 
-             &res);
+    {
+      //conductorEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
+      const float2 alpha  = float2(m_materials[a_materialId].metalColor[0], m_materials[a_materialId].metalColor[1]);
+      if(trEffectivelySmooth(alpha))
+        conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
+      else
+        conductorRoughEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
+    }
+    break;
 
     default:
     break;
@@ -179,90 +192,3 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   return res;
 } 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
-{
-  #pragma omp parallel for default(shared)
-  for(uint y=0;y<tidY;y++)
-    for(uint x=0;x<tidX;x++)
-      PackXY(x, y);
-}
-
-void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
-{ 
-  #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
-  #endif
-  for(uint i=0;i<tid;i++)
-    CastSingleRay(i, out_color);
-}
-
-void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum)
-{
-  ConsoleProgressBar progress(tid);
-  progress.Start();
-
-  auto start = std::chrono::high_resolution_clock::now();
-  #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
-  #endif
-  for(uint i=0;i<tid;i++)
-  {
-    for(uint j=0;j<a_passNum;j++)
-    {
-      NaivePathTrace(i, out_color);
-    }
-    progress.Update();
-  }
-  progress.Done();
-  naivePtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
-}
-
-void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
-{
-  ConsoleProgressBar progress(tid);
-  progress.Start();
-  auto start = std::chrono::high_resolution_clock::now();
-  #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
-  #endif
-  for(uint i=0;i<tid;i++)
-  {
-    for(uint j=0;j<a_passNum;j++)
-    {
-      PathTrace(i, out_color);
-    }
-    progress.Update();
-  }
-  progress.Done();
-  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
-}
-
-void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
-{
-  ConsoleProgressBar progress(tid);
-  progress.Start();
-  auto start = std::chrono::high_resolution_clock::now();
-  #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
-  #endif
-  for(uint i=0;i<tid;i++)
-  {
-    RayTrace(i, out_color);
-    progress.Update();
-  }
-  progress.Done();
-  raytraceTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
-}
-
-void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
-{
-  if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
-    a_out[0] = naivePtTime;
-  else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
-    a_out[0] = shadowPtTime;
-  else if(std::string(a_funcName) == "RayTrace" || std::string(a_funcName) == "RayTraceBlock")
-    a_out[0] = raytraceTime;
-}
