@@ -265,8 +265,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     *accumThoroughput = currThoroughput*cosTheta*to_float4(bxdfVal, 0.0f); 
   }
 
-  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
-  *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
+  *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.direction), 0.0f); // todo: use flatNormal for offset
+  *rayDirAndFar  = to_float4(matSam.direction, FLT_MAX);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
