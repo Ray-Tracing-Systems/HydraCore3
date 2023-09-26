@@ -24,8 +24,9 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1,
                       GLTF_COMPONENT_METAL   = 4,
                       GLTF_METAL_PERF_MIRROR = 8, }; // bit fields
 
-enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
-                      MAT_TYPE_GLASS         = 2,
+enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
+                      MAT_TYPE_GLASS     = 2,
+                      MAT_TYPE_CONDUCTOR = 3,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -176,6 +177,140 @@ static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Trowbridge-Reitz from PBRT-v4
+// pbrt is Copyright(c) 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+// The pbrt source code is licensed under the Apache License, Version 2.0.
+// SPDX: Apache-2.0
+
+static inline float CosTheta(float3 w) 
+{
+  return w.z;
+}
+static inline float Cos2Theta(float3 w) 
+{
+  return w.z * w.z;
+}
+static inline float AbsCosTheta(float3 w) 
+{
+  return std::abs(w.z);
+}
+
+static inline float Sin2Theta(float3 w) 
+{
+  return std::max(0.0f, 1.0f - Cos2Theta(w));
+}
+static inline float SinTheta(float3 w) 
+{
+  return std::sqrt(Sin2Theta(w));
+}
+
+static inline float TanTheta(float3 w) 
+{
+  return SinTheta(w) / CosTheta(w);
+}
+static inline float Tan2Theta(float3 w) 
+{
+  return Sin2Theta(w) / Cos2Theta(w);
+}
+
+static inline float CosPhi(float3 w) 
+{
+  float sinTheta = SinTheta(w);
+  return (sinTheta == 0) ? 1 : clamp(w.x / sinTheta, -1.0f, 1.0f);
+}
+
+static inline float SinPhi(float3 w) 
+{
+  float sinTheta = SinTheta(w);
+  return (sinTheta == 0) ? 0 : clamp(w.y / sinTheta, -1.0f, 1.0f);
+}
+
+static inline float3 FaceForward(float3 v, float3 n2) 
+{
+    return (dot(v, n2) < 0.f) ? (-1.0f) * v : v;
+}
+
+static inline float2 SampleUniformDiskPolar(float2 u) 
+{
+  float r = std::sqrt(u[0]);
+  float theta = M_TWOPI * u[1];
+  return {r * std::cos(theta), r * std::sin(theta)};
+}
+
+static inline float trD(float3 wm, float2 alpha)  
+{
+  float tan2Theta = Tan2Theta(wm);
+  if (std::isinf(tan2Theta))
+      return 0;
+  float cos4Theta = Cos2Theta(wm) * Cos2Theta(wm);
+  if (cos4Theta < 1e-16f)
+      return 0;
+  float e = tan2Theta * ((CosPhi(wm) / alpha.x) * (CosPhi(wm) / alpha.x) + (SinPhi(wm) / alpha.y) * (SinPhi(wm) / alpha.y));
+  return 1.0f / (M_PI * alpha.x * alpha.y * cos4Theta * (1 + e) * (1 + e));
+}
+
+static inline bool trEffectivelySmooth(float2 alpha) 
+{ 
+  return std::max(alpha.x, alpha.y) < 1e-3f; 
+}
+
+static inline float trLambda(float3 w, float2 alpha)  
+{
+  float tan2Theta = Tan2Theta(w);
+  if (std::isinf(tan2Theta))
+    return 0;
+  float alpha2 = (CosPhi(w) * alpha.x) * (CosPhi(w) * alpha.x) + (SinPhi(w) * alpha.y) * (SinPhi(w) * alpha.y);
+  return (std::sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
+}
+
+static inline float trG1(float3 w, float2 alpha) 
+{ 
+  return 1.0f / (1.0f + trLambda(w, alpha)); 
+}
+
+static inline float trG(float3 wo, float3 wi, float2 alpha) 
+{ 
+  return 1.0f / (1.0f + trLambda(wo, alpha) + trLambda(wi, alpha)); 
+}
+
+static inline float trD(float3 w, float3 wm, float2 alpha) 
+{
+  return trG1(w, alpha) / AbsCosTheta(w) * trD(wm, alpha) * std::abs(dot(w, wm));
+}
+
+static inline float trPDF(float3 w, float3 wm, float2 alpha) 
+{ 
+  return trD(w, wm, alpha); 
+}
+
+static inline float3 trSample(float3 wo, float2 rands, float2 alpha)  
+{
+  // Transform _w_ to hemispherical configuration
+  float3 wh = normalize(float3(alpha.x * wo.x, alpha.y * wo.y, wo.z));
+  if (wh.z < 0)
+  {
+    wh = (-1.0f) * wh;
+  }
+
+  // Find orthonormal basis for visible normal sampling
+  float3 T1 = (wh.z < 0.99999f) ? normalize(cross(float3(0, 0, 1), wh)) : float3(1, 0, 0);
+  float3 T2 = cross(wh, T1);
+
+  // Generate uniformly distributed points on the unit disk
+  float2 p = SampleUniformDiskPolar(rands);
+
+  // Warp hemispherical projection for visible normal sampling
+  float h = std::sqrt(1 - p.x * p.x);
+  p.y = lerp(h, p.y, (1 + wh.z) / 2);
+
+  // Reproject to hemisphere and transform normal to ellipsoid configuration
+  float pz = std::sqrt(std::max(0.0f, 1.0f - dot(p, p)));
+  float3 nh = p.x * T1 + p.y * T2 + pz * wh;
+  return normalize(float3(alpha.x * nh.x, alpha.y * nh.y, std::max(1e-6f, nh.z)));
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT) 
@@ -203,6 +338,17 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
   const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
+}
+
+static inline float FrComplexConductor(float cosThetaI, complex eta)
+{
+  float sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaT = sinThetaI / (eta * eta);
+  complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
+
+  complex r_parl = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+  complex r_perp = (cosThetaI - eta * cosThetaT) / (cosThetaI + eta * cosThetaT);
+  return (complex_norm(r_parl) + complex_norm(r_perp)) / 2.0f;
 }
 
 //static inline float fresnelConductor(float cosTheta, float eta, float roughness)
