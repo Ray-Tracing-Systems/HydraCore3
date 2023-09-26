@@ -59,9 +59,6 @@ static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, 
                                                 float3 color,
                                                 BsdfSample* pRes)
 {
-  if(v.z == 0)
-    return;
-
   const uint  cflags  = a_materials[0].cflags;
   const float eta     = a_materials[0].metalColor[2];
   const float k       = a_materials[0].metalColor[3];
@@ -70,6 +67,9 @@ static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
   const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+
+  if(wo.z == 0)
+    return;
 
   float3 wm = trSample(wo, float2(rands.x, rands.y), alpha);
   float3 wi = reflect((-1.0f) * wo, wm);
