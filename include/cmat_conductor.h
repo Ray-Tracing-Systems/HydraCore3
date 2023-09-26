@@ -65,7 +65,7 @@ static inline void conductorRoughSampleAndEval(const GLTFMaterial* a_materials, 
   const uint  cflags  = a_materials[0].cflags;
   const float eta     = a_materials[0].metalColor[2];
   const float k       = a_materials[0].metalColor[3];
-  const float2 alpha  = float2(a_materials[0].metalColor[0], a_materials[0].metalColor[1]);
+  const float2 alpha  = float2(a_materials[0].metalColor[1], a_materials[0].metalColor[0]);
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -95,7 +95,7 @@ static void conductorRoughEval(const GLTFMaterial* a_materials, float3 l, float3
   const uint  cflags  = a_materials[0].cflags;
   const float eta     = a_materials[0].metalColor[2];
   const float k       = a_materials[0].metalColor[3];
-  const float2 alpha  = float2(a_materials[0].metalColor[0], a_materials[0].metalColor[1]);
+  const float2 alpha  = float2(a_materials[0].metalColor[1], a_materials[0].metalColor[0]);
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
