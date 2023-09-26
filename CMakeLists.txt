@@ -115,7 +115,8 @@ set(CORE_SRC
         integrator_pt2.cpp
         integrator_pt_scene.cpp
         mi_materials.cpp
-        imageutils.cpp)
+        imageutils.cpp
+        utils.cpp)
 
 
 if(USE_VULKAN)               

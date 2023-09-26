@@ -178,6 +178,9 @@ static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Trowbridge-Reitz from PBRT-v4
+// pbrt is Copyright(c) 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+// The pbrt source code is licensed under the Apache License, Version 2.0.
+// SPDX: Apache-2.0
 
 static inline float CosTheta(float3 w) 
 {
