@@ -78,9 +78,13 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   // TODO: read other parameters from texture
 
   BsdfSample res;
-  res.val = float3(0,0,0);
-  res.pdf   = 1.0f;
-  
+  {
+    res.val   = float3(0,0,0);
+    res.pdf   = 1.0f;
+    res.dir   = float3(0,1,0);
+    res.flags = 0;
+  }
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -115,9 +119,11 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
   // TODO: read other parameters from texture
 
   BsdfEval res;
-  res.color = float3(0,0,0);
-  res.pdf   = 0.0f;
-
+  {
+    res.color = float3(0,0,0);
+    res.pdf   = 0.0f;
+  }
+  
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
@@ -192,3 +198,12 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   return res;
 } 
 
+void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
+{
+  if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
+    a_out[0] = naivePtTime;
+  else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
+    a_out[0] = shadowPtTime;
+  else if(std::string(a_funcName) == "RayTrace" || std::string(a_funcName) == "RayTraceBlock")
+    a_out[0] = raytraceTime;
+}

@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import re
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 import cv2
@@ -34,17 +35,30 @@ class REQ:
     self.imsize = imsize
     self.integs = inregrators
     self.naivem = naivemul
+    self.times  = []
   
   def test(req, gpu_id=0):
     pass
+
+  def need_render_time(req):
+    return False
   
   def run(req, test_name, args, image_ref, outp, inregrator):
     try:
-      res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)      
-      image_mis    = cv2.imread(outp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
-      PSNR         = cv2.PSNR(image_ref,image_mis)
-      color        = Fore.GREEN
-      message      = "[PASSED]"
+      res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      output  = res.stdout.decode('utf-8')
+      #print(output)
+      pattern = r'PathTraceBlock\(exec\) = (\d+\.\d+) ms'
+      match   = re.search(pattern, output) 
+      if match:
+        execution_time_ms = round(float(match.group(1)))
+        req.times.append(execution_time_ms)
+        if req.need_render_time():
+          print(f"  render-time: {execution_time_ms} ms")
+      image_mis = cv2.imread(outp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      PSNR      = cv2.PSNR(image_ref,image_mis)
+      color     = Fore.GREEN
+      message   = "[PASSED]"
       if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
       if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
       Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
@@ -63,6 +77,7 @@ class REQ_H2(REQ):
     self.imsize = imsize
     self.integs = inregrators
     self.naivem = naivemul
+    self.times  = []
 
   def test(req, gpu_id=0):
     for test_name in req.tests: 
@@ -100,6 +115,7 @@ class REQ_HX(REQ):
     self.imsize = imsize
     self.integs = inregrators
     self.naivem = naivemul
+    self.times  = []
 
   def test(req, gpu_id=0):
     for (scnp, imgp, id, imsize2) in zip(req.scn_path, req.ref_path, range(0,len(req.scn_path)), req.imsize):
@@ -120,9 +136,58 @@ class REQ_HX(REQ):
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
           #print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
-  
+
+
+class REQ_HP(REQ):
+  def __init__(self, name, scn_path, ref_path, imsize):
+    self.name     = name
+    self.scn_path = scn_path
+    self.ref_path = ref_path
+    self.imsize   = imsize
+    self.integs   = ["mispt"]
+    self.naivem   = 1
+    self.times  = []
+    self.names    = ["test_102", "sponza", "cry_sponza"]
+
+  def need_render_time(req):
+    return True
+
+  def test(req, gpu_id=0):
+    for (scnp, imgp, id, imsize2) in zip(req.scn_path, req.ref_path, range(0,len(req.scn_path)), req.imsize):
+      image_ref   = cv2.imread(imgp, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      scene_path  = scnp
+      folder_path = os.path.dirname(imgp)
+      devices   = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
+      test_name = req.name
+      for dev_type in devices:
+        Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
+        for inregrator in req.integs:
+          outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + ".bmp"
+          print(outp)
+          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp", "1024"]
+          args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
+          args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
+          args = args + ["--" + dev_type]
+          if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
+            args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
+          #print(args)
+          req.run(test_name, args, image_ref, outp, inregrator)
+    print(req.names)
+    print(req.times)
+
+
 reqs = []
 
+'''
+reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/01_sponza/statex_00001.xml",
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/02_cry_sponza/statex_00001.xml"],
+                                 [PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z0_gpumispt.bmp", 
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z1_gpumispt.bmp",
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
+                                  [(1024,1024), (1024,1024), (1024,1024)]))
+
+'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml", 
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml", 

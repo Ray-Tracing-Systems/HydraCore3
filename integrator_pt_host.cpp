@@ -93,12 +93,3 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   raytraceTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
-{
-  if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
-    a_out[0] = naivePtTime;
-  else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
-    a_out[0] = shadowPtTime;
-  else if(std::string(a_funcName) == "RayTrace" || std::string(a_funcName) == "RayTraceBlock")
-    a_out[0] = raytraceTime;
-}
