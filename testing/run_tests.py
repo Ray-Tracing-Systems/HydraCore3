@@ -134,7 +134,7 @@ class REQ_HX(REQ):
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
-          #print(args)
+          # print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
 
 
@@ -170,7 +170,7 @@ class REQ_HP(REQ):
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
-          #print(args)
+          # print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
     print(req.names)
     print(req.times)
@@ -220,6 +220,15 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plasti
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
                                           [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/Images/PlasticSmooth_sphere_mitsuba.png",  
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/Images/PlasticSmooth_cornell_mitsuba.png"], naivemul = 16)) 
+
+reqs.append( REQ_HX("mat_conductor", [PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0001/Smooth-eta1.5-sphere-hydra3.xml",  
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0002/Rough-uv01-sphere-hydra3.xml",
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0003/Rough-u025-v001-plane-hydra3.xml",
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0004/Rough-u001-v025-plane-hydra3.xml"],
+                                     [PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0001/Images/Smooth-eta1.5-sphere-mitsuba.png",  
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0002/Images/Rough-uv01-sphere-mitsuba.png",
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0003/Images/Rough-u025-v001-plane-mitsuba.png",
+                                      PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0004/Images/Rough-u001-v025-plane-mitsuba.png"], naivemul = 16)) 
                                            
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
