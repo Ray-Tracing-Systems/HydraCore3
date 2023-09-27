@@ -65,7 +65,7 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, floa
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float eta    = a_materials[0].data[CONDUCTOR_ETA];
   const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_U], a_materials[0].data[CONDUCTOR_ROUGH_V]);
+  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -95,7 +95,7 @@ static void conductorRoughEval(const Material* a_materials, float3 l, float3 v, 
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float eta    = a_materials[0].data[CONDUCTOR_ETA];
   const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_U], a_materials[0].data[CONDUCTOR_ROUGH_V]);
+  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -126,7 +126,7 @@ static inline void conductorSampleAndEval(const Material* a_materials, float4 ra
                                           float3 color,
                                           BsdfSample* pRes)
 {
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_U], a_materials[0].data[CONDUCTOR_ROUGH_V]);
+  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   if(trEffectivelySmooth(alpha))
   {
@@ -142,7 +142,7 @@ static inline void conductorEval(const Material* a_materials, float3 l, float3 v
                                 float3 color, 
                                 BsdfEval* pRes)
 {
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_U], a_materials[0].data[CONDUCTOR_ROUGH_V]);
+  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   if(trEffectivelySmooth(alpha))
   {

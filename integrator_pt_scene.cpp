@@ -371,8 +371,8 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   auto nodeBSDF = materialNode.child(L"bsdf");
 
   auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
-  auto alpha_u   = std::sqrt(materialNode.child(L"rough_u").attribute(L"val").as_float());
-  auto alpha_v   = std::sqrt(materialNode.child(L"rough_v").attribute(L"val").as_float());
+  auto alpha_u   = materialNode.child(L"alpha_u").attribute(L"val").as_float();
+  auto alpha_v   = materialNode.child(L"alpha_v").attribute(L"val").as_float();
   auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
   auto k         = materialNode.child(L"k").attribute(L"val").as_float();
 

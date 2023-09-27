@@ -99,7 +99,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
       const float3 color = to_float3(m_materials[a_materialId].colors[CONDUCTOR_COLOR]) * texColor;
 
       //conductorSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
-      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_U], m_materials[a_materialId].data[CONDUCTOR_ROUGH_V]);
+      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
       if(trEffectivelySmooth(alpha))
         conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
       else
@@ -141,7 +141,7 @@ BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n
       const float3 color = to_float3(m_materials[a_materialId].colors[CONDUCTOR_COLOR]) * texColor;
 
       //conductorEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
-      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_U], m_materials[a_materialId].data[CONDUCTOR_ROUGH_V]);
+      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
       if(trEffectivelySmooth(alpha))
         conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
       else
