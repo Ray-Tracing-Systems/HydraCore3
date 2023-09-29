@@ -248,7 +248,7 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
 
   float relativeIor            = ior / a_misPrev->ior;
 
-  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
+  if ((a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
   {
     origNormal = (-1.0f) * a_normal; // returning the original normal
 
@@ -274,7 +274,7 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
     a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   }
 
-  const float cosThetaOut = std::fabs(dot(dir, a_normal));
+  const float cosThetaOut = fabs(dot(dir, a_normal));
   
   a_pRes->val      /= std::max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
   a_pRes->dir       = dir;
