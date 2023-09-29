@@ -21,16 +21,16 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
-  int WIN_WIDTH  = 1024;
-  int WIN_HEIGHT = 1024;
-  int PASS_NUMBER = 1024;
+  int WIN_WIDTH       = 1024;
+  int WIN_HEIGHT      = 1024;
+  int PASS_NUMBER     = 1024;
   int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
 
-  std::string scenePath = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml";
-  std::string sceneDir  = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
-  std::string imageOut  = "z_out.bmp";
+  std::string scenePath      = "d:/GitRepo/ComparisonRender/Tests/Conductor/0002/Rough-uv01-sphere-hydra3.xml"; 
+  std::string sceneDir       = "d:/GitRepo/ComparisonRender/";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
+  std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
-  float gamma = 2.4f; // out gamma, special value, see save image functions
+  float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////

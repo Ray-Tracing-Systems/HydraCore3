@@ -48,11 +48,20 @@ public:
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
 
   void PackXY         (uint tidX, uint tidY);
+
+#ifdef KERNEL_SLICER
   void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! whitted ray tracing
 
   void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
+#else
+  void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
+  void RayTrace       (uint tid, float4* out_color); ///<! whitted ray tracing
+
+  void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
+  void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
+#endif
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
@@ -104,6 +113,7 @@ public:
                                 float4* out_color);
 
   void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
+  void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -111,9 +121,10 @@ public:
   static constexpr uint INTEGRATOR_SHADOW_PT = 1;
   static constexpr uint INTEGRATOR_MIS_PT    = 2;
 
-  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)      != 0; }
-  static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC) != 0; }
-  static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE) != 0; }
+  static inline bool isDeadRay     (uint a_flags)  { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
+  static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
+  static inline bool hasInvNormal  (uint a_flags)  { return (a_flags & RAY_FLAG_HAS_INV_NORMAL) != 0; }
+  static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
 
   static inline uint extractMatId(uint a_flags)    { return (a_flags & 0x00FFFFFF); }       
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
@@ -163,7 +174,7 @@ protected:
   BsdfSample MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (int a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc);
+  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev, const uint a_currRayFlags); 
   BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
@@ -173,25 +184,28 @@ protected:
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
-  std::vector<GLTFMaterial>    m_materials;
-  std::vector<uint32_t>        m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
-  std::vector<uint32_t>        m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
-  std::vector<uint32_t>        m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
-  std::vector<uint32_t>        m_packedXY;
+  std::vector<Material>         m_materials;
+  std::vector<uint32_t>         m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
+  std::vector<uint32_t>         m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
+  std::vector<uint32_t>         m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
+  std::vector<uint32_t>         m_packedXY;
+                                
+  std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
+  std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
+  std::vector<float2>           m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+                                
+  std::vector<int>              m_remapInst;
+  std::vector<int>              m_allRemapLists;
+  std::vector<int>              m_allRemapListsOffsets;
+  std::vector<uint32_t>         m_instIdToLightInstId;
+                                
+  float4x4                      m_proj;
+  float4x4                      m_worldView;
+  float4x4                      m_projInv;
+  float4x4                      m_worldViewInv;
 
-  std::vector<uint32_t>        m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
-  std::vector<float4>          m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float2>          m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
-  
-  std::vector<int>             m_remapInst;
-  std::vector<int>             m_allRemapLists;
-  std::vector<int>             m_allRemapListsOffsets;
-  std::vector<uint32_t>        m_instIdToLightInstId;
-
-  float4x4                     m_projInv;
-  float4x4                     m_worldViewInv;
-  std::vector<RandomGen>       m_randomGens;
-  std::vector<float4x4>        m_normMatrices; ///< per instance normal matrix, local to world
+  std::vector<RandomGen>        m_randomGens;
+  std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 

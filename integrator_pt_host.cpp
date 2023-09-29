@@ -21,9 +21,9 @@ using namespace LiteMath;
 void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 {
   #pragma omp parallel for default(shared)
-  for(uint y=0;y<tidY;y++)
-    for(uint x=0;x<tidX;x++)
-      PackXY(x, y);
+  for(int y = 0; y < tidY; ++y)
+    for(int x = 0; x < tidX; ++x)
+      PackXY((uint)(x), (uint)(y));
 }
 
 void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
@@ -31,8 +31,8 @@ void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(uint i=0;i<tid;i++)
-    CastSingleRay(i, out_color);
+  for(int i = 0; i < tid; ++i)
+    CastSingleRay((uint)(i), out_color);
 }
 
 void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum)
@@ -44,11 +44,11 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(uint i=0;i<tid;i++)
+  for(int i = 0; i < tid; ++i)
   {
-    for(uint j=0;j<a_passNum;j++)
+    for(int j = 0; j < a_passNum; ++j)
     {
-      NaivePathTrace(i, out_color);
+      NaivePathTrace((uint)(i), out_color);
     }
     progress.Update();
   }
@@ -64,11 +64,11 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(uint i=0;i<tid;i++)
+  for (int i = 0; i < tid; ++i)
   {
-    for(uint j=0;j<a_passNum;j++)
+    for (int j = 0; j < a_passNum; ++j)
     {
-      PathTrace(i, out_color);
+      PathTrace((uint)(i), out_color);
     }
     progress.Update();
   }
@@ -84,9 +84,9 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(uint i=0;i<tid;i++)
+  for(int i = 0; i < tid; ++i)
   {
-    RayTrace(i, out_color);
+    RayTrace((uint)(i), out_color);
     progress.Update();
   }
   progress.Done();

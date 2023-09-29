@@ -6,11 +6,11 @@
 using namespace LiteMath;
 #endif
 
-static constexpr uint RAY_FLAG_IS_DEAD      = 0x80000000;
-static constexpr uint RAY_FLAG_OUT_OF_SCENE = 0x40000000;
-static constexpr uint RAY_FLAG_HIT_LIGHT    = 0x20000000;
-static constexpr uint RAY_FLAG_HAS_NON_SPEC = 0x10000000; // at least one bounce was non specular
-//static constexpr uint RAY_FLAG_DUMMY        = 0x08000000;
+static constexpr uint RAY_FLAG_IS_DEAD        = 0x80000000;
+static constexpr uint RAY_FLAG_OUT_OF_SCENE   = 0x40000000;
+static constexpr uint RAY_FLAG_HIT_LIGHT      = 0x20000000;
+static constexpr uint RAY_FLAG_HAS_NON_SPEC   = 0x10000000; // at least one bounce was non specular
+static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x04000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
@@ -246,7 +246,9 @@ static inline float misWeightHeuristic(float a, float b)
 typedef struct MisDataT
 {
   float matSamplePdf; ///< previous angle pdf (pdfW) that were used for sampling material. if < 0, then material sample was pure specular 
-  float cosTheta;     ///< previous dot(matSam.direction, hit.norm)
+  float cosTheta;     ///< previous dot(matSam.dir, hit.norm)
+  float ior;          ///< previous ior
+  float dummy;        ///< dummy for 4 float
 } MisData;
 
 static inline bool isSpecular(const MisData* data) { return (data->matSamplePdf < 0.0f); }
@@ -255,6 +257,7 @@ static inline MisData makeInitialMisData()
 {
   MisData data;
   data.matSamplePdf = 1.0f;
+  data.ior          = 1.0f; // start from air
   return data;
 }
 

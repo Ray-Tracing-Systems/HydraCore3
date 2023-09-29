@@ -95,7 +95,8 @@ void Integrator::kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* 
   out_color[tid] = RealColorToUint32(*a_accumColor);
 }
 
-void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color)
+void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, 
+  uint* out_color)
 { 
   const Lite_Hit lhit = *in_hit;
   if(lhit.geomId == -1)
@@ -105,7 +106,7 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
   }
 
   const uint32_t matId = m_matIdByPrimId[m_matIdOffsets[lhit.geomId] + lhit.primId];
-  const float4 mdata   = m_materials[matId].baseColor;
+  const float4 mdata   = m_materials[matId].colors[GLTF_COLOR_BASE];
   const float3 color   = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata);
 
   const uint XY = in_pakedXY[tid];
@@ -119,18 +120,18 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
 float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ m_materials[a_materialId].texId[0] ]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].baseColor)*texColor;
+  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   return lambertEvalBSDF(l, v, n)*color;
 }
 
 BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc)
 { 
-  //uint  type             = m_materials[a_materialId].mtype;
-  const float3 specular  = to_float3(m_materials[a_materialId].metalColor);
-  const float3 coat      = to_float3(m_materials[a_materialId].coatColor);
-  //const float  roughness = 1.0f - m_materials[a_materialId].glosiness;
-  float alpha            = m_materials[a_materialId].alpha;
+  const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
+  const float3 specular  = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
+  const float3 coat      = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
+  const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
+  float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
   
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float3 reflColor  = alpha*specular + (1.0f - alpha)*coat;
@@ -141,10 +142,10 @@ BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 
   //}
 
   BsdfSample res;
-  res.dir = pefReflDir;
-  res.val     = reflColor;
-  res.pdf       = 1.0f;
-  res.flags     = RAY_EVENT_S;
+  res.dir   = pefReflDir;
+  res.val   = reflColor;
+  res.pdf   = 1.0f;
+  res.flags = RAY_EVENT_S;
   return res;
 }
 
@@ -174,13 +175,13 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
 
   // process light hit case
   //
-  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
+  if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
-    const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor  = to_float3(m_textures[ m_materials[matId].texId[0] ]->sample(texCoordT));
+    const float2 texCoordT      = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
+    const float3 texColor       = to_float3(m_textures[ as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
 
-    const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
-    const uint lightId          = m_materials[matId].lightId;
+    const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
+    const uint lightId          = as_uint(m_materials[matId].data[UINT_LIGHTID]);
     float lightDirectionAtten   = (lightId == 0xFFFFFFFF) ? 1.0f : dot(to_float3(*rayDirAndFar), float3(0,-1,0)) < 0.0f ? 1.0f : 0.0f; // TODO: read light info, gety light direction and e.t.c;
 
 
@@ -230,7 +231,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   *accumThoroughput = currThoroughput * cosTheta * to_float4(bxdfVal, 0.0f);
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f);
-  *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
+  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
@@ -242,6 +243,113 @@ void Integrator::kernel_ContributeToImage3(uint tid, const float4* a_accumColor,
 
   float4 color = *a_accumColor;
   out_color[y*m_winWidth+x] += color;
+}
+
+static inline float2 clipSpaceToScreenSpace(float4 a_pos, const float fw, const float fh)
+{
+  const float x = a_pos.x * 0.5f + 0.5f;
+  const float y = a_pos.y * 0.5f + 0.5f;
+  return make_float2(x * fw, y * fh);
+}
+
+static inline float4x4 make_float4x4(const float* a_data)
+{
+  float4x4 matrix;
+  matrix.m_col[0] = make_float4(a_data[0], a_data[1], a_data[2], a_data[3]);
+  matrix.m_col[1] = make_float4(a_data[4], a_data[5], a_data[6], a_data[7]);
+  matrix.m_col[2] = make_float4(a_data[8], a_data[9], a_data[10], a_data[11]);
+  matrix.m_col[3] = make_float4(a_data[12], a_data[13], a_data[14], a_data[15]);
+  return matrix;
+}
+
+static inline float2 worldPosToScreenSpace(float3 a_wpos, const int width, const int height, 
+  float4x4 worldView, float4x4 proj)
+{
+  const float4 posWorldSpace  = to_float4(a_wpos, 1.0f);
+  const float4 posCamSpace    = mul4x4x4(worldView, posWorldSpace);
+  const float4 posNDC         = mul4x4x4(proj, posCamSpace);
+  const float4 posClipSpace   = posNDC * (1.0f / fmax(posNDC.w, DEPSILON));
+  const float2 posScreenSpace = clipSpaceToScreenSpace(posClipSpace, width, height);
+  return posScreenSpace;
+}
+
+void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, const int a_winWidth,
+  const int a_winHeight, const float4 a_rayColor1, const float4 a_rayColor2, const bool a_blendColor,
+  const bool a_multDepth, const int a_spp)
+{
+  const int dx   = abs(a_pos2.x - a_pos1.x);
+  const int dy   = abs(a_pos2.y - a_pos1.y);
+
+  const int step = dx > dy ? dx : dy;
+
+  float x_inc    = dx / (float)step;
+  float y_inc    = dy / (float)step;
+
+  if (a_pos1.x > a_pos2.x) x_inc *= -1.0f;
+  if (a_pos1.y > a_pos2.y) y_inc *= -1.0f;
+
+  float x = a_pos1.x;
+  float y = a_pos1.y;
+
+  const float depthMult1 = tanh(a_pos1.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
+  const float depthMult2 = tanh(a_pos2.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
+
+  for (int i = 0; i <= step; ++i) 
+  {
+    if (x >= 0 && x <= a_winWidth - 1 && y >= 0 && y <= a_winHeight - 1)
+    {
+      float4 color;
+      float weight    = (float)(i) / (float)(step);
+      
+      float depthMult = 1.0f; 
+      
+      if (a_multDepth) 
+        depthMult = lerp(depthMult1, depthMult2, weight);
+      
+      if (!a_blendColor)
+        weight = 0.0f;
+
+      color = lerp(a_rayColor1, a_rayColor2, weight) * depthMult;
+         
+      a_outColor[(int)(y)*a_winWidth + (int)(x)] += color * a_spp;
+    }
+ 
+    x += x_inc;
+    y += y_inc;
+  }
+  if (a_pos1.x >= 0 && a_pos1.x <= a_winWidth - 1 && a_pos1.y >= 0 && a_pos1.y <= a_winHeight - 1)
+    a_outColor[(int)(a_pos1.y)*a_winWidth + (int)(a_pos1.x)] = float4(0, a_spp, 0, 0);
+}
+
+void Integrator::kernel_ContributePathRayToImage3(float4* out_color, 
+  const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos)
+{  
+  for (int i = 1; i < a_rayPos.size(); ++i)
+  {
+    const float2 posScreen1 = worldPosToScreenSpace(a_rayPos[i - 1], m_winWidth, m_winHeight, m_worldView, m_proj);
+    const float2 posScreen2 = worldPosToScreenSpace(a_rayPos[i - 0], m_winWidth, m_winHeight, m_worldView, m_proj);
+    
+    const float3 pos1 = float3(posScreen1.x, posScreen1.y, a_rayPos[i - 1].z);
+    const float3 pos2 = float3(posScreen2.x, posScreen2.y, a_rayPos[i    ].z);
+
+    // fix color
+    //const float4 rayColor = float4(1, 1, 1, 1); 
+
+    // shade color
+    //const float4 rayColor1 = a_rayColor[i - 1]; 
+    //const float4 rayColor2 = a_rayColor[i - 0];
+
+    // direction color
+    //const float4 rayColor1 = (a_rayColor[i - 1]) * 0.5f + 0.5f;
+    //const float4 rayColor2 = (a_rayColor[i - 0]) * 0.5f + 0.5f;
+
+    // position color with rescale to 0-1
+    const float scaleSize  = 0.5f;
+    const float4 rayColor1 = float4(tanh(a_rayPos[i - 1].x * scaleSize), tanh(a_rayPos[i - 1].y * scaleSize), tanh(a_rayPos[i - 1].z * scaleSize), 0) * 0.5f + 0.5f;
+    const float4 rayColor2 = float4(tanh(a_rayPos[i - 0].x * scaleSize), tanh(a_rayPos[i - 0].y * scaleSize), tanh(a_rayPos[i - 0].z * scaleSize), 0) * 0.5f + 0.5f;
+        
+    drawLine(pos1, pos2, out_color, m_winWidth, m_winHeight, rayColor1, rayColor2, true, true, m_spp);
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -293,6 +401,5 @@ void Integrator::RayTrace(uint tid, float4* out_color)
 //  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
 //                        &accumColor);
 
-  kernel_ContributeToImage3(tid, &accumColor, m_packedXY.data(),
-                            out_color);
+  kernel_ContributeToImage3(tid, &accumColor, m_packedXY.data(), out_color);
 }

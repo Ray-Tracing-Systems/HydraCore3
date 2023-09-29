@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
-option(USE_VULKAN "Enable Vulkan implementation" ON)
+option(USE_VULKAN "Enable Vulkan implementation" OFF)
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -72,7 +72,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   #uncomment this to detect broken memory problems via gcc sanitizers
   #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-useless-cast")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-useless-cast")
   message(STATUS "Debug is OFF!")
 endif()
 

@@ -2,6 +2,7 @@
 #define RTC_MATERIAL
 
 #include "cglobals.h"
+#include <algorithm>
 
 struct BsdfSample
 {
@@ -9,20 +10,22 @@ struct BsdfSample
   float3 dir;
   float  pdf; 
   uint   flags;
+  float  ior;
 };
 
 struct BsdfEval
 {
-  float3 color;
+  float3 val;
   float  pdf; 
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT = 1, 
-                      GLTF_COMPONENT_COAT    = 2,
-                      GLTF_COMPONENT_METAL   = 4,
-                      GLTF_METAL_PERF_MIRROR = 8, }; // bit fields
+enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1, 
+                      GLTF_COMPONENT_COAT      = 2,
+                      GLTF_COMPONENT_METAL     = 4,
+                      GLTF_METAL_PERF_MIRROR   = 8, 
+                      GLTF_COMPONENT_ORENNAYAR = 16 }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
@@ -39,44 +42,81 @@ enum MATERIAL_EVENT {
   RAY_EVENT_TNINGLASS = 64,
 };
 
-static constexpr uint MI_FDR_INT   = 0; // ScalarFloat m_fdr_int;
-static constexpr uint MI_FDR_EXT   = 1; // ScalarFloat m_fdr_ext;
-static constexpr uint MI_SSW       = 2; // Float m_specular_sampling_weight;
+////////////////////////////////
+// Indexes for materials
+// 
+// Custom for all materials
+static constexpr uint UINT_MTYPE                  = 0;  ///< one of 'MATERIAL_TYPES'
+static constexpr uint UINT_CFLAGS                 = 1;  ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
+static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light if this material is light 
+static constexpr uint UINT_MAIN_LAST_IND          = 3;  ///< the last general index
 
-static constexpr uint CUSTOM_DATA_SIZE = 8;
-
-
+// GLTF
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
 // The BRDFs **share** the parameters for roughness and base color.
+// colors
+static constexpr uint GLTF_COLOR_BASE             = 0;  ///< color for both lambert and emissive lights; baseColor.w store emission
+static constexpr uint GLTF_COLOR_COAT             = 1;  ///< in our implementation we allow different color for coating (fresnel) and diffuse
+static constexpr uint GLTF_COLOR_METAL            = 2;  ///< in our implementation we allow different color for metals and diffuse
+static constexpr uint GLTF_COLOR_LAST_IND         = GLTF_COLOR_METAL;
 
-struct GLTFMaterial
+// custom                                               
+static constexpr uint GLTF_FLOAT_MI_FDR_INT       = UINT_MAIN_LAST_IND + 0; ///< ScalarFloat m_fdr_int;
+static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = UINT_MAIN_LAST_IND + 1; ///< ScalarFloat m_fdr_ext;
+static constexpr uint GLTF_FLOAT_MI_SSW           = UINT_MAIN_LAST_IND + 2; ///< Float m_specular_sampling_weight;
+static constexpr uint GLTF_FLOAT_ALPHA            = UINT_MAIN_LAST_IND + 3; ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
+static constexpr uint GLTF_FLOAT_GLOSINESS        = UINT_MAIN_LAST_IND + 4; ///< material glosiness or intensity for lights, take color from baseColor
+static constexpr uint GLTF_FLOAT_IOR              = UINT_MAIN_LAST_IND + 5; ///< index of refraction for reflection Fresnel
+static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = UINT_MAIN_LAST_IND + 6; ///< roughness for Oren-Nayar
+static constexpr uint GLTF_UINT_TEXID0            = UINT_MAIN_LAST_IND + 7; ///< texture id
+static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_UINT_TEXID0;
+
+// GLASS
+// colors
+static constexpr uint GLASS_COLOR_REFLECT         = 0;    
+static constexpr uint GLASS_COLOR_TRANSP          = 1;  
+static constexpr uint GLASS_COLOR_LAST_IND        = GLASS_COLOR_TRANSP;
+
+// custom 
+static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = UINT_MAIN_LAST_IND + 0;
+static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = UINT_MAIN_LAST_IND + 1;
+static constexpr uint GLASS_FLOAT_IOR             = UINT_MAIN_LAST_IND + 2;
+static constexpr uint GLASS_CUSTOM_LAST_IND       = GLASS_FLOAT_IOR;
+
+// Conductor
+// colors
+static constexpr uint CONDUCTOR_COLOR             = 0;
+static constexpr uint CONDUCTOR_COLOR_LAST_IND    = CONDUCTOR_COLOR;
+
+// custom
+static constexpr uint CONDUCTOR_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
+static constexpr uint CONDUCTOR_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
+static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
+static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
+
+
+
+// The size is taken according to the largest indexes
+static constexpr uint COLOR_DATA_SIZE  = std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
+static constexpr uint CUSTOM_DATA_SIZE = std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
+
+struct Material
 {
+  float4 colors[COLOR_DATA_SIZE]; ///< colors data
+
   float4 row0[1];     ///< texture matrix
   float4 row1[1];     ///< texture matrix
-  uint   texId[4];    ///< texture id
-
-  float4 baseColor;   ///< color for both lambert and emissive lights; baseColor.w store emission
-  float4 coatColor;   ///< in our implementation we allow different color for coating (fresnel) and diffuse
-  float4 metalColor;  ///< in our implementation we allow different color for metals and diffuse
-
-  uint  mtype;        ///< one of 'MATERIAL_TYPES'
-  uint  cflags;       ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
-  uint  lightId;      ///< identifier of light if this material is light 
-  uint  dummy1;
-   
-  float alpha;        ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
-  float glosiness;    ///< material glosiness or intensity for lights, take color from baseColor
-  float ior;
-  float dummy2;
-
-  float data[CUSTOM_DATA_SIZE];
+      
+  float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Lambert BRDF
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static inline float3 lambertSample(float2 rands, float3 v, float3 n)
+static inline float3 lambertSample(const float2 rands, const float3 v, const float3 n)
 {
   return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
 }
@@ -92,6 +132,90 @@ static inline float lambertEvalBSDF(float3 l, float3 v, float3 n)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PBRT routine
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float cosPhiPBRT(const float3 w, const float sintheta)
+{
+  if (sintheta == 0.0f)
+    return 1.0f;
+  else
+    return clamp(w.x / sintheta, -1.0f, 1.0f);
+}
+
+static inline float sinPhiPBRT(const float3 w, const float sintheta)
+{
+  if (sintheta == 0.0f)
+    return 0.0f;
+  else
+    return clamp(w.y / sintheta, -1.0f, 1.0f);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Oren-Nayar BRDF from PBRT
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float orennayarFunc(const float3 a_l, const float3 a_v, const float3 a_n, const float a_roughness)
+{
+  const float cosTheta_wi = dot(a_l, a_n);
+  const float cosTheta_wo = dot(a_v, a_n);
+
+  const float sinTheta_wi = sqrt(fmax(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
+  const float sinTheta_wo = sqrt(fmax(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
+
+  const float sigma  = a_roughness * M_PI * 0.5f; //Radians(sig)
+  const float sigma2 = sigma * sigma;
+  const float A      = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
+  const float B      = 0.45f * sigma2 / (sigma2 + 0.09f);
+
+  ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
+  // wo = a_v = -ray_dir
+  // wi = a_l = newDir
+  //
+  float3 nx, ny, nz = a_n;
+  CoordinateSystem(nz, &nx, &ny);
+
+  ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
+
+  // Compute cosine term of Oren-Nayar model
+  float maxcos = 0.0F;
+
+  if (sinTheta_wi > 1e-4 && sinTheta_wo > 1e-4)
+  {
+    const float3 wo     = float3(-dot(a_v, nx), -dot(a_v, ny), -dot(a_v, nz));
+    const float3 wi     = float3(-dot(a_l, nx), -dot(a_l, ny), -dot(a_l, nz));
+    const float sinphii = sinPhiPBRT(wi, sinTheta_wi);
+    const float cosphii = cosPhiPBRT(wi, sinTheta_wi);
+    const float sinphio = sinPhiPBRT(wo, sinTheta_wo);
+    const float cosphio = cosPhiPBRT(wo, sinTheta_wo);
+    const float dcos    = cosphii * cosphio + sinphii * sinphio;
+    maxcos              = fmax(0.0F, dcos);
+  }
+
+  // Compute sine and tangent terms of Oren-Nayar model
+  float sinalpha = 0.0F, tanbeta = 0.0F;
+
+  if (fabs(cosTheta_wi) > fabs(cosTheta_wo))
+  {
+    sinalpha = sinTheta_wo;
+    tanbeta  = sinTheta_wi / fmax(fabs(cosTheta_wi), DEPSILON);
+  }
+  else
+  {
+    sinalpha = sinTheta_wi;
+    tanbeta  = sinTheta_wo / fmax(fabs(cosTheta_wo), DEPSILON);
+  }
+
+  return (A + B * maxcos * sinalpha * tanbeta);
+}
+
+
+static inline float orennayarEvalPDF(const float3 l, const float3 n)
+{
+  return fabs(dot(l, n)) * INV_PI;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float3 SphericalDirectionPBRT(const float sintheta, const float costheta, const float phi) 
@@ -101,9 +225,9 @@ static inline float3 SphericalDirectionPBRT(const float sintheta, const float co
 
 static inline float GGX_Distribution(const float cosThetaNH, const float alpha)
 {
-  const float alpha2  = alpha * alpha;
-  const float NH_sqr  = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
-  const float den     = NH_sqr * alpha2 + (1.0f - NH_sqr);
+  const float alpha2 = alpha * alpha;
+  const float NH_sqr = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
+  const float den    = NH_sqr * alpha2 + (1.0f - NH_sqr);
   return alpha2 / std::max((float)(M_PI) * den * den, 1e-6f);
 }
 
@@ -116,7 +240,7 @@ static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
   //const float G          = 1.0f / (1.0f + lambda);
 
   // Optimized and equal to the commented-out formulas on top.
-  const float cosTheta_sqr = clamp(cosThetaN*cosThetaN, 0.0f, 1.0f);
+  const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
   const float tan2         = (1.0f - cosTheta_sqr) / std::max(cosTheta_sqr, 1e-6f);
   const float GP           = 2.0f / (1.0f + std::sqrt(1.0f + alpha * alpha * tan2));
   return GP;
@@ -124,7 +248,7 @@ static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static inline float3 ggxSample(float2 rands, float3 v, float3 n, float roughness)
+static inline float3 ggxSample(const float2 rands, const float3 v, const float3 n, const float roughness)
 {
   const float roughSqr = roughness * roughness;
     
@@ -141,7 +265,7 @@ static inline float3 ggxSample(float2 rands, float3 v, float3 n, float roughness
   return normalize(wi.x * nx + wi.y * ny + wi.z * nz); // back to normal coordinate system
 }
 
-static inline float ggxEvalPDF(float3 l, float3 v, float3 n, float roughness) 
+static inline float ggxEvalPDF(const float3 l, const float3 v, const float3 n, const float roughness)
 { 
   const float dotNV = dot(n, v);
   const float dotNL = dot(n, l);
@@ -157,7 +281,7 @@ static inline float ggxEvalPDF(float3 l, float3 v, float3 n, float roughness)
   return  D * dotNH / (4.0f * std::max(dotHV,1e-6f));
 }
 
-static inline float ggxEvalBSDF(float3 l, float3 v, float3 n, float roughness)
+static inline float ggxEvalBSDF(const float3 l, const float3 v, const float3 n, const float roughness)
 {
   if(std::abs(dot(l, n)) < 1e-5f)
     return 0.0f; 
@@ -317,7 +441,7 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
 {
   cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
   // Potentially swap indices of refraction
-  bool entering = cosThetaI > 0.f;
+  bool entering = cosThetaI > 0.0f;
   if (!entering) 
   {
     const float tmp = etaI;
@@ -360,7 +484,7 @@ static inline float FrComplexConductor(float cosThetaI, complex eta)
 //  return 0.5f*(rParl2 + rPerp2);
 //}
 
-static inline float fresnelSlick(float VdotH)
+static inline float fresnelSlick(const float VdotH)
 {
   const float tmp = 1.0f - std::abs(VdotH);
   return (tmp*tmp)*(tmp*tmp)*tmp;

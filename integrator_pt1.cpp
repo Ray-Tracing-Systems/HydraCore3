@@ -53,7 +53,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
                                  float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags)
 {
-  const uint currRayFlags = *rayFlags;
+  uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
     
@@ -87,20 +87,23 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
   
     // transform surface point with matrix and flip normal if needed
     //
-    hitNorm = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm = flipNorm * hitNorm;
-  
+    hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
+    const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+    hitNorm                = flipNorm * hitNorm;
+    
+    if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
+    else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
+
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
-    *rayFlags  = packMatId(currRayFlags, midRemaped);
-    *out_hit1  = to_float4(hitPos,  hitTexCoord.x); 
-    *out_hit2  = to_float4(hitNorm, hitTexCoord.y);
-    *out_instId = hit.instId;
+    *rayFlags              = packMatId(currRayFlags, midRemaped);
+    *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
+    *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
+    *out_instId            = hit.instId;
   }
   else
-    *rayFlags = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE) ;
+    *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
 
@@ -150,7 +153,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       lgtPdfW   = 1.0f;
     }
     
-    *out_shadeColor          = to_float4((to_float3(m_lights[lightId].intensity)*bsdfV.color/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
+    *out_shadeColor          = to_float4((to_float3(m_lights[lightId].intensity)*bsdfV.val/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
   }
   else
     *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -185,13 +188,13 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
   // process light hit case
   //
-  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
+  if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor  = to_float3(m_textures[ m_materials[matId].texId[0] ]->sample(texCoordT));
+    const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
 
-    const float3 lightIntensity = to_float3(m_materials[matId].baseColor)*texColor;
-    const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].lightId;
+    const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
+    const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
     
     float lightCos = 1.0f;
     float lightDirectionAtten = 1.0f;
@@ -233,18 +236,18 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const float4 uv         = rndFloat4_Pseudo(a_gen);
-  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
   const float3 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
-  const float  cosTheta   = dot(matSam.dir, hit.norm);
+  const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
-  MisData nextBounceData;                   // remember current pdfW for next bounce
-  nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; //
-  nextBounceData.cosTheta     = cosTheta;   //
-  *misPrev = nextBounceData;                //
+  MisData nextBounceData      = *misPrev;        // remember current pdfW for next bounce
+  nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; 
+  nextBounceData.cosTheta     = cosTheta;   
+  *misPrev                    = nextBounceData;
 
   if(m_intergatorType == INTEGRATOR_STUPID_PT)
   {
-    *accumThoroughput *= cosTheta*to_float4(bxdfVal, 0.0f); 
+    *accumThoroughput *= cosTheta * to_float4(bxdfVal, 0.0f); 
   }
   else if(m_intergatorType == INTEGRATOR_SHADOW_PT || m_intergatorType == INTEGRATOR_MIS_PT)
   {
@@ -311,7 +314,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis;
+  MisData   mis      = makeInitialMisData();
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
 
@@ -341,9 +344,12 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis;
+  MisData   mis      = makeInitialMisData();
   uint      rayFlags = 0;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
+    
+  //std::vector<float3> rayPos;
+  //std::vector<float4> rayColor;
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -359,6 +365,9 @@ void Integrator::PathTrace(uint tid, float4* out_color)
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
+    //rayPos.push_back(float3(rayPosAndNear.x, rayPosAndNear.y, rayPosAndNear.z));
+    //rayColor.push_back(rayPosAndNear);
+
     if(isDeadRay(rayFlags))
       break;
   }
@@ -366,7 +375,8 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                        &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), 
-                           out_color);
-                           
+  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
+  
+  // Debug draw ray path
+  //kernel_ContributePathRayToImage3(out_color, rayColor, rayPos);
 }
