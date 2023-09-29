@@ -98,8 +98,8 @@ static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
 
 
 // The size is taken according to the largest indexes
-static constexpr uint COLOR_DATA_SIZE  = std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
-static constexpr uint CUSTOM_DATA_SIZE = std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
+static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
+static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
 {
