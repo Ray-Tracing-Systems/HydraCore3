@@ -117,7 +117,7 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
 }
 
 
-float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
+float3 Integrator::MaterialEvalWhitted(uint a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
   const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -126,7 +126,7 @@ float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, flo
   return lambertEvalBSDF(l, v, n)*color;
 }
 
-BsdfSample Integrator::MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc)
+BsdfSample Integrator::MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc)
 { 
   const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
   const float3 specular  = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_METAL]);

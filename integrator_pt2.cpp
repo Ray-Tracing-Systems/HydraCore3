@@ -69,7 +69,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   // implicit strategy
@@ -117,7 +117,7 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
   // explicit strategy
   const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);

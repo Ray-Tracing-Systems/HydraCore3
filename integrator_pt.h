@@ -171,11 +171,11 @@ protected:
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
 
-  BsdfSample MaterialSampleWhitted(int a_materialId, float3 v, float3 n, float2 tc);
-  float3     MaterialEvalWhitted  (int a_materialId, float3 l, float3 v, float3 n, float2 tc);
+  BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
+  float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (int a_materialId, float3 l,     float3 v, float3 n, float2 tc);
+  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev, const uint a_currRayFlags); 
+  BsdfEval   MaterialEval         (uint a_materialId, float3 l,     float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
