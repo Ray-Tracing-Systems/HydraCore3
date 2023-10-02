@@ -190,8 +190,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   //
   if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
+    const uint texId       = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+    const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
 
     const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
     const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];

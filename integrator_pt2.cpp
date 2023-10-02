@@ -69,13 +69,13 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n,
-  float2 tc, MisData* a_misPrev, const uint a_currRayFlags)
+BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
+                                             MisData* a_misPrev, const uint a_currRayFlags)
 {
   // implicit strategy
-
+  const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
   const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
@@ -120,9 +120,9 @@ BsdfSample Integrator::MaterialSampleAndEval(int a_materialId, float4 rands, flo
 BsdfEval Integrator::MaterialEval(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
   // explicit strategy
-
+  const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
   const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 

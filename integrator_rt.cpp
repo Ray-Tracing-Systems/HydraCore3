@@ -119,8 +119,9 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint
 
 float3 Integrator::MaterialEvalWhitted(int a_materialId, float3 l, float3 v, float3 n, float2 tc)
 {
+  const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[ as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+  const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
   const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
   return lambertEvalBSDF(l, v, n)*color;
 }
@@ -177,8 +178,9 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   //
   if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
+    const uint   texId          = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
     const float2 texCoordT      = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor       = to_float3(m_textures[ as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]) ]->sample(texCoordT));
+    const float3 texColor       = to_float3(m_textures[texId]->sample(texCoordT));
 
     const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
     const uint lightId          = as_uint(m_materials[matId].data[UINT_LIGHTID]);
