@@ -1,0 +1,719 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+#include "common_generated.h"
+
+layout(binding = 0, set = 0) buffer data0 { uint out_color[]; }; //
+layout(binding = 1, set = 0) buffer data1 { uint m_matIdByPrimId[]; }; //
+layout(binding = 2, set = 0) buffer data2 { uint m_matIdOffsets[]; }; //
+layout(binding = 3, set = 0) uniform accelerationStructureEXT m_pAccelStruct;
+layout(binding = 4, set = 0) buffer data4 { Material m_materials[]; }; //
+layout(binding = 5, set = 0) uniform sampler2D m_textures[]; //
+layout(binding = 6, set = 0) buffer data6 { int m_remapInst[]; }; //
+layout(binding = 7, set = 0) buffer data7 { int m_allRemapLists[]; }; //
+layout(binding = 8, set = 0) buffer data8 { int m_allRemapListsOffsets[]; }; //
+layout(binding = 9, set = 0) buffer data9 { uint m_packedXY[]; }; //
+layout(binding = 10, set = 0) buffer data10 { LightSource m_lights[]; }; //
+layout(binding = 11, set = 0) buffer dataUBO { Integrator_Generated_UBO_Data ubo; };
+
+void conductorSmoothSampleAndEval_m_materials(uint a_materialsOffset, vec4 rands, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfSample pRes) {
+  const uint  cflags = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const float eta    = m_materials[0 + a_materialsOffset].data[CONDUCTOR_ETA];
+  const float k      = m_materials[0 + a_materialsOffset].data[CONDUCTOR_K];
+  
+  const vec3 pefReflDir = reflect((-1.0f)*v, n);
+  const float cosThetaOut = dot(pefReflDir, n);
+  vec3 dir = pefReflDir;
+  float  pdf              = 1.0f;
+  float  val              = FrComplexConductor(cosThetaOut, make_complex(eta,k));
+  
+  val = (cosThetaOut <= 1e-6f) ? 0.0f : (val / max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+
+  pRes.val = vec3(val,val,val); 
+  pRes.dir = dir;
+  pRes.pdf = pdf;
+  pRes.flags = RAY_EVENT_S;
+}
+
+void glassSampleAndEval_m_materials(uint a_materialsOffset, const vec4 a_rands, const vec3 a_viewDir, const vec3 a_normal, const vec2 a_tc, inout BsdfSample a_pRes, inout MisData a_misPrev) {
+  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
+  const vec3 colorReflect = m_materials[0 + a_materialsOffset].colors[GLASS_COLOR_REFLECT].xyz;   
+  const vec3 colorTransp = m_materials[0 + a_materialsOffset].colors[GLASS_COLOR_TRANSP].xyz;
+  const float  ior             = m_materials[0 + a_materialsOffset].data[GLASS_FLOAT_IOR];
+
+  const vec3 rayDir = (-1.0f) * a_viewDir;
+  vec3 origNormal = a_normal; // the normal flips higher and always looks at the beam
+
+  float relativeIor            = ior / a_misPrev.ior;
+
+  if ((a_pRes.flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
+  {
+    origNormal = (-1.0f) * a_normal; // returning the original normal
+
+    if (a_misPrev.ior == ior) // in the previous hit there was material with a equal IOR
+      relativeIor = 1.0f / ior;
+  }
+
+  const float fresnel = fresnel2(a_viewDir, a_normal, relativeIor);
+
+  vec3 dir;
+
+  if (a_rands.w < fresnel) // reflection
+  {
+    dir            = reflect2(rayDir, a_normal);
+    a_pRes.val    =  colorReflect;
+    a_pRes.flags |= RAY_EVENT_S;
+  }
+  else
+  {
+    dir            = refract2(rayDir, a_normal, relativeIor);
+    a_pRes.val    = colorTransp;
+    a_misPrev.ior = ior;
+    a_pRes.flags |= (RAY_EVENT_S | RAY_EVENT_T);
+  }
+
+  const float cosThetaOut = abs(dot(dir, a_normal));
+  
+  a_pRes.val      /= max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+  a_pRes.dir       = dir;
+  a_pRes.pdf       = 1.0f;
+}
+
+void gltfSampleAndEval_m_materials(uint a_materialsOffset, vec4 rands, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfSample pRes) {
+  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
+  const uint   cflags     = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const vec3 specular = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_METAL].xyz; 
+  const vec3 coat = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_COAT].xyz;  
+  const float  roughness  = clamp(1.0f - m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
+  float        alpha      = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ALPHA];                 
+  const float  fresnelIOR = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_IOR];
+  
+  if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal component set
+    alpha = 1.0f;
+
+  vec3 ggxDir;
+  float  ggxPdf; 
+  float  ggxVal;
+
+  if(roughness == 0.0f) // perfect specular reflection in coating or metal layer
+  {
+    const vec3 pefReflDir = reflect((-1.0f) * v, n);
+    const float cosThetaOut = dot(pefReflDir, n);
+    ggxDir                  = pefReflDir;
+    ggxVal                  = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f/max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+    ggxPdf                  = 1.0f;
+  }
+  else
+  {
+    ggxDir                  = ggxSample(vec2(rands.x,rands.y), v, n, roughness);
+    ggxPdf                  = ggxEvalPDF (ggxDir, v, n, roughness); 
+    ggxVal                  = ggxEvalBSDF(ggxDir, v, n, roughness);
+  }
+
+  const vec3 lambertDir = lambertSample(vec2(rands.x,rands.y), v, n);
+  const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
+  const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
+
+  // (1) select between metal and dielectric via rands.z
+  //
+  float pdfSelect = 1.0f;
+  if(rands.z < alpha) // select metall
+  {
+    pdfSelect         *= alpha;
+    const float  VdotH = dot(v,normalize(v + ggxDir));
+    pRes.dir    = ggxDir;
+    pRes.val        = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
+    pRes.pdf          = ggxPdf;
+    pRes.flags        = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+  }
+  else                // select dielectric
+  {
+    pdfSelect *= 1.0f - alpha;
+    
+    // (2) now select between specular and diffise via rands.w
+    //
+    const float f_i = FrDielectricPBRT(abs(dot(v,n)), 1.0f, fresnelIOR); 
+    const float m_specular_sampling_weight = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_SSW];
+    
+    float prob_specular = f_i * m_specular_sampling_weight;
+    float prob_diffuse  = (1.0f - f_i) * (1.0f - m_specular_sampling_weight);
+    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
+    {
+      prob_specular = prob_specular / (prob_specular + prob_diffuse);
+      prob_diffuse  = 1.f - prob_specular;
+    }
+    else
+    {
+      prob_diffuse  = 1.0f;
+      prob_specular = 0.0f;
+    }
+    float choicePdf = ((cflags & GLTF_COMPONENT_COAT) == 0) ? 0.0f : prob_specular; // if don't have coal layer, never select it
+    if(rands.w < prob_specular) // specular
+    {
+      pdfSelect      *= choicePdf;
+      pRes.dir       = ggxDir;
+      pRes.val       = ggxVal*coat*(1.0f - alpha)*f_i;
+      pRes.pdf       = ggxPdf;
+      pRes.flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
+    } 
+    else
+    {
+      pdfSelect      *= (1.0f-choicePdf); // lambert
+      pRes.dir       = lambertDir;
+      pRes.val       = lambertVal * color * (1.0f - alpha);
+      pRes.pdf       = lambertPdf;
+      pRes.flags     = RAY_FLAG_HAS_NON_SPEC;
+            
+      if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+        pRes.val *= orennayarFunc(lambertDir, (-1.0f) * v, n, m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+            
+      if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
+      {
+        const float m_fdr_int = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_FDR_INT];
+        const float f_o       = FrDielectricPBRT(abs(dot(lambertDir, n)), 1.0f, fresnelIOR);
+        pRes.val          *= (1.0f - f_i) * (1.0f - f_o) / (fresnelIOR * fresnelIOR * (1.0f - m_fdr_int));
+      }
+    }
+  }   
+  pRes.pdf *= pdfSelect;
+}
+
+LightSample areaLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
+  vec2 sampleOff = 2.0f * (vec2(-0.5f,-0.5f) + rands) * m_lights[0 + a_pLightOffset].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
+  if(m_lights[0 + a_pLightOffset].geomType == LIGHT_GEOM_DISC)
+  {
+    const float offsetX = rands.x * 2.0f - 1.0f;
+    const float offsetY = rands.y * 2.0f - 1.0f;
+    sampleOff = MapSamplesToDisc(vec2(offsetX,offsetY))*m_lights[0 + a_pLightOffset].size.x; 
+  }
+  const vec3 samplePos = mul3x3(m_lights[0 + a_pLightOffset].matrix, vec3(sampleOff.x,0.0f,sampleOff.y)) + m_lights[0 + a_pLightOffset].pos.xyz + epsilonOfPos(m_lights[0 + a_pLightOffset].pos.xyz) * m_lights[0 + a_pLightOffset].norm.xyz;
+  LightSample res;
+  res.pos  = samplePos;
+  res.norm = m_lights[0 + a_pLightOffset].norm.xyz;
+  return res;
+}
+
+void conductorRoughSampleAndEval_m_materials(uint a_materialsOffset, vec4 rands, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfSample pRes) {
+  if(v.z == 0)
+    return;
+
+  const uint  cflags = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const float eta    = m_materials[0 + a_materialsOffset].data[CONDUCTOR_ETA];
+  const float k      = m_materials[0 + a_materialsOffset].data[CONDUCTOR_K];
+  const vec2 alpha = vec2(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_V],m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_U]);
+
+  vec3 nx,  ny, nz = n;
+  CoordinateSystem(nz, nx, ny);
+  const vec3 wo = vec3(dot(v, nx),dot(v, ny),dot(v, nz));
+  if(wo.z == 0)
+    return;
+
+  if(wo.z == 0)
+    return;
+
+  vec3 wm = trSample(wo, vec2(rands.x,rands.y), alpha);
+  vec3 wi = reflect((-1.0f) * wo, wm);
+
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return;
+  }
+
+  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, make_complex(eta,k));
+
+  pRes.val   = vec3(val,val,val); 
+  pRes.dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
+  pRes.pdf   = trPDF(wo, wm, alpha) / (4.0f * abs(dot(wo, wm)));
+  pRes.flags = RAY_FLAG_HAS_NON_SPEC;
+}
+
+void conductorRoughEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval pRes) {
+  const uint  cflags = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const float eta    = m_materials[0 + a_materialsOffset].data[CONDUCTOR_ETA];
+  const float k      = m_materials[0 + a_materialsOffset].data[CONDUCTOR_K];
+  const vec2 alpha = vec2(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_V],m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_U]);
+
+  vec3 nx,  ny, nz = n;
+  CoordinateSystem(nz, nx, ny);
+
+  // v = (-1.0f) * v;
+  const vec3 wo = vec3(dot(v, nx),dot(v, ny),dot(v, nz));
+  const vec3 wi = vec3(dot(l, nx),dot(l, ny),dot(l, nz));
+
+  if(wo.z * wi.z < 0.0f)
+    return;
+
+  vec3 wm = wo + wi;
+  if (dot(wm, wm) == 0)
+      return;
+
+  wm = normalize(wm);
+
+  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, make_complex(eta,k));
+
+
+  pRes.val = vec3(val,val,val);
+
+  wm        = FaceForward(wm, vec3(0.0f,0.0f,1.0f));
+  pRes.pdf = trPDF(wo, wm, alpha) / (4.0f * abs(dot(wo, wm)));
+}
+
+LightSample sphereLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
+  const float theta = 2.0f * M_PI * rands.x;
+  const float phi   = acos(1.0f - 2.0f * rands.y);
+  const float x     = sin(phi) * cos(theta);
+  const float y     = sin(phi) * sin(theta);
+  const float z     = cos(phi);
+  const vec3 lcenter = m_lights[0 + a_pLightOffset].pos.xyz;
+  const float  lradius   = m_lights[0 + a_pLightOffset].size.x;
+  const vec3 samplePos = lcenter + (lradius*1.000001f)*vec3(x, y, z);
+  LightSample res;
+  res.pos  = samplePos;
+  res.norm = normalize(samplePos - lcenter);
+  return res;
+}
+
+void conductorSmoothEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval pRes) {
+  pRes.val = vec3(0.0f,0.0f,0.0f);
+  pRes.pdf = 0.0f;
+}
+
+LightSample directLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands, vec3 illuminationPoint) {
+  const vec3 norm = m_lights[0 + a_pLightOffset].norm.xyz;
+  LightSample res;
+  res.pos  = illuminationPoint - norm*100000.0f;
+  res.norm = norm;
+  return res;
+}
+
+void glassEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval res) {
+  // because we don't want to sample this material with shadow rays
+  res.val   = vec3(0.0f, 0.0f, 0.0f);
+  res.pdf   = 0.0f;
+}
+
+void gltfEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval res) {
+  const uint   cflags     = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const vec3 specular = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_METAL].xyz;
+  const vec3 coat = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_COAT].xyz;
+  const float  roughness  = clamp(1.0f - m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
+        float  alpha      = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ALPHA];
+  const float  fresnelIOR = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_IOR];
+
+  if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
+    alpha = 1.0f;
+      
+  float ggxVal, ggxPdf, VdotH; 
+  if(roughness != 0.0f) // perfect specular reflection in coating layer
+  {
+    ggxVal = ggxEvalBSDF(l, v, n, roughness);
+    ggxPdf = ggxEvalPDF (l, v, n, roughness);
+    VdotH  = dot(v,normalize(v + l));
+  }
+  else
+  {
+    ggxVal = 0.0f;
+    ggxPdf = 0.0f;
+    VdotH  = dot(v,n);
+  }
+
+  float lambertVal       = lambertEvalBSDF(l, v, n);
+  const float lambertPdf = lambertEvalPDF (l, v, n);
+  float f_i              = 1.0f;
+  float prob_diffuse     = 1.0f;
+  float prob_specular    = 0.0f;
+  float coeffLambertPdf  = 1.0f;
+
+  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+    lambertVal *= orennayarFunc(l, v, n, m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+
+      
+  if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
+  {
+    f_i                                    = FrDielectricPBRT(abs(dot(v,n)), 1.0f, fresnelIOR);
+    const float f_o                        = FrDielectricPBRT(abs(dot(l,n)), 1.0f, fresnelIOR);  
+    const float m_fdr_int                  = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_FDR_INT];
+    const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+    lambertVal                            *= coeff;
+    coeffLambertPdf                        = coeff; 
+    const float m_specular_sampling_weight = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_SSW];
+    prob_specular                          = f_i * m_specular_sampling_weight;
+    prob_diffuse                           = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    
+    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
+      prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
+    else
+    {
+      prob_diffuse  = 1.0f;
+      prob_specular = 0.0f;
+    }
+  }
+
+  const vec3 fConductor = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
+  const vec3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
+      
+  const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
+  const vec3 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
+
+  res.val = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
+  res.pdf = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
+}
+
+vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
+  return ubo.m_envColor;
+}
+
+bool isDeadRay(uint a_flags) { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
+
+BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) { 
+  const uint  type       = floatBitsToUint(m_materials[a_materialId].data[UINT_MTYPE]);
+  const vec3 specular = m_materials[a_materialId].colors[GLTF_COLOR_METAL].xyz;
+  const vec3 coat = m_materials[a_materialId].colors[GLTF_COLOR_COAT].xyz;
+  const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
+  float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
+  
+  const vec3 pefReflDir = reflect((-1.0f)*v, n);
+  const vec3 reflColor = alpha*specular + (1.0f - alpha)*coat;
+
+  //if(a_materialId == 4)
+  //{
+  //  int a = 2;
+  //}
+
+  BsdfSample res;
+  res.dir   = pefReflDir;
+  res.val   = reflColor;
+  res.pdf   = 1.0f;
+  res.flags = RAY_EVENT_S;
+  return res;
+}
+
+bool isOutOfScene(uint a_flags) { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
+
+vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
+  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
+  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
+  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
+  return lambertEvalBSDF(l, v, n)*color;
+}
+
+uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
+
+uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }
+
+uint RemapMaterialId(uint a_mId, int a_instId) {
+  const int remapListId  = m_remapInst[a_instId];
+  if(remapListId == -1)
+    return a_mId;
+
+  const int r_offset     = m_allRemapListsOffsets[remapListId];
+  const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
+  const ivec2 offsAndSize = ivec2(r_offset,r_size);
+  
+  uint res = a_mId;
+  
+  // for (int i = 0; i < offsAndSize.y; i++) // linear search version
+  // {
+  //   int idRemapFrom = m_allRemapLists[offsAndSize.x + i * 2 + 0];
+  //   int idRemapTo   = m_allRemapLists[offsAndSize.x + i * 2 + 1];
+  //   if (idRemapFrom == a_mId) {
+  //     res = idRemapTo;
+  //     break;
+  //   }
+  // }
+
+  int low  = 0;
+  int high = offsAndSize.y - 1;              // binary search version
+  
+  while (low <= high)
+  {
+    const int mid         = low + ((high - low) / 2);
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + mid * 2 + 0];
+    if (uint(idRemapFrom) >= a_mId)
+      high = mid - 1;
+    else //if(a[mid]<i)
+      low = mid + 1;
+  }
+
+  if (high+1 < offsAndSize.y)
+  {
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 0];
+    const int idRemapTo   = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 1];
+    res                   = (uint(idRemapFrom) == a_mId) ? uint(idRemapTo) : a_mId;
+  }
+
+  return res;
+}
+
+float LightPdfSelectRev(int a_lightId) { 
+  return 1.0f/float(ubo.m_lights_size); // uniform select
+}
+
+BsdfEval MaterialEval(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
+  // explicit strategy
+  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
+  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
+  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
+  const uint   mtype     = floatBitsToUint(m_materials[a_materialId].data[UINT_MTYPE]);
+
+
+  // TODO: read other parameters from texture
+  BsdfEval res;
+  {
+    res.val = vec3(0,0,0);
+    res.pdf   = 0.0f;
+  }
+
+
+  switch(mtype)
+  {
+    case MAT_TYPE_GLTF:
+      gltfEval_m_materials(a_materialId, l, v, n, tc, color, res);
+      break;
+    case MAT_TYPE_GLASS:
+      glassEval_m_materials(a_materialId, l, v, n, tc, color, res);
+      break;
+    case MAT_TYPE_CONDUCTOR: 
+    {
+      const vec3 color = m_materials[a_materialId].colors[CONDUCTOR_COLOR].xyz * texColor;
+
+      //conductorEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
+      const vec2 alpha = vec2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V],m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
+      if(trEffectivelySmooth(alpha))
+        conductorSmoothEval_m_materials(a_materialId, l, v, n, tc, color, res);
+      else
+        conductorRoughEval_m_materials(a_materialId, l, v, n, tc, color, res);
+    }
+      break;
+    default:
+    break;
+  }
+
+  return res;
+}
+
+float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const vec3 lpos, const vec3 lnorm) {
+  const uint gtype    = m_lights[a_lightId].geomType;
+  const float hitDist = length(illuminationPoint - lpos);
+  
+  float cosVal = 1.0f;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      const float  lradius = m_lights[a_lightId].size.x;
+      const vec3 lcenter = m_lights[a_lightId].pos.xyz;
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
+      const vec3 dirToV = normalize(lpos - illuminationPoint);
+      cosVal = abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    default:
+    cosVal  = max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    break;
+  };
+  
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+}
+
+LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev_m_lights(a_lightId, rands, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev_m_lights(a_lightId, rands);
+    default:                return areaLightSampleRev_m_lights(a_lightId, rands);
+  };
+}
+
+BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 rands, vec3 v, vec3 n, vec2 tc, inout MisData a_misPrev, const uint a_currRayFlags) {
+  // implicit strategy
+  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
+  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
+  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
+  const uint   mtype     = floatBitsToUint(m_materials[a_materialId].data[UINT_MTYPE]);
+
+  // TODO: read other parameters from texture
+
+  BsdfSample res;
+  {
+    res.val   = vec3(0,0,0);
+    res.pdf   = 1.0f;
+    res.dir   = vec3(0,1,0);
+    res.flags = a_currRayFlags;
+  }
+
+
+  switch(mtype)
+  {
+    case MAT_TYPE_GLTF:
+      gltfSampleAndEval_m_materials(a_materialId, rands, v, n, tc, color, res);
+      break;
+    case MAT_TYPE_GLASS:
+      glassSampleAndEval_m_materials(a_materialId, rands, v, n, tc, res, a_misPrev);
+      break;
+    case MAT_TYPE_CONDUCTOR:
+    {
+      const vec3 color = m_materials[a_materialId].colors[CONDUCTOR_COLOR].xyz * texColor;
+
+      //conductorSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
+      const vec2 alpha = vec2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V],m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
+      if(trEffectivelySmooth(alpha))
+        conductorSmoothSampleAndEval_m_materials(a_materialId, rands, v, n, tc, color, res);
+      else
+        conductorRoughSampleAndEval_m_materials(a_materialId, rands, v, n, tc, color, res);
+    }
+      break;
+    default:
+    break;
+  }
+
+  return res;
+}
+
+bool hasNonSpecular(uint a_flags) { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
+
+// RayScene intersection with 'm_pAccelStruct'
+//
+CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir)
+{
+  rayQueryEXT rayQuery;
+  rayQueryInitializeEXT(rayQuery, m_pAccelStruct, gl_RayFlagsOpaqueEXT, 0xff, rayPos.xyz, rayPos.w, rayDir.xyz, rayDir.w);
+  
+  while(rayQueryProceedEXT(rayQuery)) { } // actually may omit 'while' when 'gl_RayFlagsOpaqueEXT' is used
+ 
+  CRT_Hit res;
+  res.primId = -1;
+  res.instId = -1;
+  res.geomId = -1;
+  res.t      = rayDir.w;
+
+  if(rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT)
+  {    
+	  res.primId    = rayQueryGetIntersectionPrimitiveIndexEXT(rayQuery, true);
+	  res.geomId    = rayQueryGetIntersectionInstanceCustomIndexEXT(rayQuery, true);
+    res.instId    = rayQueryGetIntersectionInstanceIdEXT    (rayQuery, true);
+	  res.t         = rayQueryGetIntersectionTEXT(rayQuery, true);
+    vec2 bars     = rayQueryGetIntersectionBarycentricsEXT(rayQuery, true);
+    
+    res.coords[0] = bars.y;
+    res.coords[1] = bars.x;
+    res.coords[2] = 1.0f - bars.y - bars.x;
+  }
+
+  return res;
+}
+
+bool m_pAccelStruct_RayQuery_AnyHit(const vec4 rayPos, const vec4 rayDir)
+{
+  rayQueryEXT rayQuery;
+  rayQueryInitializeEXT(rayQuery, m_pAccelStruct, gl_RayFlagsTerminateOnFirstHitEXT, 0xff, rayPos.xyz, rayPos.w, rayDir.xyz, rayDir.w);
+  rayQueryProceedEXT(rayQuery);
+  return (rayQueryGetIntersectionTypeEXT(rayQuery, true) == gl_RayQueryCommittedIntersectionTriangleEXT);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout( push_constant ) uniform kernelArgs
+{
+  uint iNumElementsX; 
+  uint iNumElementsY; 
+  uint iNumElementsZ; 
+  uint tFlagsMask;    
+} kgenArgs;
+
+///////////////////////////////////////////////////////////////// subkernels here
+void kernel_GetRayColor_m_packedXY_out_color(uint tid, in Lite_Hit in_hit, uint in_pakedXYOffset, uint out_colorOffset) 
+{
+   
+  const Lite_Hit lhit = in_hit;
+  if(lhit.geomId == -1)
+  {
+    out_color[tid + out_colorOffset] = 0;
+    return;
+  }
+
+  const uint matId = m_matIdByPrimId[m_matIdOffsets[lhit.geomId] + uint(lhit.primId)];
+  const vec4 mdata = m_materials[matId].colors[GLTF_COLOR_BASE];
+  const vec3 color = mdata.w > 0.0f ? clamp(vec3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : mdata.xyz;
+
+  const uint XY = m_packedXY[tid + in_pakedXYOffset];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  out_color[y*uint(ubo.m_winWidth)+x + out_colorOffset] = RealColorToUint32_f3(color); 
+
+}
+
+void kernel_InitEyeRay_m_packedXY(uint tid, uint packedXYOffset, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar) 
+{
+  
+  const uint XY = m_packedXY[tid + packedXYOffset];
+
+  const uint x = (XY & 0x0000FFFF);
+  const uint y = (XY & 0xFFFF0000) >> 16;
+
+  vec3 rayDir = EyeRayDirNormalized((float(x)+0.5f)/float(ubo.m_winWidth), (float(y)+0.5f)/float(ubo.m_winHeight), ubo.m_projInv);
+  vec3 rayPos = vec3(0,0,0);
+
+  transform_ray3f(ubo.m_worldViewInv, 
+                  rayPos, rayDir);
+  
+  rayPosAndNear = vec4(rayPos, 0.0f);
+  rayDirAndFar  = vec4(rayDir, FLT_MAX);
+
+}
+
+bool kernel_RayTrace(uint tid, in vec4 rayPosAndNear, inout vec4 rayDirAndFar, inout Lite_Hit out_hit, inout vec2 out_bars) 
+{
+  
+  const vec4 rayPos = rayPosAndNear;
+  const vec4 rayDir = rayDirAndFar ;
+
+  CRT_Hit hit = m_pAccelStruct_RayQuery_NearestHit(rayPos, rayDir);
+  
+  Lite_Hit res;
+  res.primId = int(hit.primId);
+  res.instId = int(hit.instId);
+  res.geomId = int(hit.geomId);
+  res.t      = hit.t;
+
+  vec2 baricentrics = vec2(hit.coords[0],hit.coords[1]);
+ 
+  out_hit  = res;
+  out_bars = baricentrics;
+  return (res.primId != -1);
+
+}
+
+///////////////////////////////////////////////////////////////// subkernels here
+
+void main()
+{
+  ///////////////////////////////////////////////////////////////// prolog
+  const uint tid = uint(gl_GlobalInvocationID[0]); 
+  ///////////////////////////////////////////////////////////////// prolog
+
+  
+  vec4 rayPosAndNear,  rayDirAndFar;
+  kernel_InitEyeRay_m_packedXY(tid, 0, rayPosAndNear, rayDirAndFar);
+
+  Lite_Hit hit; 
+  vec2 baricentrics; 
+  if(!kernel_RayTrace(tid, rayPosAndNear, rayDirAndFar, hit, baricentrics))
+    return;
+  
+  kernel_GetRayColor_m_packedXY_out_color(tid, hit, 0, 0);
+
+}
+
