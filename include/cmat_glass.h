@@ -244,14 +244,10 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   const float  ior             = a_materials[0].data[GLASS_FLOAT_IOR];
 
   const float3 rayDir          = (-1.0f) * a_viewDir;
-  float3 origNormal            = a_normal; // the normal flips higher and always looks at the beam
-
   float relativeIor            = ior / a_misPrev->ior;
 
   if ((a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
   {
-    origNormal = (-1.0f) * a_normal; // returning the original normal
-
     if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
       relativeIor = 1.0f / ior;
   }
