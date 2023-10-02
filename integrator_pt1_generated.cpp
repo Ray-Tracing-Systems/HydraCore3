@@ -172,7 +172,7 @@ void Integrator_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyE
   for(int i=0;i<m_vdata.m_texturesArrayTexture.size();i++)
     a_pCopyEngine->UpdateImage(m_vdata.m_texturesArrayTexture[i], m_textures[i]->data(), m_textures[i]->width(), m_textures[i]->height(), m_textures[i]->bpp(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); 
   
-  std::array<VkImageMemoryBarrier, 0> barriers;
+  std::vector<VkImageMemoryBarrier> barriers(1);
 
   
   VkCommandBuffer cmdBuff       = a_pCopyEngine->CmdBuffer();
