@@ -25,12 +25,13 @@ void Integrator::InitRandomGens(int a_maxThreads)
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                    float4* rayPosAndNear, float4* rayDirAndFar,
                                    float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags) // 
+                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
   *accumColor        = make_float4(0,0,0,1);
   *accumuThoroughput = make_float4(1,1,1,1);
   RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
+  *misData           = makeInitialMisData();
 
   const uint XY = packedXY[tid];
 
@@ -315,9 +316,9 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis      = makeInitialMisData();
-  uint      rayFlags = 0;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
 
   for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
@@ -345,9 +346,9 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
   RandomGen gen; 
-  MisData   mis      = makeInitialMisData();
-  uint      rayFlags = 0;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags);
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
     
   //std::vector<float3> rayPos;
   //std::vector<float4> rayColor;

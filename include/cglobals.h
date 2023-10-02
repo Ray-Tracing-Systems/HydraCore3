@@ -243,13 +243,13 @@ static inline float misWeightHeuristic(float a, float b)
 \brief This structure is used as transit to pass MIS-weights-important-data from previouce bounce to current (or from current to next).
 
 */
-typedef struct MisDataT
+struct MisData
 {
   float matSamplePdf; ///< previous angle pdf (pdfW) that were used for sampling material. if < 0, then material sample was pure specular 
   float cosTheta;     ///< previous dot(matSam.dir, hit.norm)
   float ior;          ///< previous ior
   float dummy;        ///< dummy for 4 float
-} MisData;
+};
 
 static inline bool isSpecular(const MisData* data) { return (data->matSamplePdf < 0.0f); }
 

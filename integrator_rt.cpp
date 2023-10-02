@@ -233,7 +233,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   *accumThoroughput = currThoroughput * cosTheta * to_float4(bxdfVal, 0.0f);
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f);
-  *rayDirAndFar  = to_float4(matSam.dir, MAXFLOAT);
+  *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
