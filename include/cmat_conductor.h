@@ -5,7 +5,6 @@
 
 
 static inline void conductorSmoothSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                                float3 color,
                                                 BsdfSample* pRes)
 {
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
@@ -28,7 +27,6 @@ static inline void conductorSmoothSampleAndEval(const Material* a_materials, flo
 
 
 static void conductorSmoothEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color, 
                                 BsdfEval* pRes)
 {
   pRes->val = {0.0f, 0.0f, 0.0f};
@@ -56,7 +54,7 @@ static float conductorRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 
 
 
 static inline void conductorRoughSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                                float3 color,
+                                                float3 alpha_tex,
                                                 BsdfSample* pRes)
 {
   if(v.z == 0)
@@ -65,7 +63,16 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, floa
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float eta    = a_materials[0].data[CONDUCTOR_ETA];
   const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
+
+  // const uint  texId = as_uint(a_materials[0].data[CONDUCTOR_TEXID0]);
+
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
+  // if(texId != 0)
+  // {
+  //   alpha.x = alpha_tex.x;
+  //   alpha.y = alpha_tex.y;
+  // }
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -94,13 +101,15 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, floa
 
 
 static void conductorRoughEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color, 
+                                float3 alpha_tex, 
                                 BsdfEval* pRes)
 {
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float eta    = a_materials[0].data[CONDUCTOR_ETA];
   const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
+  // const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -128,33 +137,33 @@ static void conductorRoughEval(const Material* a_materials, float3 l, float3 v, 
 }
 
 static inline void conductorSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                          float3 color,
+                                          float3 alpha_tex,
                                           BsdfSample* pRes)
 {
   const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   if(trEffectivelySmooth(alpha))
   {
-    conductorSmoothSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
+    conductorSmoothSampleAndEval(a_materials, rands, v, n, tc, pRes);
   }
   else
   {
-    conductorRoughSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
+    conductorRoughSampleAndEval(a_materials, rands, v, n, tc, alpha_tex, pRes);
   }
 }
 
 static inline void conductorEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color,
+                                float3 alpha_tex,
                                 BsdfEval* pRes)
 {
   const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
 
   if(trEffectivelySmooth(alpha))
   {
-    conductorSmoothEval(a_materials, l, v, n, tc, color, pRes);
+    conductorSmoothEval(a_materials, l, v, n, tc, pRes);
   }
   else
   {
-    conductorRoughEval(a_materials, l, v, n, tc, color, pRes);
+    conductorRoughEval(a_materials, l, v, n, tc, alpha_tex, pRes);
   }
 }

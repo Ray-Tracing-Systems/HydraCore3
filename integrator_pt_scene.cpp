@@ -370,9 +370,43 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
 
   auto nodeBSDF = materialNode.child(L"bsdf");
 
+  float alpha_u = 0.0f;
+  float alpha_v = 0.0f;
+
   auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
-  auto alpha_u   = materialNode.child(L"alpha_u").attribute(L"val").as_float();
-  auto alpha_v   = materialNode.child(L"alpha_v").attribute(L"val").as_float();
+  auto nodeAlpha = materialNode.child(L"alpha");
+  if(nodeAlpha != nullptr)
+  {
+    alpha_u = nodeAlpha.attribute(L"val").as_float();
+    alpha_v = alpha_u;
+
+    HydraSampler alphaSampler = ReadSamplerFromColorNode(nodeAlpha);
+    auto p = texCache.find(alphaSampler);
+    uint32_t texId = 0;
+    if(p == texCache.end())
+    {
+      texCache[alphaSampler] = uint(textures.size());
+      texId  = nodeAlpha.child(L"texture").attribute(L"id").as_uint();
+      textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], alphaSampler.sampler));
+      p = texCache.find(alphaSampler);
+    }
+
+    if(texId != 0)
+      alpha_u = alpha_v = 1.0f;
+    
+    mat.row0 [0]  = alphaSampler.row0;
+    mat.row1 [0]  = alphaSampler.row1;
+    mat.data[CONDUCTOR_TEXID0] = as_float(p->second);
+  }
+  else
+  {
+    auto nodeAlphaU = materialNode.child(L"alpha_u");
+    auto nodeAlphaV = materialNode.child(L"alpha_v");
+
+    alpha_u = nodeAlphaU.attribute(L"val").as_float();
+    alpha_v = nodeAlphaV.attribute(L"val").as_float();
+  }
+  
   auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
   auto k         = materialNode.child(L"k").attribute(L"val").as_float();
 

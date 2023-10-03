@@ -93,7 +93,8 @@ static constexpr uint CONDUCTOR_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
 static constexpr uint CONDUCTOR_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
 static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
 static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
-static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
+static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_TEXID0;
 
 
 
