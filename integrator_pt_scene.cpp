@@ -13,6 +13,9 @@ using cmesh4::SimpleMesh;
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
+#include <fstream>
+#include <filesystem>
 
 #include "Image2d.h"
 using LiteImage::Image2D;
@@ -190,7 +193,17 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   return pResult;
 }
 
+struct SpectrumInfo
+{
+  std::wstring path;   
+  uint32_t id;
+};
 
+struct Spectrum
+{
+  std::vector<float> wavelengths;
+  std::vector<float> values;
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -358,9 +371,47 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   return mat;
 }
 
+
+Spectrum LoadSPDFromFile(const std::wstring& path)
+{
+  Spectrum res;
+  std::filesystem::path p(path);
+  std::ifstream in(p.string());
+  std::string line;
+  while(std::getline(in, line))
+  {
+    if(line.size() > 0 && line[0] == '#')
+      continue;
+
+    auto pos = line.find_first_of(' ');
+    float lambda = std::stof(line.substr(0, pos));
+    float spec   = std::stof(line.substr(pos + 1, line.size() - 1));
+    res.wavelengths.push_back(lambda);
+    res.values.push_back(spec);
+  }
+
+  return res;
+}
+
+
+std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
+{
+  std::optional<Spectrum> spec;
+  auto specNode = a_node.child(L"spectrum");
+  if(specNode != nullptr)
+  {
+    uint32_t spec_id = specNode.attribute(L"id").as_uint();
+    auto spec = LoadSPDFromFile(spectraInfo[spec_id].path);
+    // TODO: process spectrum
+  }
+  return spec;
+}
+
+
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
-                                        std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                        std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+                                    std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                                    const std::vector<SpectrumInfo> &spectraInfo)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -407,8 +458,11 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
   
-  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
-  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
+  auto eta     = materialNode.child(L"eta").attribute(L"val").as_float();
+  auto etaSpec = LoadSpectrumFromNode(materialNode.child(L"eta"), spectraInfo);
+  
+  auto k     = materialNode.child(L"k").attribute(L"val").as_float();
+  auto kSpec = LoadSpectrumFromNode(materialNode.child(L"k"), spectraInfo);
 
   mat.data[CONDUCTOR_ROUGH_U] = alpha_u;
   mat.data[CONDUCTOR_ROUGH_V] = alpha_v; 
@@ -468,6 +522,18 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   m_textures.reserve(256);
   m_textures.push_back(MakeWhiteDummy());
 
+  std::vector<SpectrumInfo> spectraInfo;
+  spectraInfo.resize(0);
+  spectraInfo.reserve(100);
+  for(auto specNode : scene.SpectraNodes())
+  {
+    SpectrumInfo spec;
+    spec.id   = specNode.attribute(L"id").as_uint();
+    spec.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + specNode.attribute(L"loc").as_string();
+    spectraInfo.push_back(spec);
+  }
+
+
   //// (1) load materials
   //
   m_materials.resize(0);
@@ -486,7 +552,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, spectraInfo);
     }
     m_materials.push_back(mat);
   }
