@@ -120,6 +120,7 @@ namespace hydra_xml
     m_materialsLib = m_xmlDoc.child(L"materials_lib");
     m_geometryLib  = m_xmlDoc.child(L"geometry_lib");
     m_lightsLib    = m_xmlDoc.child(L"lights_lib");
+    m_spectraLib    = m_xmlDoc.child(L"spectra_lib");
 
     m_cameraLib    = m_xmlDoc.child(L"cam_lib");
     m_settingsNode = m_xmlDoc.child(L"render_lib");

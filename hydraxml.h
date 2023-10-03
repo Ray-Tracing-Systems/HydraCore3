@@ -290,6 +290,7 @@ namespace hydra_xml
     pugi::xml_object_range<pugi::xml_node_iterator> GeomNodes()     { return m_geometryLib.children();  }
     pugi::xml_object_range<pugi::xml_node_iterator> LightNodes()    { return m_lightsLib.children();    }
     pugi::xml_object_range<pugi::xml_node_iterator> CameraNodes()   { return m_cameraLib.children();    }
+    pugi::xml_object_range<pugi::xml_node_iterator> SpectraNodes()  { return m_spectraLib.children();   }
     
     //// please also use this functions with C++11 range for
     //
@@ -300,6 +301,11 @@ namespace hydra_xml
     pugi::xml_object_range<LocIterator> TextureFiles() { return pugi::xml_object_range(LocIterator(m_texturesLib.begin(), m_libraryRootDir), 
                                                                                        LocIterator(m_texturesLib.end(), m_libraryRootDir)
                                                                                        ); }
+
+    pugi::xml_object_range<LocIterator> SpectraFiles() { return pugi::xml_object_range(LocIterator(m_spectraLib.begin(), m_libraryRootDir), 
+                                                                                       LocIterator(m_spectraLib.end(), m_libraryRootDir)
+                                                                                       ); }
+
 
     pugi::xml_object_range<InstIterator> InstancesGeom() { return pugi::xml_object_range(InstIterator(m_scenesNode.child(L"scene").child(L"instance"), m_scenesNode.child(L"scene").end()), 
                                                                                          InstIterator(m_scenesNode.child(L"scene").end(), m_scenesNode.child(L"scene").end())
@@ -336,6 +342,7 @@ namespace hydra_xml
     pugi::xml_node     m_geometryLib; 
     pugi::xml_node     m_lightsLib;
     pugi::xml_node     m_cameraLib; 
+    pugi::xml_node     m_spectraLib;
     pugi::xml_node     m_settingsNode; 
     pugi::xml_node     m_scenesNode; 
     pugi::xml_document m_xmlDoc;
