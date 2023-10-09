@@ -116,6 +116,7 @@ set(CORE_SRC
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
         mi_materials.cpp
+        spectrum.cpp
         imageutils.cpp
         utils.cpp)
 

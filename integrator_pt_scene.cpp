@@ -5,6 +5,7 @@
 using cmesh4::SimpleMesh;
 
 #include "mi_materials.h"
+#include "spectrum.h"
 
 //#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
 #include "LiteScene/hydraxml.h"
@@ -199,11 +200,6 @@ struct SpectrumInfo
   uint32_t id;
 };
 
-struct Spectrum
-{
-  std::vector<float> wavelengths;
-  std::vector<float> values;
-};
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -372,27 +368,6 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 }
 
 
-Spectrum LoadSPDFromFile(const std::wstring& path)
-{
-  Spectrum res;
-  std::filesystem::path p(path);
-  std::ifstream in(p.string());
-  std::string line;
-  while(std::getline(in, line))
-  {
-    if(line.size() > 0 && line[0] == '#')
-      continue;
-
-    auto pos = line.find_first_of(' ');
-    float lambda = std::stof(line.substr(0, pos));
-    float spec   = std::stof(line.substr(pos + 1, line.size() - 1));
-    res.wavelengths.push_back(lambda);
-    res.values.push_back(spec);
-  }
-
-  return res;
-}
-
 
 std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
 {
@@ -401,17 +376,28 @@ std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const
   if(specNode != nullptr)
   {
     uint32_t spec_id = specNode.attribute(L"id").as_uint();
-    auto spec = LoadSPDFromFile(spectraInfo[spec_id].path);
-    // TODO: process spectrum
+    spec = LoadSPDFromFile(spectraInfo[spec_id].path, spec_id);
   }
+
   return spec;
+}
+
+uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
+{
+  uint32_t spec_id = 0xFFFFFFFF;
+  auto specNode = a_node.child(L"spectrum");
+  if(specNode != nullptr)
+  {
+    spec_id = specNode.attribute(L"id").as_uint();
+  }
+
+  return spec_id;
 }
 
 
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
-                                    const std::vector<SpectrumInfo> &spectraInfo)
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -458,30 +444,32 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
   
-  auto eta     = materialNode.child(L"eta").attribute(L"val").as_float();
-  auto etaSpec = LoadSpectrumFromNode(materialNode.child(L"eta"), spectraInfo);
+  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
+  auto etaSpecId = GetSpectrumIdFromNode(materialNode.child(L"eta"));
+  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
+  auto kSpecId   = GetSpectrumIdFromNode(materialNode.child(L"k"));
   
-  auto k     = materialNode.child(L"k").attribute(L"val").as_float();
-  auto kSpec = LoadSpectrumFromNode(materialNode.child(L"k"), spectraInfo);
-
   mat.data[CONDUCTOR_ROUGH_U] = alpha_u;
   mat.data[CONDUCTOR_ROUGH_V] = alpha_v; 
   mat.data[CONDUCTOR_ETA]     = eta; 
   mat.data[CONDUCTOR_K]       = k;   
 
+  mat.data[CONDUCTOR_ETA_SPECID] = etaSpecId;
+  mat.data[CONDUCTOR_K_SPECID]   = kSpecId;
+
   return mat;
 }
 
-bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
+bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
-  std::string scenePathStr(a_scehePath);
+  std::string scenePathStr(a_scenePath);
   std::string sceneDirStr(a_sncDir);  
   hydra_xml::HydraScene scene;
   
   auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
   if(loadRes != 0)
   {
-    std::cout << "Integrator::LoadScene failed: '" << a_scehePath << "'" << std::endl; 
+    std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
     exit(0);
   }
 
@@ -523,14 +511,17 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
   m_textures.push_back(MakeWhiteDummy());
 
   std::vector<SpectrumInfo> spectraInfo;
-  spectraInfo.resize(0);
   spectraInfo.reserve(100);
   for(auto specNode : scene.SpectraNodes())
   {
-    SpectrumInfo spec;
-    spec.id   = specNode.attribute(L"id").as_uint();
-    spec.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + specNode.attribute(L"loc").as_string();
-    spectraInfo.push_back(spec);
+    auto spec_id   = specNode.attribute(L"id").as_uint();
+    auto spec_path = std::filesystem::path(sceneFolder);
+    spec_path.append(specNode.attribute(L"loc").as_string());
+
+    m_spectra.push_back(LoadSPDFromFile(spec_path, spec_id));
+    
+    // we expect dense, sorted ids for now
+    assert(m_spectra[spec_id].id == spec_id);
   }
 
 
@@ -552,7 +543,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, spectraInfo);
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
     }
     m_materials.push_back(mat);
   }

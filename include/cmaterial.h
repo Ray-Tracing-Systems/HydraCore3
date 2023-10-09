@@ -94,7 +94,9 @@ static constexpr uint CONDUCTOR_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
 static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
 static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
 static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
-static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_TEXID0;
+static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
+static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
 
 
 
@@ -111,6 +113,8 @@ struct Material
       
   float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

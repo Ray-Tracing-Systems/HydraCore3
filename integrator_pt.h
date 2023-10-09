@@ -15,6 +15,8 @@
 #include "CrossRT.h" // special include for ray tracing
 #include "Image2d.h" // special include for textures
 
+#include "spectrum.h"
+
 using LiteImage::ICombinedImageSampler;
 
 class Integrator // : public DataClass, IRenderer
@@ -81,8 +83,10 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
-  void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, uint* rayFlags);        
+  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float3* wavelengths,
+                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
+  void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
+                          float4* accumuThoroughput, uint* rayFlags);        
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
@@ -93,13 +97,13 @@ public:
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
-                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float3* wavelengths,
                          float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
-  void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
+  void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float3* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, 
                                 const uint* rayFlags, 
                                 RandomGen* a_gen, float4* out_shadeColor);
@@ -110,7 +114,7 @@ public:
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
   void kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                float4* out_color);
+                                const float3* wavelengths, float4* out_color);
 
   void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
@@ -174,8 +178,9 @@ protected:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 rands, float3 v, float3 n, float2 tc, MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (uint a_materialId, float3 l,     float3 v, float3 n, float2 tc);
+  BsdfSample MaterialSampleAndEval(uint a_materialId, float3 wavelengths, float4 rands, float3 v, float3 n, float2 tc,
+                                   MisData* a_misPrev, const uint a_currRayFlags); 
+  BsdfEval   MaterialEval         (uint a_materialId, float3 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
@@ -220,6 +225,8 @@ protected:
   //// textures
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
+
+  std::vector<Spectrum> m_spectra;
   
 };
 

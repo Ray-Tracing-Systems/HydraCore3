@@ -69,7 +69,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float3 wavelengths, float4 rands, float3 v, float3 n, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   // implicit strategy
@@ -106,9 +106,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, fl
       
       const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res);
+        conductorSmoothSampleAndEval(m_materials.data() + a_materialId, m_spectra.data(), wavelengths, rands, v, n, tc, &res);
       else
-        conductorRoughSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, alphaTex, &res);
+        conductorRoughSampleAndEval(m_materials.data() + a_materialId, m_spectra.data(), wavelengths, rands, v, n, tc, alphaTex, &res);
     }
       break;
     default:
@@ -118,7 +118,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, fl
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(uint a_materialId, float3 l, float3 v, float3 n, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float3 wavelengths, float3 l, float3 v, float3 n, float2 tc)
 {
   // explicit strategy
   const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
@@ -152,9 +152,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float3 l, float3 v, float3 
 
       const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, &res);
+        conductorSmoothEval(m_materials.data() + a_materialId, wavelengths, l, v, n, tc, &res);
       else
-        conductorRoughEval(m_materials.data() + a_materialId, l, v, n, tc, alphaTex, &res);
+        conductorRoughEval(m_materials.data() + a_materialId, m_spectra.data(), wavelengths, l, v, n, tc, alphaTex, &res);
     }
       break;
     default:
