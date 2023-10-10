@@ -301,7 +301,8 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
   float3 color = to_float3(*a_accumColor);
-  color = SpectrumToRGB(color, *wavelengths);
+  color = SpectrumToXYZ(color, *wavelengths);
+  color = XYZToRGB(color);
 
   float4 colorRes = to_float4(color, 1.0f);
   //if(x == 511 && (y == 1024-340-1))
