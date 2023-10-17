@@ -5,31 +5,50 @@
 #include "../spectrum.h"
 
 
-static inline void conductorSmoothSampleAndEval(const Material* a_materials, const Spectrum* a_spectra, float3 wavelengths,
-                                                float4 rands, float3 v, float3 n, float2 tc,
-                                                BsdfSample* pRes)
+static inline float3 conductorSampleEtaSpectrum(const Material* a_materials, const Spectrum* a_spectra, const float3 a_wavelengths)
 {
-  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const uint spectralSamples = sizeof(wavelengths.M)/sizeof(wavelengths.M[0]); 
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
   
   float3 eta = float3(a_materials[0].data[CONDUCTOR_ETA]);
-  float3 k   = float3(a_materials[0].data[CONDUCTOR_K]);
 
   const uint eta_specId = a_materials[0].data[CONDUCTOR_ETA_SPECID];
-  const uint k_specId   = a_materials[0].data[CONDUCTOR_K_SPECID];
 
   if(eta_specId < 0xFFFFFFFF)
   {
     for(int i = 0; i < spectralSamples; ++i)
-      eta[i] = a_spectra[eta_specId].Sample(wavelengths[i]);
+      eta[i] = a_spectra[eta_specId].Sample(a_wavelengths[i]);
   }
   
+  return eta;
+}
+
+static inline float3 conductorSampleKSpectrum(const Material* a_materials, const Spectrum* a_spectra, const float3 a_wavelengths)
+{
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+  
+  float3 k = float3(a_materials[0].data[CONDUCTOR_K]);
+
+  const uint k_specId = a_materials[0].data[CONDUCTOR_K_SPECID];
+
   if(k_specId < 0xFFFFFFFF)
   {
     for(int i = 0; i < spectralSamples; ++i)
-      k[i] = a_spectra[k_specId].Sample(wavelengths[i]);
+      k[i] = a_spectra[k_specId].Sample(a_wavelengths[i]);
   }
   
+  return k;
+}
+
+static inline void conductorSmoothSampleAndEval(const Material* a_materials, const Spectrum* a_spectra, const float3 a_wavelengths,
+                                                float4 rands, float3 v, float3 n, float2 tc,
+                                                BsdfSample* pRes)
+{
+  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+
+  float3 eta = conductorSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths);
+  float3 k   = conductorSampleKSpectrum(a_materials, a_spectra, a_wavelengths);
+
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
@@ -77,7 +96,7 @@ static float conductorRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 
 }
 
 
-static inline void conductorRoughSampleAndEval(const Material* a_materials, const Spectrum* a_spectra, float3 wavelengths, 
+static inline void conductorRoughSampleAndEval(const Material* a_materials, const Spectrum* a_spectra, const float3 a_wavelengths, 
                                                float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                                BsdfSample* pRes)
 {
@@ -85,26 +104,10 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
     return;
 
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const uint spectralSamples = sizeof(wavelengths.M)/sizeof(wavelengths.M[0]); 
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
 
-  float3 eta = float3(a_materials[0].data[CONDUCTOR_ETA]);
-  float3 k   = float3(a_materials[0].data[CONDUCTOR_K]);
-
-  const uint eta_specId = a_materials[0].data[CONDUCTOR_ETA_SPECID];
-  const uint k_specId   = a_materials[0].data[CONDUCTOR_K_SPECID];
-
-  if(eta_specId < 0xFFFFFFFF)
-  {
-    for(int i = 0; i < spectralSamples; ++i)
-      eta[i] = a_spectra[eta_specId].Sample(wavelengths[i]);
-  }
-  
-  if(k_specId < 0xFFFFFFFF)
-  {
-    for(int i = 0; i < spectralSamples; ++i)
-      k[i] = a_spectra[k_specId].Sample(wavelengths[i]); 
-  }
-
+  float3 eta = conductorSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths);
+  float3 k   = conductorSampleKSpectrum(a_materials, a_spectra, a_wavelengths);
   // const uint  texId = as_uint(a_materials[0].data[CONDUCTOR_TEXID0]);
 
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
@@ -145,30 +148,15 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
 }
 
 
-static void conductorRoughEval(const Material* a_materials, const Spectrum* a_spectra, float3 wavelengths,
+static void conductorRoughEval(const Material* a_materials, const Spectrum* a_spectra, const float3 a_wavelengths,
                                float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                BsdfEval* pRes)
 {
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const uint spectralSamples = sizeof(wavelengths.M)/sizeof(wavelengths.M[0]); 
-  
-  float3 eta = float3(a_materials[0].data[CONDUCTOR_ETA]);
-  float3 k   = float3(a_materials[0].data[CONDUCTOR_K]);
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
 
-  const uint eta_specId = a_materials[0].data[CONDUCTOR_ETA_SPECID];
-  const uint k_specId   = a_materials[0].data[CONDUCTOR_K_SPECID];
-
-  if(eta_specId < 0xFFFFFFFF)
-  {
-    for(int i = 0; i < spectralSamples; ++i)
-      eta[i] = a_spectra[eta_specId].Sample(wavelengths[i]);
-  }
-  
-  if(k_specId < 0xFFFFFFFF)
-  {
-    for(int i = 0; i < spectralSamples; ++i)
-      k[i] = a_spectra[k_specId].Sample(wavelengths[i]); 
-  }
+  float3 eta = conductorSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths);
+  float3 k   = conductorSampleKSpectrum(a_materials, a_spectra, a_wavelengths);
 
   // const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 

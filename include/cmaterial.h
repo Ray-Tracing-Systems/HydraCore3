@@ -30,6 +30,7 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
 enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
+                      MAT_TYPE_DIFFUSE   = 4,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -97,6 +98,19 @@ static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
 static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
 static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
 static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
+
+
+// Simple diffuse
+// colors
+static constexpr uint DIFFUSE_COLOR             = 0;
+static constexpr uint DIFFUSE_COLOR_LAST_IND    = DIFFUSE_COLOR;
+
+// custom
+static constexpr uint DIFFUSE_ROUGHNESS         = UINT_MAIN_LAST_IND + 0;
+static constexpr uint DIFFUSE_TEXID0            = UINT_MAIN_LAST_IND + 1;
+static constexpr uint DIFFUSE_SPECID            = UINT_MAIN_LAST_IND + 2;
+static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_SPECID;
+
 
 
 
