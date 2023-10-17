@@ -484,11 +484,10 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
   }
 
   auto nodeColor = materialNode.child(L"reflectance");
-  float3 color {};
   if(nodeColor != nullptr)
   {
-    color = hydra_xml::readval3f(nodeColor);
-   
+    mat.colors[DIFFUSE_COLOR] = to_float4(hydra_xml::readval3f(nodeColor), 0);
+
     const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, texturesInfo, texCache, textures);
     
     mat.row0 [0]  = sampler.row0;

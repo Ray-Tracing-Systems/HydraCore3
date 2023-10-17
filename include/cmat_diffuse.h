@@ -6,7 +6,7 @@
 
 static inline float3 sampleDiffuseSpectrum(const Material* a_materials, const Spectrum* a_spectra, float3 a_wavelengths)
 {  
-  float3 reflSpec = float3(a_materials[0].data[DIFFUSE_COLOR]);
+  float3 reflSpec = to_float3(a_materials[0].colors[DIFFUSE_COLOR]);
   if(a_wavelengths.M[0] == 0.0f)
     return reflSpec;
 

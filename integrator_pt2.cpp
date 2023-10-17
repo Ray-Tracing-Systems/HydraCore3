@@ -120,9 +120,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float3 wavelengt
     case MAT_TYPE_DIFFUSE:
     {
       const uint   texId       = as_uint(m_materials[a_materialId].data[DIFFUSE_TEXID0]);
-      const float3 reflectance = to_float3(m_materials[a_materialId].colors[DIFFUSE_COLOR]); 
+      // const float3 reflectance = to_float3(m_materials[a_materialId].colors[DIFFUSE_COLOR]); 
       const float3 texColor    = to_float3(m_textures[texId]->sample(texCoordT));
-      const float3 color       = reflectance * texColor;
+      const float3 color       = texColor;
 
       diffuseSampleAndEval(m_materials.data() + a_materialId, m_spectra.data(), wavelengths, rands, v, n, tc, color, &res);
 
@@ -179,9 +179,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float3 wavelengths, float3 
     case MAT_TYPE_DIFFUSE:
     {
       const uint   texId       = as_uint(m_materials[a_materialId].data[DIFFUSE_TEXID0]);
-      const float3 reflectance = to_float3(m_materials[a_materialId].colors[DIFFUSE_COLOR]); 
+      // const float3 reflectance = to_float3(m_materials[a_materialId].colors[DIFFUSE_COLOR]); 
       const float3 texColor    = to_float3(m_textures[texId]->sample(texCoordT));
-      const float3 color       = reflectance * texColor;
+      const float3 color       = texColor;
 
       diffuseEval(m_materials.data() + a_materialId, m_spectra.data(), wavelengths, l, v, n, tc, color, &res);
 
