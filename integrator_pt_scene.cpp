@@ -412,7 +412,8 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   float alpha_u = 0.0f;
   float alpha_v = 0.0f;
 
-  auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+  //auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+
   auto nodeAlpha = materialNode.child(L"alpha");
   if(nodeAlpha != nullptr)
   {
@@ -447,8 +448,8 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   mat.data[CONDUCTOR_ETA]     = eta; 
   mat.data[CONDUCTOR_K]       = k;   
 
-  mat.data[CONDUCTOR_ETA_SPECID] = etaSpecId;
-  mat.data[CONDUCTOR_K_SPECID]   = kSpecId;
+  mat.data[CONDUCTOR_ETA_SPECID] = as_float(etaSpecId);
+  mat.data[CONDUCTOR_K_SPECID]   = as_float(kSpecId);
 
   return mat;
 }
@@ -495,7 +496,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
     mat.data[DIFFUSE_TEXID0] = as_float(texID);
 
     auto specId = GetSpectrumIdFromNode(nodeColor);
-    mat.data[DIFFUSE_SPECID] = specId;
+    mat.data[DIFFUSE_SPECID] = as_float(specId);
   }
 
   return mat;
@@ -554,38 +555,40 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   std::vector<SpectrumInfo> spectraInfo;
   spectraInfo.reserve(100);
-  for(auto specNode : scene.SpectraNodes())
-  {
-    auto spec_id   = specNode.attribute(L"id").as_uint();
-    auto spec_path = std::filesystem::path(sceneFolder);
-    spec_path.append(specNode.attribute(L"loc").as_string());
+  if(m_spectral_mode)
+  {  
+    for(auto specNode : scene.SpectraNodes())
+    {
+      auto spec_id   = specNode.attribute(L"id").as_uint();
+      auto spec_path = std::filesystem::path(sceneFolder);
+      spec_path.append(specNode.attribute(L"loc").as_string());
 
-    m_spectra.push_back(LoadSPDFromFile(spec_path, spec_id));
-    
-    // we expect dense, sorted ids for now
-    assert(m_spectra[spec_id].id == spec_id);
+      m_spectra.push_back(LoadSPDFromFile(spec_path, spec_id));
+      
+      // we expect dense, sorted ids for now
+      assert(m_spectra[spec_id].id == spec_id);
+    }
+
+    // if no spectra are loaded add uniform 1.0 spectrum
+    if(spectraInfo.empty())
+    {
+      Spectrum uniform1;
+      uniform1.id = 0;
+      uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
+      uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
+      
+      m_spectra.push_back(std::move(uniform1));
+    }
   }
-
-  // if no spectra are loaded add uniform 1.0 spectrum
-  if(spectraInfo.empty())
-  {
-    Spectrum uniform1;
-    uniform1.id = 0;
-    uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
-    uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
-    
-    m_spectra.push_back(std::move(uniform1));
-  }
-
 
   //// (1) load materials
   //
   m_materials.resize(0);
   m_materials.reserve(100);
 
-  static const std::wstring hydraOldMatTypeStr {L"hydra_material"};
+  static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
   static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
-  static const std::wstring simpleDiffuseMatTypeStr {L"diffuse"};
+  static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 
   for(auto materialNode : scene.MaterialNodes())
   {

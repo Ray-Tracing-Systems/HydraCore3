@@ -45,8 +45,16 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  float u = rndFloat1_Pseudo(&genLocal);  
-  *wavelengths   = SampleWavelengths(u);
+  if(m_spectral_mode)
+  {
+    float u = rndFloat1_Pseudo(&genLocal);
+    *wavelengths = SampleWavelengths(u);
+  }
+  else
+  {
+    *wavelengths = {0.0f, 0.0f, 0.0f};
+  }
+
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
   *gen           = genLocal;
@@ -301,8 +309,12 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
   float3 color = to_float3(*a_accumColor);
-  color = SpectrumToXYZ(color, *wavelengths);
-  color = XYZToRGB(color);
+
+  if(m_spectral_mode) // TODO: spectral framebuffer
+  {
+    color = SpectrumToXYZ(color, *wavelengths);
+    color = XYZToRGB(color);
+  }
 
   float4 colorRes = to_float4(color, 1.0f);
   //if(x == 511 && (y == 1024-340-1))
