@@ -117,6 +117,24 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
+float3 Integrator::GetLightSourceIntensity(uint a_lightId, const float3* a_wavelengths)
+{
+  float3 lightColor = to_float3(m_lights[a_lightId].intensity);
+  if(!m_spectral_mode)
+    return lightColor;
+
+  const uint specId = as_uint(m_lights[a_lightId].ids.x);
+
+  if(specId < 0xFFFFFFFF)
+  {
+    lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
+    // const uint spectralSamples = uint(sizeof(a_wavelengths->M) / sizeof(a_wavelengths->M[0])); 
+    // for(uint i = 0; i < spectralSamples; ++i)
+    //   lightColor[i] = m_spectra[specId].Sample(a_wavelengths->M[i]);
+  }
+  return lightColor;
+}
+
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                           const float3* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, 
@@ -155,9 +173,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
     const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     
-    float  lgtPdfW          = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
-    float misWeight         = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
-    const bool  isDirect    = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
+    float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
+    float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
+    const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
     
     if(isDirect)
     {
@@ -165,7 +183,8 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       lgtPdfW   = 1.0f;
     }
     
-    *out_shadeColor = to_float4((to_float3(m_lights[lightId].intensity)*bsdfV.val/lgtPdfW)*cosThetaOut*misWeight, 0.0f);
+    const float3 lightColor = GetLightSourceIntensity(lightId, wavelengths);
+    *out_shadeColor = to_float4((lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight, 0.0f);
   }
   else
     *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -203,11 +222,21 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   //
   if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
   {
-    const uint texId       = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+    const uint texId       = as_uint(m_materials[matId].data[EMISSION_TEXID0]);
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
+    float3 lightColor      = to_float3(m_materials[matId].colors[EMISSION_COLOR]);
 
-    const float3 lightIntensity = to_float3(m_materials[matId].colors[GLTF_COLOR_BASE])*texColor;
+    if(m_spectral_mode)
+    {
+      const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
+      if(specId < 0xFFFFFFFF)
+      {
+        lightColor = SampleSpectrum(m_spectra.data() + specId, *wavelengths);
+      }
+    }
+
+    const float3 lightIntensity = lightColor * texColor;
     const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
     
     float lightCos = 1.0f;

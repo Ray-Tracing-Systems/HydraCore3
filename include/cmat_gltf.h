@@ -48,8 +48,8 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
   {
     pdfSelect         *= alpha;
     const float  VdotH = dot(v,normalize(v + ggxDir));
-    pRes->dir    = ggxDir;
-    pRes->val        = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
+    pRes->dir          = ggxDir;
+    pRes->val          = ggxVal * alpha * hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); //TODO: disable fresnel here for mirrors
     pRes->pdf          = ggxPdf;
     pRes->flags        = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   }

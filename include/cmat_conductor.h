@@ -15,9 +15,10 @@ static inline float3 conductorSampleEtaSpectrum(const Material* a_materials, con
 
   if(eta_specId < 0xFFFFFFFF)
   {
-    const uint spectralSamples = uint(sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0])); 
-    for(uint i = 0; i < spectralSamples; ++i)
-      eta[i] = a_spectra[eta_specId].Sample(a_wavelengths[i]);
+    eta = SampleSpectrum(a_spectra + eta_specId, a_wavelengths);
+    // const uint spectralSamples = uint(sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0])); 
+    // for(uint i = 0; i < spectralSamples; ++i)
+    //   eta[i] = a_spectra[eta_specId].Sample(a_wavelengths[i]);
   }
   
   return eta;
@@ -33,9 +34,10 @@ static inline float3 conductorSampleKSpectrum(const Material* a_materials, const
 
   if(k_specId < 0xFFFFFFFF)
   {
-    const uint spectralSamples = uint(sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0])); 
-    for(uint i = 0; i < spectralSamples; ++i)
-      k[i] = a_spectra[k_specId].Sample(a_wavelengths[i]);
+    k = SampleSpectrum(a_spectra + k_specId, a_wavelengths);
+    // const uint spectralSamples = uint(sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0])); 
+    // for(uint i = 0; i < spectralSamples; ++i)
+    //   k[i] = a_spectra[k_specId].Sample(a_wavelengths[i]);
   }
   
   return k;

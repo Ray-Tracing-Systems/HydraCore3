@@ -14,9 +14,10 @@ static inline float3 sampleDiffuseSpectrum(const Material* a_materials, const Sp
 
   if(specId < 0xFFFFFFFF)
   {
-    const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
-    for(uint i = 0; i < spectralSamples; ++i)
-      reflSpec[i] = a_spectra[specId].Sample(a_wavelengths[i]);
+    reflSpec = SampleSpectrum(a_spectra + specId, a_wavelengths);
+    // const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
+    // for(uint i = 0; i < spectralSamples; ++i)
+    //   reflSpec[i] = a_spectra[specId].Sample(a_wavelengths[i]);
   }
 
   return reflSpec;

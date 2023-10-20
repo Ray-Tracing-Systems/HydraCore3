@@ -200,6 +200,31 @@ struct SpectrumInfo
   uint32_t id;
 };
 
+std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
+{
+  std::optional<Spectrum> spec;
+  auto specNode = a_node.child(L"spectrum");
+  if(specNode != nullptr)
+  {
+    uint32_t spec_id = specNode.attribute(L"id").as_uint();
+    spec = LoadSPDFromFile(spectraInfo[spec_id].path, spec_id);
+  }
+
+  return spec;
+}
+
+uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
+{
+  uint32_t spec_id = 0xFFFFFFFF;
+  auto specNode = a_node.child(L"spectrum");
+  if(specNode != nullptr)
+  {
+    spec_id = specNode.attribute(L"id").as_uint();
+  }
+
+  return spec_id;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,23 +265,25 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   //
   float4 color(0.0f, 0.0f, 0.0f, 0.0f);
 
-    if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
-    {
-      auto nodeEmissColor          = nodeEmiss.child(L"color");
-      color                        = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
+  if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
+  {
+    auto nodeEmissColor = nodeEmiss.child(L"color");
+    color               = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, texturesInfo, texCache, textures);
     
     mat.row0 [0]  = emissiveSampler.row0;
     mat.row1 [0]  = emissiveSampler.row1;
-    mat.data[GLTF_UINT_TEXID0] = as_float(texID);
+    mat.data[EMISSION_TEXID0] = as_float(texID);
     
-    mat.colors[GLTF_COLOR_BASE] = color;
+    mat.colors[EMISSION_COLOR] = color;
     if(materialNode.attribute(L"light_id") == nullptr)
       mat.data[UINT_LIGHTID] = as_float(uint(-1));
     else
       mat.data[UINT_LIGHTID] = as_float(uint(materialNode.attribute(L"light_id").as_int())); // for correct process of "-1"
-    
+
+    auto specId = GetSpectrumIdFromNode(nodeEmissColor);  
+    mat.data[EMISSION_SPECID0] = as_float(specId);
     mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
   }
 
@@ -368,34 +395,6 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 
   return mat;
 }
-
-
-
-std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
-{
-  std::optional<Spectrum> spec;
-  auto specNode = a_node.child(L"spectrum");
-  if(specNode != nullptr)
-  {
-    uint32_t spec_id = specNode.attribute(L"id").as_uint();
-    spec = LoadSPDFromFile(spectraInfo[spec_id].path, spec_id);
-  }
-
-  return spec;
-}
-
-uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
-{
-  uint32_t spec_id = 0xFFFFFFFF;
-  auto specNode = a_node.child(L"spectrum");
-  if(specNode != nullptr)
-  {
-    spec_id = specNode.attribute(L"id").as_uint();
-  }
-
-  return spec_id;
-}
-
 
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
@@ -640,23 +639,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
     auto matrix  = lightInst.matrix;
 
+    auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
+
+    LightSource lightSource{};
+    lightSource.ids.x = as_float(lightSpecId);
     if(ltype == std::wstring(L"sky"))
     {
       m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
     }
     else if(ltype == std::wstring(L"directional"))
     {
-      LightSource lightSource{};
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       lightSource.intensity = to_float4(color*power,0);
       lightSource.geomType  = LIGHT_GEOM_DIRECT;
-      m_lights.push_back(lightSource);
     }
     else if(shape == L"rect" || shape == L"disk")
     {
-      LightSource lightSource{};
-
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       lightSource.intensity = to_float4(color*power,0);
@@ -683,8 +682,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       else
         lightSource.pdfA   = 1.0f / (4.0f * lightSource.size.x * lightSource.size.y * scale.x * scale.z);
-
-      m_lights.push_back(lightSource);
     }
     else if (shape == L"sphere")
     {
@@ -703,19 +700,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         std::cout << "[Integrator::LoadScene]: non uniform scale for spherical light instance matrix is not supported: (" << scale.x << ", " << scale.y << ", " << scale.z << ")" << std::endl; 
       }
 
-      LightSource lightSource{};
-      {
-        lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
-        lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
-        lightSource.intensity = to_float4(color*power,0);
-        lightSource.geomType  = LIGHT_GEOM_SPHERE;
-  
-        lightSource.matrix    = float4x4{};
-        lightSource.size      = float2(radius, radius);
-        lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
-      }
-      m_lights.push_back(lightSource);
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
+      lightSource.intensity = to_float4(color*power,0);
+      lightSource.geomType  = LIGHT_GEOM_SPHERE;
+
+      lightSource.matrix    = float4x4{};
+      lightSource.size      = float2(radius, radius);
+      lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
     }
+    m_lights.push_back(lightSource);
   }
 
   //// (2) load meshes

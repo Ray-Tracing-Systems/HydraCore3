@@ -24,6 +24,16 @@ struct Spectrum
   uint32_t id = 0;
 };
 
+static inline float3 SampleSpectrum(const Spectrum* a_spectrum, LambdaSample a_wavelengths)
+{
+  float3 sample {};
+  const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
+  for(uint i = 0; i < spectralSamples; ++i)
+    sample[i] = a_spectrum->Sample(a_wavelengths[i]);
+  
+  return sample;
+}
+
 LambdaSample SampleWavelengths(float u, float a = LAMBDA_MIN, float b = LAMBDA_MAX);
 float3 SpectrumToXYZ(float3 spec, const LambdaSample &lambda, float lambda_min = LAMBDA_MIN, float lambda_max = LAMBDA_MAX);
 
