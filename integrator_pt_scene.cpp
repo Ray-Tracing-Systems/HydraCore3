@@ -418,6 +418,74 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   return mat;
 }
 
+Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                                        std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                        std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.colors[FILM_COLOR]       = float4(1, 1, 1, 0);
+  mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_FILM);  
+  mat.data[UINT_LIGHTID]       = as_float(uint(-1));
+
+  auto nodeBSDF = materialNode.child(L"bsdf");
+
+  float alpha_u = 0.0f;
+  float alpha_v = 0.0f;
+
+  auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+  auto nodeAlpha = materialNode.child(L"alpha");
+  if(nodeAlpha != nullptr)
+  {
+    alpha_u = nodeAlpha.attribute(L"val").as_float();
+    alpha_v = alpha_u;
+
+    HydraSampler alphaSampler = ReadSamplerFromColorNode(nodeAlpha);
+    auto p = texCache.find(alphaSampler);
+    uint32_t texId = 0;
+    if(p == texCache.end())
+    {
+      texCache[alphaSampler] = uint(textures.size());
+      texId  = nodeAlpha.child(L"texture").attribute(L"id").as_uint();
+      textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], alphaSampler.sampler));
+      p = texCache.find(alphaSampler);
+    }
+
+    if(texId != 0)
+      alpha_u = alpha_v = 1.0f;
+    
+    mat.row0 [0]  = alphaSampler.row0;
+    mat.row1 [0]  = alphaSampler.row1;
+    mat.data[FILM_TEXID0] = as_float(p->second);
+  }
+  else
+  {
+    auto nodeAlphaU = materialNode.child(L"alpha_u");
+    auto nodeAlphaV = materialNode.child(L"alpha_v");
+
+    alpha_u = nodeAlphaU.attribute(L"val").as_float();
+    alpha_v = nodeAlphaV.attribute(L"val").as_float();
+  }
+  
+  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
+  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
+
+  auto base_eta  = materialNode.child(L"base_eta").attribute(L"val").as_float();
+  auto base_k    = materialNode.child(L"base_k").attribute(L"val").as_float();
+
+  auto thickness = materialNode.child(L"thickness").attribute(L"val").as_float();
+
+  mat.data[FILM_ROUGH_U]     = alpha_u;
+  mat.data[FILM_ROUGH_V]     = alpha_v; 
+  mat.data[FILM_ETA]         = eta; 
+  mat.data[FILM_K]           = k;   
+  mat.data[FILM_BASE_ETA]    = base_eta; 
+  mat.data[FILM_BASE_K]      = base_k;  
+  mat.data[FILM_THICKNESS]   = thickness;
+
+  return mat;
+}
+
 bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 { 
   std::string scenePathStr(a_scehePath);
@@ -475,6 +543,7 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
 
   const std::wstring hydraOldMatTypeStr {L"hydra_material"};
   const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
+  const std::wstring thinFilmMatTypeStr {L"thin_film"};
 
   for(auto materialNode : scene.MaterialNodes())
   {
@@ -487,6 +556,10 @@ bool Integrator::LoadScene(const char* a_scehePath, const char* a_sncDir)
     else if(mat_type == roughConductorMatTypeStr)
     {
       mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+    }
+    else if(mat_type == thinFilmMatTypeStr)
+    {
+      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures);
     }
     m_materials.push_back(mat);
   }

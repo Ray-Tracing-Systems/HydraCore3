@@ -1,0 +1,4 @@
+/home/roman/Desktop/hydra3/HydraCore3/build/CMakeFiles/miniz.dir
+/home/roman/Desktop/hydra3/HydraCore3/build/CMakeFiles/hydra.dir
+/home/roman/Desktop/hydra3/HydraCore3/build/CMakeFiles/edit_cache.dir
+/home/roman/Desktop/hydra3/HydraCore3/build/CMakeFiles/rebuild_cache.dir

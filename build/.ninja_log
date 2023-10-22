@@ -1,0 +1,23 @@
+# ninja log v5
+1	3325	1698015049396125595	CMakeFiles/miniz.dir/external/tinyexr/miniz.c.o	20daa8f11dfaa7d9
+3325	3372	1698015049440127083	/home/roman/Desktop/hydra3/HydraCore3/bin-release/libminiz.a	cb59d7e22a4fed0d
+4	2895	1698015048964110993	CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o	a90f8257b569f56c
+5008	5489	1698015051552198348	/home/roman/Desktop/hydra3/HydraCore3/bin-release/hydra	9aafd440ff51bb20
+0	25	1698013072304214931	build.ninja	f6d75af4e9bd47fb
+3	1406	1698012690289576851	CMakeFiles/hydra.dir/spectrum.cpp.o	cd28603ad317704a
+4	1432	1698015047504061536	CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o	3adb92499240e501
+2	2333	1698015048404092034	CMakeFiles/hydra.dir/integrator_pt2.cpp.o	3e716bd267c5d627
+2	1426	1698015047496061265	CMakeFiles/hydra.dir/integrator_pt_host.cpp.o	ed25fc508ef1037f
+3	1034	1698015047104047971	CMakeFiles/hydra.dir/utils.cpp.o	85010ff067a8c4f4
+1	1614	1698015047684067640	CMakeFiles/hydra.dir/integrator_rt.cpp.o	de300dbc33d0e022
+3	808	1698015046880040367	CMakeFiles/hydra.dir/mi_materials.cpp.o	cf8dd8bbcc43b980
+4	2983	1698015049052113969	CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o	36984f45605b7572
+3	1233	1698015047304054753	CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o	24840e45d254907b
+3	3898	1698015049968144928	CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o	856bcbbb488ae040
+2	1879	1698015047948076592	CMakeFiles/hydra.dir/integrator_pt1.cpp.o	a71729738d634a81
+1	2284	1698015048356090409	CMakeFiles/hydra.dir/main.cpp.o	937174d59f54343e
+3	5008	1698015051080182448	CMakeFiles/hydra.dir/imageutils.cpp.o	48b86852a5a20932
+808	1977	1698015048048079981	CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o	b35b6256c30ea43d
+0	6	0	clean	5d67358ef295f001
+2	1058	1698015469150458744	CMakeFiles/hydra.dir/integrator_pt2.cpp.o	3e716bd267c5d627
+1058	1560	1698015469642467410	/home/roman/Desktop/hydra3/HydraCore3/bin-release/hydra	9aafd440ff51bb20

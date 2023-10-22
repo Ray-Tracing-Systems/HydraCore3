@@ -30,6 +30,7 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
 enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
+                      MAT_TYPE_FILM      = 4,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -95,6 +96,22 @@ static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
 static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
 static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
 static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_TEXID0;
+
+// Conductor
+// colors
+static constexpr uint FILM_COLOR             = 0;
+static constexpr uint FILM_COLOR_LAST_IND    = FILM_COLOR;
+
+// custom
+static constexpr uint FILM_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
+static constexpr uint FILM_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
+static constexpr uint FILM_ETA               = UINT_MAIN_LAST_IND + 2;
+static constexpr uint FILM_K                 = UINT_MAIN_LAST_IND + 3;
+static constexpr uint FILM_BASE_ETA          = UINT_MAIN_LAST_IND + 4;
+static constexpr uint FILM_BASE_K            = UINT_MAIN_LAST_IND + 5;
+static constexpr uint FILM_THICKNESS         = UINT_MAIN_LAST_IND + 6;
+static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 7;
+static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
 
 
 
