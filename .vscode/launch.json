@@ -62,8 +62,8 @@
                  //"-in", "../HydraAPI-tests/tests_f/test_224/statex_00001.xml",
                  //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
                  "-integrator", "mispt", 
-                 "-width", "128",
-                 "-height", "128",
+                 "-width", "512",
+                 "-height", "512",
                  "-spp", "2048", 
                  //"-out", "out_gpu_224.bmp"
                  "-out", "../out/pic1.bmp"],

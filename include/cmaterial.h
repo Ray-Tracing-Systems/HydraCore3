@@ -517,4 +517,77 @@ static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float r
 }
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <iostream>
+
+enum Polarization
+{
+  S = 0,
+  P = 1
+};
+
+static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, complex etaI, complex etaT, Polarization polarization)
+{
+  if (polarization == S)
+  {
+    return (etaI * cosThetaI - etaT * cosThetaT) / (etaI * cosThetaI + etaT * cosThetaT);
+  }
+  else if (polarization == P)
+  {
+    return (etaT * cosThetaI - etaI * cosThetaT) / (etaT * cosThetaI + etaI * cosThetaT);
+  }
+  return 1.0f;
+}
+
+static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, complex etaI, complex etaT, Polarization polarization)
+{
+  if (polarization == S)
+  {
+    return (2 * etaI * cosThetaI) / (etaI * cosThetaI + etaT * cosThetaT);
+  }
+  else if (polarization == P)
+  {
+    return (2 * etaI * cosThetaI) / (etaT * cosThetaI + etaI * cosThetaT);
+  }
+  return 0.f;
+}
+
+static inline complex filmPhaseDiff(complex cosTheta, complex eta, float thickness, float lambda)
+{
+  static const float pi = 3.14159;
+  return 4 * pi * eta * cosTheta * thickness / lambda;
+}
+
+// I - income medium
+// F - film layer
+// T - outcome medium
+static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
+{
+  //std::cout << cosThetaI << std::endl;
+  complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaF = sinThetaI * (etaI * etaI) / (etaF * etaF);
+  complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
+  complex sinThetaT = sinThetaF * (etaF * etaF) / (etaT * etaT);
+  complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
+  
+  complex phaseDiff = filmPhaseDiff(cosThetaF, etaF, thickness, lambda);
+
+  float result = 0;
+  Polarization polarization[2] = {S, P};
+  for (int p = 0; p <= 1; ++p)
+  {
+    complex FrReflI   = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrReflF   = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+
+    complex FrRefl    = FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
+    FrRefl            = (FrReflI + FrRefl) / (1 + FrReflI * FrRefl);
+    result += complex_norm(FrRefl);
+  }
+
+  return result / 2;
+}
+
+
 #endif

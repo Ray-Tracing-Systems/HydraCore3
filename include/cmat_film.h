@@ -7,19 +7,26 @@
 static inline void filmSmoothSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[FILM_ETA];
-  const float k      = a_materials[0].data[FILM_K];
+  const uint  cflags      = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const float eta         = a_materials[0].data[FILM_ETA];
+  const float k           = a_materials[0].data[FILM_K];
+  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
+  const float base_k      = a_materials[0].data[FILM_BASE_K];
+  const float thickness   = a_materials[0].data[FILM_THICKNESS];
   
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
   float  pdf              = 1.0f;
-  float  val              = FrComplexConductor(cosThetaOut, complex{eta, k});
+  float3 val              = {
+    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
+    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
+    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
+  };
   
-  val = (cosThetaOut <= 1e-6f) ? 0.0f : (val / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
+  val = (cosThetaOut <= 1e-6f) ? float3(0.0f) : (val / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
 
-  pRes->val = float3(val, val, val); 
+  pRes->val = val; 
   pRes->dir = dir;
   pRes->pdf = pdf;
   pRes->flags = RAY_EVENT_S;
@@ -34,7 +41,7 @@ static void filmSmoothEval(const Material* a_materials, float3 l, float3 v, floa
 }
 
 
-static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior)
+static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior, complex ior2, float thickness, float lambda)
 {
   if(wo.z * wi.z < 0) // not in the same hemisphere
   {
@@ -46,7 +53,7 @@ static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
 
-  float F = FrComplexConductor(std::abs(dot(wo, wm)), ior);
+  float F = FrFilmRefl(std::abs(dot(wo, wm)), complex(1.0f), ior, ior2, thickness, lambda);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
@@ -61,8 +68,11 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, float4 ra
     return;
 
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[FILM_ETA];
-  const float k      = a_materials[0].data[FILM_K];
+  const float eta         = a_materials[0].data[FILM_ETA];
+  const float k           = a_materials[0].data[FILM_K];
+  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
+  const float base_k      = a_materials[0].data[FILM_BASE_K];
+  const float thickness   = a_materials[0].data[FILM_THICKNESS];
 
   // const uint  texId = as_uint(a_materials[0].data[FILM_TEXID0]);
 
@@ -91,9 +101,13 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, float4 ra
     return;
   }
 
-  float val = filmRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
+  float3 val = {
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
+  };
 
-  pRes->val   = float3(val, val, val); 
+  pRes->val   = val; 
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
@@ -105,8 +119,11 @@ static void filmRoughEval(const Material* a_materials, float3 l, float3 v, float
                                 BsdfEval* pRes)
 {
   const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[FILM_ETA];
-  const float k      = a_materials[0].data[FILM_K];
+  const float eta         = a_materials[0].data[FILM_ETA];
+  const float k           = a_materials[0].data[FILM_K];
+  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
+  const float base_k      = a_materials[0].data[FILM_BASE_K];
+  const float thickness   = a_materials[0].data[FILM_THICKNESS];
   // const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
                               min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
@@ -127,10 +144,14 @@ static void filmRoughEval(const Material* a_materials, float3 l, float3 v, float
 
   wm = normalize(wm);
 
-  float val = filmRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
+  float3 val = {
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
+    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
+  };
 
 
-  pRes->val = float3(val, val, val);
+  pRes->val = val;
 
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
