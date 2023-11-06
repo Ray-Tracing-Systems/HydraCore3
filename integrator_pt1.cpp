@@ -278,8 +278,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     return;
   }
   
-  const float4 uv         = rndFloat4_Pseudo(a_gen);
-  const BsdfSample matSam = MaterialSampleAndEval(matId, lambda, uv, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
   const float3 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 

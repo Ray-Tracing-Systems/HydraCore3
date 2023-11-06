@@ -31,6 +31,7 @@ enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
                       MAT_TYPE_DIFFUSE   = 4,
+                      MAT_TYPE_BLEND     = 5,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -122,6 +123,17 @@ static constexpr uint DIFFUSE_TEXID0            = UINT_MAIN_LAST_IND + 1;
 static constexpr uint DIFFUSE_SPECID            = UINT_MAIN_LAST_IND + 2;
 static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_SPECID;
 
+
+// Blend material
+// colors
+static constexpr uint BLEND_COLOR_LAST_IND = 0;
+
+// custom
+static constexpr uint BLEND_WEIGHT          = UINT_MAIN_LAST_IND + 0;
+static constexpr uint BLEND_MAT_ID_1        = UINT_MAIN_LAST_IND + 1;
+static constexpr uint BLEND_MAT_ID_2        = UINT_MAIN_LAST_IND + 2;
+static constexpr uint BLEND_TEXID0          = UINT_MAIN_LAST_IND + 3;
+static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_TEXID0;
 
 
 

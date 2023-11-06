@@ -501,6 +501,35 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
 }
 
 
+Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                           std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                           std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_BLEND);  
+  mat.data[UINT_LIGHTID]      = as_float(uint(-1));
+  mat.data[BLEND_WEIGHT]      = 1.0f;
+  mat.data[BLEND_TEXID0]      = 0;
+
+  mat.data[BLEND_MAT_ID_1]    = as_float(materialNode.child(L"bsdf_1").attribute(L"id").as_uint());
+  mat.data[BLEND_MAT_ID_2]    = as_float(materialNode.child(L"bsdf_2").attribute(L"id").as_uint());
+
+  auto nodeWeight = materialNode.child(L"weight");
+  if(nodeWeight != nullptr)
+  {
+    mat.data[BLEND_WEIGHT] = (hydra_xml::readval1f(nodeWeight), 1.0f);
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeWeight, texturesInfo, texCache, textures);
+    
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[BLEND_TEXID0] = as_float(texID);
+  }
+
+  return mat;
+}
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   std::string scenePathStr(a_scenePath);
@@ -587,6 +616,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
   static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
   static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
+  static const std::wstring blendMatTypeStr          {L"blend"};
 
   for(auto materialNode : scene.MaterialNodes())
   {
@@ -603,6 +633,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
       mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures);
+    }
+    else if(mat_type == blendMatTypeStr)
+    {
+      mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
     }
 
     m_materials.push_back(mat);
