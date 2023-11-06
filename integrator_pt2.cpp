@@ -95,11 +95,13 @@ BsdfSample Integrator::MaterialBlendSampleAndEval(uint a_materialId, float3 wave
   {
     res = MaterialSampleAndEval(matId2, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
     res.pdf *= weight;
+    res.val *= weight;
   }
   else
   {
     res = MaterialSampleAndEval(matId1, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
     res.pdf *= 1.0f - weight;
+    res.val *= 1.0f - weight;
   }
 
 
