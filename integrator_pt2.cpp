@@ -93,12 +93,12 @@ BsdfSample Integrator::MaterialBlendSampleAndEval(uint a_materialId, float3 wave
   const float select = rndFloat1_Pseudo(a_gen);
   if(select < weight)
   {
-    res = MaterialSampleAndEval(matId1, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
+    res = MaterialSampleAndEval(matId2, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
     res.pdf *= weight;
   }
   else
   {
-    res = MaterialSampleAndEval(matId2, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
+    res = MaterialSampleAndEval(matId1, wavelengths, a_gen, v, n, tc, a_misPrev, a_currRayFlags);
     res.pdf *= 1.0f - weight;
   }
 
@@ -124,8 +124,8 @@ BsdfEval Integrator::MaterialBlendEval(uint a_materialId, float3 wavelengths, fl
 
   BsdfEval res1 = MaterialEval(matId1, wavelengths, l, v, n, tc);
   BsdfEval res2 = MaterialEval(matId2, wavelengths, l, v, n, tc);
-  res.pdf = weight * res1.pdf + (1.0f - weight) * res2.pdf;
-  res.val = weight * res1.val + (1.0f - weight) * res2.val;
+  res.pdf = weight * res2.pdf + (1.0f - weight) * res1.pdf;
+  res.val = weight * res2.val + (1.0f - weight) * res1.val;
 
   return res;
 }
