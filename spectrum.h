@@ -4,15 +4,11 @@
 #include <vector>
 #include <filesystem>
 #include "LiteMath.h"
+#include "include/cglobals.h"
 #ifndef __OPENCL_VERSION__
 using namespace LiteMath;
 #endif
 
-using LambdaSample = float3;
-
-// visible spectrum
-static constexpr float LAMBDA_MIN = 360.0f;
-static constexpr float LAMBDA_MAX = 830.0f;
 
 struct Spectrum
 {
@@ -24,9 +20,9 @@ struct Spectrum
   uint32_t id = 0;
 };
 
-static inline float3 SampleSpectrum(const Spectrum* a_spectrum, LambdaSample a_wavelengths)
+static inline float4 SampleSpectrum(const Spectrum* a_spectrum, float4 a_wavelengths)
 {
-  float3 sample {};
+  float4 sample {};
   const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
   for(uint i = 0; i < spectralSamples; ++i)
     sample[i] = a_spectrum->Sample(a_wavelengths[i]);
@@ -34,8 +30,8 @@ static inline float3 SampleSpectrum(const Spectrum* a_spectrum, LambdaSample a_w
   return sample;
 }
 
-LambdaSample SampleWavelengths(float u, float a = LAMBDA_MIN, float b = LAMBDA_MAX);
-float3 SpectrumToXYZ(float3 spec, const LambdaSample &lambda, float lambda_min = LAMBDA_MIN, float lambda_max = LAMBDA_MAX);
+float4 SampleWavelengths(float u, float a = LAMBDA_MIN, float b = LAMBDA_MAX);
+float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lambda_min = LAMBDA_MIN, float lambda_max = LAMBDA_MAX);
 
 template <typename P>
 inline size_t BinarySearch(size_t sz, const P &pred) 
@@ -65,8 +61,8 @@ inline LiteMath::float3 XYZToRGB(const LiteMath::float3 xyz)
   return rgb;
 }
 
-static constexpr float CIE_Y_integral = 106.856895;
-constexpr int nCIESamples = 471;
+static constexpr float CIE_Y_integral = 106.856895f;
+constexpr uint32_t nCIESamples = 471;
 const float CIE_lambda[nCIESamples] = {
     360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376,
     377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393,
@@ -97,7 +93,7 @@ const float CIE_lambda[nCIESamples] = {
     802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813, 814, 815, 816, 817, 818,
     819, 820, 821, 822, 823, 824, 825, 826, 827, 828, 829, 830};
 
-    const float CIE_X[nCIESamples] = {
+const float CIE_X[nCIESamples] = {
     0.0001299000f,   0.0001458470f,   0.0001638021f,   0.0001840037f,   0.0002066902f,
     0.0002321000f,   0.0002607280f,   0.0002930750f,   0.0003293880f,   0.0003699140f,
     0.0004149000f,   0.0004641587f,   0.0005189860f,   0.0005818540f,   0.0006552347f,

@@ -5,12 +5,12 @@
 
 
 static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
-  float3 n, float2 tc, float3 color, BsdfSample* pRes)
+  float3 n, float2 tc, float4 color, BsdfSample* pRes)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-  const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float3 specular   = to_float3(a_materials[0].colors[GLTF_COLOR_METAL]); 
-  const float3 coat       = to_float3(a_materials[0].colors[GLTF_COLOR_COAT]);  
+  const uint           cflags   = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const float4 specular = a_materials[0].colors[GLTF_COLOR_METAL]; 
+  const float4 coat     = a_materials[0].colors[GLTF_COLOR_COAT];  
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
   float        alpha      = a_materials[0].data[GLTF_FLOAT_ALPHA];                 
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
@@ -107,11 +107,11 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 
 
 static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
-                     float3 color, BsdfEval* res)
+                     float4 color, BsdfEval* res)
 {
-  const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float3 specular   = to_float3(a_materials[0].colors[GLTF_COLOR_METAL]);
-  const float3 coat       = to_float3(a_materials[0].colors[GLTF_COLOR_COAT]);
+  const uint           cflags   = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const float4 specular = a_materials[0].colors[GLTF_COLOR_METAL];
+  const float4 coat     = a_materials[0].colors[GLTF_COLOR_COAT];
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
         float  alpha      = a_materials[0].data[GLTF_FLOAT_ALPHA];
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
@@ -165,12 +165,12 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
     }
   }
 
-  const float3 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
-  const float3 specularColor = ggxVal*fConductor;                                        // eval metal specular component
+  const float4 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
+  const float4 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
   const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
-  const float3 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
+  const float4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
 
-  res->val = alpha*specularColor + (1.0f - alpha)*dielectricVal; // (3) accumulate final color and pdf
-  res->pdf = alpha*ggxPdf        + (1.0f - alpha)*dielectricPdf; // (3) accumulate final color and pdf
+  res->val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
+  res->pdf = alpha * ggxPdf        + (1.0f - alpha) * dielectricPdf; // (3) accumulate final color and pdf
 }

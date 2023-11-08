@@ -23,11 +23,11 @@ void Integrator::InitRandomGens(int a_maxThreads)
 
 
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar, float3* wavelengths, 
+                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                    float4* accumColor,    float4* accumuThoroughput,
                                    RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
-  *accumColor        = make_float4(0,0,0,1);
+  *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
   RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
@@ -52,7 +52,11 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   }
   else
   {
-    *wavelengths = {0.0f, 0.0f, 0.0f};
+    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
+    for (uint32_t i = 0; i < sample_sz; ++i) 
+    {
+      (*wavelengths).M[i] = 0.0f;
+    }
   }
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
@@ -117,9 +121,9 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-float3 Integrator::GetLightSourceIntensity(uint a_lightId, const float3* a_wavelengths)
+float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths)
 {
-  float3 lightColor = to_float3(m_lights[a_lightId].intensity);
+  float4 lightColor = m_lights[a_lightId].intensity;
   if(!m_spectral_mode)
     return lightColor;
 
@@ -128,16 +132,13 @@ float3 Integrator::GetLightSourceIntensity(uint a_lightId, const float3* a_wavel
   if(specId < 0xFFFFFFFF)
   {
     lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-    // const uint spectralSamples = uint(sizeof(a_wavelengths->M) / sizeof(a_wavelengths->M[0])); 
-    // for(uint i = 0; i < spectralSamples; ++i)
-    //   lightColor[i] = m_spectra[specId].Sample(a_wavelengths->M[i]);
   }
   return lightColor;
 }
 
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
-                                          const float3* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, 
+                                          const float4* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, 
                                           const uint* rayFlags,  
                                           RandomGen* a_gen, float4* out_shadeColor)
 {
@@ -150,7 +151,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   
   const float4 data1  = *in_hitPart1;
   const float4 data2  = *in_hitPart2;
-  const float3 lambda = *wavelengths;
+  const float4 lambda = *wavelengths;
 
   SurfaceHit hit;
   hit.pos  = to_float3(data1);
@@ -184,15 +185,15 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       lgtPdfW   = 1.0f;
     }
     
-    const float3 lightColor = GetLightSourceIntensity(lightId, wavelengths);
-    *out_shadeColor = to_float4((lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight, 0.0f);
+    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths);
+    *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
-    *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
 void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
-                                   const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float3* wavelengths,
+                                   const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                                    float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* misPrev, uint* rayFlags)
 {
   const uint currRayFlags = *rayFlags;
@@ -205,7 +206,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   //
   const float3 ray_dir = to_float3(*rayDirAndFar);
   const float3 ray_pos = to_float3(*rayPosAndNear);
-  const float3 lambda  = *wavelengths;
+  const float4 lambda  = *wavelengths;
   
   const float4 data1 = *in_hitPart1;
   const float4 data2 = *in_hitPart2;
@@ -217,7 +218,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   
   const MisData prevBounce = *misPrev;
   const float   prevPdfW   = prevBounce.matSamplePdf;
-  const float   prevPdfA   = (prevPdfW >= 0.0f) ? PdfWtoA(prevPdfW, length(ray_pos - hit.norm), prevBounce.cosTheta) : 1.0f;
+  // const float   prevPdfA   = (prevPdfW >= 0.0f) ? PdfWtoA(prevPdfW, length(ray_pos - hit.norm), prevBounce.cosTheta) : 1.0f;
 
   // process light hit case
   //
@@ -225,9 +226,10 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   {
     const uint texId       = as_uint(m_materials[matId].data[EMISSION_TEXID0]);
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
-    float3 lightColor      = to_float3(m_materials[matId].colors[EMISSION_COLOR]);
+    float4 texColor  = (m_textures[texId]->sample(texCoordT));
+    float4 lightColor = (m_materials[matId].colors[EMISSION_COLOR]);
 
+    float4 lightIntensity = lightColor * texColor;
     if(m_spectral_mode)
     {
       const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
@@ -235,10 +237,10 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       {
         lightColor = SampleSpectrum(m_spectra.data() + specId, *wavelengths);
       }
+      lightIntensity = lightColor;
     }
 
-    const float3 lightIntensity = lightColor * texColor;
-    const uint lightId          = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
+    const uint lightId = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
     
     float lightCos = 1.0f;
     float lightDirectionAtten = 1.0f;
@@ -268,11 +270,12 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     float4 currAccumColor      = *accumColor;
     float4 currAccumThroughput = *accumThoroughput;
     
-    currAccumColor.x += currAccumThroughput.x * lightIntensity.x * misWeight * lightDirectionAtten;
-    currAccumColor.y += currAccumThroughput.y * lightIntensity.y * misWeight * lightDirectionAtten;
-    currAccumColor.z += currAccumThroughput.z * lightIntensity.z * misWeight * lightDirectionAtten;
-    if(bounce > 0)
-      currAccumColor.w *= prevPdfA;
+    currAccumColor += currAccumThroughput * lightIntensity * misWeight * lightDirectionAtten;
+    // currAccumColor.x += currAccumThroughput.x * lightIntensity.x * misWeight * lightDirectionAtten;
+    // currAccumColor.y += currAccumThroughput.y * lightIntensity.y * misWeight * lightDirectionAtten;
+    // currAccumColor.z += currAccumThroughput.z * lightIntensity.z * misWeight * lightDirectionAtten;
+    // if(bounce > 0)
+    //   currAccumColor.w *= prevPdfA;
     
     *accumColor = currAccumColor;
     *rayFlags   = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_HIT_LIGHT);
@@ -280,7 +283,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const BsdfSample matSam = MaterialSampleAndEval(matId, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
-  const float3 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
+  const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
   MisData nextBounceData      = *misPrev;        // remember current pdfW for next bounce
@@ -290,7 +293,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
   if(m_intergatorType == INTEGRATOR_STUPID_PT)
   {
-    *accumThoroughput *= cosTheta * to_float4(bxdfVal, 0.0f); 
+    *accumThoroughput *= cosTheta * bxdfVal; 
   }
   else if(m_intergatorType == INTEGRATOR_SHADOW_PT || m_intergatorType == INTEGRATOR_MIS_PT)
   {
@@ -298,14 +301,15 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     const float4 shadeColor      = *in_shadeColor;
     float4 currAccumColor        = *accumColor;
 
-    currAccumColor.x += currThoroughput.x * shadeColor.x;
-    currAccumColor.y += currThoroughput.y * shadeColor.y;
-    currAccumColor.z += currThoroughput.z * shadeColor.z;
-    if(bounce > 0)
-      currAccumColor.w *= prevPdfA;
+    currAccumColor += currThoroughput * shadeColor;
+    // currAccumColor.x += currThoroughput.x * shadeColor.x;
+    // currAccumColor.y += currThoroughput.y * shadeColor.y;
+    // currAccumColor.z += currThoroughput.z * shadeColor.z;
+    // if(bounce > 0)
+    //   currAccumColor.w *= prevPdfA;
 
     *accumColor       = currAccumColor;
-    *accumThoroughput = currThoroughput*cosTheta*to_float4(bxdfVal, 0.0f); 
+    *accumThoroughput = currThoroughput*cosTheta*bxdfVal; 
   }
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
@@ -320,34 +324,37 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   if(!isOutOfScene(currRayFlags))
     return;
   
+  // TODO: HDRI maps
   const float4 envData  = GetEnvironmentColorAndPdf(to_float3(*rayDirAndFar));
-  const float3 envColor = to_float3(envData)/envData.w;                         // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
+  // const float3 envColor = to_float3(envData)/envData.w;    // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
 
-  if(m_intergatorType == INTEGRATOR_STUPID_PT)                                  // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
-    *accumColor = (*accumThoroughput) * to_float4(envColor,0);
+  const float4 envColor = envData;
+  if(m_intergatorType == INTEGRATOR_STUPID_PT)     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
+    *accumColor = (*accumThoroughput) * envColor;
   else
-    *accumColor += (*accumThoroughput) * to_float4(envColor,0);
+    *accumColor += (*accumThoroughput) * envColor;
 }
 
 
 void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
-                                          const float3* wavelengths, float4* out_color)
+                                          const float4* wavelengths, float4* out_color)
 {
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  float3 color = to_float3(*a_accumColor);
+  // if(length(*a_accumColor) > 1e-5)
+  //   int a =1;
 
+  float3 rgb = to_float3(*a_accumColor);
   if(m_spectral_mode) // TODO: spectral framebuffer
   {
-    color = SpectrumToXYZ(color, *wavelengths);
-    color = XYZToRGB(color);
+    rgb = XYZToRGB(SpectrumToXYZ(*a_accumColor, *wavelengths));
   }
 
-  float4 colorRes = to_float4(color, 1.0f);
-  //if(x == 511 && (y == 1024-340-1))
-  //  color = float4(0,0,1,0);
+  float4 colorRes = to_float4(rgb, 1.0f);
+  // if(x == 247 && (y == 512-412-1))
+  //   colorRes = float4(0,0,1,0);
   //if(!std::isfinite(color.x) || !std::isfinite(color.y) || !std::isfinite(color.z))
   //{
   //  int a = 2;
@@ -365,7 +372,7 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
-  float3 wavelengths;
+  float4 wavelengths;
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
@@ -396,7 +403,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
-  float3 wavelengths;
+  float4 wavelengths;
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;

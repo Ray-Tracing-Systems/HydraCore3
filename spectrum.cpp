@@ -5,12 +5,9 @@
 
 float Spectrum::Sample(float lambda) const
 {
-  float sample;
-
   if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
     return 0;
-
-  
+ 
   int o = BinarySearch(wavelengths.size(), [&](int i) { return wavelengths[i] <= lambda; });
 
   float t = (lambda - wavelengths[o]) / (wavelengths[o + 1] - wavelengths[o]);
@@ -40,16 +37,15 @@ Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 }
 
 // "stratified" sample wavelengths in [a, b] with random number u
-LambdaSample SampleWavelengths(float u, float a, float b) 
+float4 SampleWavelengths(float u, float a, float b) 
 {
   // pdf is 1.0f / (b - a)
-  LambdaSample res;
-  const uint32_t sample_sz = sizeof(res.M) / sizeof(res.M[0]);
-  
+  float4 res;
+
   res[0] = lerp(a, b, u);
 
-  float delta = (b - a) / sample_sz;
-  for (int i = 1; i < sample_sz; ++i) 
+  float delta = (b - a) / SPECTRUM_SAMPLE_SZ;
+  for (uint32_t i = 1; i < SPECTRUM_SAMPLE_SZ; ++i) 
   {
       res[i] = res[i - 1] + delta;
       if (res[i] > b)
@@ -59,14 +55,13 @@ LambdaSample SampleWavelengths(float u, float a, float b)
   return res;
 }
 
-float3 SampleCIE(const LambdaSample &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
+float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
 {
-  float3 res;
-  const uint32_t sample_sz = sizeof(lambda.M) / sizeof(lambda.M[0]);
+  float4 res;
 
-  for (int i = 0; i < sample_sz; ++i) 
+  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
   {
-    int offset = std::lround(lambda[i]) - a;
+    uint32_t offset = uint32_t(float(std::lround(lambda[i])) - a);
     if (offset < 0 || offset >= nCIESamples)
       res[i] = 0;
     else
@@ -75,29 +70,27 @@ float3 SampleCIE(const LambdaSample &lambda, const float* cie, float a = LAMBDA_
   return res;
 }
 
-float SpectrumAverage(float3 spec) 
+float SpectrumAverage(float4 spec) 
 {
-  const uint32_t sample_sz = sizeof(spec.M) / sizeof(spec.M[0]);
   float sum = spec[0];
-  for (uint32_t i = 1; i < sample_sz; ++i)
+  for (uint32_t i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
     sum += spec[i];
-  return sum / sample_sz;
+  return sum / SPECTRUM_SAMPLE_SZ;
 }
 
-float3 SpectrumToXYZ(float3 spec, const LambdaSample &lambda, float lambda_min, float lambda_max) 
+float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lambda_min, float lambda_max) 
 {
-  const uint32_t sample_sz = sizeof(lambda.M) / sizeof(lambda.M[0]);
   const float pdf = 1.0f / (lambda_max - lambda_min);
 
   //TODO: fix
-  for (int i = 0; i < sample_sz; ++i)
+  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
     spec[i] = (pdf != 0) ? spec[i] / pdf : 0.0f;
 
-  float3 X = SampleCIE(lambda, CIE_X, lambda_min, lambda_max);
-  float3 Y = SampleCIE(lambda, CIE_Y, lambda_min, lambda_max);
-  float3 Z = SampleCIE(lambda, CIE_Z, lambda_min, lambda_max);
+  float4 X = SampleCIE(lambda, CIE_X, lambda_min, lambda_max);
+  float4 Y = SampleCIE(lambda, CIE_Y, lambda_min, lambda_max);
+  float4 Z = SampleCIE(lambda, CIE_Z, lambda_min, lambda_max);
 
-  for (int i = 0; i < sample_sz; ++i)
+  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
   {
     X[i] *= spec[i];
     Y[i] *= spec[i];

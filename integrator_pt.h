@@ -83,7 +83,7 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float3* wavelengths,
+  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
@@ -97,13 +97,13 @@ public:
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
-                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float3* wavelengths,
+                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                          float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
-  void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float3* wavelengths, 
+  void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, 
                                 const uint* rayFlags, 
                                 RandomGen* a_gen, float4* out_shadeColor);
@@ -114,7 +114,7 @@ public:
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
   void kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                const float3* wavelengths, float4* out_color);
+                                const float4* wavelengths, float4* out_color);
 
   void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
@@ -160,7 +160,7 @@ protected:
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float3 GetLightSourceIntensity(uint a_lightId, const float3* a_wavelengths);
+  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -178,13 +178,13 @@ protected:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float3 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc,
+  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc,
                                    MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (uint a_materialId, float3 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialBlendSampleAndEval(uint a_materialId, float3 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  BsdfSample MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, const uint a_currRayFlags);
-  BsdfEval   MaterialBlendEval         (uint a_materialId, float3 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  BsdfEval   MaterialBlendEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
@@ -219,7 +219,7 @@ protected:
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
   std::vector<LightSource> m_lights;
-  float4 m_envColor = float4(0,0,0,1);
+  float4 m_envColor = float4{0.0f};
 
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
   bool m_spectral_mode  = false;

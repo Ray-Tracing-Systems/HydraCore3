@@ -128,14 +128,14 @@ float3 Integrator::MaterialEvalWhitted(uint a_materialId, float3 l, float3 v, fl
 
 BsdfSample Integrator::MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc)
 { 
-  const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
-  const float3 specular  = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
-  const float3 coat      = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
-  const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
+  // const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
+  const float4 specular  = (m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
+  const float4 coat      = (m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
+  // const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
   float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
   
   const float3 pefReflDir = reflect((-1.0f)*v, n);
-  const float3 reflColor  = alpha*specular + (1.0f - alpha)*coat;
+  const float4 reflColor  = alpha*specular + (1.0f - alpha)*coat;
 
   //if(a_materialId == 4)
   //{
@@ -219,7 +219,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   }
 
   const BsdfSample matSam = MaterialSampleWhitted(matId, (-1.0f)*ray_dir, hit.norm, hit.uv);
-  const float3 bxdfVal    = matSam.val;
+  const float4 bxdfVal    = matSam.val;
   const float  cosTheta   = dot(matSam.dir, hit.norm);
 
   const float4 currThoroughput = *accumThoroughput;
@@ -230,7 +230,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   currAccumColor.z += currThoroughput.z * shadeColor.z;
 
   *accumColor       = currAccumColor;
-  *accumThoroughput = currThoroughput * cosTheta * to_float4(bxdfVal, 0.0f);
+  *accumThoroughput = currThoroughput * cosTheta * bxdfVal;
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f);
   *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
@@ -270,8 +270,8 @@ static inline float2 worldPosToScreenSpace(float3 a_wpos, const int width, const
   const float4 posWorldSpace  = to_float4(a_wpos, 1.0f);
   const float4 posCamSpace    = mul4x4x4(worldView, posWorldSpace);
   const float4 posNDC         = mul4x4x4(proj, posCamSpace);
-  const float4 posClipSpace   = posNDC * (1.0f / fmax(posNDC.w, DEPSILON));
-  const float2 posScreenSpace = clipSpaceToScreenSpace(posClipSpace, width, height);
+  const float4 posClipSpace   = posNDC * (1.0f / std::max(posNDC.w, DEPSILON));
+  const float2 posScreenSpace = clipSpaceToScreenSpace(posClipSpace, float(width), float(height));
   return posScreenSpace;
 }
 
@@ -279,8 +279,8 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
   const int a_winHeight, const float4 a_rayColor1, const float4 a_rayColor2, const bool a_blendColor,
   const bool a_multDepth, const int a_spp)
 {
-  const int dx   = abs(a_pos2.x - a_pos1.x);
-  const int dy   = abs(a_pos2.y - a_pos1.y);
+  const int dx   = std::abs(a_pos2.x - a_pos1.x);
+  const int dy   = std::abs(a_pos2.y - a_pos1.y);
 
   const int step = dx > dy ? dx : dy;
 
@@ -293,8 +293,8 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
   float x = a_pos1.x;
   float y = a_pos1.y;
 
-  const float depthMult1 = tanh(a_pos1.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
-  const float depthMult2 = tanh(a_pos2.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
+  const float depthMult1 = std::tanh(a_pos1.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
+  const float depthMult2 = std::tanh(a_pos2.z * 0.25f) * 0.5f + 0.5f; // rescale for 0 - 1
 
   for (int i = 0; i <= step; ++i) 
   {
@@ -326,7 +326,7 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
 void Integrator::kernel_ContributePathRayToImage3(float4* out_color, 
   const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos)
 {  
-  for (int i = 1; i < a_rayPos.size(); ++i)
+  for (uint32_t i = 1; i < a_rayPos.size(); ++i)
   {
     const float2 posScreen1 = worldPosToScreenSpace(a_rayPos[i - 1], m_winWidth, m_winHeight, m_worldView, m_proj);
     const float2 posScreen2 = worldPosToScreenSpace(a_rayPos[i - 0], m_winWidth, m_winHeight, m_worldView, m_proj);
@@ -347,8 +347,10 @@ void Integrator::kernel_ContributePathRayToImage3(float4* out_color,
 
     // position color with rescale to 0-1
     const float scaleSize  = 0.5f;
-    const float4 rayColor1 = float4(tanh(a_rayPos[i - 1].x * scaleSize), tanh(a_rayPos[i - 1].y * scaleSize), tanh(a_rayPos[i - 1].z * scaleSize), 0) * 0.5f + 0.5f;
-    const float4 rayColor2 = float4(tanh(a_rayPos[i - 0].x * scaleSize), tanh(a_rayPos[i - 0].y * scaleSize), tanh(a_rayPos[i - 0].z * scaleSize), 0) * 0.5f + 0.5f;
+    const float4 rayColor1 = float4(std::tanh(a_rayPos[i - 1].x * scaleSize), std::tanh(a_rayPos[i - 1].y * scaleSize),
+                                    std::tanh(a_rayPos[i - 1].z * scaleSize), 0) * 0.5f + 0.5f;
+    const float4 rayColor2 = float4(std::tanh(a_rayPos[i - 0].x * scaleSize), std::tanh(a_rayPos[i - 0].y * scaleSize),
+                                    std::tanh(a_rayPos[i - 0].z * scaleSize), 0) * 0.5f + 0.5f;
         
     drawLine(pos1, pos2, out_color, m_winWidth, m_winHeight, rayColor1, rayColor2, true, true, m_spp);
   }

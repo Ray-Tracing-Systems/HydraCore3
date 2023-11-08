@@ -247,15 +247,37 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
   return {sampler, p->second};
 }
 
+float4 GetColorFromNode(const pugi::xml_node& a_node, bool is_spectral_mode)
+{
+  auto val = hydra_xml::readvalVariant(a_node);
+  if(std::holds_alternative<float>(val))
+  {
+    return float4(std::get<float>(val));
+  }
+  else if(std::holds_alternative<float3>(val))
+  {
+    if(is_spectral_mode == true)
+    {
+      std::cout << "WARNING! Reading float3 color value in spectral mode. Spectral upsampling not implemented yet, results will be incorrect." << std::endl;
+    }
+    return to_float4(std::get<float3>(val), 0.0f);
+  }
+  else
+  {
+    return std::get<float4>(val);
+  }
+}
+
 Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                 std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+                                 std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                                 bool is_spectral_mode)
 {
   std::wstring name            = materialNode.attribute(L"name").as_string();
   Material mat                 = {};
   mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
   mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
-  mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,0); 
+  mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,1); 
   mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);  
   mat.data[UINT_LIGHTID]       = as_float(uint(-1));
   
@@ -265,10 +287,12 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   //
   float4 color(0.0f, 0.0f, 0.0f, 0.0f);
 
+  bool is_emission_color = false;
   if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
   {
+    is_emission_color = true;
     auto nodeEmissColor = nodeEmiss.child(L"color");
-    color               = to_float4(hydra_xml::readval3f(nodeEmissColor), 1.0f);
+    color               = GetColorFromNode(nodeEmissColor, is_spectral_mode);
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, texturesInfo, texCache, textures);
     
@@ -290,7 +314,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
   if(nodeDiffColor != nullptr)
   {
-    color = to_float4(hydra_xml::readval3f(nodeDiffColor), 0.0f);
+    color = GetColorFromNode(nodeDiffColor, is_spectral_mode);
     const auto& [diffSampler, texID] = LoadTextureFromNode(nodeDiffColor, texturesInfo, texCache, textures);
     
     mat.row0 [0]  = diffSampler.row0;
@@ -298,25 +322,25 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     mat.data[GLTF_UINT_TEXID0] = as_float(texID);
   }
 
-  float3 reflColor     = float3(0,0,0);
+  float4 reflColor     = float4(0, 0, 0, 0);
   float reflGlossiness = 1.0f;
   float fresnelIOR     = 1.5f;
   auto nodeRefl        = materialNode.child(L"reflectivity");
   if(nodeRefl != nullptr)
   {
-    reflColor       = hydra_xml::readval3f(nodeRefl.child(L"color"));
+    reflColor       = GetColorFromNode(nodeRefl.child(L"color"), is_spectral_mode);
     reflGlossiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
     fresnelIOR      = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
   }
 
-  float3 transpColor      = float3(0, 0, 0);
+  float4 transpColor      = float4(0, 0, 0, 0);
   float  transpGlossiness = 1.0f;
   float  transpIOR        = 1.5f;
 
   auto nodeTransp = materialNode.child(L"transparency");
   if (nodeTransp != nullptr)
   {
-    transpColor      = hydra_xml::readval3f(nodeTransp.child(L"color"));
+    transpColor      = GetColorFromNode(nodeTransp.child(L"color"), is_spectral_mode);
     transpGlossiness = hydra_xml::readval1f(nodeTransp.child(L"glossiness"));
     transpIOR        = hydra_xml::readval1f(nodeTransp.child(L"ior"));
   }
@@ -330,13 +354,13 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   {
     mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_GLTF);
     mat.colors[GLTF_COLOR_BASE]  = color;
-    mat.colors[GLTF_COLOR_COAT]  = to_float4(reflColor, 0.0f);
+    mat.colors[GLTF_COLOR_COAT]  = reflColor;
     mat.data[UINT_LIGHTID]       = as_float(uint(-1));
 
     if(hasFresnel)
     {
       mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
-      mat.colors[GLTF_COLOR_COAT]  = to_float4(reflColor, 0.0f);
+      mat.colors[GLTF_COLOR_COAT]  = reflColor;
       mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0); 
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT);
     }
@@ -344,17 +368,17 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     {
       mat.data[GLTF_FLOAT_ALPHA]   = length(reflColor)/( length(reflColor) + length3f(color) );
       mat.colors[GLTF_COLOR_COAT]  = float4(0,0,0,0); 
-      mat.colors[GLTF_COLOR_METAL] = to_float4(reflColor, 0.0f);                               // disable coating for such blend type
+      mat.colors[GLTF_COLOR_METAL] = reflColor;   // disable coating for such blend type
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL);
     }
 
-    SetMiPlastic(&mat, fresnelIOR, 1.0f, to_float3(color), reflColor);
+    SetMiPlastic(&mat, fresnelIOR, 1.0f, color, reflColor);
   }
   else if(length(reflColor) > 1e-5f)
   {
     mat.data[UINT_MTYPE]           = as_float(MAT_TYPE_GLTF);
     mat.data[UINT_CFLAGS]          = as_float(GLTF_COMPONENT_METAL);
-    mat.colors[GLTF_COLOR_METAL]   = to_float4(reflColor, 0.0f);
+    mat.colors[GLTF_COLOR_METAL]   = reflColor;
     mat.colors[GLTF_COLOR_COAT]    = float4(0,0,0,0); 
     mat.data[GLTF_FLOAT_ALPHA]     = 1.0f;
   }
@@ -372,14 +396,14 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   if (length(reflColor) > 1e-5f && length(transpColor) > 1e-5f)
   {
     mat.data[UINT_MTYPE]                = as_float(MAT_TYPE_GLASS);      
-    mat.colors[GLASS_COLOR_REFLECT]     = to_float4(reflColor, 0.0f);
-    mat.colors[GLASS_COLOR_TRANSP]      = to_float4(transpColor, 0.0f);      
+    mat.colors[GLASS_COLOR_REFLECT]     = reflColor;
+    mat.colors[GLASS_COLOR_TRANSP]      = transpColor;      
     mat.data[GLASS_FLOAT_GLOSS_REFLECT] = reflGlossiness;
     mat.data[GLASS_FLOAT_GLOSS_TRANSP]  = transpGlossiness;
     mat.data[GLASS_FLOAT_IOR]           = fresnelIOR;
   }
 
-  if(color[3] > 1e-5f)
+  if(is_emission_color)
     mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
 
   auto nodeDiffRough = materialNode.child(L"diffuse").child(L"roughness");
@@ -402,11 +426,11 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
-  mat.colors[CONDUCTOR_COLOR]  = float4(1, 1, 1, 0);
+  mat.colors[CONDUCTOR_COLOR]  = float4(1, 1, 1, 1);
   mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_CONDUCTOR);  
   mat.data[UINT_LIGHTID]       = as_float(uint(-1));
 
-  auto nodeBSDF = materialNode.child(L"bsdf");
+  // auto nodeBSDF = materialNode.child(L"bsdf");
 
   float alpha_u = 0.0f;
   float alpha_v = 0.0f;
@@ -456,11 +480,12 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
 
 Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             bool is_spectral_mode)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
-  mat.colors[DIFFUSE_COLOR]   = float4(1, 1, 1, 0);
+  mat.colors[DIFFUSE_COLOR]   = float4(1, 1, 1, 1);
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_DIFFUSE);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[DIFFUSE_ROUGHNESS] = 0.0f;
@@ -485,7 +510,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
   auto nodeColor = materialNode.child(L"reflectance");
   if(nodeColor != nullptr)
   {
-    mat.colors[DIFFUSE_COLOR] = to_float4(hydra_xml::readval3f(nodeColor), 0);
+    mat.colors[DIFFUSE_COLOR] = GetColorFromNode(nodeColor, is_spectral_mode);
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, texturesInfo, texCache, textures);
     
@@ -624,7 +649,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto mat_type = materialNode.attribute(L"type").as_string();
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
@@ -632,7 +657,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
     }
     else if(mat_type == blendMatTypeStr)
     {
@@ -670,7 +695,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
     if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
 
-    float3 color = hydra_xml::readval3f(lightInst.lightNode.child(L"intensity").child(L"color"));
+    float4 color = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), m_spectral_mode);
     auto matrix  = lightInst.matrix;
 
     auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
@@ -679,20 +704,20 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     lightSource.ids.x = as_float(lightSpecId);
     if(ltype == std::wstring(L"sky"))
     {
-      m_envColor = to_float4(color * power, 1.0f); // set pdf to 1.0f
+      m_envColor = color * power;
     }
     else if(ltype == std::wstring(L"directional"))
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = to_float4(color*power,0);
+      lightSource.intensity = color * power;
       lightSource.geomType  = LIGHT_GEOM_DIRECT;
     }
     else if(shape == L"rect" || shape == L"disk")
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = to_float4(color*power,0);
+      lightSource.intensity = color * power;
       lightSource.geomType  = (shape == L"rect") ? LIGHT_GEOM_RECT : LIGHT_GEOM_DISC;
 
       // extract scale and rotation from transformation matrix
@@ -736,7 +761,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
-      lightSource.intensity = to_float4(color*power,0);
+      lightSource.intensity = color * power;
       lightSource.geomType  = LIGHT_GEOM_SPHERE;
 
       lightSource.matrix    = float4x4{};

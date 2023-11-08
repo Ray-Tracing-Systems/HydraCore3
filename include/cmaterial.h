@@ -6,7 +6,7 @@
 
 struct BsdfSample
 {
-  float3 val;
+  float4 val;
   float3 dir;
   float  pdf; 
   uint   flags;
@@ -15,7 +15,7 @@ struct BsdfSample
 
 struct BsdfEval
 {
-  float3 val;
+  float4 val;
   float  pdf; 
 };
 
@@ -202,8 +202,8 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   const float cosTheta_wi = dot(a_l, a_n);
   const float cosTheta_wo = dot(a_v, a_n);
 
-  const float sinTheta_wi = sqrt(fmax(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
-  const float sinTheta_wo = sqrt(fmax(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
+  const float sinTheta_wi = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
+  const float sinTheta_wo = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
 
   const float sigma  = a_roughness * M_PI * 0.5f; //Radians(sig)
   const float sigma2 = sigma * sigma;
@@ -220,9 +220,9 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
 
   // Compute cosine term of Oren-Nayar model
-  float maxcos = 0.0F;
+  float maxcos = 0.0f;
 
-  if (sinTheta_wi > 1e-4 && sinTheta_wo > 1e-4)
+  if (sinTheta_wi > 1e-4f && sinTheta_wo > 1e-4f)
   {
     const float3 wo     = float3(-dot(a_v, nx), -dot(a_v, ny), -dot(a_v, nz));
     const float3 wi     = float3(-dot(a_l, nx), -dot(a_l, ny), -dot(a_l, nz));
@@ -231,21 +231,21 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
     const float sinphio = sinPhiPBRT(wo, sinTheta_wo);
     const float cosphio = cosPhiPBRT(wo, sinTheta_wo);
     const float dcos    = cosphii * cosphio + sinphii * sinphio;
-    maxcos              = fmax(0.0F, dcos);
+    maxcos              = std::max(0.0f, dcos);
   }
 
   // Compute sine and tangent terms of Oren-Nayar model
-  float sinalpha = 0.0F, tanbeta = 0.0F;
+  float sinalpha = 0.0f, tanbeta = 0.0f;
 
-  if (fabs(cosTheta_wi) > fabs(cosTheta_wo))
+  if (std::abs(cosTheta_wi) > std::abs(cosTheta_wo))
   {
     sinalpha = sinTheta_wo;
-    tanbeta  = sinTheta_wi / fmax(fabs(cosTheta_wi), DEPSILON);
+    tanbeta  = sinTheta_wi / std::max(std::abs(cosTheta_wi), DEPSILON);
   }
   else
   {
     sinalpha = sinTheta_wi;
-    tanbeta  = sinTheta_wo / fmax(fabs(cosTheta_wo), DEPSILON);
+    tanbeta  = sinTheta_wo / std::max(std::abs(cosTheta_wo), DEPSILON);
   }
 
   return (A + B * maxcos * sinalpha * tanbeta);
@@ -254,7 +254,7 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
 
 static inline float orennayarEvalPDF(const float3 l, const float3 n)
 {
-  return fabs(dot(l, n)) * INV_PI;
+  return std::abs(dot(l, n)) * INV_PI;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -532,12 +532,12 @@ static inline float fresnelSlick(const float VdotH)
   return (tmp*tmp)*(tmp*tmp)*tmp;
 }
 
-static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
+static inline float4 hydraFresnelCond(float4 f0, float VdotH, float ior, float roughness) 
 {  
   if(ior == 0.0f) // fresnel reflactance is disabled
     return f0;
 
-  return f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+  return f0 + (float4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
 
