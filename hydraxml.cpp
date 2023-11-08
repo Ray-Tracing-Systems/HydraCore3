@@ -235,6 +235,71 @@ namespace hydra_xml
     return res;
   }
 
+  void readValuesFromStr(const std::wstring &a_str, std::vector<float> &a_vals)
+  {
+    float val = 0.0f;
+    std::wstringstream ss(a_str);
+    while (ss >> val) 
+    {
+      a_vals.push_back(val);
+    }
+  }
+
+  std::vector<float> readNf(const pugi::xml_node &a_node)
+  {
+    std::vector<float> res;
+    const wchar_t* pStr = a_node.text().as_string();
+    if (pStr != nullptr)
+    {
+      std::wstring str{pStr};
+      readValuesFromStr(str, res);
+    }
+    return res;
+  }
+
+  std::vector<float> readNf(const pugi::xml_attribute &a_attr)
+  {
+    std::vector<float> res;
+    const wchar_t* pStr = a_attr.as_string();
+    if (pStr != nullptr)
+    {
+      std::wstring str{pStr};
+      readValuesFromStr(str, res);
+    }
+    return res;
+  }
+
+  std::variant<float, float3, float4> readvalVariant(const pugi::xml_node &a_node)
+  {
+    std::vector<float> values;
+    if(a_node.attribute(L"val") != nullptr)
+      values = hydra_xml::readNf(a_node.attribute(L"val"));
+    else
+      values = hydra_xml::readNf(a_node);
+
+    std::variant<float, float3, float4> res;
+    if(values.size() == 1)
+    {
+      res = values[0];
+    }
+    else if(values.size() == 3)
+    {
+      res = LiteMath::float3 {values[0], values[1], values[2]};
+    }
+    else if(values.size() == 4)
+    {
+      res = LiteMath::float4 {values[0], values[1], values[2], values[3]};
+    }
+    else
+    {
+      std::wstring nodeName = a_node.name();
+      std::cout << "Node " << ws2s(nodeName) << " contains unexpected number of values: " << values.size();
+      return LiteMath::float4 {0.0f};
+    }
+    
+    return res;
+  }
+
   LiteMath::float3 readval3f(const pugi::xml_node a_node)
   {
     float3 color;
