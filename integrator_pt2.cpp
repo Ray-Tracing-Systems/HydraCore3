@@ -162,8 +162,8 @@ void stack_push(uint32_t val, uint32_t* stack, uint32_t stack_sz)
 MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz)
 {
   MatIdWeight val = stack[0];
-  int i = 0;
-  while(stack[i].id != 0xFFFFFFFF || i != stack_sz - 2)
+  uint32_t i = 0;
+  while(stack[i].id != 0xFFFFFFFF || i != stack_sz - 2u)
   {
     stack[i] = stack[i + 1];
     ++i;
@@ -173,7 +173,7 @@ MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz)
 
 void stack_weight_push(MatIdWeight val, MatIdWeight* stack, uint32_t stack_sz)
 {
-  int i = stack_sz - 1;
+  uint32_t i = stack_sz - 1;
   assert(stack[i].id == 0xFFFFFFFF);
 
   while(i > 0)
@@ -194,6 +194,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     res.dir   = float3(0,1,0);
     res.flags = a_currRayFlags;
   }
+
+  // TODO: if root material is not a blend material, process it with no stack etc.
+  // const uint root_mtype = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
 
   constexpr uint32_t stack_sz = 8;
   uint32_t material_stack[stack_sz] = {a_materialId, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
