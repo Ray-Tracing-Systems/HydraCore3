@@ -19,6 +19,12 @@
 
 using LiteImage::ICombinedImageSampler;
 
+struct MatIdWeight
+{
+  uint32_t id;
+  float weight;
+};
+
 class Integrator // : public DataClass, IRenderer
 {
 public:
@@ -182,9 +188,9 @@ protected:
                                    MisData* a_misPrev, const uint a_currRayFlags); 
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                                        MisData* a_misPrev, const uint a_currRayFlags);
-  BsdfEval   MaterialBlendEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  uint32_t MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                                      MisData* a_misPrev, BsdfSample* a_pRes);
+  std::pair<MatIdWeight, MatIdWeight>  MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
