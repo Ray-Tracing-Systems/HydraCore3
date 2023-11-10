@@ -18,10 +18,8 @@ void CamPinHole::SetParameters(int a_width, int a_height, const CamParameters& a
   m_width  = a_width;
   m_height = a_height;
       
-  m_proj         = perspectiveMatrix(a_params.fov, a_params.aspect, a_params.nearPlane, a_params.farPlane);;
-  m_worldView    = lookAt(float3(a_params.pos), float3(a_params.lookAt), float3(a_params.up));;
-  m_projInv      = inverse4x4(m_proj);
-  m_worldViewInv = inverse4x4(m_worldViewInv);
+  m_proj    = perspectiveMatrix(a_params.fov, a_params.aspect, a_params.nearPlane, a_params.farPlane);
+  m_projInv = inverse4x4(m_proj);
 }
 
 void CamPinHole::MakeRaysBlock(float* out_rayPosAndNear4f, float* out_rayDirAndFar4f, size_t in_blockSize, int passId)
@@ -55,11 +53,9 @@ void CamPinHole::kernel_MakeEyeRay(int tid, float4* out_rayPosAndNear4f, float4*
 {
   const int x = tid % m_width;
   const int y = tid / m_height;
-  
+
   float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
   float3 rayPos = float3(0,0,0);
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   out_rayPosAndNear4f[tid] = to_float4(rayPos, 0.0f);
   out_rayDirAndFar4f [tid] = to_float4(rayDir, FLT_MAX);

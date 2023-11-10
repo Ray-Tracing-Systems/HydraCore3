@@ -2,16 +2,12 @@
 #include <cstdint>      // uint32_t
 #include <cstddef>      // for size_t
 
-struct CamParameters
+struct CamParameters    ///<! add any parameter you like to this structure
 {
-  float aspect;
   float fov;
+  float aspect;
   float nearPlane;
   float farPlane;
-
-  float pos[3];
-  float lookAt[3];
-  float up[3];
 };
 
 struct ICamRaysAPI

@@ -129,10 +129,10 @@ int main(int argc, const char** argv)
     pImpl->UpdateMembersPlainData();
     
     int passId = 0;
-    //pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    //pImpl->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
-    //pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+    pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
+    pImpl->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
+    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
+    //pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
     std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;

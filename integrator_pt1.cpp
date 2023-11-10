@@ -23,9 +23,9 @@ void Integrator::InitRandomGens(int a_maxThreads)
 
 
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar,
-                                   float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
+                                    float4* rayPosAndNear, float4* rayDirAndFar,
+                                    float4* accumColor,    float4* accumuThoroughput,
+                                    RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
   *accumColor        = make_float4(0,0,0,1);
   *accumuThoroughput = make_float4(1,1,1,1);
@@ -57,8 +57,19 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAnd
   *accumuThoroughput = make_float4(1,1,1,1);
   *rayFlags          = 0;
   *misData           = makeInitialMisData();  
-  *rayPosAndNear     = in_rayPosAndNear[tid];
-  *rayDirAndFar      = in_rayDirAndFar[tid];
+
+  const int x = tid % m_winWidth;
+  const int y = tid / m_winHeight;
+
+  const float4 rayPosData = in_rayPosAndNear[tid];
+  const float4 rayDirData = in_rayDirAndFar[tid];
+
+  float3 rayPos = to_float3(rayPosData);
+  float3 rayDir = to_float3(rayDirData);
+  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+
+  *rayPosAndNear     = to_float4(rayPos, rayPosData.w);
+  *rayDirAndFar      = to_float4(rayDir, rayDirData.w);
   *gen               = m_randomGens[tid];
 }
 
