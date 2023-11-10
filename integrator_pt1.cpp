@@ -320,6 +320,12 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   m_randomGens[tid] = *gen;
 }
 
+void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
+{
+  out_color   [tid] = *a_accumColor;
+  m_randomGens[tid] = *gen;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -381,7 +387,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                       &accumColor);
+                        &accumColor);
 
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
 }
@@ -395,7 +401,9 @@ void Integrator::PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear
   uint      rayFlags;
   kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
                              &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
-
+  
+  //////////////////////////////////////////////////// same as for PathTrace
+  //
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;
@@ -415,7 +423,9 @@ void Integrator::PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                       &accumColor);
+                        &accumColor);
+  //
+  //////////////////////////////////////////////////// same as for PathTrace 
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
+  kernel_CopyColorToOutput(tid, &accumColor, &gen, out_color);
 }

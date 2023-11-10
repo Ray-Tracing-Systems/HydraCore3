@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
+option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -108,8 +109,15 @@ set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
         external/CrossRT/EmbreeRT.cpp)
 
+if(CAM_PLUGIN)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  set(MAIN_FILE cam_plugin/main_with_cam.cpp)
+else()
+  set(MAIN_FILE main.cpp)
+endif()
+
 set(CORE_SRC
-        main.cpp
+        ${MAIN_FILE}
         integrator_rt.cpp
         integrator_pt1.cpp
         integrator_pt2.cpp
