@@ -5,6 +5,7 @@
 #include "integrator_pt.h"
 #include "ArgParser.h"
 #include "CamPluginAPI.h"
+#include "CamPinHole.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
@@ -34,7 +35,9 @@ int main(int argc, const char** argv)
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-  std::shared_ptr<Integrator> pImpl = nullptr;
+  std::shared_ptr<Integrator>  pImpl    = nullptr;
+  std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
+
   ArgParser args(argc, argv);
   
   if(args.hasOption("-in"))
@@ -69,8 +72,12 @@ int main(int argc, const char** argv)
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-
-  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
+  
+  std::vector<float4> rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data 
+  std::vector<float4> rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  std::vector<float4> rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  
+  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT); ///<! frame buffer (TODO: spectral FB?)
 
   bool onGPU = args.hasOption("--gpu");
   #ifdef USE_VULKAN
@@ -83,12 +90,16 @@ int main(int argc, const char** argv)
   else
   #endif
   {
-    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pImpl    = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
   pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);                   /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
+  
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pImpl->CommitDeviceData();
@@ -116,6 +127,11 @@ int main(int argc, const char** argv)
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
+    
+    int passId = 0;
+    //pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
+    //pImpl->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
+    //pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
     pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
