@@ -35,7 +35,7 @@ int main(int argc, const char** argv)
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-  std::shared_ptr<Integrator>  pImpl    = nullptr;
+  std::shared_ptr<Integrator>  pRender  = nullptr;
   std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
 
   ArgParser args(argc, argv);
@@ -78,6 +78,7 @@ int main(int argc, const char** argv)
   std::vector<float4> rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
   
   std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT); ///<! frame buffer (TODO: spectral FB?)
+  std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
 
   bool onGPU = args.hasOption("--gpu");
   #ifdef USE_VULKAN
@@ -85,26 +86,27 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    pRender = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
   #endif
   {
-    pImpl    = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pRender  = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
     pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-
-  pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);                   /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
   
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
-  pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
-  pImpl->CommitDeviceData();
 
-  PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
+  pRender->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);                  /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
+  pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
+  pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+  pRender->CommitDeviceData();
+
+  PASS_NUMBER = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     PASS_NUMBER = args.getOptionValue<int>("-spp");
 
@@ -113,37 +115,32 @@ int main(int argc, const char** argv)
   // remember (x,y) coords for each thread to make our threading 1D
   //
   std::cout << "[main_with_cam]: PackXYBlock() ... " << std::endl; /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
-  pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
+  pRender->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
   float timings[4] = {0,0,0,0};
   const float normConst = 1.0f/float(PASS_NUMBER);
 
-  //if(integratorType == "mispt" || integratorType == "all")
   // do rendering
   {
     std::cout << "[main_with_cam]: PathTraceBlock(MIS-PT) ... " << std::endl;
     
-    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
-
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
-    pImpl->UpdateMembersPlainData();
-    
     int passId = 0;
     pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    pImpl->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
+    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
     pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
-    //pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
     
-    pImpl->GetExecutionTime("PathTraceBlock", timings);
-    std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-    std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-
-    if(saveHDR) 
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
-    else
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
+    //pRender->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+    
+    pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
+    std::cout << "PathTraceFromInputRaysBlock(exec) = " << timings[0]              << " ms " << std::endl;
+    std::cout << "PathTraceFromInputRaysBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+    std::cout << "PathTraceFromInputRaysBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
   }
+
+  if(saveHDR) 
+    SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
+  else
+    SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
   
   return 0;
 }
