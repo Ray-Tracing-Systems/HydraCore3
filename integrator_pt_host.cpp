@@ -98,12 +98,11 @@ void Integrator::PathTraceFromInputRaysBlock(uint tid, const float4* in_rayPosAn
   #pragma omp parallel for default(shared)
   #endif
   for (int i = 0; i < tid; ++i) {
-    for (int j = 0; j < a_passNum; ++j) {
-      //PathTraceFromInputRays(uint(i), in_rayPosAndNear, in_rayDirAndFar, out_color);
-    }
+    for (int j = 0; j < a_passNum; ++j)
+      PathTraceFromInputRays(uint(i), in_rayPosAndNear, in_rayDirAndFar, out_color);
     progress.Update();
   }
   progress.Done();
-  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+  fromRaysPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 

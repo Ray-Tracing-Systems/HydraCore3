@@ -4,6 +4,7 @@
 
 #include "integrator_pt.h"
 #include "ArgParser.h"
+#include "CamPluginAPI.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
@@ -109,7 +110,8 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   const float normConst = 1.0f/float(PASS_NUMBER);
 
-  if(integratorType == "mispt" || integratorType == "all")
+  //if(integratorType == "mispt" || integratorType == "all")
+  // do rendering
   {
     std::cout << "[main_with_cam]: PathTraceBlock(MIS-PT) ... " << std::endl;
     

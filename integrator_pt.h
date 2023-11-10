@@ -227,6 +227,7 @@ protected:
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;
   float raytraceTime = 0.0f;
+  float fromRaysPtTime = 0.0f;
 
   //// textures
   //
