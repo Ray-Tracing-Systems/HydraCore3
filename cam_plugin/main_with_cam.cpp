@@ -23,9 +23,9 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
-  int WIN_WIDTH       = 1024;
-  int WIN_HEIGHT      = 1024;
-  int PASS_NUMBER     = 1024;
+  int WIN_WIDTH  = 1024;
+  int WIN_HEIGHT = 1024;
+  int SPP_TOTAL  = 1024;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
@@ -101,41 +101,46 @@ int main(int argc, const char** argv)
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
-  pRender->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);                  /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
+
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
   pRender->CommitDeviceData();
 
-  PASS_NUMBER = pRender->GetSPP();                     // read target spp from scene
+  SPP_TOTAL = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
-    PASS_NUMBER = args.getOptionValue<int>("-spp");
+    SPP_TOTAL = args.getOptionValue<int>("-spp");
 
-  std::cout << "[main_with_cam]: spp = " << PASS_NUMBER << std::endl;
+  const int SAMPLES_PER_RAY = 4;
+  const int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY;
 
-  // remember (x,y) coords for each thread to make our threading 1D
-  //
-  std::cout << "[main_with_cam]: PackXYBlock() ... " << std::endl; /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
-  pRender->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
+  std::cout << "[main_with_cam]: spp     = " << SPP_TOTAL << std::endl;
+  std::cout << "[main_with_cam]: passNum = " << CAM_PASSES_NUM << std::endl;
 
-  float timings[4] = {0,0,0,0};
-  const float normConst = 1.0f/float(PASS_NUMBER);
+  float timings   [4] = {0,0,0,0};
+  float timingsAvg[4] = {0,0,0,0};
+  const float normConst = 1.0f/float(SPP_TOTAL);
 
   // do rendering
+  //
+  for(int passId = 0; passId < CAM_PASSES_NUM; passId++)
   {
-    std::cout << "[main_with_cam]: PathTraceBlock(MIS-PT) ... " << std::endl;
+    std::cout << "rendering, pass " << passId << " / " << CAM_PASSES_NUM  << "\r"; 
+    std::cout.flush();
+    std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
     
-    int passId = 0;
     pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), PASS_NUMBER);
+    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
     pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
     
-    //pRender->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
-    
     pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
-    std::cout << "PathTraceFromInputRaysBlock(exec) = " << timings[0]              << " ms " << std::endl;
-    std::cout << "PathTraceFromInputRaysBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "PathTraceFromInputRaysBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    for(int i=0;i<4;i++)
+      timingsAvg[i] += timings[i];
   }
+
+  std::cout << std::endl << std::endl;
+  std::cout << "PathTraceFromInputRays(exec, total) = " << timingsAvg[0]                 << " ms " << std::endl;
+  std::cout << "PathTraceFromInputRays(copy, total) = " << timingsAvg[1] + timingsAvg[2] << " ms " << std::endl;
+  std::cout << "PathTraceFromInputRays(ovrh, total) = " << timingsAvg[3]                 << " ms " << std::endl;
 
   if(saveHDR) 
     SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);

@@ -11,7 +11,7 @@
                  "-integrator", "mispt", 
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "16",
+                 "-spp", "64",
                  "-scn_dir", "../comparisonrender"],
                  //"-out", "../Hydra3Tests/Tests/Conductor/0002/Images/Rough-uv01-sphere-hydra3.png"],
         "stopAtEntry": false,
