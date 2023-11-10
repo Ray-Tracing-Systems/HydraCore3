@@ -50,6 +50,18 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *gen           = genLocal;
 }
 
+void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar,
+                                            float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData)
+{
+  *accumColor        = make_float4(0,0,0,1);
+  *accumuThoroughput = make_float4(1,1,1,1);
+  *rayFlags          = 0;
+  *misData           = makeInitialMisData();  
+  *rayPosAndNear     = in_rayPosAndNear[tid];
+  *rayDirAndFar      = in_rayDirAndFar[tid];
+  *gen               = m_randomGens[tid];
+}
+
 
 void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
                                  float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags)
@@ -349,9 +361,6 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   MisData   mis;
   uint      rayFlags;
   kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
-    
-  //std::vector<float3> rayPos;
-  //std::vector<float4> rayColor;
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -367,8 +376,39 @@ void Integrator::PathTrace(uint tid, float4* out_color)
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
-    //rayPos.push_back(float3(rayPosAndNear.x, rayPosAndNear.y, rayPosAndNear.z));
-    //rayColor.push_back(rayPosAndNear);
+    if(isDeadRay(rayFlags))
+      break;
+  }
+
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+                       &accumColor);
+
+  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
+}
+
+void Integrator::PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, float4* out_color)
+{
+  float4 accumColor, accumThroughput;
+  float4 rayPosAndNear, rayDirAndFar;
+  RandomGen gen; 
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
+                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+
+  for(uint depth = 0; depth < m_traceDepth; depth++) 
+  {
+    float4   shadeColor, hitPart1, hitPart2;
+    uint instId;
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
+    if(isDeadRay(rayFlags))
+      break;
+    
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &rayFlags,
+                             &gen, &shadeColor);
+
+    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
+                      &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
     if(isDeadRay(rayFlags))
       break;
@@ -378,7 +418,4 @@ void Integrator::PathTrace(uint tid, float4* out_color)
                        &accumColor);
 
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), out_color);
-  
-  // Debug draw ray path
-  //kernel_ContributePathRayToImage3(out_color, rayColor, rayPos);
 }

@@ -6,7 +6,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu",
+        "args": ["--gpu",
                  "-in", "../comparisonrender/Tests/Glass/0001/Glass-sphere_gloss-1_cornell_hydra3.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",

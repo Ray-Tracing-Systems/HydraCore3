@@ -55,18 +55,23 @@ public:
 
   void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
+  void PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear __attribute__((size("tid"))), 
+                                        const float4* in_rayDirAndFar  __attribute__((size("tid"))), 
+                                        float4*       out_color        __attribute__((size("tid"))));
 #else
   void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, float4* out_color); ///<! whitted ray tracing
 
   void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
+  void PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, float4* out_color);
 #endif
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
+  virtual void PathTraceFromInputRaysBlock(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, float4* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
@@ -83,6 +88,9 @@ public:
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, uint* rayFlags);        
+  
+  void kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar,
+                                  float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
@@ -221,6 +229,13 @@ protected:
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
   
+  static constexpr uint32_t KSPEC_FEATURE_MAT_GLASS     = 1;
+  static constexpr uint32_t KSPEC_FEATURE_MAT_CONDUCTOR = 2;
+  
+  virtual std::vector<uint32_t> ListRequiredFeatures() {
+    std::vector<uint32_t> allFeaturesAreEnabled = {1,1,1}; // because [0,1,2]
+    return allFeaturesAreEnabled;
+  }
 };
 
 #endif

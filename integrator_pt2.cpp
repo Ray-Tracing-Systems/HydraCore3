@@ -96,9 +96,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, fl
       gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
       break;
     case MAT_TYPE_GLASS:
+    if(KSPEC_FEATURE_MAT_GLASS != 0)
+    {
       glassSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res, a_misPrev);
-      break;
+    }
+    break;
     case MAT_TYPE_CONDUCTOR:
+    if(KSPEC_FEATURE_MAT_CONDUCTOR != 0)
     {
       const uint   texId     = as_uint(m_materials[a_materialId].data[CONDUCTOR_TEXID0]);
       const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -142,9 +146,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float3 l, float3 v, float3 
       gltfEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
       break;
     case MAT_TYPE_GLASS:
+    if(KSPEC_FEATURE_MAT_GLASS != 0)
+    {
       glassEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
-      break;
+    }
+    break;
     case MAT_TYPE_CONDUCTOR: 
+    if(KSPEC_FEATURE_MAT_CONDUCTOR != 0)
     {
       const uint   texId     = as_uint(m_materials[a_materialId].data[CONDUCTOR_TEXID0]);
       const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
