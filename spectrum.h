@@ -33,20 +33,34 @@ static inline float4 SampleSpectrum(const Spectrum* a_spectrum, float4 a_wavelen
 float4 SampleWavelengths(float u, float a = LAMBDA_MIN, float b = LAMBDA_MAX);
 float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lambda_min = LAMBDA_MIN, float lambda_max = LAMBDA_MAX);
 
-template <typename P>
-inline size_t BinarySearch(size_t sz, const P &pred) 
+// template <typename P>
+// inline size_t BinarySearch(size_t sz, const P &pred) 
+// {
+//   using ssize_t = std::make_signed_t<size_t>;
+//   ssize_t last = (ssize_t)sz - 2, first = 1;
+//   while (last > 0) 
+//   {
+//     size_t half = (size_t)last >> 1, 
+//     middle = first + half;
+//     bool predResult = pred(middle);
+//     first = predResult ? middle + 1 : first;
+//     last = predResult ? last - (half + 1) : half;
+//   }
+//   return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
+// }
+
+inline size_t BinarySearch(const float* array, size_t array_sz, float val) 
 {
-  using ssize_t = std::make_signed_t<size_t>;
-  ssize_t last = (ssize_t)sz - 2, first = 1;
+  int32_t last = (int32_t)array_sz - 2, first = 1;
   while (last > 0) 
   {
     size_t half = (size_t)last >> 1, 
     middle = first + half;
-    bool predResult = pred(middle);
-    first = predResult ? middle + 1 : first;
-    last = predResult ? last - (half + 1) : half;
+    bool predResult = array[middle] <= val;
+    first = predResult ? int32_t(middle + 1) : first;
+    last = predResult ? last - int32_t(half + 1) : int32_t(half);
   }
-  return (size_t)clamp((ssize_t)first - 1, 0, sz - 2);
+  return (size_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
 }
 
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);

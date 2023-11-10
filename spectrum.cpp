@@ -8,7 +8,8 @@ float Spectrum::Sample(float lambda) const
   if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
     return 0;
  
-  int o = BinarySearch(wavelengths.size(), [&](int i) { return wavelengths[i] <= lambda; });
+  // int o = BinarySearch(wavelengths.size(), [&](int i) { return wavelengths[i] <= lambda; });
+  int o = BinarySearch(wavelengths.data(), wavelengths.size(), lambda);
 
   float t = (lambda - wavelengths[o]) / (wavelengths[o + 1] - wavelengths[o]);
   return lerp(values[o], values[o + 1], t);
