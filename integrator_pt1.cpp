@@ -68,9 +68,9 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAnd
   float3 rayDir = to_float3(rayDirData);
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  *rayPosAndNear     = to_float4(rayPos, rayPosData.w);
-  *rayDirAndFar      = to_float4(rayDir, rayDirData.w);
-  *gen               = m_randomGens[tid];
+  *rayPosAndNear = to_float4(rayPos, rayPosData.w);
+  *rayDirAndFar  = to_float4(rayDir, rayDirData.w);
+  *gen           = m_randomGens[tid];
 }
 
 
@@ -333,7 +333,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
 
 void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
 {
-  out_color   [tid] = *a_accumColor;
+  out_color   [tid] += *a_accumColor;
   m_randomGens[tid] = *gen;
 }
 
