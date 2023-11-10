@@ -53,9 +53,6 @@ int main(int argc, const char** argv)
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos;
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
-
-  if(args.hasOption("-integrator"))
-    integratorType = args.getOptionValue<std::string>("-integrator");
   
   if(args.hasOption("-gamma")) {
     std::string gammaText = args.getOptionValue<std::string>("-gamma");
@@ -91,7 +88,7 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
+  pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);                   /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pImpl->CommitDeviceData();
@@ -104,7 +101,7 @@ int main(int argc, const char** argv)
 
   // remember (x,y) coords for each thread to make our threading 1D
   //
-  std::cout << "[main_with_cam]: PackXYBlock() ... " << std::endl; // TODO: remove it later whet cam API is ready (!!!)
+  std::cout << "[main_with_cam]: PackXYBlock() ... " << std::endl; /////////////////////////////// TODO: remove it later whet cam API is ready (!!!)
   pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
 
   float timings[4] = {0,0,0,0};
@@ -127,15 +124,9 @@ int main(int argc, const char** argv)
     std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
 
     if(saveHDR) 
-    {
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
-    }
+      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
     else
-    {  
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
-    }
+      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
   }
   
   return 0;
