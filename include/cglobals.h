@@ -20,7 +20,7 @@ static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
 
 using float4 = float4;
-static constexpr uint32_t SPECTRUM_SAMPLE_SZ = sizeof(float4) / sizeof(float);
+static constexpr uint32_t SPECTRUM_SAMPLE_SZ = 4; //sizeof(float4) / sizeof(float); // srry, sizeof() evaluation not yet supported ... 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -182,8 +182,8 @@ static inline float2 MapSamplesToDisc(float2 xy)
 
   //float sin_phi, cos_phi;
   //sincosf(phi, &sin_phi, &cos_phi);
-  float sin_phi = sinf(phi);
-  float cos_phi = cosf(phi);
+  float sin_phi = std::sin(phi);
+  float cos_phi = std::cos(phi);
 
   res.x = r*sin_phi;
   res.y = r*cos_phi;
