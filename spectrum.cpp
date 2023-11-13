@@ -1,7 +1,7 @@
 #include <fstream>
 
 #include "spectrum.h"
-
+#include <string>
 
 float Spectrum::Sample(float lambda) const
 {
