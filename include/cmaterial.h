@@ -540,5 +540,26 @@ static inline float4 hydraFresnelCond(float4 f0, float VdotH, float ior, float r
   return f0 + (float4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
+////////////////// blends
+
+struct MatIdWeight
+{
+  uint32_t id;
+  float weight;
+};
+
+struct MatIdWeightPair
+{
+  MatIdWeight first;
+  MatIdWeight second;
+};
+
+static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
+{
+  MatIdWeightPair res;
+  res.first  = a;
+  res.second = b;
+  return res;
+}
 
 #endif

@@ -100,17 +100,23 @@ uint32_t Integrator::MaterialBlendSampleAndEval(uint a_materialId, float4 wavele
   return selectedMatId;
 }
 
-std::pair<MatIdWeight, MatIdWeight> Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
+MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
   const uint   texId     = as_uint(m_materials[a_mat.id].data[BLEND_TEXID0]);
   const float  weightTex = to_float3(m_textures[texId]->sample(texCoordT)).x;
   const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
 
-  const uint matId1 = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
-  const uint matId2 = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_2]);
+  const uint matId1      = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
+  const uint matId2      = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_2]);
 
-  return std::make_pair(MatIdWeight{matId1, a_mat.weight * (1.0f - weight)}, MatIdWeight{matId2, a_mat.weight * weight});
+  MatIdWeight p1, p2;
+  p1.id     = matId1;
+  p1.weight = a_mat.weight * (1.0f - weight);
+  p2.id     = matId2;
+  p2.weight = a_mat.weight * weight;
+
+  return make_weight_pair(p1, p2);
 }
 
 
@@ -228,9 +234,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
   while(material_stack[0].id != 0xFFFFFFFF)
   {
-    MatIdWeight currMat = stack_weight_pop(material_stack, stack_sz);
-    assert(currMatId < m_materials.size());
-
+    MatIdWeight  currMat   = stack_weight_pop(material_stack, stack_sz);
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
 
