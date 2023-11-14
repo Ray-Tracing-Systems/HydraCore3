@@ -620,7 +620,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uint32_t offset = m_wavelengths.size();
       std::copy(spec.wavelengths.begin(), spec.wavelengths.end(), std::back_inserter(m_wavelengths));
       std::copy(spec.values.begin(), spec.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back({offset, spec.wavelengths.size()});
+      m_spec_offset_sz.push_back(uint2{offset, spec.wavelengths.size()});
       
       // we expect dense, sorted ids for now
       assert(m_spectra[spec_id].id == spec_id);
@@ -637,7 +637,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uint32_t offset = m_wavelengths.size();
       std::copy(uniform1.wavelengths.begin(), uniform1.wavelengths.end(), std::back_inserter(m_wavelengths));
       std::copy(uniform1.values.begin(), uniform1.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back({offset, uniform1.wavelengths.size()});
+      m_spec_offset_sz.push_back(uint2{offset, uniform1.wavelengths.size()});
     }
   }
 

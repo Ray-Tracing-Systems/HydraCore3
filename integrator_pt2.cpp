@@ -135,7 +135,7 @@ MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz, uint32_t in_
 void stack_weight_push(MatIdWeight val, MatIdWeight* stack, uint32_t stack_sz, uint32_t in_stack)
 {
   uint32_t i = in_stack;
-  assert(in_stack < stack_sz);
+  //assert(in_stack < stack_sz);
 
   while(i > 0)
   {
@@ -233,8 +233,6 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   }
 
   constexpr uint32_t stack_sz = 8;
-  // MatIdWeight material_stack[stack_sz] = {{a_materialId, 1.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f},
-  //                                         {0xFFFFFFFF, 0.0f},   {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}};
   MatIdWeight material_stack[stack_sz];
   material_stack[0] = {a_materialId, 1.0f};
   uint32_t in_stack = 1;

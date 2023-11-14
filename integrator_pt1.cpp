@@ -132,7 +132,9 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
   if(specId < 0xFFFFFFFF)
   {
     // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-    auto &[offset, size] = m_spec_offset_sz[specId];
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
     lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
   }
   return lightColor;
@@ -237,7 +239,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
       if(specId < 0xFFFFFFFF)
       {
-        auto &[offset, size] = m_spec_offset_sz[specId];
+        const uint2 data  = m_spec_offset_sz[specId];
+        const uint offset = data.x;
+        const uint size   = data.y;
         lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *wavelengths, size);
       }
       lightIntensity = lightColor;

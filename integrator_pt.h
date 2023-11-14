@@ -235,7 +235,7 @@ protected:
   // std::vector<Spectrum> m_spectra;
   std::vector<float> m_wavelengths; 
   std::vector<float> m_spec_values;
-  std::vector<std::pair<uint32_t, uint32_t>> m_spec_offset_sz;
+  std::vector<uint2> m_spec_offset_sz;
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

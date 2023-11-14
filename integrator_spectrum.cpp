@@ -11,7 +11,9 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
 
   if(specId < 0xFFFFFFFF)
   {
-    auto &[offset, size] = m_spec_offset_sz[specId];
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
     res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
   }
 
@@ -28,7 +30,9 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
 
   if(specId < 0xFFFFFFFF)
   {
-    auto &[offset, size] = m_spec_offset_sz[specId];
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
     res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
   }
 
