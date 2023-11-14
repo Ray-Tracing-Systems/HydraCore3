@@ -23,7 +23,7 @@ class Integrator // : public DataClass, IRenderer
 {
 public:
 
-  Integrator(int a_maxThreads = 1, bool a_spectral_mode = false) : m_spectral_mode(a_spectral_mode)
+  Integrator(int a_maxThreads = 1, int a_spectral_mode = 0) : m_spectral_mode(a_spectral_mode)
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
@@ -222,7 +222,7 @@ protected:
   float4 m_envColor = float4{0.0f};
 
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
-  bool m_spectral_mode  = false;
+  int  m_spectral_mode  = 0;
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;

@@ -10,7 +10,7 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, bool a_spectral_mode, 
+std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, 
                                                        vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); 
 #endif
 
@@ -75,7 +75,7 @@ int main(int argc, const char** argv)
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   
 
-  bool spectral_mode = args.hasOption("--spectral");
+  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////

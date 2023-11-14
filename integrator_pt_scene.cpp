@@ -614,7 +614,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   std::vector<SpectrumInfo> spectraInfo;
   spectraInfo.reserve(100);
-  if(m_spectral_mode)
+  if(m_spectral_mode != 0)
   {  
     for(auto specNode : scene.SpectraNodes())
     {
@@ -664,7 +664,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto mat_type = materialNode.attribute(L"type").as_string();
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
@@ -672,7 +672,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
     }
     else if(mat_type == blendMatTypeStr)
     {
@@ -710,7 +710,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
     if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
 
-    float4 color = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), m_spectral_mode);
+    float4 color = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), m_spectral_mode != 0);
     auto matrix  = lightInst.matrix;
 
     auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  

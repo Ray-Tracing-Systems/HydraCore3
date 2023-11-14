@@ -45,7 +45,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  if(m_spectral_mode)
+  if(m_spectral_mode != 0)
   {
     float u = rndFloat1_Pseudo(&genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
@@ -122,7 +122,7 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
 float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths)
 {
   float4 lightColor = m_lights[a_lightId].intensity;
-  if(!m_spectral_mode)
+  if(m_spectral_mode == 0)
     return lightColor;
 
   const uint specId = as_uint(m_lights[a_lightId].ids.x);
@@ -232,7 +232,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     float4 lightColor = (m_materials[matId].colors[EMISSION_COLOR]);
 
     float4 lightIntensity = lightColor * texColor;
-    if(m_spectral_mode)
+    if(m_spectral_mode != 0)
     {
       const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
       if(specId < 0xFFFFFFFF)
@@ -352,7 +352,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   //   int a =1;
 
   float3 rgb = to_float3(*a_accumColor);
-  if(m_spectral_mode) // TODO: spectral framebuffer
+  if(m_spectral_mode != 0) // TODO: spectral framebuffer
   {
     const float3 xyz = SpectrumToXYZ(*a_accumColor, *wavelengths, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
     rgb = XYZToRGB(xyz);
