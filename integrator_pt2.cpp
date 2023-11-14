@@ -120,11 +120,11 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
 }
 
 
-MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz)
+MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz, uint32_t in_stack)
 {
   MatIdWeight val = stack[0];
   uint32_t i = 0;
-  while(stack[i].id != 0xFFFFFFFF || i != stack_sz - 2u)
+  while(i < in_stack)
   {
     stack[i] = stack[i + 1];
     ++i;
@@ -132,10 +132,10 @@ MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz)
   return val;
 }
 
-void stack_weight_push(MatIdWeight val, MatIdWeight* stack, uint32_t stack_sz)
+void stack_weight_push(MatIdWeight val, MatIdWeight* stack, uint32_t stack_sz, uint32_t in_stack)
 {
-  uint32_t i = stack_sz - 1;
-  assert(stack[i].id == 0xFFFFFFFF);
+  uint32_t i = in_stack;
+  assert(in_stack < stack_sz);
 
   while(i > 0)
   {
@@ -193,11 +193,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const uint   texId     = as_uint(m_materials[currMatId].data[CONDUCTOR_TEXID0]);
       const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
       
-      const float2 alpha = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
+      const float2 alpha   = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
+      const float4 etaSpec = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
+      const float4 kSpec   = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + currMatId, m_spectra.data(), wavelengths, rands, v, n, tc, &res);
+        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, &res);
       else
-        conductorRoughSampleAndEval(m_materials.data() + currMatId, m_spectra.data(), wavelengths, rands, v, n, tc, alphaTex, &res);
+        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, alphaTex, &res);
       
       break;
     }
@@ -209,7 +211,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float4 texColor    = (m_textures[texId]->sample(texCoordT));
       const float4 color       = texColor;
 
-      diffuseSampleAndEval(m_materials.data() + currMatId, m_spectra.data(), wavelengths, rands, v, n, tc, color, &res);
+      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
+
+      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, color, &res);
 
       break;
     }
@@ -229,12 +233,16 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   }
 
   constexpr uint32_t stack_sz = 8;
-  MatIdWeight material_stack[stack_sz] = {{a_materialId, 1.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f},
-                                          {0xFFFFFFFF, 0.0f},   {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}};
+  // MatIdWeight material_stack[stack_sz] = {{a_materialId, 1.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f},
+  //                                         {0xFFFFFFFF, 0.0f},   {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}, {0xFFFFFFFF, 0.0f}};
+  MatIdWeight material_stack[stack_sz];
+  material_stack[0] = {a_materialId, 1.0f};
+  uint32_t in_stack = 1;
 
-  while(material_stack[0].id != 0xFFFFFFFF)
+  while(in_stack > 0)
   {
-    MatIdWeight  currMat   = stack_weight_pop(material_stack, stack_sz);
+    MatIdWeight  currMat   = stack_weight_pop(material_stack, stack_sz, in_stack);
+    in_stack--;
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
 
@@ -271,10 +279,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
 
         const float2 alpha = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
-        if(trEffectivelySmooth(alpha))
-          conductorSmoothEval(m_materials.data() + currMat.id, wavelengths, l, v, n, tc, &currVal);
-        else
-          conductorRoughEval(m_materials.data() + currMat.id, m_spectra.data(), wavelengths, l, v, n, tc, alphaTex, &currVal);
+
+        if(!trEffectivelySmooth(alpha))
+        {
+          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
+          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
+          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, &currVal);
+        }
 
         res.val += currVal.val * currMat.weight;
         res.pdf += currVal.pdf * currMat.weight;
@@ -286,7 +297,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         const float4 texColor    = (m_textures[texId]->sample(texCoordT));
         const float4 color       = texColor;
 
-        diffuseEval(m_materials.data() + currMat.id, m_spectra.data(), wavelengths, l, v, n, tc, color, &currVal);
+        const float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
+
+        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, color, &currVal);
 
         res.val += currVal.val * currMat.weight;
         res.pdf += currVal.pdf * currMat.weight;
@@ -295,8 +308,10 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_BLEND:
       {
         auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, n, tc);
-        stack_weight_push(childMats.second, material_stack, stack_sz);
-        stack_weight_push(childMats.first, material_stack, stack_sz);
+        stack_weight_push(childMats.second, material_stack, stack_sz, in_stack);
+        in_stack++;
+        stack_weight_push(childMats.first, material_stack, stack_sz, in_stack);
+        in_stack++;
         break;
       }
       default:

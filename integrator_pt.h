@@ -232,8 +232,13 @@ protected:
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
 
-  std::vector<Spectrum> m_spectra;
-  
+  // std::vector<Spectrum> m_spectra;
+  std::vector<float> m_wavelengths; 
+  std::vector<float> m_spec_values;
+  std::vector<std::pair<uint32_t, uint32_t>> m_spec_offset_sz;
+
+  float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+  float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
 };
 
 #endif

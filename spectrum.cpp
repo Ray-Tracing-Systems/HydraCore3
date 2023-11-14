@@ -3,6 +3,8 @@
 #include "spectrum.h"
 #include <string>
 
+
+// unused
 float Spectrum::Sample(float lambda) const
 {
   if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
@@ -13,6 +15,36 @@ float Spectrum::Sample(float lambda) const
 
   float t = (lambda - wavelengths[o]) / (wavelengths[o + 1] - wavelengths[o]);
   return lerp(values[o], values[o + 1], t);
+}
+
+float4 SampleSpectrum(const float* a_spec_wavelengths, const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
+{
+  float4 sample {};
+  const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
+  for(uint i = 0; i < spectralSamples; ++i)
+  {
+    if (a_sz == 0 || a_wavelengths[i] < a_spec_wavelengths[0] || a_wavelengths[i] > a_spec_wavelengths[a_sz - 1])
+    {
+      sample[i] = 0.0f;
+    }
+    else
+    {
+      int32_t last = (int32_t)a_sz - 2, first = 1;
+      while (last > 0) 
+      {
+        size_t half = (size_t)last >> 1, 
+        middle = first + half;
+        bool predResult = a_spec_wavelengths[middle] <= a_wavelengths[i];
+        first = predResult ? int32_t(middle + 1) : first;
+        last = predResult ? last - int32_t(half + 1) : int32_t(half);
+      }
+      size_t o = (size_t)clamp(int32_t(first - 1), 0, int32_t(a_sz - 2));
+
+      float t = (a_wavelengths[i] - a_spec_wavelengths[o]) / (a_spec_wavelengths[o + 1] - a_spec_wavelengths[o]);
+      sample[i] =  lerp(a_spec_values[o], a_spec_values[o + 1], t);
+    } 
+  }
+  return sample;
 }
 
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)

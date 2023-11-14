@@ -4,26 +4,8 @@
 #include "cmaterial.h"
 
 
-static inline float4 sampleDiffuseSpectrum(const Material* a_materials, const Spectrum* a_spectra, float4 a_wavelengths)
-{  
-  float4 reflSpec = a_materials[0].colors[DIFFUSE_COLOR];
-  if(a_wavelengths.M[0] == 0.0f)
-    return reflSpec;
 
-  const uint specId = as_uint(a_materials[0].data[DIFFUSE_SPECID]);
-
-  if(specId < 0xFFFFFFFF)
-  {
-    reflSpec = SampleSpectrum(a_spectra + specId, a_wavelengths);
-    // const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
-    // for(uint i = 0; i < spectralSamples; ++i)
-    //   reflSpec[i] = a_spectra[specId].Sample(a_wavelengths[i]);
-  }
-
-  return reflSpec;
-}
-
-static inline void diffuseSampleAndEval(const Material* a_materials, const Spectrum* a_spectra, float4 a_wavelengths, float4 rands, float3 v, 
+static inline void diffuseSampleAndEval(const Material* a_materials, float4 a_reflSpec, float4 rands, float3 v, 
                                         float3 n, float2 tc, float4 color, BsdfSample* pRes)
 {
   const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
@@ -31,10 +13,8 @@ static inline void diffuseSampleAndEval(const Material* a_materials, const Spect
   const float  lambertPdf = lambertEvalPDF(lambertDir, v, n);
   const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
 
-  const float4 reflSpec = sampleDiffuseSpectrum(a_materials, a_spectra, a_wavelengths);
-
   pRes->dir   = lambertDir;
-  pRes->val   = lambertVal * reflSpec;
+  pRes->val   = lambertVal * a_reflSpec;
   pRes->pdf   = lambertPdf;
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
         
@@ -44,11 +24,10 @@ static inline void diffuseSampleAndEval(const Material* a_materials, const Spect
 }
 
 
-static void diffuseEval(const Material* a_materials, const Spectrum* a_spectra, float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, 
+static void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
                         float4 color, BsdfEval* res)
 {
   const uint             cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float4 reflSpec = sampleDiffuseSpectrum(a_materials, a_spectra, a_wavelengths);
  
   float lambertVal       = lambertEvalBSDF(l, v, n);
   const float lambertPdf = lambertEvalPDF (l, v, n);
@@ -56,6 +35,6 @@ static void diffuseEval(const Material* a_materials, const Spectrum* a_spectra, 
   if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
     lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[DIFFUSE_ROUGHNESS]);
 
-  res->val = lambertVal * reflSpec; 
+  res->val = lambertVal * a_reflSpec; 
   res->pdf = lambertPdf; 
 }

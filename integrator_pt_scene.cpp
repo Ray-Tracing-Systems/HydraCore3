@@ -615,7 +615,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       auto spec_path = std::filesystem::path(sceneFolder);
       spec_path.append(specNode.attribute(L"loc").as_string());
 
-      m_spectra.push_back(LoadSPDFromFile(spec_path, spec_id));
+      auto spec = LoadSPDFromFile(spec_path, spec_id);
+      
+      uint32_t offset = m_wavelengths.size();
+      std::copy(spec.wavelengths.begin(), spec.wavelengths.end(), std::back_inserter(m_wavelengths));
+      std::copy(spec.values.begin(), spec.values.end(), std::back_inserter(m_spec_values));
+      m_spec_offset_sz.push_back({offset, spec.wavelengths.size()});
       
       // we expect dense, sorted ids for now
       assert(m_spectra[spec_id].id == spec_id);
@@ -629,7 +634,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
       uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
       
-      m_spectra.push_back(std::move(uniform1));
+      uint32_t offset = m_wavelengths.size();
+      std::copy(uniform1.wavelengths.begin(), uniform1.wavelengths.end(), std::back_inserter(m_wavelengths));
+      std::copy(uniform1.values.begin(), uniform1.values.end(), std::back_inserter(m_spec_values));
+      m_spec_offset_sz.push_back({offset, uniform1.wavelengths.size()});
     }
   }
 
