@@ -68,20 +68,20 @@ static inline float4 SampleSpectrum(const float* a_spec_wavelengths, const float
   return sample;
 }
 
-static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
-{
-  float4 res;
-
-  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
-  {
-    uint32_t offset = uint32_t(float(std::lround(lambda[i])) - a);
-    if (offset < 0 || offset >= nCIESamples)
-      res[i] = 0;
-    else
-      res[i] = cie[offset];
-  }
-  return res;
-}
+//static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
+//{
+//  float4 res;
+//
+//  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
+//  {
+//    uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - a);
+//    if (offset < 0 || offset >= nCIESamples)
+//      res[i] = 0;
+//    else
+//      res[i] = cie[offset];
+//  }
+//  return res;
+//}
 
 static inline float SpectrumAverage(float4 spec) 
 {
@@ -91,7 +91,7 @@ static inline float SpectrumAverage(float4 spec)
   return sum / SPECTRUM_SAMPLE_SZ;
 }
 
-static inline float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lambda_min, float lambda_max,
+static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min, float lambda_max,
                                    const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z) 
 {
   const float pdf = 1.0f / (lambda_max - lambda_min);
@@ -100,9 +100,30 @@ static inline float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lamb
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
     spec[i] = (pdf != 0) ? spec[i] / pdf : 0.0f;
 
-  float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
-  float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
-  float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);
+  //float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
+  //float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
+  //float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);
+  float4 X,Y,Z; 
+  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
+  {
+    uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - lambda_min);
+  
+    if (offset < 0 || offset >= nCIESamples)
+      X[i] = 0;
+    else
+      X[i] = a_CIE_X[offset];
+  
+    if (offset < 0 || offset >= nCIESamples)
+      Y[i] = 0;
+    else
+      Y[i] = a_CIE_Y[offset];
+  
+    if (offset < 0 || offset >= nCIESamples)
+      Z[i] = 0;
+    else
+      Z[i] = a_CIE_Z[offset];
+  }
+  
 
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
   {
@@ -118,7 +139,7 @@ static inline float3 SpectrumToXYZ(float4 spec, const float4 &lambda, float lamb
   return float3{x ,y, z};
 }
 
-inline LiteMath::float3 XYZToRGB(const LiteMath::float3 xyz)
+inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
 {
   LiteMath::float3 rgb;
   rgb[0] = +3.240479f * xyz[0] - 1.537150f * xyz[1] - 0.498535f * xyz[2];
