@@ -568,6 +568,13 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     exit(0);
   }
 
+  ////////////////////////////////////////////////
+  m_cie_lambda = Get_CIE_lambda();
+  m_cie_x      = Get_CIE_X();
+  m_cie_y      = Get_CIE_Y();
+  m_cie_z      = Get_CIE_Z();
+  ////////////////////////////////////////////////
+  
   std::vector<TextureInfo> texturesInfo;
   texturesInfo.resize(0);
   texturesInfo.reserve(100);

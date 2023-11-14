@@ -356,7 +356,8 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   float3 rgb = to_float3(*a_accumColor);
   if(m_spectral_mode) // TODO: spectral framebuffer
   {
-    rgb = XYZToRGB(SpectrumToXYZ(*a_accumColor, *wavelengths));
+    const float3 xyz = SpectrumToXYZ(*a_accumColor, *wavelengths, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+    rgb = XYZToRGB(xyz);
   }
 
   float4 colorRes = to_float4(rgb, 1.0f);
