@@ -120,31 +120,6 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
 }
 
 
-MatIdWeight stack_weight_pop(MatIdWeight* stack, uint32_t stack_sz, uint32_t in_stack)
-{
-  MatIdWeight val = stack[0];
-  uint32_t i = 0;
-  while(i < in_stack)
-  {
-    stack[i] = stack[i + 1];
-    ++i;
-  }
-  return val;
-}
-
-void stack_weight_push(MatIdWeight val, MatIdWeight* stack, uint32_t stack_sz, uint32_t in_stack)
-{
-  uint32_t i = in_stack;
-  //assert(in_stack < stack_sz);
-
-  while(i > 0)
-  {
-    stack[i] = stack[i - 1];
-    --i;
-  }
-  stack[i] = val;
-}
-
 BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
@@ -235,12 +210,12 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   constexpr uint32_t stack_sz = 8;
   MatIdWeight material_stack[stack_sz];
   material_stack[0] = {a_materialId, 1.0f};
-  uint32_t in_stack = 1;
+  uint32_t top = 1;
 
-  while(in_stack > 0)
+  while(top > 0)
   {
-    MatIdWeight  currMat   = stack_weight_pop(material_stack, stack_sz, in_stack);
-    in_stack--;
+    top--;
+    MatIdWeight  currMat = material_stack[std::max(top, 0u)];
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
 
@@ -306,10 +281,10 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_BLEND:
       {
         auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, n, tc);
-        stack_weight_push(childMats.second, material_stack, stack_sz, in_stack);
-        in_stack++;
-        stack_weight_push(childMats.first, material_stack, stack_sz, in_stack);
-        in_stack++;
+        material_stack[top] = childMats.second;
+        top++;
+        material_stack[top] = childMats.first;
+        top++;
         break;
       }
       default:
