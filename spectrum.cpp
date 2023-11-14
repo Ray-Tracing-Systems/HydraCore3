@@ -38,26 +38,7 @@ Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
   return res;
 }
 
-// "stratified" sample wavelengths in [a, b] with random number u
-float4 SampleWavelengths(float u, float a, float b) 
-{
-  // pdf is 1.0f / (b - a)
-  float4 res;
-
-  res[0] = lerp(a, b, u);
-
-  float delta = (b - a) / SPECTRUM_SAMPLE_SZ;
-  for (uint32_t i = 1; i < SPECTRUM_SAMPLE_SZ; ++i) 
-  {
-      res[i] = res[i - 1] + delta;
-      if (res[i] > b)
-        res[i] = a + (res[i] - b);
-  }
-
-  return res;
-}
-
-
+constexpr uint32_t nCIESamples = 471;
 const float CIE_lambda[nCIESamples] = {
     360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376,
     377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393,

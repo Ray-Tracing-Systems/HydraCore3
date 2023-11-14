@@ -76,7 +76,8 @@ uint32_t Integrator::MaterialBlendSampleAndEval(uint a_materialId, float4 wavele
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = as_uint(m_materials[a_materialId].data[BLEND_TEXID0]);
-  const float  weightTex = to_float3(m_textures[texId]->sample(texCoordT)).x;
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_materialId].data[BLEND_WEIGHT] * weightTex;
 
   const uint matId1 = as_uint(m_materials[a_materialId].data[BLEND_MAT_ID_1]);
@@ -104,7 +105,8 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
   const uint   texId     = as_uint(m_materials[a_mat.id].data[BLEND_TEXID0]);
-  const float  weightTex = to_float3(m_textures[texId]->sample(texCoordT)).x;
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
 
   const uint matId1      = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
@@ -139,7 +141,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
   }
 
-  assert(currMatId < m_materials.size());
+  //assert(currMatId < m_materials.size());
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   switch(mtype)
@@ -209,7 +211,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
   constexpr uint32_t stack_sz = 8;
   MatIdWeight material_stack[stack_sz];
-  material_stack[0] = {a_materialId, 1.0f};
+  material_stack[0] = make_id_weight(a_materialId, 1.0f);
   uint32_t top = 1;
 
   while(top > 0)
@@ -240,7 +242,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       }
       case MAT_TYPE_GLASS:
       {
-        glassEval(m_materials.data() + currMat.id, l, v, n, tc, {}, &currVal);
+        glassEval(m_materials.data() + currMat.id, l, v, n, tc, float3(0,0,0), &currVal);
 
         res.val += currVal.val * currMat.weight;
         res.pdf += currVal.pdf * currMat.weight;

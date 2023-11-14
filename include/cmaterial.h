@@ -548,6 +548,14 @@ struct MatIdWeight
   float weight;
 };
 
+static inline MatIdWeight make_id_weight(uint32_t a, float b)
+{
+  MatIdWeight res;
+  res.id  = a;
+  res.weight = b;
+  return res;
+}
+
 struct MatIdWeightPair
 {
   MatIdWeight first;

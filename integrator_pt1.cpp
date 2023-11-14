@@ -48,15 +48,13 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   if(m_spectral_mode)
   {
     float u = rndFloat1_Pseudo(&genLocal);
-    *wavelengths = SampleWavelengths(u);
+    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
   }
   else
   {
     const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
     for (uint32_t i = 0; i < sample_sz; ++i) 
-    {
-      (*wavelengths).M[i] = 0.0f;
-    }
+      (*wavelengths)[i] = 0.0f;
   }
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);

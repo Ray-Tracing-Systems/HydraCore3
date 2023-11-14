@@ -9,9 +9,6 @@
 using namespace LiteMath;
 #endif
 
-static constexpr float CIE_Y_integral = 106.856895f;
-static constexpr uint32_t nCIESamples = 471;
-
 struct Spectrum
 {
   float Sample(float lambda) const;
@@ -36,36 +33,53 @@ inline size_t BinarySearch(const float* array, size_t array_sz, float val)
   return (size_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
 }
 
-float4 SampleWavelengths(float u, float a = LAMBDA_MIN, float b = LAMBDA_MAX);
+// "stratified" sample wavelengths in [a, b] with random number u
+static inline float4 SampleWavelengths(float u, float a, float b) 
+{
+  // pdf is 1.0f / (b - a)
+  float4 res;
+
+  res[0] = lerp(a, b, u);
+
+  float delta = (b - a) / SPECTRUM_SAMPLE_SZ;
+  for (uint32_t i = 1; i < SPECTRUM_SAMPLE_SZ; ++i) 
+  {
+      res[i] = res[i - 1] + delta;
+      if (res[i] > b)
+        res[i] = a + (res[i] - b);
+  }
+
+  return res;
+}
 
 static inline float4 SampleSpectrum(const float* a_spec_wavelengths, const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
 {
-  float4 sample {};
+  float4 sampleSpec = float4(0,0,0,0);
   const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
   for(uint i = 0; i < spectralSamples; ++i)
   {
     if (a_sz == 0 || a_wavelengths[i] < a_spec_wavelengths[0] || a_wavelengths[i] > a_spec_wavelengths[a_sz - 1])
     {
-      sample[i] = 0.0f;
+      sampleSpec[i] = 0.0f;
     }
     else
     {
-      int32_t last = (int32_t)a_sz - 2, first = 1;
+      int last = (int)a_sz - 2, first = 1;
       while (last > 0) 
       {
-        size_t half = (size_t)last >> 1, 
+        int half = last >> 1, 
         middle = first + half;
         bool predResult = a_spec_wavelengths[middle] <= a_wavelengths[i];
-        first = predResult ? int32_t(middle + 1) : first;
-        last = predResult ? last - int32_t(half + 1) : int32_t(half);
+        first = predResult ? int(middle + 1) : first;
+        last = predResult ? last - int(half + 1) : int(half);
       }
-      size_t o = (size_t)clamp(int32_t(first - 1), 0, int32_t(a_sz - 2));
+      int o = clamp(int(first - 1), 0, int(a_sz - 2));
 
       float t = (a_wavelengths[i] - a_spec_wavelengths[o]) / (a_spec_wavelengths[o + 1] - a_spec_wavelengths[o]);
-      sample[i] =  lerp(a_spec_values[o], a_spec_values[o + 1], t);
+      sampleSpec[i] =  lerp(a_spec_values[o], a_spec_values[o + 1], t);
     } 
   }
-  return sample;
+  return sampleSpec;
 }
 
 //static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
@@ -95,6 +109,8 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
                                    const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z) 
 {
   const float pdf = 1.0f / (lambda_max - lambda_min);
+  const float CIE_Y_integral = 106.856895f;
+  const uint32_t nCIESamples = 471;
 
   //TODO: fix
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
@@ -123,7 +139,6 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
     else
       Z[i] = a_CIE_Z[offset];
   }
-  
 
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
   {
