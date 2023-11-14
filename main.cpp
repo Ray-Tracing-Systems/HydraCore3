@@ -10,7 +10,8 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
+std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, bool a_spectral_mode, 
+                                                       vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); 
 #endif
 
 int main(int argc, const char** argv)
@@ -87,7 +88,7 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, spectral_mode, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
   #endif

@@ -124,17 +124,17 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   {
     uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - lambda_min);
   
-    if (offset < 0 || offset >= nCIESamples)
+    if (offset >= nCIESamples)
       X[i] = 0;
     else
       X[i] = a_CIE_X[offset];
   
-    if (offset < 0 || offset >= nCIESamples)
+    if (offset >= nCIESamples)
       Y[i] = 0;
     else
       Y[i] = a_CIE_Y[offset];
   
-    if (offset < 0 || offset >= nCIESamples)
+    if (offset >= nCIESamples)
       Z[i] = 0;
     else
       Z[i] = a_CIE_Z[offset];

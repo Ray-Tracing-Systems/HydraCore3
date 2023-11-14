@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "CPU render",
+        "name": "CPU render (1)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
@@ -13,7 +13,7 @@
                  "-height", "1024",
                  "-spp", "256",
                  "-scn_dir", "../comparisonrender",
-                 "-out", "OUT_BLEND.bmp"],
+                 "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -27,6 +27,34 @@
             }
         ]
     },
+
+    {
+        "name": "GPU render (1)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
     {
         "name": "CPU render (debug)",
         "type": "cppdbg",
