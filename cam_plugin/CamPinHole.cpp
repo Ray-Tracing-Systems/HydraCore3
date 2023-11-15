@@ -22,7 +22,7 @@ void CamPinHole::SetParameters(int a_width, int a_height, const CamParameters& a
   m_projInv = inverse4x4(m_proj);
 }
 
-void CamPinHole::MakeRaysBlock(float* out_rayPosAndNear4f, float* out_rayDirAndFar4f, size_t in_blockSize, int passId)
+void CamPinHole::MakeRaysBlock(float* out_rayPosAndNear4f, float* out_rayDirAndFar4f, AuxRayData* out_auxData, size_t in_blockSize, int passId)
 {
   assert(in_blockSize == m_width*m_height);
   #pragma omp parallel for default(shared)

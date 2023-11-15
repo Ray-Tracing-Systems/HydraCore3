@@ -33,8 +33,6 @@ int main(int argc, const char** argv)
   std::string integratorType = "mispt";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
-  ///////////////////////////////////////////////////////////////////////////////////////
-  ///////////////////////////////////////////////////////////////////////////////////////
   std::shared_ptr<Integrator>  pRender  = nullptr;
   std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
 
@@ -45,6 +43,26 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-out"))
     imageOut = args.getOptionValue<std::string>("-out");
+
+  
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  std::cout << "[main_with_cam]: loading xml ... " << scenePath.c_str() << std::endl;
+
+  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), 
+                                                       WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+
+  //// override parameters which are explicitly defined in command line
+  //
+  if(args.hasOption("-width"))
+    WIN_WIDTH = args.getOptionValue<int>("-width");
+  if(args.hasOption("-height"))
+    WIN_HEIGHT = args.getOptionValue<int>("-height");
+  if(args.hasOption("--spectral"))
+    spectral_mode = 1;
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
 
   std::filesystem::path out_path {imageOut};
   auto dir = out_path.parent_path();
@@ -73,9 +91,10 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  std::vector<float4> rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data 
-  std::vector<float4> rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
-  std::vector<float4> rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  std::vector<float4>     rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data 
+  std::vector<float4>     rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  std::vector<AuxRayData> auxDat(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  std::vector<float4>     rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
   
   std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT); ///<! frame buffer (TODO: spectral FB?)
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
@@ -128,7 +147,7 @@ int main(int argc, const char** argv)
     std::cout.flush();
     std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
     
-    pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
+    pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), auxDat.data(), WIN_WIDTH*WIN_HEIGHT, passId);
     pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
     pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
     
