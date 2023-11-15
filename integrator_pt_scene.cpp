@@ -601,7 +601,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   //// initial feature map
   //
-  features.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
+  features.resize(TOTAL_FEATURES_NUM); // disable all features by default
   for(auto& feature : features)              //
     feature = 0;                             //
   features[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends (i.e. blends are disabled!)
@@ -672,7 +672,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   ////
   
   //// init render feature map
-  m_actualFeatures.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
+  m_actualFeatures.resize(TOTAL_FEATURES_NUM); // disable all features by default
   for(auto& feature : m_actualFeatures)              //
     feature = 0;                                      //
   m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends

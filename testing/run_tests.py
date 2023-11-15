@@ -190,12 +190,6 @@ reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/stat
 
 '''
 
-reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml"],
-                                           [PATH_TO_HYDRA2_TESTS + "/tests_images/test_078/w_ref.png"],
-                                            imsize = [(512,512)], naivemul = 1, inregrators = ["mispt"]))
-
-
-'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml",
@@ -229,7 +223,7 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plasti
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
                                           [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/Images/PlasticSmooth_sphere_mitsuba.png",
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/Images/PlasticSmooth_cornell_mitsuba.png"],
-                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 16))
+                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
 
 reqs.append( REQ_HX("mat_conductor",
                     [
@@ -253,7 +247,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Glass_gloss-1_cornell_hydra3.xml"],
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Images/Glass_rough-0_cornell_mitsuba.png"],
-                                         imsize = [(1024, 1024), (1024, 1024)], naivemul = 16))
+                                         imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
 
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
@@ -263,8 +257,7 @@ reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
-reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 16) )
-'''
+reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
