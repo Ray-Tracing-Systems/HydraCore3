@@ -95,12 +95,6 @@ int main(int argc, const char** argv)
   #ifdef USE_VULKAN
   if(onGPU)
   {
-    //std::cout << "WIN_WIDTH  = " << WIN_WIDTH << std::endl;
-    //std::cout << "WIN_HEIGHT = " << WIN_HEIGHT << std::endl;
-    //std::cout << "spectral_mode = " << spectral_mode << std::endl;
-    //for(auto feature : features)
-    //  std::cout << feature << ",";
-    //std::cout << std::endl;
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
     pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features, ctx, WIN_WIDTH*WIN_HEIGHT);
