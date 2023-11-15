@@ -48,7 +48,7 @@ class REQ:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       output  = res.stdout.decode('utf-8')
       #print(output)
-      pattern = r'PathTraceBlock\(exec\) = (\d+\.\d+) ms'
+      pattern = r'PathTraceBlock\(MIS-PT\) = (\d+\.\d+) ms'
       match   = re.search(pattern, output) 
       if match:
         execution_time_ms = round(float(match.group(1)))
@@ -66,7 +66,7 @@ class REQ:
       Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
       return
     if res.returncode != 0:
-      Log().status_info("{}: launch".format(test_name), status=Status.FAILED)
+      Log().status_info("{}: launch, returncode = {}".format(test_name,res.returncode), status=Status.FAILED)
       Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
       return
 
@@ -134,8 +134,9 @@ class REQ_HX(REQ):
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
-          # print(args)
+          #print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
+          #print("finished")
 
 
 class REQ_HP(REQ):
@@ -188,6 +189,7 @@ reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/stat
                                   [(1024,1024), (1024,1024), (1024,1024)]))
 
 '''
+
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml",
@@ -198,6 +200,7 @@ reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_
                                             PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref.png",
                                             PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref2.png"],
                                             imsize = [(512,512), (512,512), (512,512), (512,512)], naivemul = 1))
+
 
 reqs.append( REQ_HX("mat_lambert", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_101/statex_00001.xml",
                                     PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Lambert_cornell_hydra2.xml"],
@@ -220,7 +223,7 @@ reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plasti
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
                                           [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/Images/PlasticSmooth_sphere_mitsuba.png",
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/Images/PlasticSmooth_cornell_mitsuba.png"],
-                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 16))
+                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
 
 reqs.append( REQ_HX("mat_conductor",
                     [
@@ -244,7 +247,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Glass_gloss-1_cornell_hydra3.xml"],
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Images/Glass_rough-0_cornell_mitsuba.png"],
-                                         imsize = [(1024, 1024), (1024, 1024)], naivemul = 16))
+                                         imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
 
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
@@ -254,7 +257,7 @@ reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
-reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 16) )
+reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))

@@ -10,7 +10,8 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
+std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, 
+                                                       vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); 
 #endif
 
 int main(int argc, const char** argv)
@@ -68,11 +69,23 @@ int main(int argc, const char** argv)
       gamma = args.getOptionValue<float>("-gamma");
   }
   
+  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+  std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
+
+  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), 
+                                                       WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+
+  //// override parameters which are explicitly defined in command line
+  //
   if(args.hasOption("-width"))
     WIN_WIDTH = args.getOptionValue<int>("-width");
   if(args.hasOption("-height"))
     WIN_HEIGHT = args.getOptionValue<int>("-height");
-  
+  if(args.hasOption("--spectral"))
+    spectral_mode = 1;
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -84,11 +97,11 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features, ctx, WIN_WIDTH*WIN_HEIGHT);
   }
   else
   #endif
-    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features);
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +231,6 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
     }
   }
-
 
   return 0;
 }

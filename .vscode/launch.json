@@ -2,10 +2,11 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "CPU render",
+        "name": "CPU render (1)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
+<<<<<<< HEAD
         "args": ["--cpu",
                  "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
                  "-integrator", "mispt", 
@@ -14,6 +15,16 @@
                  "-spp", "64",
                  "-scn_dir", "../comparisonrender"],
                  //"-out", "../Hydra3Tests/Tests/Conductor/0002/Images/Rough-uv01-sphere-hydra3.png"],
+=======
+        "args": ["--cpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_CPU.bmp"],
+>>>>>>> main
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -27,18 +38,73 @@
             }
         ]
     },
+
+    {
+        "name": "GPU render (1)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CPU render (2)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_078/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16",
+                 "-out", "OUT_COLOR.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
     {
         "name": "CPU render (debug)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--cpu",
-                "-in", "../Hydra3Tests/Tests/Conductor/0002/Rough-uv01-sphere-hydra3.xml",
+        "args": ["--cpu", "--spectral",
+                "-in", "../Hydra3Tests/Tests/Spectral/0004/spectral_cornell_hydra3.xml",
                 "-integrator", "mispt", 
                 "-width", "512",
                 "-height", "512",
-                "-spp", "64", 
-                "-out", "../Hydra3Tests/Tests/Conductor/0002/Images/Rough-uv01-sphere-hydra3.png"],
+                "-spp", "32",
+                "-scn_dir", "../Hydra3Tests",
+                "-out", "DEBUG.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

@@ -15,6 +15,12 @@ static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
+
+static constexpr float LAMBDA_MIN = 360.0f;
+static constexpr float LAMBDA_MAX = 830.0f;
+
+using float4 = float4;
+static constexpr uint32_t SPECTRUM_SAMPLE_SZ = 4; //sizeof(float4) / sizeof(float); // srry, sizeof() evaluation not yet supported ... 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -32,6 +38,7 @@ typedef struct SurfaceHitT
   float3 norm;
   float2 uv;
 }SurfaceHit;
+
 
 static inline float3 EyeRayDirNormalized(float x, float y, float4x4 a_mViewProjInv)
 {
@@ -175,8 +182,8 @@ static inline float2 MapSamplesToDisc(float2 xy)
 
   //float sin_phi, cos_phi;
   //sincosf(phi, &sin_phi, &cos_phi);
-  float sin_phi = sin(phi);
-  float cos_phi = cos(phi);
+  float sin_phi = std::sin(phi);
+  float cos_phi = std::cos(phi);
 
   res.x = r*sin_phi;
   res.y = r*cos_phi;

@@ -16,7 +16,7 @@ struct LightSource
   float2   size;
   float    pdfA;
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE
-  //float4 dummy;     ///<! don't forget to manually align stucture to 16 bytes when add new fields
+  float4   ids;       /// (spec_id, tex_id, ies_id, unused)
 };
 
 struct LightSample

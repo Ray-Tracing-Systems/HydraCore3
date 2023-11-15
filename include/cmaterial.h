@@ -6,7 +6,7 @@
 
 struct BsdfSample
 {
-  float3 val;
+  float4 val;
   float3 dir;
   float  pdf; 
   uint   flags;
@@ -15,7 +15,7 @@ struct BsdfSample
 
 struct BsdfEval
 {
-  float3 val;
+  float4 val;
   float  pdf; 
 };
 
@@ -30,6 +30,8 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
 enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
+                      MAT_TYPE_DIFFUSE   = 4,
+                      MAT_TYPE_BLEND     = 5,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -83,6 +85,17 @@ static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = UINT_MAIN_LAST_IND + 1;
 static constexpr uint GLASS_FLOAT_IOR             = UINT_MAIN_LAST_IND + 2;
 static constexpr uint GLASS_CUSTOM_LAST_IND       = GLASS_FLOAT_IOR;
 
+// EMISSION
+// colors
+static constexpr uint EMISSION_COLOR              = 0;    
+static constexpr uint EMISSION_COLOR_LAST_IND     = EMISSION_COLOR;
+
+// custom 
+static constexpr uint EMISSION_TEXID0             = UINT_MAIN_LAST_IND + 0;
+static constexpr uint EMISSION_SPECID0            = UINT_MAIN_LAST_IND + 1;
+static constexpr uint EMISSION_CUSTOM_LAST_IND    = EMISSION_SPECID0;
+
+
 // Conductor
 // colors
 static constexpr uint CONDUCTOR_COLOR             = 0;
@@ -94,7 +107,33 @@ static constexpr uint CONDUCTOR_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
 static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
 static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
 static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
-static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_TEXID0;
+static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
+static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
+
+
+// Simple diffuse
+// colors
+static constexpr uint DIFFUSE_COLOR             = 0;
+static constexpr uint DIFFUSE_COLOR_LAST_IND    = DIFFUSE_COLOR;
+
+// custom
+static constexpr uint DIFFUSE_ROUGHNESS         = UINT_MAIN_LAST_IND + 0;
+static constexpr uint DIFFUSE_TEXID0            = UINT_MAIN_LAST_IND + 1;
+static constexpr uint DIFFUSE_SPECID            = UINT_MAIN_LAST_IND + 2;
+static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_SPECID;
+
+
+// Blend material
+// colors
+static constexpr uint BLEND_COLOR_LAST_IND = 0;
+
+// custom
+static constexpr uint BLEND_WEIGHT          = UINT_MAIN_LAST_IND + 0;
+static constexpr uint BLEND_MAT_ID_1        = UINT_MAIN_LAST_IND + 1;
+static constexpr uint BLEND_MAT_ID_2        = UINT_MAIN_LAST_IND + 2;
+static constexpr uint BLEND_TEXID0          = UINT_MAIN_LAST_IND + 3;
+static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_TEXID0;
 
 
 
@@ -111,6 +150,8 @@ struct Material
       
   float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,8 +202,8 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   const float cosTheta_wi = dot(a_l, a_n);
   const float cosTheta_wo = dot(a_v, a_n);
 
-  const float sinTheta_wi = sqrt(fmax(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
-  const float sinTheta_wo = sqrt(fmax(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
+  const float sinTheta_wi = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
+  const float sinTheta_wo = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
 
   const float sigma  = a_roughness * M_PI * 0.5f; //Radians(sig)
   const float sigma2 = sigma * sigma;
@@ -179,9 +220,9 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
 
   // Compute cosine term of Oren-Nayar model
-  float maxcos = 0.0F;
+  float maxcos = 0.0f;
 
-  if (sinTheta_wi > 1e-4 && sinTheta_wo > 1e-4)
+  if (sinTheta_wi > 1e-4f && sinTheta_wo > 1e-4f)
   {
     const float3 wo     = float3(-dot(a_v, nx), -dot(a_v, ny), -dot(a_v, nz));
     const float3 wi     = float3(-dot(a_l, nx), -dot(a_l, ny), -dot(a_l, nz));
@@ -190,21 +231,21 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
     const float sinphio = sinPhiPBRT(wo, sinTheta_wo);
     const float cosphio = cosPhiPBRT(wo, sinTheta_wo);
     const float dcos    = cosphii * cosphio + sinphii * sinphio;
-    maxcos              = fmax(0.0F, dcos);
+    maxcos              = std::max(0.0f, dcos);
   }
 
   // Compute sine and tangent terms of Oren-Nayar model
-  float sinalpha = 0.0F, tanbeta = 0.0F;
+  float sinalpha = 0.0f, tanbeta = 0.0f;
 
-  if (fabs(cosTheta_wi) > fabs(cosTheta_wo))
+  if (std::abs(cosTheta_wi) > std::abs(cosTheta_wo))
   {
     sinalpha = sinTheta_wo;
-    tanbeta  = sinTheta_wi / fmax(fabs(cosTheta_wi), DEPSILON);
+    tanbeta  = sinTheta_wi / std::max(std::abs(cosTheta_wi), DEPSILON);
   }
   else
   {
     sinalpha = sinTheta_wi;
-    tanbeta  = sinTheta_wo / fmax(fabs(cosTheta_wo), DEPSILON);
+    tanbeta  = sinTheta_wo / std::max(std::abs(cosTheta_wo), DEPSILON);
   }
 
   return (A + B * maxcos * sinalpha * tanbeta);
@@ -213,7 +254,7 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
 
 static inline float orennayarEvalPDF(const float3 l, const float3 n)
 {
-  return fabs(dot(l, n)) * INV_PI;
+  return std::abs(dot(l, n)) * INV_PI;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -491,13 +532,42 @@ static inline float fresnelSlick(const float VdotH)
   return (tmp*tmp)*(tmp*tmp)*tmp;
 }
 
-static inline float3 hydraFresnelCond(float3 f0, float VdotH, float ior, float roughness) 
+static inline float4 hydraFresnelCond(float4 f0, float VdotH, float ior, float roughness) 
 {  
   if(ior == 0.0f) // fresnel reflactance is disabled
     return f0;
 
-  return f0 + (float3(1.0f,1.0f,1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+  return f0 + (float4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
 }
 
+////////////////// blends
+
+struct MatIdWeight
+{
+  uint32_t id;
+  float weight;
+};
+
+static inline MatIdWeight make_id_weight(uint32_t a, float b)
+{
+  MatIdWeight res;
+  res.id  = a;
+  res.weight = b;
+  return res;
+}
+
+struct MatIdWeightPair
+{
+  MatIdWeight first;
+  MatIdWeight second;
+};
+
+static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
+{
+  MatIdWeightPair res;
+  res.first  = a;
+  res.second = b;
+  return res;
+}
 
 #endif

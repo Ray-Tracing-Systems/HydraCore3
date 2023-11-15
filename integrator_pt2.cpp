@@ -5,6 +5,7 @@
 #include "include/cmat_gltf.h"
 #include "include/cmat_conductor.h"
 #include "include/cmat_glass.h"
+#include "include/cmat_diffuse.h"
 
 #include <chrono>
 #include <string>
@@ -47,8 +48,8 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
   {
     case LIGHT_GEOM_SPHERE:
     {
-      const float  lradius = m_lights[a_lightId].size.x;
-      const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      // const float  lradius = m_lights[a_lightId].size.x;
+      // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
       //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
       //  return 1.0f;
       const float3 dirToV  = normalize(lpos - illuminationPoint);
@@ -69,105 +70,251 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 rands, float3 v, float3 n, float2 tc, 
+
+uint32_t Integrator::MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                                                  MisData* a_misPrev, BsdfSample* a_pRes)
+{
+  const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const uint   texId     = as_uint(m_materials[a_materialId].data[BLEND_TEXID0]);
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float  weightTex = weightDat.x;
+  const float  weight    = m_materials[a_materialId].data[BLEND_WEIGHT] * weightTex;
+
+  const uint matId1 = as_uint(m_materials[a_materialId].data[BLEND_MAT_ID_1]);
+  const uint matId2 = as_uint(m_materials[a_materialId].data[BLEND_MAT_ID_2]);
+
+  uint32_t selectedMatId = matId1;
+  const float select = rndFloat1_Pseudo(a_gen);
+  if(select < weight)
+  {
+    a_pRes->pdf *= weight;
+    a_pRes->val *= weight;
+    selectedMatId = matId2;
+  }
+  else
+  {
+    a_pRes->pdf *= 1.0f - weight;
+    a_pRes->val *= 1.0f - weight;
+    selectedMatId = matId1;
+  }
+
+  return selectedMatId;
+}
+
+MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
+{
+  const float2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
+  const uint   texId     = as_uint(m_materials[a_mat.id].data[BLEND_TEXID0]);
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float  weightTex = weightDat.x;
+  const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
+
+  const uint matId1      = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
+  const uint matId2      = as_uint(m_materials[a_mat.id].data[BLEND_MAT_ID_2]);
+
+  MatIdWeight p1, p2;
+  p1.id     = matId1;
+  p1.weight = a_mat.weight * (1.0f - weight);
+  p2.id     = matId2;
+  p2.weight = a_mat.weight * weight;
+
+  return make_weight_pair(p1, p2);
+}
+
+
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
-  // implicit strategy
-  const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
-  const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
-  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
-
-  // TODO: read other parameters from texture
-
   BsdfSample res;
   {
-    res.val   = float3(0,0,0);
+    res.val   = float4(0, 0, 0, 0);
     res.pdf   = 1.0f;
     res.dir   = float3(0,1,0);
     res.flags = a_currRayFlags;
   }
 
+  uint32_t currMatId = a_materialId;
+  uint     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
+  while(mtype == MAT_TYPE_BLEND)
+  {
+    currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
+    mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
+  }
 
+  //assert(currMatId < m_materials.size());
+
+  const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
-      gltfSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, color, &res);
-      break;
-    case MAT_TYPE_GLASS:
-    if(KSPEC_FEATURE_MAT_GLASS != 0)
+    if(KSPEC_MAT_TYPE_GLTF != 0)
     {
-      glassSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res, a_misPrev);
+      const float4 rands = rndFloat4_Pseudo(a_gen);
+      
+      const uint   texId     = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
+      const float4 texColor  = (m_textures[texId]->sample(texCoordT));
+      const float4 color     = (m_materials[currMatId].colors[GLTF_COLOR_BASE])*texColor;
+      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, color, &res);
+    }
+    break;
+    case MAT_TYPE_GLASS: 
+    if(KSPEC_MAT_TYPE_GLASS != 0)
+    {
+      const float4 rands = rndFloat4_Pseudo(a_gen);
+
+      glassSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, &res, a_misPrev);
     }
     break;
     case MAT_TYPE_CONDUCTOR:
-    if(KSPEC_FEATURE_MAT_CONDUCTOR != 0)
+    if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
     {
-      const uint   texId     = as_uint(m_materials[a_materialId].data[CONDUCTOR_TEXID0]);
-      const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+      const float4 rands = rndFloat4_Pseudo(a_gen);
+
+      const uint   texId     = as_uint(m_materials[currMatId].data[CONDUCTOR_TEXID0]);
       const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
       
-      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
+      const float2 alpha   = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
+      const float4 etaSpec = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
+      const float4 kSpec   = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res);
+        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, &res);
       else
-        conductorRoughSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, alphaTex, &res);
+        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, alphaTex, &res);
     }
-      break;
+    break;
+    case MAT_TYPE_DIFFUSE:
+    if(KSPEC_MAT_TYPE_DIFFUSE != 0)
+    {
+      const float4 rands = rndFloat4_Pseudo(a_gen);
+
+      const uint   texId       = as_uint(m_materials[currMatId].data[DIFFUSE_TEXID0]);
+      const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+      const float4 color       = texColor;
+
+      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
+
+      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, color, &res);
+    }
+    break;
     default:
     break;
   }
-
+  
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(uint a_materialId, float3 l, float3 v, float3 n, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
 {
-  // explicit strategy
-  const uint   texId     = as_uint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
-  const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const float3 texColor  = to_float3(m_textures[texId]->sample(texCoordT));
-  const float3 color     = to_float3(m_materials[a_materialId].colors[GLTF_COLOR_BASE])*texColor;
-  const uint   mtype     = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
-
-
-  // TODO: read other parameters from texture
   BsdfEval res;
   {
-    res.val = float3(0,0,0);
+    res.val = float4(0,0,0,0);
     res.pdf   = 0.0f;
   }
 
+  MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
+  MatIdWeight material_stack[KSPEC_BLEND_STACK_SIZE];
+  if(KSPEC_MAT_TYPE_BLEND != 0)
+    material_stack[0] = currMat;
+  int top = 0;
+  bool needPop = false;
 
-  switch(mtype)
+  do
   {
-    case MAT_TYPE_GLTF:
-      gltfEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
-      break;
-    case MAT_TYPE_GLASS:
-    if(KSPEC_FEATURE_MAT_GLASS != 0)
+    if(KSPEC_MAT_TYPE_BLEND != 0)
     {
-      glassEval(m_materials.data() + a_materialId, l, v, n, tc, color, &res);
-    }
-    break;
-    case MAT_TYPE_CONDUCTOR: 
-    if(KSPEC_FEATURE_MAT_CONDUCTOR != 0)
-    {
-      const uint   texId     = as_uint(m_materials[a_materialId].data[CONDUCTOR_TEXID0]);
-      const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-      const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
-
-      const float2 alpha = float2(m_materials[a_materialId].data[CONDUCTOR_ROUGH_V], m_materials[a_materialId].data[CONDUCTOR_ROUGH_U]);
-      if(trEffectivelySmooth(alpha))
-        conductorSmoothEval(m_materials.data() + a_materialId, l, v, n, tc, &res);
+      if(needPop)
+      {
+        top--;
+        currMat = material_stack[std::max(top, 0)];
+      }
       else
-        conductorRoughEval(m_materials.data() + a_materialId, l, v, n, tc, alphaTex, &res);
+        needPop = true; // if not blend, pop on next iter
+    } 
+
+    const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
+    const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
+
+    BsdfEval currVal;
+    {
+      currVal.val = float4(0,0,0,0);
+      currVal.pdf   = 0.0f;
     }
-      break;
-    default:
-    break;
-  }
+    switch(mtype)
+    {
+      case MAT_TYPE_GLTF:
+      if(KSPEC_MAT_TYPE_GLTF != 0)
+      {
+        const uint   texId     = as_uint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
+        const float4 texColor  = (m_textures[texId]->sample(texCoordT));
+        const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
+        gltfEval(m_materials.data() + currMat.id, l, v, n, tc, color, &currVal);
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+
+        break;
+      }
+      case MAT_TYPE_GLASS:
+      if(KSPEC_MAT_TYPE_GLASS != 0)
+      {
+        glassEval(m_materials.data() + currMat.id, l, v, n, tc, float3(0,0,0), &currVal);
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_CONDUCTOR: 
+      if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
+      {
+        const uint   texId     = as_uint(m_materials[currMat.id].data[CONDUCTOR_TEXID0]);
+        const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
+
+        const float2 alpha = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
+
+        if(!trEffectivelySmooth(alpha))
+        {
+          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
+          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
+          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, &currVal);
+        }
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_DIFFUSE:
+      if(KSPEC_MAT_TYPE_DIFFUSE != 0)
+      {
+        const uint   texId       = as_uint(m_materials[currMat.id].data[DIFFUSE_TEXID0]);
+        const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+        const float4 color       = texColor;
+
+        const float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
+
+        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, color, &currVal);
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_BLEND:
+      if(KSPEC_MAT_TYPE_BLEND != 0)
+      {
+        auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, n, tc);
+        currMat = childMats.first;
+        needPop = false;                        // we already put 'childMats.first' in 'currMat'
+        if(top + 1 <= KSPEC_BLEND_STACK_SIZE)
+        {
+          material_stack[top] = childMats.second; // remember second mat in stack
+          top++;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+
+  } while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
 
   return res;
 }

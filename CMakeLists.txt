@@ -124,7 +124,9 @@ set(CORE_SRC
         integrator_pt2.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
+        integrator_spectrum.cpp
         mi_materials.cpp
+        spectrum.cpp
         imageutils.cpp
         utils.cpp)
 
@@ -151,6 +153,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   link_directories("${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64")
   set(EMBREE_LIBS ${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+  find_package(Threads REQUIRED)
   link_directories(${CMAKE_SOURCE_DIR}/external/CrossRT/lib)
   set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
 endif()
@@ -175,6 +178,7 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   # add debug specific options here
+  target_link_libraries(hydra LINK_PUBLIC Threads::Threads)
 else()
   target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
 endif()
