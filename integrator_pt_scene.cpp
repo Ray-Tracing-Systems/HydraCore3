@@ -595,7 +595,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   auto loadRes = g_lastScene.LoadState(scenePathStr, sceneDirStr);
   if(loadRes != 0)
   {
-    std::cout << "Integrator::PreliminarySceneAnalysis failed: '" << a_scenePath << "'" << std::endl; 
+    std::cout << "[Integrator::PreliminarySceneAnalysis]: Load scene xml failed: '" << a_scenePath << "'" << std::endl; 
     exit(0);
   }
 
@@ -672,11 +672,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   ////
   
   //// init render feature map
-  m_enabledFeatures.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
-  for(auto& feature : m_enabledFeatures)              //
+  m_actualFeatures.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
+  for(auto& feature : m_actualFeatures)              //
     feature = 0;                                      //
-  m_enabledFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
-  m_enabledFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
+  m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
+  m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
   //// 
 
   std::vector<TextureInfo> texturesInfo;
@@ -765,25 +765,25 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
       if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
-        m_enabledFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
+        m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
-        m_enabledFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
+        m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
       mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
-      m_enabledFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
+      m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
       mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
-      m_enabledFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
+      m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
     {
       mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
-      m_enabledFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
-      m_enabledFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+      m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
+      m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
 
     m_materials.push_back(mat);
@@ -983,6 +983,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // (6) print enabled features in scene
   //
+  for(size_t i=0; i<m_enabledFeatures.size();i++)
+  {
+    if(m_actualFeatures[i] != m_enabledFeatures[i])
+    {
+      std::string featureName = GetFeatureName(uint32_t(i));
+      std::cout << "[Integrator::LoadScene]: feature '" << featureName.c_str() << "' has different values in 'enabled' and 'actual' features array" << std::endl;
+      std::cout << "[Integrator::LoadScene]: enabled = " << m_enabledFeatures[i] << ", actual = " << m_actualFeatures[i] << std::endl;
+    }
+  }
+
   std::cout << "features = {";
   bool firstFeature = true;
   for(size_t i=0; i<m_enabledFeatures.size();i++)

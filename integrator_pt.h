@@ -260,6 +260,7 @@ protected:
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
 
   std::vector<uint32_t>         m_enabledFeatures;
+  std::vector<uint32_t>         m_actualFeatures;
   std::string                   GetFeatureName(uint32_t a_featureId);
 
   static std::string g_lastScenePath;

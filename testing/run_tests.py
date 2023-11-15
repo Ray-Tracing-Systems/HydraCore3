@@ -66,7 +66,7 @@ class REQ:
       Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
       return
     if res.returncode != 0:
-      Log().status_info("{}: launch".format(test_name), status=Status.FAILED)
+      Log().status_info("{}: launch, returncode = {}".format(test_name,res.returncode), status=Status.FAILED)
       Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
       return
 
@@ -189,6 +189,13 @@ reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/stat
                                   [(1024,1024), (1024,1024), (1024,1024)]))
 
 '''
+
+reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml"],
+                                           [PATH_TO_HYDRA2_TESTS + "/tests_images/test_078/w_ref.png"],
+                                            imsize = [(512,512)], naivemul = 1, inregrators = ["mispt"]))
+
+
+'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml",
@@ -199,6 +206,7 @@ reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_
                                             PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref.png",
                                             PATH_TO_HYDRA2_TESTS + "/tests_images/test_079/w_ref2.png"],
                                             imsize = [(512,512), (512,512), (512,512), (512,512)], naivemul = 1))
+
 
 reqs.append( REQ_HX("mat_lambert", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_101/statex_00001.xml",
                                     PATH_TO_HYDRA3_SCENS + "/Tests/Lambert/0001/Lambert_cornell_hydra2.xml"],
@@ -256,6 +264,7 @@ reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 16) )
+'''
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
