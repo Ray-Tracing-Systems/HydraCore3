@@ -48,7 +48,7 @@ class REQ:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       output  = res.stdout.decode('utf-8')
       #print(output)
-      pattern = r'PathTraceBlock\(exec\) = (\d+\.\d+) ms'
+      pattern = r'PathTraceBlock\(MIS-PT\) = (\d+\.\d+) ms'
       match   = re.search(pattern, output) 
       if match:
         execution_time_ms = round(float(match.group(1)))
@@ -134,8 +134,9 @@ class REQ_HX(REQ):
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
-          # print(args)
+          #print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
+          #print("finished")
 
 
 class REQ_HP(REQ):

@@ -243,6 +243,17 @@ protected:
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+
+  static constexpr uint32_t KSPEC_MAT_TYPE_GLTF      = 1;
+  static constexpr uint32_t KSPEC_MAT_TYPE_GLASS     = 2;
+  static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR = 3;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 4;
+  static constexpr uint32_t KSPEC_SOME_FEATURE_DUMMY = 5;
+
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
+  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+
 };
 
 #endif
