@@ -345,7 +345,6 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     transpIOR        = hydra_xml::readval1f(nodeTransp.child(L"ior"));
   }
 
-
   const bool hasFresnel  = (nodeRefl.child(L"fresnel").attribute(L"val").as_int() != 0);
   if(!hasFresnel)
     fresnelIOR = 0.0f;
@@ -393,7 +392,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   }
     
   // Glass
-  if (length(reflColor) > 1e-5f && length(transpColor) > 1e-5f)
+  if (length(transpColor) > 1e-5f)
   {
     mat.data[UINT_MTYPE]                = as_float(MAT_TYPE_GLASS);      
     mat.colors[GLASS_COLOR_REFLECT]     = reflColor;
@@ -555,26 +554,131 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   return mat;
 }
 
+std::string Integrator::GetFeatureName(uint32_t a_featureId)
+{
+  switch(a_featureId)
+  {
+    case KSPEC_MAT_TYPE_GLTF      : return "GLTF_LITE";
+    case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
+    case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
+    case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
+    case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
+    case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
+    case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
+    case KSPEC_BLEND_STACK_SIZE   : 
+    {
+      std::stringstream strout;
+      strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
+      return strout.str();
+    }
+    default:
+    break;
+  };
+  return "UNKNOWN";
+}
+
+hydra_xml::HydraScene   g_lastScene;
+std::string Integrator::g_lastScenePath;
+std::string Integrator::g_lastSceneDir;
+static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
+static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
+static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
+static const std::wstring blendMatTypeStr          {L"blend"};
+
+std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
+                                                           int& width, int& height, int& spectral_mode)
+{
+  std::vector<uint32_t> features;
+  
+  std::string scenePathStr(a_scenePath);
+  std::string sceneDirStr(a_sncDir);  
+  auto loadRes = g_lastScene.LoadState(scenePathStr, sceneDirStr);
+  if(loadRes != 0)
+  {
+    std::cout << "Integrator::PreliminarySceneAnalysis failed: '" << a_scenePath << "'" << std::endl; 
+    exit(0);
+  }
+
+  //// initial feature map
+  //
+  features.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
+  for(auto& feature : features)              //
+    feature = 0;                             //
+  features[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends (i.e. blends are disabled!)
+  features[KSPEC_SPECTRAL_RENDERING] = (spectral_mode == 0) ? 0 : 1;
+  
+  //// list reauired material features
+  //
+  for(auto materialNode : g_lastScene.MaterialNodes())
+  {
+    auto mat_type = materialNode.attribute(L"type").as_string();
+    if(mat_type == hydraOldMatTypeStr)
+    {
+      float4 transpColor = float4(0, 0, 0, 0);
+      auto nodeTransp = materialNode.child(L"transparency");
+      if (nodeTransp != nullptr)
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), spectral_mode);
+  
+      if(LiteMath::length3f(transpColor) > 1e-5f)
+        features[KSPEC_MAT_TYPE_GLASS] = 1;
+      else
+        features[KSPEC_MAT_TYPE_GLTF] = 1;
+    }
+    else if(mat_type == roughConductorMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
+    }
+    else if(mat_type == simpleDiffuseMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_DIFFUSE] = 1;
+    }
+    else if(mat_type == blendMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_BLEND]   = 1;
+      features[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+    }
+  }
+
+  g_lastScenePath = scenePathStr;
+  g_lastSceneDir  = sceneDirStr;
+
+  return features;
+}
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   std::string scenePathStr(a_scenePath);
   std::string sceneDirStr(a_sncDir);  
-  hydra_xml::HydraScene scene;
+  hydra_xml::HydraScene sceneLocal;
   
-  auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
-  if(loadRes != 0)
+  const bool sameSceneAnalyzed = (scenePathStr == g_lastScenePath) && (sceneDirStr == g_lastSceneDir);
+  hydra_xml::HydraScene& scene = sameSceneAnalyzed ? g_lastScene : sceneLocal;
+  
+  if(!sameSceneAnalyzed)
   {
-    std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
-    exit(0);
+    auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
+    if(loadRes != 0)
+    {
+      std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
+      exit(0);
+    }
   }
 
-  ////////////////////////////////////////////////
+  //// init spectral curves
   m_cie_lambda = Get_CIE_lambda();
   m_cie_x      = Get_CIE_X();
   m_cie_y      = Get_CIE_Y();
   m_cie_z      = Get_CIE_Z();
-  ////////////////////////////////////////////////
+  ////
   
+  //// init render feature map
+  m_enabledFeatures.resize(KSPEC_TOTAL_FEATURES_NUM); // disable all features by default
+  for(auto& feature : m_enabledFeatures)              //
+    feature = 0;                                      //
+  m_enabledFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
+  m_enabledFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
+  //// 
+
   std::vector<TextureInfo> texturesInfo;
   texturesInfo.resize(0);
   texturesInfo.reserve(100);
@@ -630,7 +734,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_spec_offset_sz.push_back(uint2{offset, spec.wavelengths.size()});
       
       // we expect dense, sorted ids for now
-      assert(m_spectra[spec_id].id == spec_id);
+      //assert(m_spectra[spec_id].id == spec_id);
     }
 
     // if no spectra are loaded add uniform 1.0 spectrum
@@ -653,11 +757,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_materials.resize(0);
   m_materials.reserve(100);
 
-  static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
-  static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
-  static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
-  static const std::wstring blendMatTypeStr          {L"blend"};
-
   for(auto materialNode : scene.MaterialNodes())
   {
     Material mat = {};
@@ -665,18 +764,26 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     if(mat_type == hydraOldMatTypeStr)
     {
       mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
+        m_enabledFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
+      else
+        m_enabledFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
       mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+      m_enabledFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
       mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      m_enabledFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
     {
       mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
+      m_enabledFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
+      m_enabledFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
 
     m_materials.push_back(mat);
@@ -873,6 +980,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     break; // take first render settings
   }
+
+  // (6) print enabled features in scene
+  //
+  std::cout << "features = {";
+  bool firstFeature = true;
+  for(size_t i=0; i<m_enabledFeatures.size();i++)
+  {
+    if(m_enabledFeatures[i] != 0)
+    {
+      std::string featureName = GetFeatureName(uint32_t(i));
+      if(!firstFeature)
+        std::cout << ",";
+      std::cout << featureName.c_str();
+      firstFeature = false;
+    }
+  }
+  std::cout << "};" << std::endl;
 
   return true;
 }

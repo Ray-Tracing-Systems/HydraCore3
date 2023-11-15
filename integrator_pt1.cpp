@@ -45,7 +45,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  if(m_spectral_mode != 0)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
     float u = rndFloat1_Pseudo(&genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
@@ -121,19 +121,19 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
 
 float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths)
 {
-  float4 lightColor = m_lights[a_lightId].intensity;
-  if(m_spectral_mode == 0)
-    return lightColor;
-
-  const uint specId = as_uint(m_lights[a_lightId].ids.x);
-
-  if(specId < 0xFFFFFFFF)
+  float4 lightColor = m_lights[a_lightId].intensity;  
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-    const uint2 data  = m_spec_offset_sz[specId];
-    const uint offset = data.x;
-    const uint size   = data.y;
-    lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
+    const uint specId = as_uint(m_lights[a_lightId].ids.x);
+  
+    if(specId < 0xFFFFFFFF)
+    {
+      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
+      const uint2 data  = m_spec_offset_sz[specId];
+      const uint offset = data.x;
+      const uint size   = data.y;
+      lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
+    }
   }
   return lightColor;
 }
@@ -228,11 +228,11 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   {
     const uint texId       = as_uint(m_materials[matId].data[EMISSION_TEXID0]);
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    float4 texColor  = (m_textures[texId]->sample(texCoordT));
-    float4 lightColor = (m_materials[matId].colors[EMISSION_COLOR]);
+    float4 texColor   = m_textures[texId]->sample(texCoordT);
+    float4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
 
     float4 lightIntensity = lightColor * texColor;
-    if(m_spectral_mode != 0)
+    if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0)
     {
       const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
       if(specId < 0xFFFFFFFF)
@@ -352,7 +352,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   //   int a =1;
 
   float3 rgb = to_float3(*a_accumColor);
-  if(m_spectral_mode != 0) // TODO: spectral framebuffer
+  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
   {
     const float3 xyz = SpectrumToXYZ(*a_accumColor, *wavelengths, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
     rgb = XYZToRGB(xyz);

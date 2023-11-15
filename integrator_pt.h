@@ -23,7 +23,7 @@ class Integrator // : public DataClass, IRenderer
 {
 public:
 
-  Integrator(int a_maxThreads = 1, int a_spectral_mode = 0) : m_spectral_mode(a_spectral_mode)
+  Integrator(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) : m_spectral_mode(a_spectral_mode), m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
@@ -253,7 +253,20 @@ protected:
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+  
+  static constexpr uint32_t KSPEC_TOTAL_FEATURES_NUM = 9;
 
+  //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
+  virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
+
+  std::vector<uint32_t>         m_enabledFeatures;
+  std::string                   GetFeatureName(uint32_t a_featureId);
+
+  static std::string g_lastScenePath;
+  static std::string g_lastSceneDir;
+public:
+  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
+                                                        int& width, int& height, int& spectral_mode);
 };
 
 #endif
