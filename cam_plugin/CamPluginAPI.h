@@ -32,10 +32,13 @@ struct ICamRaysAPI
   */
   virtual void SetParameters(int a_width, int a_height, const CamParameters& a_params) {}
 
+  virtual void SetBatchSize(int a_tileSize) = 0;
+
   /**
    \brief Put portion of rays in execution queue
    \param out_rayPosAndNear - packed ray origin    (x,y,z) and tNear (w)
    \param out_rayDirAndFar  - packed ray direction (x,y,z) and tFar  (w)
+   \param out_auxData       - packed ray wavelengs and other aux data
    \param in_blockSize      - ray portion size     (may depend on GPU/device, usually == 1024*512)  
     Please note that it is assumed that rays are uniformly distributed over image plane (and all other integrated dimentions like position on lens)
     for the whole period of time (all passes), the example will be provided.

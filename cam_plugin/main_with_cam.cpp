@@ -91,12 +91,12 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  std::vector<float4>     rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data 
-  std::vector<float4>     rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
-  std::vector<AuxRayData> auxDat(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
-  std::vector<float4>     rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data
+  std::vector<float4>     rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input 
+  std::vector<float4>     rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
+  std::vector<AuxRayData> auxDat(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
+  std::vector<float4>     rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, output 
   
-  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT); ///<! frame buffer (TODO: spectral FB?)
+  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);  ///<! frame buffer (TODO: spectral FB?)
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
 
   bool onGPU = args.hasOption("--gpu");
@@ -110,7 +110,7 @@ int main(int argc, const char** argv)
   else
   #endif
   {
-    pRender  = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pRender  = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT, spectral_mode);
     pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
@@ -120,6 +120,7 @@ int main(int argc, const char** argv)
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
+  pCamImpl->SetBatchSize(WIN_WIDTH*WIN_HEIGHT);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
