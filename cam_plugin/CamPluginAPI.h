@@ -8,6 +8,7 @@ struct CamParameters    ///<! add any parameter you like to this structure
   float aspect;
   float nearPlane;
   float farPlane;
+  int   spectralMode;
 };
 
 static constexpr float CAM_LAMBDA_MIN = 360.0f; ///<! you should statically check that hydra LAMBDA_MIN == CAM_LAMBDA_MIN
@@ -53,6 +54,6 @@ struct ICamRaysAPI
   \param a_width    - image width
   \param a_height   - image height
   */
-  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
+  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, const AuxRayData* in_auxData, size_t in_blockSize, 
                                            uint32_t a_width, uint32_t a_height, int passId) = 0;
 };

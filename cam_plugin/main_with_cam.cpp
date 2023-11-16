@@ -119,7 +119,7 @@ int main(int argc, const char** argv)
   
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f});
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
   pCamImpl->SetBatchSize(WIN_WIDTH*WIN_HEIGHT);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
@@ -149,8 +149,8 @@ int main(int argc, const char** argv)
     std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
     
     pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), auxDat.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
-    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
+    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), (const LiteMath::ushort4*)auxDat.data(), rayCol.data(), SAMPLES_PER_RAY);
+    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), auxDat.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
     
     pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
     for(int i=0;i<4;i++)
