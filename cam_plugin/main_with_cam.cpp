@@ -44,7 +44,9 @@ int main(int argc, const char** argv)
   if(args.hasOption("-out"))
     imageOut = args.getOptionValue<std::string>("-out");
 
-  
+  if(args.hasOption("-scn_dir"))
+    sceneDir = args.getOptionValue<std::string>("-scn_dir");
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
@@ -68,9 +70,6 @@ int main(int argc, const char** argv)
   auto dir = out_path.parent_path();
   if(!dir.empty() && !std::filesystem::exists(dir))
     std::filesystem::create_directories(dir);
- 
-  if(args.hasOption("-scn_dir"))
-    sceneDir = args.getOptionValue<std::string>("-scn_dir");
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos;
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
@@ -130,8 +129,12 @@ int main(int argc, const char** argv)
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     SPP_TOTAL = args.getOptionValue<int>("-spp");
 
-  const int SAMPLES_PER_RAY = 4;
-  const int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY;
+  int SAMPLES_PER_RAY = 4;
+  int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY;
+  if(SPP_TOTAL == 1) {
+    SAMPLES_PER_RAY = 1;
+    CAM_PASSES_NUM = 1;
+  }
 
   std::cout << "[main_with_cam]: spp     = " << SPP_TOTAL << std::endl;
   std::cout << "[main_with_cam]: passNum = " << CAM_PASSES_NUM << std::endl;

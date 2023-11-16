@@ -57,13 +57,18 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, float4* out_rayPosAndNear
   
     float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
     float3 rayPos = float3(0,0,0);
+
+    if(x == 512 && y == 512)
+    {
+      int a = 2;
+    }
   
     float4 wavelengths = float4(0,0,0,0);
     if(m_spectral_mode != 0)
     {
       auto genLocal = m_randomGens[tid];
       float u = rndFloat1_Pseudo(&genLocal);
-      wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
+      wavelengths = SampleWavelengths(u, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
       m_randomGens[tid] = genLocal;
     }
     
@@ -86,6 +91,11 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
     const int x = tid % m_width;
     const int y = tid / m_height;
     
+    if(x == 512 && y == 512)
+    {
+      int a = 2;
+    }
+
     float4 color = in_color[tid];
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {

@@ -71,8 +71,12 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAnd
   *rayFlags          = 0;
   *misData           = makeInitialMisData();  
 
-  const int x = int(tid) % m_winWidth;
-  const int y = int(tid) / m_winHeight;
+  //const int x = int(tid) % m_winWidth;
+  //const int y = int(tid) / m_winHeight;
+  if(tid == 524800)
+  {
+    int a = 2;
+  }
 
   const float4 rayPosData = in_rayPosAndNear[tid];
   const float4 rayDirData = in_rayDirAndFar[tid];
