@@ -16,6 +16,7 @@
 #include "Image2d.h" // special include for textures
 
 #include "spectrum.h"
+#include "cam_plugin/CamPluginAPI.h"
 
 using LiteImage::ICombinedImageSampler;
 
@@ -57,9 +58,8 @@ public:
 
   void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const float4*  in_rayPosAndNear __attribute__((size("tid"))), 
-                                        const float4*  in_rayDirAndFar  __attribute__((size("tid"))),
-                                        const ushort4* in_wavesPacked   __attribute__((size("tid"))), 
+  void PathTraceFromInputRays(uint tid, const RayPart1*  in_rayPosAndNear __attribute__((size("tid"))), 
+                                        const RayPart2*  in_rayDirAndFar  __attribute__((size("tid"))),
                                         float4*        out_color        __attribute__((size("tid"))));
 #else
   void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
@@ -67,7 +67,7 @@ public:
 
   void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, const ushort4* in_wavesPacked, 
+  void PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
                               float4* out_color);
 #endif
 
@@ -75,7 +75,7 @@ public:
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceFromInputRaysBlock(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, const ushort4* in_wavesPacked, 
+  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, 
                                            float4* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
@@ -96,7 +96,7 @@ public:
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
-  void kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, const ushort4* in_wavesPacked, 
+  void kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                   RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
 

@@ -62,7 +62,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *gen           = genLocal;
 }
 
-void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, const ushort4* in_wavesPacked, 
+void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                             RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
 {
@@ -78,27 +78,27 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const float4* in_rayPosAnd
     int a = 2;
   }
 
-  const float4 rayPosData = in_rayPosAndNear[tid];
-  const float4 rayDirData = in_rayDirAndFar[tid];
+  const RayPart1 rayPosData = in_rayPosAndNear[tid];
+  const RayPart2 rayDirData = in_rayDirAndFar[tid];
 
-  float3 rayPos = to_float3(rayPosData);
-  float3 rayDir = to_float3(rayDirData);
+  float3 rayPos = float3(rayPosData.origin[0], rayPosData.origin[1], rayPosData.origin[2]);
+  float3 rayDir = float3(rayDirData.direction[0], rayDirData.direction[1], rayDirData.direction[2]);
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    const ushort4 auxDat = in_wavesPacked[tid];
-    const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
-    *wavelengths = float4(float(auxDat[0])*scale + LAMBDA_MIN,
-                          float(auxDat[1])*scale + LAMBDA_MIN,
-                          float(auxDat[2])*scale + LAMBDA_MIN,
-                          float(auxDat[3])*scale + LAMBDA_MIN);
-  }
-  else
+  //if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+  //{
+  //  const ushort4 auxDat = in_wavesPacked[tid];
+  //  const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
+  //  *wavelengths = float4(float(auxDat[0])*scale + LAMBDA_MIN,
+  //                        float(auxDat[1])*scale + LAMBDA_MIN,
+  //                        float(auxDat[2])*scale + LAMBDA_MIN,
+  //                        float(auxDat[3])*scale + LAMBDA_MIN);
+  //}
+  //else
     *wavelengths = float4(0,0,0,0);
 
-  *rayPosAndNear = to_float4(rayPos, rayPosData.w);
-  *rayDirAndFar  = to_float4(rayDir, rayDirData.w);
+  *rayPosAndNear = to_float4(rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
   *gen           = m_randomGens[tid];
 }
 
@@ -485,7 +485,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
-void Integrator::PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear, const float4* in_rayDirAndFar, const ushort4* in_wavesPacked, float4* out_color)
+void Integrator::PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -493,7 +493,7 @@ void Integrator::PathTraceFromInputRays(uint tid, const float4* in_rayPosAndNear
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, in_wavesPacked, 
+  kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
                              &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths);
   
   //////////////////////////////////////////////////// same as for PathTrace

@@ -90,10 +90,9 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  std::vector<float4>     rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input 
-  std::vector<float4>     rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
-  std::vector<AuxRayData> auxDat(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
-  std::vector<float4>     rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, output 
+  std::vector<RayPart1> rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input 
+  std::vector<RayPart2> rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
+  std::vector<float4>   rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, output 
   
   std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);  ///<! frame buffer (TODO: spectral FB?)
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
@@ -129,7 +128,7 @@ int main(int argc, const char** argv)
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     SPP_TOTAL = args.getOptionValue<int>("-spp");
 
-  int SAMPLES_PER_RAY = 4;
+  int SAMPLES_PER_RAY = 1;
   int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY;
   if(SPP_TOTAL == 1) {
     SAMPLES_PER_RAY = 1;
@@ -151,9 +150,9 @@ int main(int argc, const char** argv)
     std::cout.flush();
     std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
     
-    pCamImpl->MakeRaysBlock((float*)rayPos.data(), (float*)rayDir.data(), auxDat.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), (const LiteMath::ushort4*)auxDat.data(), rayCol.data(), SAMPLES_PER_RAY);
-    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), auxDat.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
+    pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
+    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
+    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
     
     pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
     for(int i=0;i<4;i++)

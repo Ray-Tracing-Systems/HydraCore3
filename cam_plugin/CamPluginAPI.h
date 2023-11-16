@@ -14,11 +14,16 @@ struct CamParameters    ///<! add any parameter you like to this structure
 static constexpr float CAM_LAMBDA_MIN = 360.0f; ///<! you should statically check that hydra LAMBDA_MIN == CAM_LAMBDA_MIN
 static constexpr float CAM_LAMBDA_MAX = 830.0f; ///<! you should statically check that hydra LAMBDA_MAX == CAM_LAMBDA_MAX
 
-struct AuxRayData
+struct RayPart1 
 {
-  uint16_t wavelengthsFixp[4]; ///<! 
-  //uint32_t dummy1;           ///<! not used, reserved
-  //uint32_t dummy2;           ///<! not used, reserved
+  float    origin[3];   ///<! ray origin, x,y,z
+  uint32_t pwaves01;    ///<! Packed 2 first waves in 16 bit xy, fixed point; 0x0000 => 0.0; 0xFFFF => 1.0; x stored in less significant bits.
+};
+
+struct RayPart2 
+{
+  float    direction[3]; ///<! normalized ray direction, x,y,z
+  uint32_t pwaves23;     ///<! Packed 2 last waves in 16 bit xy, fixed point; 0x0000 => 0.0; 0xFFFF => 1.0; x stored in less significant bits.
 };
 
 struct ICamRaysAPI
@@ -44,7 +49,7 @@ struct ICamRaysAPI
     Please note that it is assumed that rays are uniformly distributed over image plane (and all other integrated dimentions like position on lens)
     for the whole period of time (all passes), the example will be provided.
   */
-  virtual void MakeRaysBlock(float* out_rayPosAndNear4f, float* out_rayDirAndFar4f, AuxRayData* out_auxData, size_t in_blockSize, int passId) = 0;
+  virtual void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int passId) = 0;
 
   /**
   \brief Add contribution
@@ -54,6 +59,6 @@ struct ICamRaysAPI
   \param a_width    - image width
   \param a_height   - image height
   */
-  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, const AuxRayData* in_auxData, size_t in_blockSize, 
+  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
                                            uint32_t a_width, uint32_t a_height, int passId) = 0;
 };

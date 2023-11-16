@@ -36,18 +36,18 @@ void CamPinHole::Init(int a_maxThreads)
   m_cie_z      = Get_CIE_Z();
 }
 
-void CamPinHole::MakeRaysBlock(float* out_rayPosAndNear4f, float* out_rayDirAndFar4f, AuxRayData* out_auxData, size_t in_blockSize, int passId)
+void CamPinHole::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int passId)
 {
-  kernel1D_MakeEyeRay(int(in_blockSize), (float4*)out_rayPosAndNear4f, (float4*)out_rayDirAndFar4f, out_auxData);
+  kernel1D_MakeEyeRay(int(in_blockSize), out_rayPosAndNear4f, out_rayDirAndFar4f);
 }
 
-void CamPinHole::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, const AuxRayData* in_auxData, size_t in_blockSize, 
+void CamPinHole::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
                                              uint32_t a_width, uint32_t a_height, int passId)
 {
-  kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, in_auxData, (float4*)out_color4f); 
+  kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, (float4*)out_color4f); 
 }
 
-void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, float4* out_rayPosAndNear4f, float4* out_rayDirAndFar4f, AuxRayData* out_auxData)
+void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f)
 {
   #pragma omp parallel for default(shared)
   for(int tid = 0; tid < int(in_blockSize); tid++)
@@ -66,25 +66,37 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, float4* out_rayPosAndNear
     float4 wavelengths = float4(0,0,0,0);
     if(m_spectral_mode != 0)
     {
-      auto genLocal = m_randomGens[tid];
-      float u = rndFloat1_Pseudo(&genLocal);
-      wavelengths = SampleWavelengths(u, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
+      auto genLocal     = m_randomGens[tid];
+      float u           = rndFloat1_Pseudo(&genLocal);
+      wavelengths       = SampleWavelengths(u, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
       m_randomGens[tid] = genLocal;
     }
-    
-    AuxRayData auxDat;
-    auxDat.wavelengthsFixp[0] = uint16_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    auxDat.wavelengthsFixp[1] = uint16_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    auxDat.wavelengthsFixp[2] = uint16_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    auxDat.wavelengthsFixp[3] = uint16_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+
+    RayPart1 p1;
+    RayPart2 p2;
+
+    p1.origin[0] = rayPos[0];
+    p1.origin[1] = rayPos[1];
+    p1.origin[2] = rayPos[2];
+    p1.pwaves01  = 0; // 
+
+    p2.direction[0] = rayDir[0];
+    p2.direction[1] = rayDir[1];
+    p2.direction[2] = rayDir[2];
+    p2.pwaves23     = 0;
+
+    //AuxRayData auxDat;
+    //auxDat.wavelengthsFixp[0] = uint16_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    //auxDat.wavelengthsFixp[1] = uint16_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    //auxDat.wavelengthsFixp[2] = uint16_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    //auxDat.wavelengthsFixp[3] = uint16_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
   
-    out_rayPosAndNear4f[tid] = to_float4(rayPos, 0.0f);
-    out_rayDirAndFar4f [tid] = to_float4(rayDir, FLT_MAX);
-    out_auxData        [tid] = auxDat;
+    out_rayPosAndNear4f[tid] = p1;
+    out_rayDirAndFar4f [tid] = p2;
   }
 }
 
-void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color, const AuxRayData* in_auxData, float4* out_color)
+void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color)
 {
   for(int tid = 0; tid < int(in_blockSize); tid++)
   {
@@ -97,17 +109,17 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
     }
 
     float4 color = in_color[tid];
-    if(m_spectral_mode != 0) // TODO: spectral framebuffer
-    {
-      const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
-      AuxRayData auxDat  = in_auxData[tid];
-      float4 wavelengths = float4(float(auxDat.wavelengthsFixp[0])*scale + CAM_LAMBDA_MIN,
-                                  float(auxDat.wavelengthsFixp[1])*scale + CAM_LAMBDA_MIN,
-                                  float(auxDat.wavelengthsFixp[2])*scale + CAM_LAMBDA_MIN,
-                                  float(auxDat.wavelengthsFixp[3])*scale + CAM_LAMBDA_MIN);
-      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-      color = to_float4(XYZToRGB(xyz), 0.0f);
-    }
+    //if(m_spectral_mode != 0) // TODO: spectral framebuffer
+    //{
+    //  const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
+    //  AuxRayData auxDat  = in_auxData[tid];
+    //  float4 wavelengths = float4(float(auxDat.wavelengthsFixp[0])*scale + CAM_LAMBDA_MIN,
+    //                              float(auxDat.wavelengthsFixp[1])*scale + CAM_LAMBDA_MIN,
+    //                              float(auxDat.wavelengthsFixp[2])*scale + CAM_LAMBDA_MIN,
+    //                              float(auxDat.wavelengthsFixp[3])*scale + CAM_LAMBDA_MIN);
+    //  const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+    //  color = to_float4(XYZToRGB(xyz), 0.0f);
+    //}
     out_color[y*m_width+x] += color;
   }
 }
