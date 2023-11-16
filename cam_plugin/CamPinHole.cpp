@@ -28,10 +28,9 @@ void CamPinHole::Init(int a_maxThreads)
   m_randomGens.resize(a_maxThreads);
   #pragma omp parallel for default(shared)
   for(int i=0;i<a_maxThreads;i++)
-    m_randomGens[i] = RandomGenInit(i);
+    m_randomGens[i] = RandomGenInit(i + 12345*i);
 
   // init spectral curves
-  m_cie_lambda = Get_CIE_lambda();
   m_cie_x      = Get_CIE_X();
   m_cie_y      = Get_CIE_Y();
   m_cie_z      = Get_CIE_Z();
@@ -58,11 +57,6 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
   
     float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
     float3 rayPos = float3(0,0,0);
-
-    if(x == 512 && y == 512)
-    {
-      int a = 2;
-    }
   
     float4 wavelengths = float4(0,0,0,0);
     if(m_spectral_mode != 0)
@@ -103,11 +97,6 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
   {
     const int x = tid % m_width;
     const int y = tid / m_height;
-    
-    if(x == 512 && y == 512)
-    {
-      int a = 2;
-    }
 
     float4 color = in_color[tid];
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
@@ -120,8 +109,9 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
                                   float(wavesXY[1])*scale + CAM_LAMBDA_MIN,
                                   float(wavesZW[2])*scale + CAM_LAMBDA_MIN,
                                   float(wavesZW[3])*scale + CAM_LAMBDA_MIN);
+                                  
       const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-      color = to_float4(XYZToRGB(xyz), 0.0f);
+      color = to_float4(XYZToRGB(xyz), 1.0f);
     }
     out_color[y*m_width+x] += color;
   }

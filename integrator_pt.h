@@ -252,7 +252,6 @@ protected:
   std::vector<float> m_wavelengths; 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
-  std::vector<float> m_cie_lambda;
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;

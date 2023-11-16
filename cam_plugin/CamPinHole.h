@@ -41,7 +41,6 @@ protected:
   std::vector<uint2>      m_storedWaves;
   void Init(int a_maxThreads);
 
-  std::vector<float> m_cie_lambda;
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;

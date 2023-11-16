@@ -497,8 +497,6 @@ void Integrator::PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNe
   kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
                              &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths);
   
-  //////////////////////////////////////////////////// same as for PathTrace
-  //
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2;

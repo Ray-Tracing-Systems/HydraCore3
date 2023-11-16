@@ -362,6 +362,6 @@ const float CIE_Z[nCIESamples] = {
 
 
 std::vector<float> Get_CIE_lambda() { return std::vector<float>(CIE_lambda, CIE_lambda + sizeof(CIE_lambda)/sizeof(float)); }
-std::vector<float> Get_CIE_X()      { return std::vector<float>(CIE_X,      CIE_X      + sizeof(CIE_lambda)/sizeof(float)); }
-std::vector<float> Get_CIE_Y()      { return std::vector<float>(CIE_Y,      CIE_Y      + sizeof(CIE_lambda)/sizeof(float)); }
-std::vector<float> Get_CIE_Z()      { return std::vector<float>(CIE_Z,      CIE_Z      + sizeof(CIE_lambda)/sizeof(float)); }
+std::vector<float> Get_CIE_X()      { return std::vector<float>(CIE_X,      CIE_X      + sizeof(CIE_X)/sizeof(float)); }
+std::vector<float> Get_CIE_Y()      { return std::vector<float>(CIE_Y,      CIE_Y      + sizeof(CIE_Y)/sizeof(float)); }
+std::vector<float> Get_CIE_Z()      { return std::vector<float>(CIE_Z,      CIE_Z      + sizeof(CIE_Z)/sizeof(float)); }

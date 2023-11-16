@@ -665,7 +665,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
 
   //// init spectral curves
-  m_cie_lambda = Get_CIE_lambda();
   m_cie_x      = Get_CIE_X();
   m_cie_y      = Get_CIE_Y();
   m_cie_z      = Get_CIE_Z();
