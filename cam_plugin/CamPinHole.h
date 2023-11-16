@@ -38,6 +38,7 @@ protected:
   int m_spectral_mode;
 
   std::vector<RandomGen>  m_randomGens;
+  std::vector<uint2>      m_storedWaves;
   void Init(int a_maxThreads);
 
   std::vector<float> m_cie_lambda;

@@ -24,6 +24,7 @@ void CamPinHole::SetParameters(int a_width, int a_height, const CamParameters& a
 
 void CamPinHole::Init(int a_maxThreads)
 {
+  m_storedWaves.resize(a_maxThreads);
   m_randomGens.resize(a_maxThreads);
   #pragma omp parallel for default(shared)
   for(int i=0;i<a_maxThreads;i++)
@@ -75,24 +76,24 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
     RayPart1 p1;
     RayPart2 p2;
 
+    const uint32_t wavesX = uint32_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint32_t wavesY = uint32_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint32_t wavesZ = uint32_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint32_t wavesW = uint32_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+
     p1.origin[0] = rayPos[0];
     p1.origin[1] = rayPos[1];
     p1.origin[2] = rayPos[2];
-    p1.pwaves01  = 0; // 
+    p1.pwaves01  = packXY1616(wavesX,wavesY); // 
 
     p2.direction[0] = rayDir[0];
     p2.direction[1] = rayDir[1];
     p2.direction[2] = rayDir[2];
-    p2.pwaves23     = 0;
-
-    //AuxRayData auxDat;
-    //auxDat.wavelengthsFixp[0] = uint16_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    //auxDat.wavelengthsFixp[1] = uint16_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    //auxDat.wavelengthsFixp[2] = uint16_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    //auxDat.wavelengthsFixp[3] = uint16_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    p2.pwaves23     = packXY1616(wavesZ,wavesW); // 
   
     out_rayPosAndNear4f[tid] = p1;
     out_rayDirAndFar4f [tid] = p2;
+    m_storedWaves      [tid] = uint2(p1.pwaves01,  p2.pwaves23); // just remember waves in our buffer for camera
   }
 }
 
@@ -109,17 +110,19 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
     }
 
     float4 color = in_color[tid];
-    //if(m_spectral_mode != 0) // TODO: spectral framebuffer
-    //{
-    //  const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
-    //  AuxRayData auxDat  = in_auxData[tid];
-    //  float4 wavelengths = float4(float(auxDat.wavelengthsFixp[0])*scale + CAM_LAMBDA_MIN,
-    //                              float(auxDat.wavelengthsFixp[1])*scale + CAM_LAMBDA_MIN,
-    //                              float(auxDat.wavelengthsFixp[2])*scale + CAM_LAMBDA_MIN,
-    //                              float(auxDat.wavelengthsFixp[3])*scale + CAM_LAMBDA_MIN);
-    //  const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-    //  color = to_float4(XYZToRGB(xyz), 0.0f);
-    //}
+    if(m_spectral_mode != 0) // TODO: spectral framebuffer
+    {
+      const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
+      const uint2 wavesPacked = m_storedWaves[tid];
+      const uint2 wavesXY = unpackXY1616(wavesPacked.x);
+      const uint2 wavesZW = unpackXY1616(wavesPacked.y);
+      float4 wavelengths = float4(float(wavesXY[0])*scale + CAM_LAMBDA_MIN,
+                                  float(wavesXY[1])*scale + CAM_LAMBDA_MIN,
+                                  float(wavesZW[2])*scale + CAM_LAMBDA_MIN,
+                                  float(wavesZW[3])*scale + CAM_LAMBDA_MIN);
+      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      color = to_float4(XYZToRGB(xyz), 0.0f);
+    }
     out_color[y*m_width+x] += color;
   }
 }

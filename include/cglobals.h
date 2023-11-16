@@ -281,20 +281,14 @@ static inline float2 mulRows2x4(const float4 row0, const float4 row1, float2 v)
   return res;
 }
 
-//static inline float sRGBToLinear(float s)
-//{
-//  if(s <= 0.0404482362771082f)
-//    return s*0.077399381f;
-//  else 
-//    return std::pow((s+0.055f)*0.947867299f, 2.4f);
-//}
-//
-//static inline float linearToSRGB(float l)
-//{
-//  if(l <= 0.00313066844250063f)
-//    return l*12.92f;
-//  else
-//    return 1.055*std::pow(l, 1.0f/2.4f) - 0.055;
-//}
+static inline uint  packXY1616(uint x, uint y) { return (y << 16u) | (x & 0x0000FFFF); }
+static inline uint2 unpackXY1616(uint packedIndex) 
+{
+  uint2 res; 
+  res.x = (packedIndex & 0x0000FFFF);         
+  res.y = (packedIndex & 0xFFFF0000) >> 16;   
+  return res;
+}
+
 
 #endif

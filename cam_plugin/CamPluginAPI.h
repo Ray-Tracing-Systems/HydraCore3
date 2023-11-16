@@ -14,6 +14,7 @@ struct CamParameters    ///<! add any parameter you like to this structure
 static constexpr float CAM_LAMBDA_MIN = 360.0f; ///<! you should statically check that hydra LAMBDA_MIN == CAM_LAMBDA_MIN
 static constexpr float CAM_LAMBDA_MAX = 830.0f; ///<! you should statically check that hydra LAMBDA_MAX == CAM_LAMBDA_MAX
 
+
 struct RayPart1 
 {
   float    origin[3];   ///<! ray origin, x,y,z

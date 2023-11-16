@@ -85,16 +85,17 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
   float3 rayDir = float3(rayDirData.direction[0], rayDirData.direction[1], rayDirData.direction[2]);
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  //if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  //{
-  //  const ushort4 auxDat = in_wavesPacked[tid];
-  //  const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
-  //  *wavelengths = float4(float(auxDat[0])*scale + LAMBDA_MIN,
-  //                        float(auxDat[1])*scale + LAMBDA_MIN,
-  //                        float(auxDat[2])*scale + LAMBDA_MIN,
-  //                        float(auxDat[3])*scale + LAMBDA_MIN);
-  //}
-  //else
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+  {
+    const uint2 wavesXY = unpackXY1616(rayPosData.pwaves01);
+    const uint2 wavesZW = unpackXY1616(rayDirData.pwaves23);
+    const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
+    *wavelengths = float4(float(wavesXY[0])*scale + LAMBDA_MIN,
+                          float(wavesXY[1])*scale + LAMBDA_MIN,
+                          float(wavesZW[0])*scale + LAMBDA_MIN,
+                          float(wavesZW[1])*scale + LAMBDA_MIN);
+  }
+  else
     *wavelengths = float4(0,0,0,0);
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
