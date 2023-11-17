@@ -36,29 +36,29 @@ void CamPinHole::Init(int a_maxThreads)
   m_cie_z      = Get_CIE_Z();
 }
 
-void CamPinHole::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int passId)
+void CamPinHole::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int subPassId)
 {
-  kernel1D_MakeEyeRay(int(in_blockSize), out_rayPosAndNear4f, out_rayDirAndFar4f);
+  kernel1D_MakeEyeRay(int(in_blockSize), out_rayPosAndNear4f, out_rayDirAndFar4f, subPassId);
 }
 
 void CamPinHole::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
-                                             uint32_t a_width, uint32_t a_height, int passId)
+                                             uint32_t a_width, uint32_t a_height, int subPassId)
 {
-  kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, (float4*)out_color4f); 
+  kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, (float4*)out_color4f, subPassId); 
 }
 
-void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f)
+void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId)
 {
   #pragma omp parallel for default(shared)
   for(int tid = 0; tid < int(in_blockSize); tid++)
   {
-    const int x = tid % m_width;
-    const int y = tid / m_height;
+    const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
+    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
     
-    if(x == 512 && y == 1023-100)
-    {
-      int a = 2;
-    }
+    //if(x == 512 && y == 1023-100) // to debug target pixel
+    //{
+    //  int a = 2;
+    //}
 
     float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
     float3 rayPos = float3(0,0,0);
@@ -96,12 +96,12 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
   }
 }
 
-void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color)
+void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color, int subPassId)
 {
   for(int tid = 0; tid < int(in_blockSize); tid++)
   {
-    const int x = tid % m_width;
-    const int y = tid / m_height;
+    const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
+    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
     float4 color = in_color[tid];
     if(m_spectral_mode != 0) // TODO: spectral framebuffer

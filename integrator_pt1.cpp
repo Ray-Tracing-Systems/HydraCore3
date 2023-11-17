@@ -385,6 +385,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
+
   float3 rgb = to_float3(*a_accumColor);
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
   {
@@ -407,10 +408,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
 
 void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
 {
-  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0)
-    out_color   [tid] += *a_accumColor;
-  else
-    out_color   [tid] = *a_accumColor;
+  out_color   [tid] += *a_accumColor;
   m_randomGens[tid] = *gen;
 }
 

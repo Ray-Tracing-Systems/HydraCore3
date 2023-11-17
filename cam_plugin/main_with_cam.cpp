@@ -90,11 +90,13 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  std::vector<RayPart1> rayPos(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input 
-  std::vector<RayPart2> rayDir(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, input
-  std::vector<float4>   rayCol(WIN_WIDTH*WIN_HEIGHT); ///<! per tile data, output 
-  
-  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);  ///<! frame buffer (TODO: spectral FB?)
+  int MEGA_TILE_SIZE = 512*512;          ///<! tile size
+
+  std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
+  std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
+  std::vector<float4>   rayCol(MEGA_TILE_SIZE); ///<! per tile data, output 
+
+  std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer (TODO: monochrome FB need also)
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
 
   bool onGPU = args.hasOption("--gpu");
@@ -103,12 +105,12 @@ int main(int argc, const char** argv)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
     auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pRender = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+    pRender = CreateIntegrator_Generated(MEGA_TILE_SIZE, ctx, MEGA_TILE_SIZE);
   }
   else
   #endif
   {
-    pRender  = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT, spectral_mode);
+    pRender  = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
     pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
@@ -118,7 +120,7 @@ int main(int argc, const char** argv)
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
-  pCamImpl->SetBatchSize(WIN_WIDTH*WIN_HEIGHT);
+  pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
@@ -128,8 +130,8 @@ int main(int argc, const char** argv)
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     SPP_TOTAL = args.getOptionValue<int>("-spp");
 
-  int SAMPLES_PER_RAY = spectral_mode ? 1 : 4;       // can't average data in spectral mode in general!
-  int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY;
+  int SAMPLES_PER_RAY = 4;                          
+  int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY; 
   if(SPP_TOTAL == 1) {
     SAMPLES_PER_RAY = 1;
     CAM_PASSES_NUM = 1;
@@ -139,7 +141,7 @@ int main(int argc, const char** argv)
   std::cout << "[main_with_cam]: passNum = " << CAM_PASSES_NUM << std::endl;
 
   float timings   [4] = {0,0,0,0};
-  float timingsAvg[4] = {0,0,0,0};
+  float timingSum[4] = {0,0,0,0};
   const float normConst = 1.0f/float(SPP_TOTAL);
 
   // do rendering
@@ -148,21 +150,26 @@ int main(int argc, const char** argv)
   {
     std::cout << "rendering, pass " << passId << " / " << CAM_PASSES_NUM  << "\r"; 
     std::cout.flush();
-    std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
     
-    pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), WIN_WIDTH*WIN_HEIGHT, passId);
-    pRender->PathTraceFromInputRaysBlock(WIN_WIDTH*WIN_HEIGHT, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
-    pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), WIN_WIDTH*WIN_HEIGHT, WIN_WIDTH, WIN_HEIGHT, passId);
-    
-    pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
-    for(int i=0;i<4;i++)
-      timingsAvg[i] += timings[i];
+    const int passNum = (WIN_WIDTH*WIN_HEIGHT/MEGA_TILE_SIZE);
+    for(int subPassId = 0; subPassId < passNum; subPassId++) 
+    {
+      std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
+
+      pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
+      pRender->PathTraceFromInputRaysBlock(MEGA_TILE_SIZE, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
+      pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
+      
+      pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
+      for(int i=0;i<4;i++)
+        timingSum[i] += timings[i];
+    }
   }
 
   std::cout << std::endl << std::endl;
-  std::cout << "PathTraceFromInputRays(exec, total) = " << timingsAvg[0]                 << " ms " << std::endl;
-  std::cout << "PathTraceFromInputRays(copy, total) = " << timingsAvg[1] + timingsAvg[2] << " ms " << std::endl;
-  std::cout << "PathTraceFromInputRays(ovrh, total) = " << timingsAvg[3]                 << " ms " << std::endl;
+  std::cout << "PathTraceFromInputRays(exec, total) = " << timingSum[0]                << " ms " << std::endl;
+  std::cout << "PathTraceFromInputRays(copy, total) = " << timingSum[1] + timingSum[2] << " ms " << std::endl;
+  std::cout << "PathTraceFromInputRays(ovrh, total) = " << timingSum[3]                << " ms " << std::endl;
 
   if(saveHDR) 
     SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
