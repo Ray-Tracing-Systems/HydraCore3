@@ -66,17 +66,13 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                             RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
 {
-  *accumColor        = make_float4(0,0,0,1);
+  *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
   *rayFlags          = 0;
   *misData           = makeInitialMisData();  
 
   //const int x = int(tid) % m_winWidth;
   //const int y = int(tid) / m_winHeight;
-  if(tid == 524800)
-  {
-    int a = 2;
-  }
 
   const RayPart1 rayPosData = in_rayPosAndNear[tid];
   const RayPart2 rayDirData = in_rayDirAndFar[tid];
@@ -389,9 +385,6 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  // if(length(*a_accumColor) > 1e-5)
-  //   int a =1;
-
   float3 rgb = to_float3(*a_accumColor);
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
   {
@@ -414,7 +407,10 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
 
 void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
 {
-  out_color   [tid] += *a_accumColor;
+  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0)
+    out_color   [tid] += *a_accumColor;
+  else
+    out_color   [tid] = *a_accumColor;
   m_randomGens[tid] = *gen;
 }
 

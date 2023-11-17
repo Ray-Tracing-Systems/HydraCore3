@@ -54,7 +54,12 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
   {
     const int x = tid % m_width;
     const int y = tid / m_height;
-  
+    
+    if(x == 512 && y == 1023-100)
+    {
+      int a = 2;
+    }
+
     float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
     float3 rayPos = float3(0,0,0);
   
@@ -107,12 +112,13 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color
       const uint2 wavesZW = unpackXY1616(wavesPacked.y);
       float4 wavelengths = float4(float(wavesXY[0])*scale + CAM_LAMBDA_MIN,
                                   float(wavesXY[1])*scale + CAM_LAMBDA_MIN,
-                                  float(wavesZW[2])*scale + CAM_LAMBDA_MIN,
-                                  float(wavesZW[3])*scale + CAM_LAMBDA_MIN);
+                                  float(wavesZW[0])*scale + CAM_LAMBDA_MIN,
+                                  float(wavesZW[1])*scale + CAM_LAMBDA_MIN);
                                   
       const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
       color = to_float4(XYZToRGB(xyz), 1.0f);
     }
+
     out_color[y*m_width+x] += color;
   }
 }
