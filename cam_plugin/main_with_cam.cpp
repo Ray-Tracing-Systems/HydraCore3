@@ -6,6 +6,7 @@
 #include "ArgParser.h"
 #include "CamPluginAPI.h"
 #include "CamPinHole.h"
+#include "CamTableLens.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
@@ -46,6 +47,8 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-scn_dir"))
     sceneDir = args.getOptionValue<std::string>("-scn_dir");
+
+  int camType = 1;
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +93,7 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  int MEGA_TILE_SIZE = 512*512;          ///<! tile size
+  int MEGA_TILE_SIZE = 512*512;                 ///<! tile size
 
   std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
   std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
@@ -110,8 +113,12 @@ int main(int argc, const char** argv)
   else
   #endif
   {
-    pRender  = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
-    pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
+    pRender = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
+
+    if(camType == 0)
+      pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
+    else if(camType == 1)
+      pCamImpl = std::make_shared<CamTableLens>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////

@@ -83,8 +83,8 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
 
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    const uint2 wavesXY = unpackXY1616(rayPosData.pwaves01);
-    const uint2 wavesZW = unpackXY1616(rayDirData.pwaves23);
+    const uint2 wavesXY = unpackXY1616(rayPosData.waves01);
+    const uint2 wavesZW = unpackXY1616(rayDirData.waves23);
     const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
     *wavelengths = float4(float(wavesXY[0])*scale + LAMBDA_MIN,
                           float(wavesXY[1])*scale + LAMBDA_MIN,

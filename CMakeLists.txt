@@ -112,7 +112,8 @@ set(OTHER_EXTERNAL_SRC
 if(CAM_PLUGIN)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   set(MAIN_FILE cam_plugin/main_with_cam.cpp
-                cam_plugin/CamPinHole.cpp)
+                cam_plugin/CamPinHole.cpp
+                cam_plugin/CamTableLens.cpp)
 else()
   set(MAIN_FILE main.cpp)
 endif()

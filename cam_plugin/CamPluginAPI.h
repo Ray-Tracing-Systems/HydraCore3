@@ -14,17 +14,16 @@ struct CamParameters    ///<! add any parameter you like to this structure
 static constexpr float CAM_LAMBDA_MIN = 360.0f; ///<! you should statically check that hydra LAMBDA_MIN == CAM_LAMBDA_MIN
 static constexpr float CAM_LAMBDA_MAX = 830.0f; ///<! you should statically check that hydra LAMBDA_MAX == CAM_LAMBDA_MAX
 
-
 struct RayPart1 
 {
-  float    origin[3];   ///<! ray origin, x,y,z
-  uint32_t pwaves01;    ///<! Packed 2 first waves in 16 bit xy, fixed point; 0x0000 => 0.0; 0xFFFF => 1.0; x stored in less significant bits.
+  float    origin[3]; ///<! ray origin, x,y,z
+  uint32_t waves01;   ///<! Packed 2 first waves in 16 bit xy, fixed point; 0x0000 => CAM_LAMBDA_MIN; 0xFFFF => CAM_LAMBDA_MAX; wave[0] stored in less significant bits.
 };
 
 struct RayPart2 
 {
   float    direction[3]; ///<! normalized ray direction, x,y,z
-  uint32_t pwaves23;     ///<! Packed 2 last waves in 16 bit xy, fixed point; 0x0000 => 0.0; 0xFFFF => 1.0; x stored in less significant bits.
+  uint32_t waves23;      ///<! Packed 2 last waves in 16 bit xy, fixed point; 0x0000 => CAM_LAMBDA_MIN; 0xFFFF => CAM_LAMBDA_MAX; wave[1] stored in less significant bits.
 };
 
 struct ICamRaysAPI

@@ -83,16 +83,16 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
     p1.origin[0] = rayPos[0];
     p1.origin[1] = rayPos[1];
     p1.origin[2] = rayPos[2];
-    p1.pwaves01  = packXY1616(wavesX,wavesY); // 
+    p1.waves01  = packXY1616(wavesX,wavesY); // 
 
     p2.direction[0] = rayDir[0];
     p2.direction[1] = rayDir[1];
     p2.direction[2] = rayDir[2];
-    p2.pwaves23     = packXY1616(wavesZ,wavesW); // 
+    p2.waves23     = packXY1616(wavesZ,wavesW); // 
   
     out_rayPosAndNear4f[tid] = p1;
     out_rayDirAndFar4f [tid] = p2;
-    m_storedWaves      [tid] = uint2(p1.pwaves01,  p2.pwaves23); // just remember waves in our buffer for camera
+    m_storedWaves      [tid] = uint2(p1.waves01,  p2.waves23); // just remember waves in our buffer for camera
   }
 }
 
