@@ -71,6 +71,7 @@ void CamTableLens::SetParameters(int a_width, int a_height, const CamParameters&
 void CamTableLens::Init(int a_maxThreads)
 {
   m_storedWaves.resize(a_maxThreads);
+  m_storedData.resize(a_maxThreads);
   m_randomGens.resize(a_maxThreads);
   #pragma omp parallel for default(shared)
   for(int i=0;i<a_maxThreads;i++)
@@ -227,39 +228,55 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
     }
     
     auto genLocal = m_randomGens[tid];
-    const float4 rands = rndFloat4_Pseudo(&genLocal);
-    m_randomGens[tid] = genLocal;
-
-    //float3 ray_dir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
-    //float3 ray_pos = float3(0,0,0);
-
+    
+    float3 ray_pos, ray_dir;
+    float cosTheta;
     float4 wavelengths = float4(0,0,0,0);
-    if(m_spectral_mode != 0)
-      wavelengths = SampleWavelengths(rands.z, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
 
-    const float2 xy = 0.25f*m_physSize*float2(2.0f*(float(x+0.5f)/float(m_width))  - 1.0f, 
-                                              2.0f*(float(y+0.5f)/float(m_height)) - 1.0f);
-    
-    float3 ray_pos = float3(xy.x, xy.y, 0);
+    bool success = false;
+    const int MAX_TRIALS = 10;
+    int failed = 0;
+    //do
+    //{
+      const float4 rands = rndFloat4_Pseudo(&genLocal);
+      if(m_spectral_mode != 0)
+        wavelengths = SampleWavelengths(rands.z, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
+      
+      const float2 xy = 0.25f*m_physSize*float2(2.0f*(float(x+0.5f)/float(m_width))  - 1.0f, 
+                                                2.0f*(float(y+0.5f)/float(m_height)) - 1.0f);
+      ray_pos = float3(xy.x, xy.y, 0);
+  
+      const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(rands.x - 0.5f, rands.y - 0.5f));
+      const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
+      const float3 ray_dirF = normalize(shootTo - ray_pos);
+      
+      cosTheta = std::abs(ray_dirF.z);      
+      ray_dir  = ray_dirF;
+      success  = TraceLensesFromFilm(ray_pos, ray_dir, &ray_pos, &ray_dir);
+      if(!success)
+        failed++;
 
-    const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(rands.x - 0.5f, rands.y - 0.5f));
-    const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
-    const float3 ray_dirF = normalize(shootTo - ray_pos);
-    const float cosTheta  = std::abs(ray_dirF.z);
+    //} while (!success && failed < MAX_TRIALS);
+
+    m_randomGens[tid] = genLocal;
     
-    float3 ray_dir = ray_dirF;
-    bool rayIsDead = false;
-    if (!TraceLensesFromFilm(ray_pos, ray_dir, &ray_pos, &ray_dir)) 
+    float weight = 1.0f;
+    //if (failed >= MAX_TRIALS) 
+    if(!success)
     {
       ray_pos = float3(0,-10000000.0,0.0); // shoot ray under the floor
       ray_dir = float3(0,-1,0);
-      rayIsDead = true;
+      weight  = 0.0f;
     }
     else
     {
       ray_dir = float3(-1,-1,-1)*normalize(ray_dir);
       ray_pos = float3(-1,-1,-1)*ray_pos;
+      weight  = (failed == 0) ? 1.0f : float(MAX_TRIALS)/float(failed);
     }
+
+    PipeThrough pipeData;
+    pipeData.cosPower4 = (cosTheta*cosTheta)*(cosTheta*cosTheta)*weight;  // only if you need such data
 
     RayPart1 p1;
     RayPart2 p2;
@@ -281,7 +298,9 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
   
     out_rayPosAndNear4f[tid] = p1;
     out_rayDirAndFar4f [tid] = p2;
+
     m_storedWaves      [tid] = uint2(p1.waves01,  p2.waves23); // just remember waves in our buffer for camera
+    m_storedData       [tid] = pipeData;                       // remember cos4 in other buffer 
   }
 }
 
@@ -292,7 +311,8 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float4* in_col
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
-    float4 color = in_color[tid];
+    float4 color = in_color[tid]*m_storedData[tid].cosPower4;
+
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
       const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);

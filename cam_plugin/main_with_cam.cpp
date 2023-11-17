@@ -137,7 +137,7 @@ int main(int argc, const char** argv)
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     SPP_TOTAL = args.getOptionValue<int>("-spp");
 
-  int SAMPLES_PER_RAY = 4;                          
+  int SAMPLES_PER_RAY = 1;                          
   int CAM_PASSES_NUM  = SPP_TOTAL/SAMPLES_PER_RAY; 
   if(SPP_TOTAL == 1) {
     SAMPLES_PER_RAY = 1;

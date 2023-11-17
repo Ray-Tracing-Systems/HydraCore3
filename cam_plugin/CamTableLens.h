@@ -20,6 +20,11 @@ struct LensElementInterface
   float apertureRadius;
 };
 
+struct PipeThrough
+{
+  float cosPower4;
+};
+
 class CamTableLens : public ICamRaysAPI
 {
 public:
@@ -54,8 +59,9 @@ protected:
   int m_height;
   int m_spectral_mode;
 
-  std::vector<RandomGen>  m_randomGens;
-  std::vector<uint2>      m_storedWaves;
+  std::vector<RandomGen>   m_randomGens;
+  std::vector<uint2>       m_storedWaves;
+  std::vector<PipeThrough> m_storedData;
   void Init(int a_maxThreads);
 
   std::vector<float> m_cie_x;
