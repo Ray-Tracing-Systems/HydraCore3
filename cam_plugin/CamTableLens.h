@@ -61,6 +61,7 @@ protected:
 
   std::vector<RandomGen>   m_randomGens;
   std::vector<uint2>       m_storedWaves;
+  std::vector<float>       m_storedCos4;
   std::vector<PipeThrough> m_storedData;
   void Init(int a_maxThreads);
 
