@@ -229,38 +229,43 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
     
     auto genLocal = m_randomGens[tid];
     const float4 rands = rndFloat4_Pseudo(&genLocal);
-
-    //float3 ray_dir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
-    //float3 ray_pos = float3(0,0,0);
-
+    
+    float3 ray_pos, ray_dir;
+    float cosTheta;
     float4 wavelengths = float4(0,0,0,0);
+    bool success = false;
+    int failed = 0;
+    const int MAX_TRIALS = 10;
+    
     if(m_spectral_mode != 0)
       wavelengths = SampleWavelengths(rands.z, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
 
     const float2 xy = 0.25f*m_physSize*float2(2.0f*(float(x+0.5f)/float(m_width))  - 1.0f, 
                                               2.0f*(float(y+0.5f)/float(m_height)) - 1.0f);
     
-    float3 ray_pos = float3(xy.x, xy.y, 0);
+    ray_pos = float3(xy.x, xy.y, 0);
 
     const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(rands.x - 0.5f, rands.y - 0.5f));
     const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
     const float3 ray_dirF = normalize(shootTo - ray_pos);
-    const float cosTheta  = std::abs(ray_dirF.z);
-    
-    m_randomGens[tid] = genLocal;
 
-    float3 ray_dir = ray_dirF;
-    bool rayIsDead = false;
-    if (!TraceLensesFromFilm(ray_pos, ray_dir, &ray_pos, &ray_dir)) 
+    cosTheta  = std::abs(ray_dirF.z);
+    ray_dir   = ray_dirF;
+    success   = TraceLensesFromFilm(ray_pos, ray_dir, &ray_pos, &ray_dir);
+
+    if (!success) 
     {
       ray_pos = float3(0,-10000000.0,0.0); // shoot ray under the floor
       ray_dir = float3(0,-1,0);
+      failed++;
     }
     else
     {
       ray_dir = float3(-1,-1,-1)*normalize(ray_dir);
       ray_pos = float3(-1,-1,-1)*ray_pos;
     }
+
+    m_randomGens[tid] = genLocal;
 
     RayPart1 p1;
     RayPart2 p2;
@@ -295,7 +300,7 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float4* in_col
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
     float4 color = in_color[tid]*m_storedCos4[tid];
-    
+
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
       const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
