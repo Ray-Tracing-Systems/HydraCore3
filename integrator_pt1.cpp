@@ -178,7 +178,7 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                           const float4* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, 
-                                          const uint* rayFlags,  
+                                          const uint* rayFlags, uint bounce,
                                           RandomGen* a_gen, float4* out_shadeColor)
 {
   const uint currRayFlags = *rayFlags;
@@ -223,6 +223,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       misWeight = 1.0f;
       lgtPdfW   = 1.0f;
     }
+
+    if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
+      misWeight = 0.0f;
     
     const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
@@ -309,6 +312,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
       misWeight = 0.0f;
     
+    if(m_skipBounce >= 1 && bounce < m_skipBounce) // skip some number of bounces if this is set
+      misWeight = 0.0f;
+
     float4 currAccumColor      = *accumColor;
     float4 currAccumThroughput = *accumThoroughput;
     
@@ -464,7 +470,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &rayFlags, depth,
                              &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,
@@ -499,7 +505,7 @@ void Integrator::PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNe
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &rayFlags, depth,
                              &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &instId, &shadeColor,

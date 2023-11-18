@@ -20,6 +20,7 @@
 
 using LiteImage::ICombinedImageSampler;
 
+
 class Integrator // : public DataClass, IRenderer
 {
 public:
@@ -117,7 +118,7 @@ public:
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, 
-                                const uint* rayFlags, 
+                                const uint* rayFlags, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
@@ -169,6 +170,8 @@ protected:
   int m_winWidth    = 512;
   int m_winHeight   = 512;
   uint m_traceDepth = 10;
+  uint m_skipBounce = 0; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
+                         ///!< TODO: don't account specular bounces(!)
   uint m_spp        = 1024;
   uint m_dummy2     = 0;
   uint m_dummy3     = 0;
