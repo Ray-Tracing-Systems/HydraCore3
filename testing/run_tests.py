@@ -29,11 +29,11 @@ def alignIntegratorName(name): # "naivept","shadowpt","mispt" ==> "naivept ","sh
 ############################################################################################################
 
 class REQ:
-  def __init__(self, name, tests, imsize = (512,512), inregrators = ["naivept","shadowpt","mispt"], naivemul = 4):
+  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4):
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
-    self.integs = inregrators
+    self.integs = integrators
     self.naivem = naivemul
     self.times  = []
   
@@ -71,11 +71,11 @@ class REQ:
       return
 
 class REQ_H2(REQ):
-  def __init__(self, name, tests, imsize = (512,512), inregrators = ["naivept","shadowpt","mispt"], naivemul = 4):
+  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4):
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
-    self.integs = inregrators
+    self.integs = integrators
     self.naivem = naivemul
     self.times  = []
 
@@ -108,13 +108,14 @@ class REQ_H2(REQ):
           Log().print_colored_text("  {}: PSNR({}, CPU/GPU) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color) 
 
 class REQ_HX(REQ):
-  def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], inregrators = ["naivept","shadowpt","mispt"], naivemul = 4):
+  def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], integrators = ["naivept","shadowpt","mispt"], naivemul = 4, is_spectral = False):
     self.name   = name
     self.scn_path = scn_path
     self.ref_path = ref_path
     self.imsize = imsize
-    self.integs = inregrators
+    self.integs = integrators
     self.naivem = naivemul
+    self.spectral = is_spectral
     self.times  = []
 
   def test(req, gpu_id=0):
@@ -134,6 +135,8 @@ class REQ_HX(REQ):
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
+          if req.spectral:
+            args = args + ["--spectral"]
           #print(args)
           req.run(test_name, args, image_ref, outp, inregrator)
           #print("finished")
@@ -162,17 +165,17 @@ class REQ_HP(REQ):
       test_name = req.name
       for dev_type in devices:
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
-        for inregrator in req.integs:
-          outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + ".bmp"
+        for integrator in req.integs:
+          outp = folder_path + "/y" + str(id) + "_" + dev_type + integrator + ".bmp"
           print(outp)
-          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp", "1024"]
+          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", integrator, "-spp", "1024"]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
           if scene_path.find(PATH_TO_HYDRA3_SCENS) != -1:
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
           # print(args)
-          req.run(test_name, args, image_ref, outp, inregrator)
+          req.run(test_name, args, image_ref, outp, integrator)
     print(req.names)
     print(req.times)
 
@@ -242,7 +245,37 @@ reqs.append( REQ_HX("mat_conductor",
                     ],
                     imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
                     naivemul = 16))
-                                           
+
+reqs.append( REQ_HX("spectral",
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0001/Spectral-ior-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0002/Spectral-ior-model-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0003/Spectral-diffuse-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0004/spectral_cornell_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/spectral_cornell_hydra3.xml"
+                    ],
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0001/Images/Spectral-ior-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0002/Images/Spectral-ior-model-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0003/Images/Spectral-diffuse-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0004/Images/spectral_cornell_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0006/Images/spectral_cornell_mitsuba.png"
+                    ],
+                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    naivemul = 16, integrators = ["mispt"], is_spectral = True))
+
+reqs.append( REQ_HX("blend",
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Blend/0001/spectral-blend-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml"
+                    ],
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Blend/0001/Images/spectral-blend-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Blend/0002/Images/spectral-blend-sphere-mitsuba.png"
+                    ],
+                    imsize = [(1024, 1024), (1024, 1024)],
+                    naivemul = 16, integrators = ["mispt"], is_spectral = True))
+
 reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Glass-sphere_gloss-1_cornell_hydra3.xml",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Glass_gloss-1_cornell_hydra3.xml"],
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
