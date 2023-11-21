@@ -290,9 +290,9 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   bool is_emission_color = false;
   if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
   {
-    is_emission_color = true;
     auto nodeEmissColor = nodeEmiss.child(L"color");
     color               = GetColorFromNode(nodeEmissColor, is_spectral_mode);
+    is_emission_color = (materialNode.attribute(L"light_id") != nullptr) || (length(color) > 1e-5f );
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, texturesInfo, texCache, textures);
     
@@ -793,7 +793,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   //
   for(auto cam : scene.Cameras())
   {
-    float aspect   = 1.0f;
+    float aspect   = float(m_winWidth) / float(m_winHeight);
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
     auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
       
