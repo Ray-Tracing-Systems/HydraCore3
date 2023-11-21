@@ -145,6 +145,12 @@ public:
     m_winHeight = a_height;
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
   }
+  
+  void SetWorldView(const float4x4& a_mat)
+  {
+    m_worldView = a_mat;
+    m_worldViewInv = LiteMath::inverse4x4(m_worldView);
+  }
 
   uint GetSPP() const { return m_spp; } 
 

@@ -82,6 +82,19 @@ Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
     return Sampler::AddressMode::WRAP;
 }
 
+float4x4 ReadMatrixFromString(const std::string& str)
+{
+  float4x4 res;
+  std::stringstream ss(str);
+  for(int i = 0; i < 4; ++i)
+  {
+    ss >> res.m_col[i].x >> res.m_col[i].y >> res.m_col[i].z >> res.m_col[i].w;
+  }
+
+  return res;
+}
+
+
 HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
 {
   HydraSampler res;

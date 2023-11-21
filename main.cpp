@@ -7,6 +7,7 @@
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+float4x4 ReadMatrixFromString(const std::string& str);
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
@@ -70,6 +71,15 @@ int main(int argc, const char** argv)
   }
   
   int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+
+  float4x4 look_at;
+  auto override_camera_pos = args.hasOption("-look_at");
+  if(override_camera_pos)
+  {
+    auto str = args.getOptionValue<std::string>("-look_at");
+    std::cout << str << std::endl;
+    look_at = ReadMatrixFromString(str);
+  }
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -109,6 +119,12 @@ int main(int argc, const char** argv)
   pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
+
+  if(override_camera_pos)
+  {
+    pImpl->SetWorldView(look_at);
+  }
+
   pImpl->CommitDeviceData();
 
   PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
