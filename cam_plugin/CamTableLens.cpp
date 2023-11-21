@@ -148,7 +148,7 @@ bool CamTableLens::IntersectSphericalElement(float radius, float zCenter, float3
 }
 
 bool CamTableLens::TraceLensesFromFilm(const float3 inRayPos, const float3 inRayDir, 
-                                    float3* outRayPos, float3* outRayDir) const
+                                       float3* outRayPos, float3* outRayDir) const
 {
   float elementZ = 0;
   // Transform _rCamera_ from camera to lens system space
