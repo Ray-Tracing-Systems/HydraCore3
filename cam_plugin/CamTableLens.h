@@ -34,8 +34,8 @@ public:
   void SetParameters(int a_width, int a_height, const CamParameters& a_params) override;
   void SetBatchSize(int a_tileSize) override { Init(a_tileSize); };
   
-  void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int subPassId)  override;
-  void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
+  void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)  override;
+  void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, 
                                    uint32_t a_width, uint32_t a_height, int subPassId);
 
 protected:

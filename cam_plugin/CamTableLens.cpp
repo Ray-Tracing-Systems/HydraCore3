@@ -10,7 +10,6 @@
 using LiteMath::perspectiveMatrix;
 using LiteMath::lookAt;
 using LiteMath::inverse4x4;
-
   
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,12 +110,12 @@ void CamTableLens::Init(int a_maxThreads)
 
 }
 
-void CamTableLens::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int subPassId)
+void CamTableLens::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
 {
   kernel1D_MakeEyeRay(int(in_blockSize), out_rayPosAndNear4f, out_rayDirAndFar4f, subPassId);
 }
 
-void CamTableLens::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
+void CamTableLens::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, 
                                              uint32_t a_width, uint32_t a_height, int subPassId)
 {
   kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, (float4*)out_color4f, subPassId); 

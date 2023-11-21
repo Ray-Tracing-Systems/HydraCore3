@@ -40,6 +40,15 @@
             ]
         },
         {
+            "label": "Build Shaders PinHole (GLSL)",
+            "type": "shell",
+            "command": "cd cam_plugin/shaders_generated && bash build.sh",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "label": "Clear",
             "type": "shell",
             "command": "rm integrator_pt1_temp.cpp",

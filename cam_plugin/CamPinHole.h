@@ -21,9 +21,14 @@ public:
   void SetParameters(int a_width, int a_height, const CamParameters& a_params) override;
   void SetBatchSize(int a_tileSize) override { Init(a_tileSize); };
   
-  void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int subPassId)  override;
-  void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
-                                   uint32_t a_width, uint32_t a_height, int subPassId);
+  void MakeRaysBlock(RayPart1* out_rayPosAndNear4f [[size("in_blockSize")]], 
+                     RayPart2* out_rayDirAndFar4f  [[size("in_blockSize")]], uint32_t in_blockSize, int subPassId)  override;
+                     
+  void AddSamplesContributionBlock(float* out_color4f [[size("a_width*a_height*4")]], const float* colors4f [[size("in_blockSize*4")]], uint32_t in_blockSize, 
+                                   uint32_t a_width, uint32_t a_height, int subPassId) override;
+
+  virtual void CommitDeviceData(){}
+  virtual void GetExecutionTime(const char* a_funcName, float a_out[4]){}
 
 protected:
 

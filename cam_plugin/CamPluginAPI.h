@@ -49,7 +49,7 @@ struct ICamRaysAPI
     Please note that it is assumed that rays are uniformly distributed over image plane (and all other integrated dimentions like position on lens)
     for the whole period of time (all passes), the example will be provided.
   */
-  virtual void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, size_t in_blockSize, int subPassId) = 0;
+  virtual void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId) = 0;
 
   /**
   \brief Add contribution
@@ -59,6 +59,6 @@ struct ICamRaysAPI
   \param a_width    - image width
   \param a_height   - image height
   */
-  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, size_t in_blockSize, 
+  virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, 
                                            uint32_t a_width, uint32_t a_height, int subPassId) = 0;
 };
