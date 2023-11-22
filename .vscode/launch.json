@@ -11,7 +11,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "16",
+                 "-spp", "256",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,

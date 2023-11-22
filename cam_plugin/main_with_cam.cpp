@@ -232,7 +232,6 @@ int main(int argc, const char** argv)
       pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
       for(int i=0;i<4;i++)
         timingSum[i] += timings[i];
-      break;  
     }
   }
 
