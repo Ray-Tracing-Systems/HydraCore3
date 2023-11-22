@@ -118,14 +118,13 @@ int main(int argc, const char** argv)
     
     auto devFeaturesCam = (camType == 0) ? CamPinHole_PINHOLE_GPU::ListRequiredDeviceFeatures(requiredExtensions) :
                                            CamTableLens_TABLELENS_GPU::ListRequiredDeviceFeatures(requiredExtensions);
-
-    requiredExtensions.clear(); // TBD: probably join with previous
+                                           
     auto devFeaturesHydra = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions); 
     
     // TBD: you actually need to carefully join all required device features structures and Vulkan lists 
     //
-    if(devFeaturesCam.features.shaderFloat64 == VK_TRUE)
-      devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // in this example we know that hydra3 don't use double floating point while cam plugin probably uses it
+    if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
+      devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
     
     auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
 
