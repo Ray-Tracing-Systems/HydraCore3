@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <chrono>
 
 #include "integrator_pt.h"
 #include "ArgParser.h"
@@ -11,12 +12,12 @@
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
-#ifdef USE_VULKAN
 #include "vk_context.h"
+#include "vk_buffers.h"
+
 #include "integrator_pt1_generated.h"              // advanced way of woking with hydra
 #include "cam_plugin/CamPinHole_pinhole_gpu.h"     // same way for camera plugins
 #include "cam_plugin/CamTableLens_tablelens_gpu.h" // same way for camera plugins
-#endif
 
 int main(int argc, const char** argv)
 {
@@ -36,8 +37,8 @@ int main(int argc, const char** argv)
   std::string integratorType = "mispt";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
-  std::shared_ptr<Integrator>  pRender  = nullptr;
-  std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
+  //std::shared_ptr<Integrator>  pRender  = nullptr; // replace them with actual classes or GPU API
+  //std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr; // replace them with actual classes or GPU API
 
   ArgParser args(argc, argv);
   
@@ -92,19 +93,10 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
-
-  std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
-  std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
-  std::vector<float4>   rayCol(MEGA_TILE_SIZE); ///<! per tile data, output 
-
-  std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer (TODO: monochrome FB need also)
-  std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
-
-  bool onGPU = args.hasOption("--gpu");
-  #ifdef USE_VULKAN
-  if(onGPU)
-  {
+  const int MEGA_TILE_SIZE = WIN_WIDTH*WIN_HEIGHT; //512*512;           ///<! tile size
+ 
+  // always on GPU in this main
+  //{
     // (1) advanced way, you may disable unused features in shader code via spec constants.
     //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
     //
@@ -140,47 +132,30 @@ int main(int argc, const char** argv)
 
     // advanced way, init renderer
     //
-    {
-      auto pObj = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pRender = pObj;
-    }
+  
+    auto pRender = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
+    pRender->SetVulkanContext(ctx);
+    pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+    
+    auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>(); 
+    pCamImpl->SetVulkanContext(ctx);
+    pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+  //}
 
-    // init appropriate camera plugin and put it to 'pCamImpl'
-    //
-    if(camType == 0)
-    {
-      auto pObj = std::make_shared<CamPinHole_PINHOLE_GPU>(); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pCamImpl = pObj;
-    }
-    else if(camType == 1)
-    {
-      auto pObj = std::make_shared<CamTableLens_TABLELENS_GPU>(); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pCamImpl = pObj;
-    }
-  }
-  else
-  #endif
-  {
-    pRender = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
+  // alloc all reauired buffers on GPU
+  // 
+  VkBuffer rayPosGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+  VkBuffer rayDirGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+  VkBuffer rayColGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
-    if(camType == 0)
-      pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);
-    else if(camType == 1)
-      pCamImpl = std::make_shared<CamTableLens>(); // (WIN_WIDTH*WIN_HEIGHT);
-  }
+  VkBuffer frameBuferGPU = vk_utils::createBuffer(ctx.device, WIN_WIDTH*WIN_HEIGHT*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
-  //auto pCamDebug = std::make_shared<CamTableLens>();
+  auto memObject = vk_utils::allocateAndBindWithPadding(ctx.device, ctx.physicalDevice, {rayPosGPU,rayDirGPU,rayColGPU,frameBuferGPU});
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
+  std::cout << "[main_cam_gpu]: Loading scene ... " << scenePath.c_str() << std::endl;
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
@@ -204,37 +179,80 @@ int main(int argc, const char** argv)
     CAM_PASSES_NUM = 1;
   }
 
-  std::cout << "[main_with_cam]: spp     = " << SPP_TOTAL << std::endl;
-  std::cout << "[main_with_cam]: passNum = " << CAM_PASSES_NUM << std::endl;
+  std::cout << "[main_cam_gpu]: spp     = " << SPP_TOTAL << std::endl;
+  std::cout << "[main_cam_gpu]: passNum = " << CAM_PASSES_NUM << std::endl;
 
   float timings   [4] = {0,0,0,0};
   float timingSum[4] = {0,0,0,0};
   const float normConst = 1.0f/float(SPP_TOTAL);
 
+  // bind buffers
+  //
+  pCamImpl->SetVulkanInOutFor_MakeRaysBlock(rayPosGPU, 0, 
+                                            rayDirGPU, 0);
+
+  pRender->SetVulkanInOutFor_PathTraceFromInputRays(rayPosGPU, 0, 
+                                                    rayDirGPU, 0, 
+                                                    rayColGPU, 0);
+
+  pCamImpl->SetVulkanInOutFor_AddSamplesContributionBlock(frameBuferGPU, 0, 
+                                                          rayColGPU, 0);
+
   // do rendering
   //
-  for(int passId = 0; passId < CAM_PASSES_NUM; passId++)
+  VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(ctx.device, ctx.commandPool);
+  VkCommandBufferBeginInfo beginCommandBufferInfo = {};
+  beginCommandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginCommandBufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  
+  // std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+  //
+  std::cout << "[main_cam_gpu]: clear frame buffer" << std::endl;
+  vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
+  vkCmdFillBuffer(commandBuffer, frameBuferGPU, 0, VK_WHOLE_SIZE, 0);
+  vkEndCommandBuffer(commandBuffer);  
+  vk_utils::executeCommandBufferNow(commandBuffer, ctx.computeQueue, ctx.device); 
+  
+  vkResetCommandBuffer(commandBuffer, 0);
+  vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
+  
+  // std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{});
+  //
+  vkCmdFillBuffer(commandBuffer, rayColGPU, 0, VK_WHOLE_SIZE, 0); 
   {
-    std::cout << "rendering, pass " << passId << " / " << CAM_PASSES_NUM  << "\r"; 
-    std::cout.flush();
-    
-    const int passNum = (WIN_WIDTH*WIN_HEIGHT/MEGA_TILE_SIZE);
-    for(int subPassId = 0; subPassId < passNum; subPassId++) 
-    {
-      std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
-      
-      //pCamDebug->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
-      pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
-      pRender->PathTraceFromInputRaysBlock(MEGA_TILE_SIZE, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
-      pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
-      //pCamDebug->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
-
-      pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
-      for(int i=0;i<4;i++)
-        timingSum[i] += timings[i];
-      break;  
-    }
+    VkBufferMemoryBarrier bar = {};
+    bar.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bar.pNext               = NULL;
+    bar.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+    bar.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+    bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    bar.buffer              = rayColGPU;
+    bar.offset              = 0;
+    bar.size                = VK_WHOLE_SIZE;
+    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &bar, 0, nullptr); 
   }
+  
+  // loop over big image in several passes
+  //
+  const int passNum = (WIN_WIDTH*WIN_HEIGHT/MEGA_TILE_SIZE);
+  for(int subPassId = 0; subPassId < passNum; subPassId++) {
+    pCamImpl->MakeRaysBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, subPassId);
+    pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, nullptr, nullptr, nullptr);
+    pCamImpl->AddSamplesContributionBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);      
+  }
+
+  vkEndCommandBuffer(commandBuffer);  
+  
+  std::cout << "[main_cam_gpu]: rendering ... " << std::endl;
+  for(int passId = 0; passId < CAM_PASSES_NUM; passId++) {
+    vk_utils::executeCommandBufferNow(commandBuffer, ctx.computeQueue, ctx.device);
+  }
+  
+  std::vector<float> realColor(WIN_WIDTH*WIN_HEIGHT*4);            
+  ctx.pCopyHelper->ReadBuffer(frameBuferGPU, 0, realColor.data(), WIN_WIDTH*WIN_HEIGHT*4*sizeof(float));
+
+  vkFreeMemory(ctx.device, memObject, nullptr);
 
   std::cout << std::endl << std::endl;
   std::cout << "PathTraceFromInputRays(exec, total) = " << timingSum[0]                << " ms " << std::endl;
@@ -242,9 +260,9 @@ int main(int argc, const char** argv)
   std::cout << "PathTraceFromInputRays(ovrh, total) = " << timingSum[3]                << " ms " << std::endl;
 
   if(saveHDR) 
-    SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
+    SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
   else
-    SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
+    SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
   
   return 0;
 }
