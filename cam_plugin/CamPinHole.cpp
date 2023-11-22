@@ -49,7 +49,7 @@ void CamPinHole::AddSamplesContributionBlock(float* out_color4f, const float* co
 void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId)
 {
   #pragma omp parallel for default(shared)
-  for(int tid = 0; tid < int(in_blockSize); tid++)
+  for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
@@ -97,7 +97,8 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNe
 
 void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color, int subPassId)
 {
-  for(int tid = 0; tid < int(in_blockSize); tid++)
+  #pragma omp parallel for default(shared)
+  for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines

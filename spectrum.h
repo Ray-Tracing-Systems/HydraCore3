@@ -9,6 +9,7 @@
 using namespace LiteMath;
 #endif
 
+#ifndef KERNEL_SLICER
 struct Spectrum
 {
   float Sample(float lambda) const;
@@ -18,6 +19,7 @@ struct Spectrum
   std::vector<float> values;
   uint32_t id = 0;
 };
+#endif
 
 inline size_t BinarySearch(const float* array, size_t array_sz, float val) 
 {
