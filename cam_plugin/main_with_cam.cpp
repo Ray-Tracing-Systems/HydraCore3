@@ -13,7 +13,9 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
+#include "integrator_pt1_generated.h"              // advanced way of woking with hydra
+#include "cam_plugin/CamPinHole_pinhole_gpu.h"     // same way for camera plugins
+#include "cam_plugin/CamTableLens_tablelens_gpu.h" // same way for camera plugins
 #endif
 
 int main(int argc, const char** argv)
@@ -53,11 +55,7 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
-  std::cout << "[main_with_cam]: loading xml ... " << scenePath.c_str() << std::endl;
-
-  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), 
-                                                       WIN_WIDTH, WIN_HEIGHT, spectral_mode);
-
+ 
   //// override parameters which are explicitly defined in command line
   //
   if(args.hasOption("-width"))
@@ -90,10 +88,11 @@ int main(int argc, const char** argv)
   if(args.hasOption("-height"))
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   
+  
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  int MEGA_TILE_SIZE = 512*512;                 ///<! tile size
+  const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
 
   std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
   std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
@@ -106,9 +105,65 @@ int main(int argc, const char** argv)
   #ifdef USE_VULKAN
   if(onGPU)
   {
-    unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
-    auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pRender = CreateIntegrator_Generated(MEGA_TILE_SIZE, ctx, MEGA_TILE_SIZE);
+    // (1) advanced way, you may disable unused features in shader code via spec constants.
+    //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
+    //
+    std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
+    auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+    
+    // (2) init device with apropriate features for both hydra and camera plugin
+    //
+    unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
+    std::vector<const char*> requiredExtensions;
+    
+    auto devFeaturesCam = (camType == 0) ? CamPinHole_PINHOLE_GPU::ListRequiredDeviceFeatures(requiredExtensions) :
+                                           CamTableLens_TABLELENS_GPU::ListRequiredDeviceFeatures(requiredExtensions);
+
+    requiredExtensions.clear(); // TBD: probably join with previous
+    auto devFeaturesHydra = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions); 
+    
+    // TBD: you actually need to carefully join all required device features structures and Vulkan lists 
+    //
+    if(devFeaturesCam.features.shaderFloat64 == VK_TRUE)
+      devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // in this example we know that hydra3 don't use double floating point while cam plugin probably uses it
+    
+    auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
+
+    // (3) Explicitly disable all pipelines which you don't need.
+    //     This will make application start-up faster.
+    //
+    Integrator_Generated::EnabledPipelines().enableRayTraceMega               = false;
+    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; 
+    Integrator_Generated::EnabledPipelines().enablePackXYMega                 = false; 
+    Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = true;  // you need only this pipeline!
+    Integrator_Generated::EnabledPipelines().enablePathTraceMega              = false;
+    Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = false;
+
+    // advanced way, init renderer
+    //
+    {
+      auto pObj = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
+      pObj->SetVulkanContext(ctx);
+      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+      pRender = pObj;
+    }
+
+    // init appropriate camera plugin and put it to 'pCamImpl'
+    //
+    if(camType == 0)
+    {
+      auto pObj = std::make_shared<CamPinHole_PINHOLE_GPU>(); 
+      pObj->SetVulkanContext(ctx);
+      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+      pCamImpl = pObj;
+    }
+    else if(camType == 1)
+    {
+      auto pObj = std::make_shared<CamTableLens_TABLELENS_GPU>(); 
+      pObj->SetVulkanContext(ctx);
+      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+      pCamImpl = pObj;
+    }
   }
   else
   #endif
@@ -131,7 +186,9 @@ int main(int argc, const char** argv)
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+
   pRender->CommitDeviceData();
+  pCamImpl->CommitDeviceData();
 
   SPP_TOTAL = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line

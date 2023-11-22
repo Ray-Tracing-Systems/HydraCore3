@@ -41,7 +41,7 @@ public:
 protected:
 
   void kernel1D_MakeEyeRay   (int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId);
-  void kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color, int subPassId);
+  void kernel1D_ContribSample(int in_blockSize, const float* in_color, float* out_color, int subPassId);
 
   bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
                                  float *t, float3 *n) const;

@@ -61,4 +61,7 @@ struct ICamRaysAPI
   */
   virtual void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, 
                                            uint32_t a_width, uint32_t a_height, int subPassId) = 0;
+
+  virtual void CommitDeviceData(){}
+  virtual void GetExecutionTime(const char* a_funcName, float a_out[4]){}                                          
 };

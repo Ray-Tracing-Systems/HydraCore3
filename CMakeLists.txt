@@ -98,6 +98,16 @@ set(VULKAN_SRC
         integrator_pt1_generated_init.cpp
         integrator_pt1_generated_ds.cpp )
 
+set(VULKAN_CAM1
+        cam_plugin/CamPinHole_pinhole_gpu.cpp
+        cam_plugin/CamPinHole_pinhole_gpu_init.cpp
+        cam_plugin/CamPinHole_pinhole_gpu_ds.cpp )
+
+set(VULKAN_CAM2
+        cam_plugin/CamTableLens_tablelens_gpu.cpp
+        cam_plugin/CamTableLens_tablelens_gpu_init.cpp
+        cam_plugin/CamTableLens_tablelens_gpu_ds.cpp )
+
 add_library(miniz external/tinyexr/miniz.c)
 
 set(LOADER_EXTERNAL_SRC
@@ -132,21 +142,27 @@ set(CORE_SRC
         utils.cpp)
 
 
-if(USE_VULKAN)               
-  add_executable(hydra ${CORE_SRC}
-                       ${VULKAN_EXTERNAL_SRC}
-                       ${VULKAN_SRC}
-                       ${LOADER_EXTERNAL_SRC}
-                       ${OTHER_EXTERNAL_SRC})
-
-#  set(LINKED_VULKAN ${Vulkan_LIBRARY})
+if(USE_VULKAN)    
+  if(CAM_PLUGIN)
+    add_executable(hydra ${CORE_SRC}
+                         ${VULKAN_EXTERNAL_SRC}
+                         ${VULKAN_SRC}
+                         ${VULKAN_CAM1}
+                         ${VULKAN_CAM2}
+                         ${LOADER_EXTERNAL_SRC}
+                         ${OTHER_EXTERNAL_SRC})
+  else()
+    add_executable(hydra ${CORE_SRC}
+                         ${VULKAN_EXTERNAL_SRC}
+                         ${VULKAN_SRC}
+                         ${LOADER_EXTERNAL_SRC}
+                         ${OTHER_EXTERNAL_SRC})
+  endif()
 else()
   add_executable(hydra ${CORE_SRC}
                        ${LOADER_EXTERNAL_SRC}
                        ${OTHER_EXTERNAL_SRC})
-#  set(LINKED_VULKAN "")
 endif()
-
 
 set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 

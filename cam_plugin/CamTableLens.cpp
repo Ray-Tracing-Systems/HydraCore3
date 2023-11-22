@@ -118,7 +118,7 @@ void CamTableLens::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_ra
 void CamTableLens::AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, 
                                              uint32_t a_width, uint32_t a_height, int subPassId)
 {
-  kernel1D_ContribSample(int(in_blockSize), (const float4*)colors4f, (float4*)out_color4f, subPassId); 
+  kernel1D_ContribSample(int(in_blockSize), colors4f, out_color4f, subPassId); 
 }
 
 
@@ -291,14 +291,15 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
   }
 }
 
-void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color, int subPassId)
+void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float* in_color, float* out_color, int subPassId)
 {
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
-    float4 color = in_color[tid]*m_storedCos4[tid];
+    //float4 color = in_color[tid]*m_storedCos4[tid];
+    float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3])*m_storedCos4[tid]; // always float4
 
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
@@ -315,6 +316,10 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float4* in_col
       color = to_float4(XYZToRGB(xyz), 1.0f);
     }
 
-    out_color[y*m_width+x] += color;
+    //out_color[y*m_width+x] += color;
+    out_color[(y*m_width+x)*4+0] += color[0];  // R
+    out_color[(y*m_width+x)*4+1] += color[1];  // G
+    out_color[(y*m_width+x)*4+2] += color[2];  // B
+    //out_color[(y*m_width+x)*4+3] += color[3];// A
   }
 }
