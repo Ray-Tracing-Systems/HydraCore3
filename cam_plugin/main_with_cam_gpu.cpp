@@ -2,6 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <chrono>
+#include <iomanip>
 
 #include "integrator_pt.h"
 #include "ArgParser.h"
@@ -246,15 +247,19 @@ int main(int argc, const char** argv)
   vkEndCommandBuffer(commandBuffer);  
   
   std::cout << "[main_cam_gpu]: rendering ... " << std::endl;
+  auto start = std::chrono::high_resolution_clock::now();
   for(int passId = 0; passId < CAM_PASSES_NUM; passId++) {
     vk_utils::executeCommandBufferNow(commandBuffer, ctx.computeQueue, ctx.device);
     if(passId != 0 && passId%16 == 0)
       std::cout << "[main_cam_gpu]: pass " <<  passId << "/" << CAM_PASSES_NUM << "\r";
       std::cout.flush();
   }
+  auto stop = std::chrono::high_resolution_clock::now();
   std::cout << std::endl;
   std::cout.flush();
 
+  std::cout << std::fixed << std::setprecision(2) \
+            << "[main_cam_gpu]: render time = " << std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()/1000000.f << " s" << std::endl;
   std::cout << "[main_cam_gpu]: save image to hard ... " << std::endl;
 
   std::vector<float> realColor(WIN_WIDTH*WIN_HEIGHT*4);            
@@ -262,10 +267,6 @@ int main(int argc, const char** argv)
 
   vkFreeMemory(ctx.device, memObject, nullptr);
 
-  std::cout << std::endl << std::endl;
-  std::cout << "PathTraceFromInputRays(exec, total) = " << timingSum[0]                << " ms " << std::endl;
-  std::cout << "PathTraceFromInputRays(copy, total) = " << timingSum[1] + timingSum[2] << " ms " << std::endl;
-  std::cout << "PathTraceFromInputRays(ovrh, total) = " << timingSum[3]                << " ms " << std::endl;
 
   if(saveHDR) 
     SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);

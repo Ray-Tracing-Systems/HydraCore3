@@ -119,17 +119,23 @@ set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
         external/CrossRT/EmbreeRT.cpp)
 
+if(USE_VULKAN)
+  set (CAM_MAIN cam_plugin/main_with_cam_gpu.cpp)   
+else()
+  set (CAM_MAIN cam_plugin/main_with_cam.cpp)
+endif()
+
 if(CAM_PLUGIN)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-  set(MAIN_FILE cam_plugin/main_with_cam_gpu.cpp
+  set(MAIN_FILES ${CAM_MAIN}
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
 else()
-  set(MAIN_FILE main.cpp)
+  set(MAIN_FILES main.cpp)
 endif()
 
 set(CORE_SRC
-        ${MAIN_FILE}
+        ${MAIN_FILES}
         integrator_rt.cpp
         integrator_pt1.cpp
         integrator_pt2.cpp
