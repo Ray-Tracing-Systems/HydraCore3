@@ -1,8 +1,6 @@
-#pragma once
 #include "CamTableLens.h"
 
-#include <iterator>
-
+#include <algorithm> // reverse
 #include <cassert>
 #include <cmath>
 #include <cfloat>
@@ -14,16 +12,13 @@ using LiteMath::inverse4x4;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static constexpr float MachineEpsilon = std::numeric_limits<float>::epsilon();
-
 static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
   // Find quadratic discriminant
   double discrim = (double)B * (double)B - 4. * (double)A * (double)C;
   if (discrim < 0.) 
     return false;
   double rootDiscrim = std::sqrt(discrim);
-  float floatRootDiscrim   = rootDiscrim;
-  //float floatRootDiscrimErr = MachineEpsilon * rootDiscrim;
+  float floatRootDiscrim   = float(rootDiscrim);
   // Compute quadratic _t_ values
   float q;
   if ((float)B < 0)
@@ -33,7 +28,12 @@ static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
   *t0 = q / A;
   *t1 = C / q;
   if ((float)*t0 > (float)*t1) 
-    std::swap(*t0, *t1);
+  {
+    // std::swap(*t0, *t1);
+    float temp = *t0;
+    *t0 = *t1;
+    *t1 = temp;
+  }
   return true;
 }
 
@@ -135,7 +135,7 @@ bool CamTableLens::IntersectSphericalElement(float radius, float zCenter, float3
     return false;
   
   // Select intersection $t$ based on ray direction and element curvature
-  bool useCloserT = (rayDir.z > 0.0f) ^ (radius < 0.0);
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
   *t = useCloserT ? std::min(t0, t1) : std::max(t0, t1);
   if (*t < 0.0f) 
     return false;
@@ -157,7 +157,7 @@ bool CamTableLens::TraceLensesFromFilm(const float3 inRayPos, const float3 inRay
 
   for(int i=0; i<lines.size(); i++)
   {
-    const LensElementInterface& element = lines[i];                                  
+    const auto element = lines[i];                                  
     // Update ray from film accounting for interaction with _element_
     elementZ -= element.thickness;
     
@@ -216,7 +216,7 @@ bool CamTableLens::TraceLensesFromFilm(const float3 inRayPos, const float3 inRay
 void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId)
 {
   #pragma omp parallel for default(shared)
-  for(int tid = 0; tid < int(in_blockSize); tid++)
+  for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
@@ -293,7 +293,7 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
 
 void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float4* in_color, float4* out_color, int subPassId)
 {
-  for(int tid = 0; tid < int(in_blockSize); tid++)
+  for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
