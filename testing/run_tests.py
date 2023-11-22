@@ -218,9 +218,9 @@ reqs.append( REQ_HX("mat_emission", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_123/s
                                      PATH_TO_HYDRA2_TESTS + "/tests_images/test_123/w_ref2.png",
                                      PATH_TO_HYDRA2_TESTS + "/tests_images/test_123/w_ref3.png"],
                                      imsize = [(512,512), (512,512), (512,512)],
-                                     naivemul = 16, inregrators = ["naivept","mispt"]))
+                                     naivemul = 16, integrators = ["naivept","mispt"]))
 
-reqs.append( REQ_H2("mat_mirror",  ["test_102"], inregrators = ["naivept","mispt"]) )
+reqs.append( REQ_H2("mat_mirror",  ["test_102"], integrators = ["naivept","mispt"]) )
 
 reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/PlasticSmooth_sphere_hydra2.xml",
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
@@ -284,7 +284,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
 
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
-reqs.append( REQ_H2("mat_emission_texture", ["test_124"], inregrators = ["naivept","mispt"]) )
+reqs.append( REQ_H2("mat_emission_texture", ["test_124"], integrators = ["naivept","mispt"]) )
 
 reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
