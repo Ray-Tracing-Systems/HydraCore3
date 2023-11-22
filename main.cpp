@@ -110,8 +110,8 @@ int main(int argc, const char** argv)
     // advanced way, init device with features which is required by generated class
     //
     std::vector<const char*> requiredExtensions;
-    auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);                                           // TBD: you actually need to join device lists for different classes
-    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures);  //
+    auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);                                          
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures); 
      
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster

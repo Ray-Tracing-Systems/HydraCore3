@@ -38,9 +38,6 @@ int main(int argc, const char** argv)
   std::string integratorType = "mispt";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
-  //std::shared_ptr<Integrator>  pRender  = nullptr; // replace them with actual classes or GPU API
-  //std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr; // replace them with actual classes or GPU API
-
   ArgParser args(argc, argv);
   
   if(args.hasOption("-in"))
@@ -90,58 +87,55 @@ int main(int argc, const char** argv)
   if(args.hasOption("-height"))
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   
-  
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
+  const int MEGA_TILE_SIZE = 512*512;  ///<! tile size
  
-  // always on GPU in this main
-  //{
-    // (1) advanced way, you may disable unused features in shader code via spec constants.
-    //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
-    //
-    std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-    auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+  // (1) advanced way, you may disable unused features in shader code via spec constants.
+  //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
+  //
+  std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
+  auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
     
-    // (2) init device with apropriate features for both hydra and camera plugin
-    //
-    unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
-    std::vector<const char*> requiredExtensions;
+  // (2) init device with apropriate features for both hydra and camera plugin
+  //
+  unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
+  std::vector<const char*> requiredExtensions;
     
-    auto devFeaturesCam = (camType == 0) ? CamPinHole_PINHOLE_GPU::ListRequiredDeviceFeatures(requiredExtensions) :
-                                           CamTableLens_TABLELENS_GPU::ListRequiredDeviceFeatures(requiredExtensions);
+  auto devFeaturesCam = (camType == 0) ? CamPinHole_PINHOLE_GPU::ListRequiredDeviceFeatures(requiredExtensions) :
+                                         CamTableLens_TABLELENS_GPU::ListRequiredDeviceFeatures(requiredExtensions);
                                            
-    auto devFeaturesHydra = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions); 
+  auto devFeaturesHydra = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions); 
     
-    // TBD: you actually need to carefully join all required device features structures and Vulkan lists 
-    //
-    if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
-      devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
+  // TBD: you actually need to carefully join all required device features structures and Vulkan lists 
+  //
+  if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
+    devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
     
-    auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
+  auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
 
-    // (3) Explicitly disable all pipelines which you don't need.
-    //     This will make application start-up faster.
-    //
-    Integrator_Generated::EnabledPipelines().enableRayTraceMega               = false;
-    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; 
-    Integrator_Generated::EnabledPipelines().enablePackXYMega                 = false; 
-    Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = true;  // you need only this pipeline!
-    Integrator_Generated::EnabledPipelines().enablePathTraceMega              = false;
-    Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = false;
+  // (3) Explicitly disable all pipelines which you don't need.
+  //     This will make application start-up faster.
+  //
+  Integrator_Generated::EnabledPipelines().enableRayTraceMega               = false;
+  Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; 
+  Integrator_Generated::EnabledPipelines().enablePackXYMega                 = false; 
+  Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = true;  // you need only this pipeline!
+  Integrator_Generated::EnabledPipelines().enablePathTraceMega              = false;
+  Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = false;
 
-    // advanced way, init renderer
-    //
-  
-    auto pRender = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
-    pRender->SetVulkanContext(ctx);
-    pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
+  // advanced way, init renderer
+  //
+  auto pRender = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
+  auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>();
+  //auto pCamImpl = std::make_shared<CamPinHole_PINHOLE_GPU>();  
+
+  pRender->SetVulkanContext(ctx);
+  pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
     
-    auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>(); 
-    pCamImpl->SetVulkanContext(ctx);
-    pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-  //}
+  pCamImpl->SetVulkanContext(ctx);
+  pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
 
   // alloc all reauired buffers on GPU
   // 
@@ -160,14 +154,12 @@ int main(int argc, const char** argv)
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
-  //pCamDebug->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
-  //pCamDebug->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
 
-  pRender->CommitDeviceData();
-  pCamImpl->CommitDeviceData();
+  pRender->CommitDeviceData();                       // copy internal camera     data from CPU to GPU
+  pCamImpl->CommitDeviceData();                      // copy internal integrator data from CPU to GPU
 
   SPP_TOTAL = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
