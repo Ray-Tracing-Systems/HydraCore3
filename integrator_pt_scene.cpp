@@ -82,6 +82,19 @@ Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
     return Sampler::AddressMode::WRAP;
 }
 
+float4x4 ReadMatrixFromString(const std::string& str)
+{
+  float4x4 res;
+  std::stringstream ss(str);
+  for(int i = 0; i < 4; ++i)
+  {
+    ss >> res.m_col[i].x >> res.m_col[i].y >> res.m_col[i].z >> res.m_col[i].w;
+  }
+
+  return res;
+}
+
+
 HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
 {
   HydraSampler res;
@@ -290,9 +303,9 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   bool is_emission_color = false;
   if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
   {
-    is_emission_color = true;
     auto nodeEmissColor = nodeEmiss.child(L"color");
     color               = GetColorFromNode(nodeEmissColor, is_spectral_mode);
+    is_emission_color = (materialNode.attribute(L"light_id") != nullptr) || (length(color) > 1e-5f );
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, texturesInfo, texCache, textures);
     
@@ -730,7 +743,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uint32_t offset = m_wavelengths.size();
       std::copy(spec.wavelengths.begin(), spec.wavelengths.end(), std::back_inserter(m_wavelengths));
       std::copy(spec.values.begin(), spec.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, spec.wavelengths.size()});
+      m_spec_offset_sz.push_back(uint2{offset, static_cast<uint32_t>(spec.wavelengths.size())});
       
       // we expect dense, sorted ids for now
       //assert(m_spectra[spec_id].id == spec_id);
@@ -747,7 +760,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uint32_t offset = m_wavelengths.size();
       std::copy(uniform1.wavelengths.begin(), uniform1.wavelengths.end(), std::back_inserter(m_wavelengths));
       std::copy(uniform1.values.begin(), uniform1.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, uniform1.wavelengths.size()});
+      m_spec_offset_sz.push_back(uint2{offset, static_cast<uint32_t>(uniform1.wavelengths.size())});
     }
   }
 
@@ -792,7 +805,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   //
   for(auto cam : scene.Cameras())
   {
-    float aspect   = 1.0f;
+    float aspect   = float(m_winWidth) / float(m_winHeight);
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
     auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
       
