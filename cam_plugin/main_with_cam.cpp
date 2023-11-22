@@ -175,6 +175,8 @@ int main(int argc, const char** argv)
       pCamImpl = std::make_shared<CamTableLens>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
+  //auto pCamDebug = std::make_shared<CamTableLens>();
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
@@ -182,6 +184,8 @@ int main(int argc, const char** argv)
 
   pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
+  //pCamDebug->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
+  //pCamDebug->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
@@ -218,7 +222,8 @@ int main(int argc, const char** argv)
     for(int subPassId = 0; subPassId < passNum; subPassId++) 
     {
       std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
-
+      
+      //pCamDebug->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
       pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
       pRender->PathTraceFromInputRaysBlock(MEGA_TILE_SIZE, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
       pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
@@ -226,6 +231,7 @@ int main(int argc, const char** argv)
       pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
       for(int i=0;i<4;i++)
         timingSum[i] += timings[i];
+      break;  
     }
   }
 
