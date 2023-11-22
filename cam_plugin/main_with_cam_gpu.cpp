@@ -93,7 +93,7 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  const int MEGA_TILE_SIZE = WIN_WIDTH*WIN_HEIGHT; //512*512;           ///<! tile size
+  const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
  
   // always on GPU in this main
   //{
@@ -216,27 +216,28 @@ int main(int argc, const char** argv)
   vkResetCommandBuffer(commandBuffer, 0);
   vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
   
-  // std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{});
-  //
-  vkCmdFillBuffer(commandBuffer, rayColGPU, 0, VK_WHOLE_SIZE, 0); 
-  {
-    VkBufferMemoryBarrier bar = {};
-    bar.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    bar.pNext               = NULL;
-    bar.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-    bar.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
-    bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    bar.buffer              = rayColGPU;
-    bar.offset              = 0;
-    bar.size                = VK_WHOLE_SIZE;
-    vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &bar, 0, nullptr); 
-  }
-  
   // loop over big image in several passes
   //
   const int passNum = (WIN_WIDTH*WIN_HEIGHT/MEGA_TILE_SIZE);
-  for(int subPassId = 0; subPassId < passNum; subPassId++) {
+  for(int subPassId = 0; subPassId < passNum; subPassId++) 
+  {  
+    // std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{});
+    //
+    vkCmdFillBuffer(commandBuffer, rayColGPU, 0, VK_WHOLE_SIZE, 0); 
+    {
+      VkBufferMemoryBarrier bar = {};
+      bar.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+      bar.pNext               = NULL;
+      bar.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+      bar.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+      bar.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      bar.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+      bar.buffer              = rayColGPU;
+      bar.offset              = 0;
+      bar.size                = VK_WHOLE_SIZE;
+      vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &bar, 0, nullptr); 
+    } 
+
     pCamImpl->MakeRaysBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, subPassId);
     pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, nullptr, nullptr, nullptr);
     pCamImpl->AddSamplesContributionBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);      
@@ -247,8 +248,15 @@ int main(int argc, const char** argv)
   std::cout << "[main_cam_gpu]: rendering ... " << std::endl;
   for(int passId = 0; passId < CAM_PASSES_NUM; passId++) {
     vk_utils::executeCommandBufferNow(commandBuffer, ctx.computeQueue, ctx.device);
+    if(passId != 0 && passId%16 == 0)
+      std::cout << "[main_cam_gpu]: pass " <<  passId << "/" << CAM_PASSES_NUM << "\r";
+      std::cout.flush();
   }
-  
+  std::cout << std::endl;
+  std::cout.flush();
+
+  std::cout << "[main_cam_gpu]: save image to hard ... " << std::endl;
+
   std::vector<float> realColor(WIN_WIDTH*WIN_HEIGHT*4);            
   ctx.pCopyHelper->ReadBuffer(frameBuferGPU, 0, realColor.data(), WIN_WIDTH*WIN_HEIGHT*4*sizeof(float));
 
