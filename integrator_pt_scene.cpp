@@ -166,6 +166,9 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
+//std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
+float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH);
+
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
@@ -180,15 +183,33 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     std::cout << "[LoadTextureAndMakeCombined]: can't open '" << fnameA << "'" << std::endl;
   #endif
 
+  std::string filename = hydra_xml::ws2s(a_texInfo.path);
+
   fin.read((char*)wh, sizeof(int)*2);
   if(a_texInfo.bpp == 16)
   {
-    std::vector<float> data(wh[0]*wh[1]*4);
-    fin.read((char*)data.data(), sizeof(float)*4*data.size());
-    fin.close();
+    float* pCustomData = nullptr;
+    std::vector<float> data;
+    
+    if(filename.find(".exr") != std::string::npos || filename.find(".EXR") != std::string::npos)
+    {
+      fin.close();
+      pCustomData = LoadImage4fFromEXRUnsafe(filename.c_str(), &wh[0], &wh[1]);
+    }
+    else
+    {
+      data.resize(wh[0]*wh[1]*4);
+      fin.read((char*)data.data(), sizeof(float)*4*data.size());
+      fin.close();
+    }
 
-    auto pTexture = std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data());
+    auto pTexture = (pCustomData == nullptr) ? std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data()) : 
+                                               std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)pCustomData);
+
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+
+    if(pCustomData != nullptr)
+       free(pCustomData);
   }
   else
   {
@@ -710,7 +731,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   for(auto texNode : scene.TextureNodes())
   {
     TextureInfo tex;
-    tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+    std::wstring texFile = texNode.attribute(L"loc").as_string(); // default
+    if(texFile == L"")                                            // old-style for delayed-load
+      texFile = texNode.attribute(L"path").as_string();           // may be in any format (!)
+    tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texFile;
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
     if(tex.width != 0 && tex.height != 0)
@@ -930,7 +954,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-    //for(size_t i=0;i<currMesh.vPos4f.size();i++) // pack texture coords to fourth components
+    //for(size_t i=0;i<currMesh.vPos4f.size();i++)                                               // #TODO: pack texture coords to fourth components
     //{
     //  currMesh.vPos4f [i].w = currMesh.vTexCoord2f[i].x;
     //  currMesh.vNorm4f[i].w = currMesh.vTexCoord2f[i].y;
