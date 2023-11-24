@@ -91,8 +91,9 @@ static constexpr uint EMISSION_COLOR              = 0;
 static constexpr uint EMISSION_COLOR_LAST_IND     = EMISSION_COLOR;
 
 // custom 
-static constexpr uint EMISSION_TEXID0             = UINT_MAIN_LAST_IND + 0;
-static constexpr uint EMISSION_SPECID0            = UINT_MAIN_LAST_IND + 1;
+static constexpr uint EMISSION_MULT               = UINT_MAIN_LAST_IND + 0;
+static constexpr uint EMISSION_TEXID0             = UINT_MAIN_LAST_IND + 1;
+static constexpr uint EMISSION_SPECID0            = UINT_MAIN_LAST_IND + 2;
 static constexpr uint EMISSION_CUSTOM_LAST_IND    = EMISSION_SPECID0;
 
 

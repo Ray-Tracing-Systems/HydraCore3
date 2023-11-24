@@ -247,6 +247,7 @@ protected:
 
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
   int  m_spectral_mode  = 0;
+  float m_exposureMult = 1.0f;
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;

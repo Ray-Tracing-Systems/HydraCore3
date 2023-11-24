@@ -172,6 +172,7 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
       lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
     }
   }
+  lightColor *= m_lights[a_lightId].mult;
   return lightColor;
 }
 
@@ -270,8 +271,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     float4 texColor   = m_textures[texId]->sample(texCoordT);
     float4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
+    float  lightMult  = m_materials[matId].data[EMISSION_MULT];
 
-    float4 lightIntensity = lightColor * texColor;
+    float4 lightIntensity = lightColor * texColor * lightMult;
     if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0)
     {
       const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
@@ -282,7 +284,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
         const uint size   = data.y;
         lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *wavelengths, size);
       }
-      lightIntensity = lightColor;
+      lightIntensity = lightColor * lightMult;
     }
 
     const uint lightId = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
@@ -399,7 +401,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
     rgb = XYZToRGB(xyz);
   }
 
-  float4 colorRes = to_float4(rgb, 1.0f);
+  float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   // if(x == 247 && (y == 512-412-1))
   //   colorRes = float4(0,0,1,0);
   //if(!std::isfinite(color.x) || !std::isfinite(color.y) || !std::isfinite(color.z))

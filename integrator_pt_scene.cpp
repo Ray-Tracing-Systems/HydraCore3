@@ -322,6 +322,16 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     auto specId = GetSpectrumIdFromNode(nodeEmissColor);  
     mat.data[EMISSION_SPECID0] = as_float(specId);
     mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
+
+    auto colorMultNode = nodeEmissColor.child(L"multiplier");
+    if(colorMultNode)
+    {
+      mat.data[EMISSION_MULT] = hydra_xml::readval1f(nodeEmissColor.child(L"multiplier")); 
+    }
+    else
+    {
+      mat.data[EMISSION_MULT] = 1.0f;
+    }
   }
 
   auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
@@ -809,6 +819,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
     auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
       
+    m_exposureMult = cam.exposureMult;
     m_proj         = proj;
     m_worldView    = worldView;
     m_projInv      = inverse4x4(proj);
@@ -836,22 +847,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     LightSource lightSource{};
     lightSource.ids.x = as_float(lightSpecId);
+    lightSource.mult  = power;
     if(ltype == std::wstring(L"sky"))
     {
-      m_envColor = color * power;
+      m_envColor = color;
     }
     else if(ltype == std::wstring(L"directional"))
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = LIGHT_GEOM_DIRECT;
     }
     else if(shape == L"rect" || shape == L"disk")
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = (shape == L"rect") ? LIGHT_GEOM_RECT : LIGHT_GEOM_DISC;
 
       // extract scale and rotation from transformation matrix
@@ -895,7 +907,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = LIGHT_GEOM_SPHERE;
 
       lightSource.matrix    = float4x4{};

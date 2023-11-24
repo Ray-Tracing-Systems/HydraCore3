@@ -16,7 +16,8 @@ struct LightSource
   float2   size;
   float    pdfA;
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE
-  float4   ids;       /// (spec_id, tex_id, ies_id, unused)
+  float3   ids;       /// (spec_id, tex_id, ies_id)
+  float    mult;
 };
 
 struct LightSample
