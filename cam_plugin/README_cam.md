@@ -4,7 +4,7 @@ cam_pligin folder is an example of interaction between optics sim and hydra inte
 In order to simplify interaction with the rendering system, the camera is implemented outside the renderer in separate class.
 In addition, to keep things simply stupid, for this demo you have 2 different 'main' which is separated from normal hydra main.cpp. They are:
 * main_with_cam.cpp     -- for CPU rendering with camera plugin
-* main_with_cam_gpu.cpp -- for CPU rendering with camera plugin
+* main_with_cam_gpu.cpp -- for GPU rendering with camera plugin
 
 So, it is supposed that you can take hydra Integrator source code for both CPU and GPU and integrate it to any custom application you like.
 
