@@ -65,6 +65,7 @@ namespace hydra_xml
     float fov;
     float nearPlane;
     float farPlane;
+    float exposureMult;
     pugi::xml_node node;
   };
 
@@ -173,6 +174,12 @@ namespace hydra_xml
       cam.fov       = hydra_xml::readval1f(m_iter->child(L"fov")); 
       cam.nearPlane = hydra_xml::readval1f(m_iter->child(L"nearClipPlane"));
       cam.farPlane  = hydra_xml::readval1f(m_iter->child(L"farClipPlane"));  
+
+      auto expNode = m_iter->child(L"exposure_mult");
+      if(expNode)
+        cam.exposureMult = hydra_xml::readval1f(expNode);  
+      else
+        cam.exposureMult = 1.0f;
       
       LiteMath::float3 pos    = hydra_xml::readval3f(m_iter->child(L"position"));
       LiteMath::float3 lookAt = hydra_xml::readval3f(m_iter->child(L"look_at"));
