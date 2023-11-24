@@ -2,36 +2,41 @@
 #include "cglobals.h"
 #include "crandom.h"
 #include "cmaterial.h"
+#include "../spectrum.h"
 
 
-static inline void conductorSmoothSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                                float3 color,
+static inline void conductorSmoothSampleAndEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec,
+                                                float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[CONDUCTOR_ETA];
-  const float k      = a_materials[0].data[CONDUCTOR_K];
-  
+  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
   float  pdf              = 1.0f;
-  float  val              = FrComplexConductor(cosThetaOut, complex{eta, k});
   
-  val = (cosThetaOut <= 1e-6f) ? 0.0f : (val / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-
-  pRes->val = float3(val, val, val); 
+  float4 val;
+  for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    val[i] = FrComplexConductor(cosThetaOut, complex{etaSpec[i], kSpec[i]});
+    val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+  }
+  
+  pRes->val = val; 
   pRes->dir = dir;
   pRes->pdf = pdf;
   pRes->flags = RAY_EVENT_S;
 }
 
 
-static void conductorSmoothEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color, 
+static void conductorSmoothEval(const Material* a_materials, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc,
                                 BsdfEval* pRes)
 {
-  pRes->val = {0.0f, 0.0f, 0.0f};
+  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
+  {
+    pRes->val.M[i] = 0.0f;
+  }
   pRes->pdf = 0.0f;
 }
 
@@ -55,17 +60,18 @@ static float conductorRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 
 }
 
 
-static inline void conductorRoughSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                                float3 color,
-                                                BsdfSample* pRes)
+static inline void conductorRoughSampleAndEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec, 
+                                               float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                                               BsdfSample* pRes)
 {
   if(v.z == 0)
     return;
 
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[CONDUCTOR_ETA];
-  const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
+  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
+
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -84,23 +90,27 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, floa
     return;
   }
 
-  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
+  float4 val;
+  for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
+  }
 
-  pRes->val   = float3(val, val, val); 
+  pRes->val   = val; 
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
 
-static void conductorRoughEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color, 
-                                BsdfEval* pRes)
+static void conductorRoughEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec, 
+                               float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                               BsdfEval* pRes)
 {
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta    = a_materials[0].data[CONDUCTOR_ETA];
-  const float k      = a_materials[0].data[CONDUCTOR_K];
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
+  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
 
   float3 nx, ny, nz = n;
   CoordinateSystem(nz, &nx, &ny);
@@ -117,44 +127,14 @@ static void conductorRoughEval(const Material* a_materials, float3 l, float3 v, 
       return;
 
   wm = normalize(wm);
+  float4 val;
+  for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
+  }
 
-  float val = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{eta, k});
-
-
-  pRes->val = float3(val, val, val);
+  pRes->val = val;
 
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
-}
-
-static inline void conductorSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                          float3 color,
-                                          BsdfSample* pRes)
-{
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
-
-  if(trEffectivelySmooth(alpha))
-  {
-    conductorSmoothSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
-  }
-  else
-  {
-    conductorRoughSampleAndEval(a_materials, rands, v, n, tc, color, pRes);
-  }
-}
-
-static inline void conductorEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 color,
-                                BsdfEval* pRes)
-{
-  const float2 alpha = float2(a_materials[0].data[CONDUCTOR_ROUGH_V], a_materials[0].data[CONDUCTOR_ROUGH_U]);
-
-  if(trEffectivelySmooth(alpha))
-  {
-    conductorSmoothEval(a_materials, l, v, n, tc, color, pRes);
-  }
-  else
-  {
-    conductorRoughEval(a_materials, l, v, n, tc, color, pRes);
-  }
 }

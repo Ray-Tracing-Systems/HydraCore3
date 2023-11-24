@@ -1,0 +1,201 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "common_tablelens_gpu.h"
+
+layout(binding = 0, set = 0) buffer data0 { RayPart1 out_rayPosAndNear4f[]; }; //
+layout(binding = 1, set = 0) buffer data1 { RayPart2 out_rayDirAndFar4f[]; }; //
+layout(binding = 2, set = 0) buffer data2 { LensElementInterface lines[]; }; //
+layout(binding = 3, set = 0) buffer data3 { float m_storedCos4[]; }; //
+layout(binding = 4, set = 0) buffer data4 { uvec2 m_storedWaves[]; }; //
+layout(binding = 5, set = 0) buffer data5 { RandomGenT m_randomGens[]; }; //
+layout(binding = 6, set = 0) buffer dataUBO { CamTableLens_TABLELENS_GPU_UBO_Data ubo; };
+
+bool IntersectSphericalElement(float radius, float zCenter, vec3 rayPos, vec3 rayDir, inout float t, inout vec3 n) {
+  // Compute _t0_ and _t1_ for ray--element intersection
+  const vec3 o = rayPos - vec3(0,0,zCenter);
+  const float  A = rayDir.x * rayDir.x + rayDir.y * rayDir.y + rayDir.z * rayDir.z;
+  const float  B = 2 * (rayDir.x * o.x + rayDir.y * o.y + rayDir.z * o.z);
+  const float  C = o.x * o.x + o.y * o.y + o.z * o.z - radius * radius;
+  float  t0, t1;
+  if (!Quadratic(A, B, C, t0, t1)) 
+    return false;
+  
+  // Select intersection $t$ based on ray direction and element curvature
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
+  t = useCloserT ? min(t0, t1) : max(t0, t1);
+  if (t < 0.0f) 
+    return false;
+  
+  // Compute surface normal of element at ray intersection point
+  n = normalize(o + (t)*rayDir);
+  n = faceforward(n, -1.0f*rayDir);
+  return true;
+}
+
+float LensRearRadius() { return lines[0].apertureRadius; }
+
+float LensRearZ() { return lines[0].thickness; }
+
+bool TraceLensesFromFilm(const vec3 inRayPos, const vec3 inRayDir, inout vec3 outRayPos, inout vec3 outRayDir) {
+  float elementZ = 0;
+  // Transform _rCamera_ from camera to lens system space
+  // 
+  vec3 rayPosLens = vec3(inRayPos.x,inRayPos.y,-inRayPos.z);
+  vec3 rayDirLens = vec3(inRayDir.x,inRayDir.y,-inRayDir.z);
+
+  for(int i=0; i<ubo.lines_size; i++)
+  {
+    const LensElementInterface element = lines[i];                                  
+    // Update ray from film accounting for interaction with _element_
+    elementZ -= element.thickness;
+    
+    // Compute intersection of ray with lens element
+    float t;
+    vec3 n;
+    bool isStop = (element.curvatureRadius == 0.0f);
+    if (isStop) 
+    {
+      // The refracted ray computed in the previous lens element
+      // interface may be pointed towards film plane(+z) in some
+      // extreme situations; in such cases, 't' becomes negative.
+      if (rayDirLens.z >= 0.0f) 
+        return false;
+      t = (elementZ - rayPosLens.z) / rayDirLens.z;
+    } 
+    else 
+    {
+      const float radius  = element.curvatureRadius;
+      const float zCenter = elementZ + element.curvatureRadius;
+      if (!IntersectSphericalElement(radius, zCenter, rayPosLens, rayDirLens, t, n))
+        return false;
+    }
+
+    // Test intersection point against element aperture
+    const vec3 pHit = rayPosLens + t*rayDirLens;
+    const float r2    = pHit.x * pHit.x + pHit.y * pHit.y;
+    if (r2 > element.apertureRadius * element.apertureRadius) 
+      return false;
+    
+    rayPosLens = pHit;
+    // Update ray path for from-scene element interface interaction
+    if (!isStop) 
+    {
+      vec3 wt;
+      float etaI = lines[i+0].eta;                                                      
+      float etaT = (i == ubo.lines_size-1) ? 1.0f : lines[i+1].eta;
+      if(etaT == 0.0f)
+        etaT = 1.0f;                                                          
+      if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, wt))
+        return false;
+      rayDirLens = wt;
+    }
+
+  }
+
+  // Transform _rLens_ from lens system space back to camera space
+  //
+  (outRayPos) = vec3(rayPosLens.x,rayPosLens.y,-rayPosLens.z);
+  (outRayDir) = vec3(rayDirLens.x,rayDirLens.y,-rayDirLens.z);
+  return true;  
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout( push_constant ) uniform kernelArgs
+{
+  int subPassId;
+  int in_blockSize; 
+  uint iNumElementsY; 
+  uint iNumElementsZ; 
+  uint tFlagsMask;    
+} kgenArgs;
+
+
+void main()
+{
+  bool runThisThread = true;
+  ///////////////////////////////////////////////////////////////// prolog
+  const int tid = int(gl_GlobalInvocationID[0]); 
+  if(tid >= kgenArgs.in_blockSize + 0)
+    runThisThread = false;
+    ///////////////////////////////////////////////////////////////// prolog
+  if(runThisThread)
+  {
+  
+    const int x = (tid + kgenArgs.subPassId*kgenArgs.in_blockSize) % ubo.m_width;  // pitch-linear layout
+    const int y = (tid + kgenArgs.subPassId*kgenArgs.in_blockSize) / ubo.m_height; // subPas is just a uniform slitting of image along the lines
+    
+    if(x == 511 && y == 511)
+    {
+      int a = 2;
+    }
+    
+    RandomGenT genLocal = m_randomGens[tid];
+    const vec4 rands = rndFloat4_Pseudo(genLocal);
+    
+    vec3 ray_pos,  ray_dir;
+    float cosTheta;
+    vec4 wavelengths = vec4(0,0,0,0);
+    bool success = false;
+    int failed = 0;
+    const int MAX_TRIALS = 10;
+    
+    if(ubo.m_spectral_mode != 0)
+      wavelengths = SampleWavelengths(rands.z, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX);
+
+    const vec2 xy = 0.25f*ubo.m_physSize*vec2(2.0f*(float(float(x)+0.5f)/float(ubo.m_width))  - 1.0f,2.0f*(float(float(y)+0.5f)/float(ubo.m_height)) - 1.0f);
+    
+    ray_pos = vec3(xy.x,xy.y,0);
+
+    const vec2 rareSam = LensRearRadius()*2.0f*MapSamplesToDisc(vec2(rands.x - 0.5f,rands.y - 0.5f));
+    const vec3 shootTo = vec3(rareSam.x,rareSam.y,LensRearZ());
+    const vec3 ray_dirF = normalize(shootTo - ray_pos);
+
+    cosTheta  = abs(ray_dirF.z);
+    ray_dir   = ray_dirF;
+    success   = TraceLensesFromFilm(ray_pos, ray_dir, ray_pos, ray_dir);
+
+    if (!success) 
+    {
+      ray_pos = vec3(0,-10000000.0,0.0); // shoot ray under the floor
+      ray_dir = vec3(0,-1,0);
+      failed++;
+    }
+    else
+    {
+      ray_dir = vec3(-1,-1,-1)*normalize(ray_dir);
+      ray_pos = vec3(-1,-1,-1)*ray_pos;
+    }
+
+    m_randomGens[tid] = genLocal;
+
+    RayPart1 p1;
+    RayPart2 p2;
+
+    const uint wavesX = uint32_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint wavesY = uint32_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint wavesZ = uint32_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    const uint wavesW = uint32_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+
+    p1.origin[0] = ray_pos[0];
+    p1.origin[1] = ray_pos[1];
+    p1.origin[2] = ray_pos[2];
+    p1.waves01  = packXY1616(wavesX,wavesY); // 
+
+    p2.direction[0] = ray_dir[0];
+    p2.direction[1] = ray_dir[1];
+    p2.direction[2] = ray_dir[2];
+    p2.waves23     = packXY1616(wavesZ,wavesW); // 
+  
+    out_rayPosAndNear4f[tid] = p1;
+    out_rayDirAndFar4f [tid] = p2;
+    m_storedWaves      [tid] = uvec2(p1.waves01,p2.waves23); // just remember waves in our buffer for camera
+    m_storedCos4       [tid] = cosTheta*cosTheta*cosTheta*cosTheta;
+  
+  }
+}
+

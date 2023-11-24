@@ -27,45 +27,111 @@ VkBufferUsageFlags Integrator_Generated::GetAdditionalFlagsForUBO() const
 
 uint32_t Integrator_Generated::GetDefaultMaxTextures() const { return 256; }
 
+void Integrator_Generated::MakeComputePipelineAndLayout(const char* a_shaderPath, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, VkPipelineLayout* pPipelineLayout, VkPipeline* pPipeline)
+{
+  VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+  shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+
+  auto shaderCode   = vk_utils::readSPVFile(a_shaderPath);
+  auto shaderModule = vk_utils::createShaderModule(device, shaderCode);
+
+  shaderStageInfo.module              = shaderModule;
+  shaderStageInfo.pName               = a_mainName;
+  shaderStageInfo.pSpecializationInfo = a_specInfo;
+
+  VkPushConstantRange pcRange = {};
+  pcRange.stageFlags = shaderStageInfo.stage;
+  pcRange.offset     = 0;
+  pcRange.size       = 128; // at least 128 bytes for push constants for all Vulkan implementations
+
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+  pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
+  pipelineLayoutInfo.pPushConstantRanges    = &pcRange;
+  pipelineLayoutInfo.pSetLayouts            = &a_dsLayout;
+  pipelineLayoutInfo.setLayoutCount         = 1;
+   
+  VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, pPipelineLayout);
+  if(res != VK_SUCCESS)
+  {
+    std::string errMsg = vk_utils::errorString(res);
+    std::cout << "[ShaderError]: vkCreatePipelineLayout have failed for '" << a_shaderPath << "' with '" << errMsg.c_str() << "'" << std::endl;
+  }
+  else
+    m_allCreatedPipelineLayouts.push_back(*pPipelineLayout);
+
+  VkComputePipelineCreateInfo pipelineInfo = {};
+  pipelineInfo.sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+  pipelineInfo.flags              = 0;
+  pipelineInfo.stage              = shaderStageInfo;
+  pipelineInfo.layout             = (*pPipelineLayout);
+  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+  res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, pPipeline);
+  if(res != VK_SUCCESS)
+  {
+    std::string errMsg = vk_utils::errorString(res);
+    std::cout << "[ShaderError]: vkCreateComputePipelines have failed for '" << a_shaderPath << "' with '" << errMsg.c_str() << "'" << std::endl;
+  }
+  else
+    m_allCreatedPipelines.push_back(*pPipeline);
+
+  if (shaderModule != VK_NULL_HANDLE)
+    vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
+}
+
+void Integrator_Generated::MakeComputePipelineOnly(const char* a_shaderPath, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, VkPipelineLayout pipelineLayout, VkPipeline* pPipeline)
+{
+  VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+  shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  shaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+
+  auto shaderCode   = vk_utils::readSPVFile(a_shaderPath);
+  auto shaderModule = vk_utils::createShaderModule(device, shaderCode);
+
+  shaderStageInfo.module              = shaderModule;
+  shaderStageInfo.pName               = a_mainName;
+  shaderStageInfo.pSpecializationInfo = a_specInfo;
+
+  VkComputePipelineCreateInfo pipelineInfo = {};
+  pipelineInfo.sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+  pipelineInfo.flags              = 0;
+  pipelineInfo.stage              = shaderStageInfo;
+  pipelineInfo.layout             = pipelineLayout;
+  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+  VkResult res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, pPipeline);
+  if(res != VK_SUCCESS)
+  {
+    std::string errMsg = vk_utils::errorString(res);
+    std::cout << "[ShaderError]: vkCreateComputePipelines have failed for '" << a_shaderPath << "' with '" << errMsg.c_str() << "'" << std::endl;
+  }
+  else
+    m_allCreatedPipelines.push_back(*pPipeline);
+
+  if (shaderModule != VK_NULL_HANDLE)
+    vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
+}
+
+
 Integrator_Generated::~Integrator_Generated()
 {
-  m_pMaker = nullptr;
+  for(size_t i=0;i<m_allCreatedPipelines.size();i++)
+    vkDestroyPipeline(device, m_allCreatedPipelines[i], nullptr);
+  for(size_t i=0;i<m_allCreatedPipelineLayouts.size();i++)
+    vkDestroyPipelineLayout(device, m_allCreatedPipelineLayouts[i], nullptr);
+
   vkDestroyDescriptorSetLayout(device, RayTraceMegaDSLayout, nullptr);
   RayTraceMegaDSLayout = VK_NULL_HANDLE;
-
-  vkDestroyPipeline(device, RayTraceMegaPipeline, nullptr);
-  vkDestroyPipelineLayout(device, RayTraceMegaLayout, nullptr);
-  RayTraceMegaLayout   = VK_NULL_HANDLE;
-  RayTraceMegaPipeline = VK_NULL_HANDLE;
   vkDestroyDescriptorSetLayout(device, CastSingleRayMegaDSLayout, nullptr);
   CastSingleRayMegaDSLayout = VK_NULL_HANDLE;
-
-  vkDestroyPipeline(device, CastSingleRayMegaPipeline, nullptr);
-  vkDestroyPipelineLayout(device, CastSingleRayMegaLayout, nullptr);
-  CastSingleRayMegaLayout   = VK_NULL_HANDLE;
-  CastSingleRayMegaPipeline = VK_NULL_HANDLE;
   vkDestroyDescriptorSetLayout(device, PackXYMegaDSLayout, nullptr);
   PackXYMegaDSLayout = VK_NULL_HANDLE;
-
-  vkDestroyPipeline(device, PackXYMegaPipeline, nullptr);
-  vkDestroyPipelineLayout(device, PackXYMegaLayout, nullptr);
-  PackXYMegaLayout   = VK_NULL_HANDLE;
-  PackXYMegaPipeline = VK_NULL_HANDLE;
+  vkDestroyDescriptorSetLayout(device, PathTraceFromInputRaysMegaDSLayout, nullptr);
+  PathTraceFromInputRaysMegaDSLayout = VK_NULL_HANDLE;
   vkDestroyDescriptorSetLayout(device, PathTraceMegaDSLayout, nullptr);
   PathTraceMegaDSLayout = VK_NULL_HANDLE;
-
-  vkDestroyPipeline(device, PathTraceMegaPipeline, nullptr);
-  vkDestroyPipelineLayout(device, PathTraceMegaLayout, nullptr);
-  PathTraceMegaLayout   = VK_NULL_HANDLE;
-  PathTraceMegaPipeline = VK_NULL_HANDLE;
   vkDestroyDescriptorSetLayout(device, NaivePathTraceMegaDSLayout, nullptr);
   NaivePathTraceMegaDSLayout = VK_NULL_HANDLE;
-
-  vkDestroyPipeline(device, NaivePathTraceMegaPipeline, nullptr);
-  vkDestroyPipelineLayout(device, NaivePathTraceMegaLayout, nullptr);
-  NaivePathTraceMegaLayout   = VK_NULL_HANDLE;
-  NaivePathTraceMegaPipeline = VK_NULL_HANDLE;
-  vkDestroyDescriptorSetLayout(device, copyKernelFloatDSLayout, nullptr);
   vkDestroyDescriptorPool(device, m_dsPool, NULL); m_dsPool = VK_NULL_HANDLE;
 
  
@@ -73,6 +139,9 @@ Integrator_Generated::~Integrator_Generated()
 
   vkDestroyBuffer(device, m_vdata.m_allRemapListsBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_allRemapListsOffsetsBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_cie_xBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_cie_yBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_cie_zBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_instIdToLightInstIdBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_lightsBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_matIdByPrimIdBuffer, nullptr);
@@ -82,10 +151,13 @@ Integrator_Generated::~Integrator_Generated()
   vkDestroyBuffer(device, m_vdata.m_packedXYBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_randomGensBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_remapInstBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_spec_offset_szBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_spec_valuesBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_triIndicesBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_vNorm4fBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_vTexc2fBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_vertOffsetBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_wavelengthsBuffer, nullptr);
   for(auto obj : m_vdata.m_texturesArrayTexture)
     vkDestroyImage(device, obj, nullptr);
   for(auto obj : m_vdata.m_texturesArrayView)
@@ -98,690 +170,129 @@ Integrator_Generated::~Integrator_Generated()
 void Integrator_Generated::InitHelpers()
 {
   vkGetPhysicalDeviceProperties(physicalDevice, &m_devProps);
-  m_pMaker = std::make_unique<vk_utils::ComputePipelineMaker>();
 }
 
-VkDescriptorSetLayout Integrator_Generated::CreateRayTraceMegaDSLayout()
+const VkSpecializationInfo* Integrator_Generated::GetAllSpecInfo()
 {
-  std::array<VkDescriptorSetLayoutBinding, 16+1> dsBindings;
-
-  // binding for out_color
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  // binding for m_normMatrices
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapListsOffsets
-  dsBindings[2].binding            = 2;
-  dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[2].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapLists
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-  // binding for m_vNorm4f
-  dsBindings[4].binding            = 4;
-  dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[4].pImmutableSamplers = nullptr;
-
-  // binding for m_pAccelStruct
-  dsBindings[5].binding            = 5;
-  dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-  dsBindings[5].descriptorCount    = 1;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[5].pImmutableSamplers = nullptr;
-
-  // binding for m_lights
-  dsBindings[6].binding            = 6;
-  dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[6].pImmutableSamplers = nullptr;
-
-  // binding for m_remapInst
-  dsBindings[7].binding            = 7;
-  dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[7].pImmutableSamplers = nullptr;
-
-  // binding for m_packedXY
-  dsBindings[8].binding            = 8;
-  dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[8].descriptorCount    = 1;
-  dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[8].pImmutableSamplers = nullptr;
-
-  // binding for m_textures
-  dsBindings[9].binding            = 9;
-  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[9].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[9].pImmutableSamplers = nullptr;
-
-  // binding for m_triIndices
-  dsBindings[10].binding            = 10;
-  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[10].descriptorCount    = 1;
-  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[10].pImmutableSamplers = nullptr;
-
-  // binding for m_vTexc2f
-  dsBindings[11].binding            = 11;
-  dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[11].descriptorCount    = 1;
-  dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[11].pImmutableSamplers = nullptr;
-
-  // binding for m_materials
-  dsBindings[12].binding            = 12;
-  dsBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[12].descriptorCount    = 1;
-  dsBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[12].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdOffsets
-  dsBindings[13].binding            = 13;
-  dsBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[13].descriptorCount    = 1;
-  dsBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[13].pImmutableSamplers = nullptr;
-
-  // binding for m_vertOffset
-  dsBindings[14].binding            = 14;
-  dsBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[14].descriptorCount    = 1;
-  dsBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[14].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdByPrimId
-  dsBindings[15].binding            = 15;
-  dsBindings[15].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[15].descriptorCount    = 1;
-  dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[15].pImmutableSamplers = nullptr;
-
-  // binding for POD members stored in m_classDataBuffer
-  dsBindings[16].binding            = 16;
-  dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[16].descriptorCount    = 1;
-  dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[16].pImmutableSamplers = nullptr;
-  
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
+  if(m_allSpecConstInfo.size() == m_allSpecConstVals.size()) // already processed
+    return &m_allSpecInfo;
+  m_allSpecConstInfo.resize(m_allSpecConstVals.size());
+  m_allSpecConstInfo[0].constantID = 0;
+  m_allSpecConstInfo[0].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[0].offset     = 0;
+  m_allSpecConstInfo[1].constantID = 1;
+  m_allSpecConstInfo[1].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[1].offset     = 1*sizeof(uint32_t);
+  m_allSpecConstInfo[2].constantID = 2;
+  m_allSpecConstInfo[2].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[2].offset     = 2*sizeof(uint32_t);
+  m_allSpecConstInfo[3].constantID = 3;
+  m_allSpecConstInfo[3].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[3].offset     = 3*sizeof(uint32_t);
+  m_allSpecConstInfo[4].constantID = 4;
+  m_allSpecConstInfo[4].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[4].offset     = 4*sizeof(uint32_t);
+  m_allSpecConstInfo[5].constantID = 5;
+  m_allSpecConstInfo[5].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[5].offset     = 5*sizeof(uint32_t);
+  m_allSpecConstInfo[6].constantID = 6;
+  m_allSpecConstInfo[6].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[6].offset     = 6*sizeof(uint32_t);
+  m_allSpecConstInfo[7].constantID = 7;
+  m_allSpecConstInfo[7].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[7].offset     = 7*sizeof(uint32_t);
+  m_allSpecConstInfo[8].constantID = 8;
+  m_allSpecConstInfo[8].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[8].offset     = 8*sizeof(uint32_t);
+  m_allSpecInfo.dataSize      = m_allSpecConstVals.size()*sizeof(uint32_t);
+  m_allSpecInfo.mapEntryCount = static_cast<uint32_t>(m_allSpecConstInfo.size());
+  m_allSpecInfo.pMapEntries   = m_allSpecConstInfo.data();
+  m_allSpecInfo.pData         = m_allSpecConstVals.data();
+  return &m_allSpecInfo;  
 }
-VkDescriptorSetLayout Integrator_Generated::CreateCastSingleRayMegaDSLayout()
-{
-  std::array<VkDescriptorSetLayoutBinding, 11+1> dsBindings;
-
-  // binding for out_color
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdByPrimId
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdOffsets
-  dsBindings[2].binding            = 2;
-  dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[2].pImmutableSamplers = nullptr;
-
-  // binding for m_pAccelStruct
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-  // binding for m_materials
-  dsBindings[4].binding            = 4;
-  dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[4].pImmutableSamplers = nullptr;
-
-  // binding for m_textures
-  dsBindings[5].binding            = 5;
-  dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[5].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[5].pImmutableSamplers = nullptr;
-
-  // binding for m_remapInst
-  dsBindings[6].binding            = 6;
-  dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[6].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapLists
-  dsBindings[7].binding            = 7;
-  dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[7].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapListsOffsets
-  dsBindings[8].binding            = 8;
-  dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[8].descriptorCount    = 1;
-  dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[8].pImmutableSamplers = nullptr;
-
-  // binding for m_packedXY
-  dsBindings[9].binding            = 9;
-  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[9].descriptorCount    = 1;
-  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[9].pImmutableSamplers = nullptr;
-
-  // binding for m_lights
-  dsBindings[10].binding            = 10;
-  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[10].descriptorCount    = 1;
-  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[10].pImmutableSamplers = nullptr;
-
-  // binding for POD members stored in m_classDataBuffer
-  dsBindings[11].binding            = 11;
-  dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[11].descriptorCount    = 1;
-  dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[11].pImmutableSamplers = nullptr;
-  
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
-}
-VkDescriptorSetLayout Integrator_Generated::CreatePackXYMegaDSLayout()
-{
-  std::array<VkDescriptorSetLayoutBinding, 7+1> dsBindings;
-
-  // binding for m_materials
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  // binding for m_textures
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[1].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  // binding for m_remapInst
-  dsBindings[2].binding            = 2;
-  dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[2].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapLists
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapListsOffsets
-  dsBindings[4].binding            = 4;
-  dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[4].pImmutableSamplers = nullptr;
-
-  // binding for m_packedXY
-  dsBindings[5].binding            = 5;
-  dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[5].descriptorCount    = 1;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[5].pImmutableSamplers = nullptr;
-
-  // binding for m_lights
-  dsBindings[6].binding            = 6;
-  dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[6].pImmutableSamplers = nullptr;
-
-  // binding for POD members stored in m_classDataBuffer
-  dsBindings[7].binding            = 7;
-  dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[7].pImmutableSamplers = nullptr;
-  
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
-}
-VkDescriptorSetLayout Integrator_Generated::CreatePathTraceMegaDSLayout()
-{
-  std::array<VkDescriptorSetLayoutBinding, 18+1> dsBindings;
-
-  // binding for out_color
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdByPrimId
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  // binding for m_normMatrices
-  dsBindings[2].binding            = 2;
-  dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[2].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapListsOffsets
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapLists
-  dsBindings[4].binding            = 4;
-  dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[4].pImmutableSamplers = nullptr;
-
-  // binding for m_randomGens
-  dsBindings[5].binding            = 5;
-  dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[5].descriptorCount    = 1;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[5].pImmutableSamplers = nullptr;
-
-  // binding for m_vNorm4f
-  dsBindings[6].binding            = 6;
-  dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[6].pImmutableSamplers = nullptr;
-
-  // binding for m_remapInst
-  dsBindings[7].binding            = 7;
-  dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[7].pImmutableSamplers = nullptr;
-
-  // binding for m_packedXY
-  dsBindings[8].binding            = 8;
-  dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[8].descriptorCount    = 1;
-  dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[8].pImmutableSamplers = nullptr;
-
-  // binding for m_textures
-  dsBindings[9].binding            = 9;
-  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[9].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[9].pImmutableSamplers = nullptr;
-
-  // binding for m_instIdToLightInstId
-  dsBindings[10].binding            = 10;
-  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[10].descriptorCount    = 1;
-  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[10].pImmutableSamplers = nullptr;
-
-  // binding for m_triIndices
-  dsBindings[11].binding            = 11;
-  dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[11].descriptorCount    = 1;
-  dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[11].pImmutableSamplers = nullptr;
-
-  // binding for m_vTexc2f
-  dsBindings[12].binding            = 12;
-  dsBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[12].descriptorCount    = 1;
-  dsBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[12].pImmutableSamplers = nullptr;
-
-  // binding for m_materials
-  dsBindings[13].binding            = 13;
-  dsBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[13].descriptorCount    = 1;
-  dsBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[13].pImmutableSamplers = nullptr;
-
-  // binding for m_pAccelStruct
-  dsBindings[14].binding            = 14;
-  dsBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-  dsBindings[14].descriptorCount    = 1;
-  dsBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[14].pImmutableSamplers = nullptr;
-
-  // binding for m_lights
-  dsBindings[15].binding            = 15;
-  dsBindings[15].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[15].descriptorCount    = 1;
-  dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[15].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdOffsets
-  dsBindings[16].binding            = 16;
-  dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[16].descriptorCount    = 1;
-  dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[16].pImmutableSamplers = nullptr;
-
-  // binding for m_vertOffset
-  dsBindings[17].binding            = 17;
-  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[17].descriptorCount    = 1;
-  dsBindings[17].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[17].pImmutableSamplers = nullptr;
-
-  // binding for POD members stored in m_classDataBuffer
-  dsBindings[18].binding            = 18;
-  dsBindings[18].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[18].descriptorCount    = 1;
-  dsBindings[18].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[18].pImmutableSamplers = nullptr;
-  
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
-}
-VkDescriptorSetLayout Integrator_Generated::CreateNaivePathTraceMegaDSLayout()
-{
-  std::array<VkDescriptorSetLayoutBinding, 18+1> dsBindings;
-
-  // binding for out_color
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdByPrimId
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  // binding for m_normMatrices
-  dsBindings[2].binding            = 2;
-  dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[2].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapListsOffsets
-  dsBindings[3].binding            = 3;
-  dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[3].pImmutableSamplers = nullptr;
-
-  // binding for m_allRemapLists
-  dsBindings[4].binding            = 4;
-  dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[4].pImmutableSamplers = nullptr;
-
-  // binding for m_randomGens
-  dsBindings[5].binding            = 5;
-  dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[5].descriptorCount    = 1;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[5].pImmutableSamplers = nullptr;
-
-  // binding for m_vNorm4f
-  dsBindings[6].binding            = 6;
-  dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[6].pImmutableSamplers = nullptr;
-
-  // binding for m_lights
-  dsBindings[7].binding            = 7;
-  dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[7].pImmutableSamplers = nullptr;
-
-  // binding for m_remapInst
-  dsBindings[8].binding            = 8;
-  dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[8].descriptorCount    = 1;
-  dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[8].pImmutableSamplers = nullptr;
-
-  // binding for m_instIdToLightInstId
-  dsBindings[9].binding            = 9;
-  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[9].descriptorCount    = 1;
-  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[9].pImmutableSamplers = nullptr;
-
-  // binding for m_packedXY
-  dsBindings[10].binding            = 10;
-  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[10].descriptorCount    = 1;
-  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[10].pImmutableSamplers = nullptr;
-
-  // binding for m_textures
-  dsBindings[11].binding            = 11;
-  dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[11].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[11].pImmutableSamplers = nullptr;
-
-  // binding for m_triIndices
-  dsBindings[12].binding            = 12;
-  dsBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[12].descriptorCount    = 1;
-  dsBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[12].pImmutableSamplers = nullptr;
-
-  // binding for m_vTexc2f
-  dsBindings[13].binding            = 13;
-  dsBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[13].descriptorCount    = 1;
-  dsBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[13].pImmutableSamplers = nullptr;
-
-  // binding for m_materials
-  dsBindings[14].binding            = 14;
-  dsBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[14].descriptorCount    = 1;
-  dsBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[14].pImmutableSamplers = nullptr;
-
-  // binding for m_pAccelStruct
-  dsBindings[15].binding            = 15;
-  dsBindings[15].descriptorType     = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-  dsBindings[15].descriptorCount    = 1;
-  dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[15].pImmutableSamplers = nullptr;
-
-  // binding for m_matIdOffsets
-  dsBindings[16].binding            = 16;
-  dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[16].descriptorCount    = 1;
-  dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[16].pImmutableSamplers = nullptr;
-
-  // binding for m_vertOffset
-  dsBindings[17].binding            = 17;
-  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[17].descriptorCount    = 1;
-  dsBindings[17].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[17].pImmutableSamplers = nullptr;
-
-  // binding for POD members stored in m_classDataBuffer
-  dsBindings[18].binding            = 18;
-  dsBindings[18].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[18].descriptorCount    = 1;
-  dsBindings[18].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[18].pImmutableSamplers = nullptr;
-  
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = uint32_t(dsBindings.size());
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-  
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
-}
-
-VkDescriptorSetLayout Integrator_Generated::CreatecopyKernelFloatDSLayout()
-{
-  std::array<VkDescriptorSetLayoutBinding, 2> dsBindings;
-
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[1].pImmutableSamplers = nullptr;
-
-  VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};
-  descriptorSetLayoutCreateInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  descriptorSetLayoutCreateInfo.bindingCount = dsBindings.size();
-  descriptorSetLayoutCreateInfo.pBindings    = dsBindings.data();
-
-  VkDescriptorSetLayout layout = nullptr;
-  VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, NULL, &layout));
-  return layout;
-}
-
 
 void Integrator_Generated::InitKernel_RayTraceMega(const char* a_filePath)
 {
   std::string shaderPath = AlterShaderPath("shaders_generated/RayTraceMega.comp.spv"); 
-  
-  m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
   RayTraceMegaDSLayout = CreateRayTraceMegaDSLayout();
-  RayTraceMegaLayout   = m_pMaker->MakeLayout(device, { RayTraceMegaDSLayout }, 128); // at least 128 bytes for push constants
-  RayTraceMegaPipeline = m_pMaker->MakePipeline(device);  
+  if(m_megaKernelFlags.enableRayTraceMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, RayTraceMegaDSLayout, &RayTraceMegaLayout, &RayTraceMegaPipeline);
+  else
+  {
+    RayTraceMegaLayout   = nullptr;
+    RayTraceMegaPipeline = nullptr;
+  }
 }
 
 void Integrator_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
 {
   std::string shaderPath = AlterShaderPath("shaders_generated/CastSingleRayMega.comp.spv"); 
-  
-  m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
   CastSingleRayMegaDSLayout = CreateCastSingleRayMegaDSLayout();
-  CastSingleRayMegaLayout   = m_pMaker->MakeLayout(device, { CastSingleRayMegaDSLayout }, 128); // at least 128 bytes for push constants
-  CastSingleRayMegaPipeline = m_pMaker->MakePipeline(device);  
+  if(m_megaKernelFlags.enableCastSingleRayMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, CastSingleRayMegaDSLayout, &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline);
+  else
+  {
+    CastSingleRayMegaLayout   = nullptr;
+    CastSingleRayMegaPipeline = nullptr;
+  }
 }
 
 void Integrator_Generated::InitKernel_PackXYMega(const char* a_filePath)
 {
   std::string shaderPath = AlterShaderPath("shaders_generated/PackXYMega.comp.spv"); 
-  
-  m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
   PackXYMegaDSLayout = CreatePackXYMegaDSLayout();
-  PackXYMegaLayout   = m_pMaker->MakeLayout(device, { PackXYMegaDSLayout }, 128); // at least 128 bytes for push constants
-  PackXYMegaPipeline = m_pMaker->MakePipeline(device);  
+  if(m_megaKernelFlags.enablePackXYMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, PackXYMegaDSLayout, &PackXYMegaLayout, &PackXYMegaPipeline);
+  else
+  {
+    PackXYMegaLayout   = nullptr;
+    PackXYMegaPipeline = nullptr;
+  }
+}
+
+void Integrator_Generated::InitKernel_PathTraceFromInputRaysMega(const char* a_filePath)
+{
+  std::string shaderPath = AlterShaderPath("shaders_generated/PathTraceFromInputRaysMega.comp.spv"); 
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
+  PathTraceFromInputRaysMegaDSLayout = CreatePathTraceFromInputRaysMegaDSLayout();
+  if(m_megaKernelFlags.enablePathTraceFromInputRaysMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, PathTraceFromInputRaysMegaDSLayout, &PathTraceFromInputRaysMegaLayout, &PathTraceFromInputRaysMegaPipeline);
+  else
+  {
+    PathTraceFromInputRaysMegaLayout   = nullptr;
+    PathTraceFromInputRaysMegaPipeline = nullptr;
+  }
 }
 
 void Integrator_Generated::InitKernel_PathTraceMega(const char* a_filePath)
 {
   std::string shaderPath = AlterShaderPath("shaders_generated/PathTraceMega.comp.spv"); 
-  
-  m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
   PathTraceMegaDSLayout = CreatePathTraceMegaDSLayout();
-  PathTraceMegaLayout   = m_pMaker->MakeLayout(device, { PathTraceMegaDSLayout }, 128); // at least 128 bytes for push constants
-  PathTraceMegaPipeline = m_pMaker->MakePipeline(device);  
+  if(m_megaKernelFlags.enablePathTraceMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, PathTraceMegaDSLayout, &PathTraceMegaLayout, &PathTraceMegaPipeline);
+  else
+  {
+    PathTraceMegaLayout   = nullptr;
+    PathTraceMegaPipeline = nullptr;
+  }
 }
 
 void Integrator_Generated::InitKernel_NaivePathTraceMega(const char* a_filePath)
 {
   std::string shaderPath = AlterShaderPath("shaders_generated/NaivePathTraceMega.comp.spv"); 
-  
-  m_pMaker->LoadShader(device, shaderPath.c_str(), nullptr, "main");
+  const VkSpecializationInfo* kspec = GetAllSpecInfo();
   NaivePathTraceMegaDSLayout = CreateNaivePathTraceMegaDSLayout();
-  NaivePathTraceMegaLayout   = m_pMaker->MakeLayout(device, { NaivePathTraceMegaDSLayout }, 128); // at least 128 bytes for push constants
-  NaivePathTraceMegaPipeline = m_pMaker->MakePipeline(device);  
+  if(m_megaKernelFlags.enableNaivePathTraceMega)
+    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, NaivePathTraceMegaDSLayout, &NaivePathTraceMegaLayout, &NaivePathTraceMegaPipeline);
+  else
+  {
+    NaivePathTraceMegaLayout   = nullptr;
+    NaivePathTraceMegaPipeline = nullptr;
+  }
 }
 
 
@@ -790,6 +301,7 @@ void Integrator_Generated::InitKernels(const char* a_filePath)
   InitKernel_RayTraceMega(a_filePath);
   InitKernel_CastSingleRayMega(a_filePath);
   InitKernel_PackXYMega(a_filePath);
+  InitKernel_PathTraceFromInputRaysMega(a_filePath);
   InitKernel_PathTraceMega(a_filePath);
   InitKernel_NaivePathTraceMega(a_filePath);
 }
@@ -857,6 +369,12 @@ void Integrator_Generated::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_allRemapListsBuffer);
   m_vdata.m_allRemapListsOffsetsBuffer = vk_utils::createBuffer(device, m_allRemapListsOffsets.capacity()*sizeof(int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_allRemapListsOffsetsBuffer);
+  m_vdata.m_cie_xBuffer = vk_utils::createBuffer(device, m_cie_x.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_cie_xBuffer);
+  m_vdata.m_cie_yBuffer = vk_utils::createBuffer(device, m_cie_y.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_cie_yBuffer);
+  m_vdata.m_cie_zBuffer = vk_utils::createBuffer(device, m_cie_z.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_cie_zBuffer);
   m_vdata.m_instIdToLightInstIdBuffer = vk_utils::createBuffer(device, m_instIdToLightInstId.capacity()*sizeof(unsigned int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_instIdToLightInstIdBuffer);
   m_vdata.m_lightsBuffer = vk_utils::createBuffer(device, m_lights.capacity()*sizeof(struct LightSource), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -875,6 +393,10 @@ void Integrator_Generated::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_randomGensBuffer);
   m_vdata.m_remapInstBuffer = vk_utils::createBuffer(device, m_remapInst.capacity()*sizeof(int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_remapInstBuffer);
+  m_vdata.m_spec_offset_szBuffer = vk_utils::createBuffer(device, m_spec_offset_sz.capacity()*sizeof(struct LiteMath::uint2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_spec_offset_szBuffer);
+  m_vdata.m_spec_valuesBuffer = vk_utils::createBuffer(device, m_spec_values.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_spec_valuesBuffer);
   m_vdata.m_triIndicesBuffer = vk_utils::createBuffer(device, m_triIndices.capacity()*sizeof(unsigned int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_triIndicesBuffer);
   m_vdata.m_vNorm4fBuffer = vk_utils::createBuffer(device, m_vNorm4f.capacity()*sizeof(struct LiteMath::float4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
@@ -883,6 +405,8 @@ void Integrator_Generated::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_vTexc2fBuffer);
   m_vdata.m_vertOffsetBuffer = vk_utils::createBuffer(device, m_vertOffset.capacity()*sizeof(unsigned int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_vertOffsetBuffer);
+  m_vdata.m_wavelengthsBuffer = vk_utils::createBuffer(device, m_wavelengths.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_wavelengthsBuffer);
 
   m_vdata.m_texturesArrayTexture.resize(0);
   m_vdata.m_texturesArrayView.resize(0);
@@ -1120,4 +644,58 @@ void Integrator_Generated::AllocMemoryForMemberBuffersAndImages(const std::vecto
   }
 }
 
+
+VkPhysicalDeviceFeatures2 Integrator_Generated::ListRequiredDeviceFeatures(std::vector<const char*>& deviceExtensions)
+{
+  static VkPhysicalDeviceFeatures2 features2 = {};
+  features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+  features2.pNext = nullptr; 
+  features2.features.shaderInt64   = false;
+  features2.features.shaderFloat64 = false;  
+  features2.features.shaderInt16   = false;
+  void** ppNext = &features2.pNext;
+  {
+    static VkPhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelStructFeatures = {};
+    static VkPhysicalDeviceBufferDeviceAddressFeatures      enabledDeviceAddressFeatures = {};
+    static VkPhysicalDeviceRayQueryFeaturesKHR              enabledRayQueryFeatures =  {};
+    static VkPhysicalDeviceDescriptorIndexingFeatures       indexingFeatures = {};
+
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    indexingFeatures.pNext = nullptr;
+    indexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE; // TODO: move bindless texture to seperate feature!
+    indexingFeatures.runtimeDescriptorArray                    = VK_TRUE; // TODO: move bindless texture to seperate feature!
+
+    enabledRayQueryFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+    enabledRayQueryFeatures.rayQuery = VK_TRUE;
+    enabledRayQueryFeatures.pNext    = &indexingFeatures;
+  
+    enabledDeviceAddressFeatures.sType               = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+    enabledDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+    enabledDeviceAddressFeatures.pNext               = &enabledRayQueryFeatures;
+  
+    enabledAccelStructFeatures.sType                 = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+    enabledAccelStructFeatures.accelerationStructure = VK_TRUE;
+    enabledAccelStructFeatures.pNext                 = &enabledDeviceAddressFeatures;
+
+    (*ppNext) = &enabledAccelStructFeatures; ppNext = &indexingFeatures.pNext;
+    
+    // Required by VK_KHR_RAY_QUERY
+    deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+    deviceExtensions.push_back("VK_KHR_spirv_1_4");
+    deviceExtensions.push_back("VK_KHR_shader_float_controls");  
+    // Required by VK_KHR_acceleration_structure
+    deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+    // // Required by VK_KHR_ray_tracing_pipeline
+    // m_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    // // Required by VK_KHR_spirv_1_4
+    // m_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+    deviceExtensions.push_back("VK_EXT_descriptor_indexing"); // TODO: move bindless texture it to seperate feature!
+  }
+  return features2;
+}
+
+Integrator_Generated::MegaKernelIsEnabled Integrator_Generated::m_megaKernelFlags;
 

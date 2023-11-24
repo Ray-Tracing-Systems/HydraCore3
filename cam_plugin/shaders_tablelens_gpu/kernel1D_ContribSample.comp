@@ -1,0 +1,204 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "common_tablelens_gpu.h"
+
+layout(binding = 0, set = 0) buffer data0 { float in_color[]; }; //
+layout(binding = 1, set = 0) buffer data1 { float out_color[]; }; //
+layout(binding = 2, set = 0) buffer data2 { LensElementInterface lines[]; }; //
+layout(binding = 3, set = 0) buffer data3 { float m_cie_z[]; }; //
+layout(binding = 4, set = 0) buffer data4 { float m_cie_y[]; }; //
+layout(binding = 5, set = 0) buffer data5 { float m_cie_x[]; }; //
+layout(binding = 6, set = 0) buffer data6 { uvec2 m_storedWaves[]; }; //
+layout(binding = 7, set = 0) buffer data7 { float m_storedCos4[]; }; //
+layout(binding = 8, set = 0) buffer dataUBO { CamTableLens_TABLELENS_GPU_UBO_Data ubo; };
+
+vec3 SpectrumToXYZ_m_cie_x_m_cie_y_m_cie_z(vec4 spec, vec4 lambda, float lambda_min, float lambda_max, uint a_CIE_XOffset, uint a_CIE_YOffset, uint a_CIE_ZOffset) {
+  const float pdf = 1.0f / (lambda_max - lambda_min);
+  const float CIE_Y_integral = 106.856895f;
+  const uint nCIESamples = 471;
+
+  //TODO: fix
+  for (uint i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+    spec[int(i)] = (pdf != 0) ? spec[int(i)] / pdf : 0.0f;
+
+  //float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
+  //float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
+  //float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);
+  vec4 X,  Y,  Z; 
+  for (uint i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
+  {
+    uint offset = uint32_t(float(floor(lambda[int(i)] + 0.5f)) - lambda_min);
+  
+    if (offset >= nCIESamples)
+      X[int(i)] = 0;
+    else
+      X[int(i)] = m_cie_x[offset + a_CIE_XOffset];
+  
+    if (offset >= nCIESamples)
+      Y[int(i)] = 0;
+    else
+      Y[int(i)] = m_cie_y[offset + a_CIE_YOffset];
+  
+    if (offset >= nCIESamples)
+      Z[int(i)] = 0;
+    else
+      Z[int(i)] = m_cie_z[offset + a_CIE_ZOffset];
+  }
+
+  for (uint i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    X[int(i)] *= spec[int(i)];
+    Y[int(i)] *= spec[int(i)];
+    Z[int(i)] *= spec[int(i)];
+  }
+
+  float x = SpectrumAverage(X) / CIE_Y_integral;
+  float y = SpectrumAverage(Y) / CIE_Y_integral;
+  float z = SpectrumAverage(Z) / CIE_Y_integral;
+
+  return vec3(x,y,z);
+}
+
+bool IntersectSphericalElement(float radius, float zCenter, vec3 rayPos, vec3 rayDir, inout float t, inout vec3 n) {
+  // Compute _t0_ and _t1_ for ray--element intersection
+  const vec3 o = rayPos - vec3(0,0,zCenter);
+  const float  A = rayDir.x * rayDir.x + rayDir.y * rayDir.y + rayDir.z * rayDir.z;
+  const float  B = 2 * (rayDir.x * o.x + rayDir.y * o.y + rayDir.z * o.z);
+  const float  C = o.x * o.x + o.y * o.y + o.z * o.z - radius * radius;
+  float  t0, t1;
+  if (!Quadratic(A, B, C, t0, t1)) 
+    return false;
+  
+  // Select intersection $t$ based on ray direction and element curvature
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
+  t = useCloserT ? min(t0, t1) : max(t0, t1);
+  if (t < 0.0f) 
+    return false;
+  
+  // Compute surface normal of element at ray intersection point
+  n = normalize(o + (t)*rayDir);
+  n = faceforward(n, -1.0f*rayDir);
+  return true;
+}
+
+float LensRearRadius() { return lines[0].apertureRadius; }
+
+float LensRearZ() { return lines[0].thickness; }
+
+bool TraceLensesFromFilm(const vec3 inRayPos, const vec3 inRayDir, inout vec3 outRayPos, inout vec3 outRayDir) {
+  float elementZ = 0;
+  // Transform _rCamera_ from camera to lens system space
+  // 
+  vec3 rayPosLens = vec3(inRayPos.x,inRayPos.y,-inRayPos.z);
+  vec3 rayDirLens = vec3(inRayDir.x,inRayDir.y,-inRayDir.z);
+
+  for(int i=0; i<ubo.lines_size; i++)
+  {
+    const LensElementInterface element = lines[i];                                  
+    // Update ray from film accounting for interaction with _element_
+    elementZ -= element.thickness;
+    
+    // Compute intersection of ray with lens element
+    float t;
+    vec3 n;
+    bool isStop = (element.curvatureRadius == 0.0f);
+    if (isStop) 
+    {
+      // The refracted ray computed in the previous lens element
+      // interface may be pointed towards film plane(+z) in some
+      // extreme situations; in such cases, 't' becomes negative.
+      if (rayDirLens.z >= 0.0f) 
+        return false;
+      t = (elementZ - rayPosLens.z) / rayDirLens.z;
+    } 
+    else 
+    {
+      const float radius  = element.curvatureRadius;
+      const float zCenter = elementZ + element.curvatureRadius;
+      if (!IntersectSphericalElement(radius, zCenter, rayPosLens, rayDirLens, t, n))
+        return false;
+    }
+
+    // Test intersection point against element aperture
+    const vec3 pHit = rayPosLens + t*rayDirLens;
+    const float r2    = pHit.x * pHit.x + pHit.y * pHit.y;
+    if (r2 > element.apertureRadius * element.apertureRadius) 
+      return false;
+    
+    rayPosLens = pHit;
+    // Update ray path for from-scene element interface interaction
+    if (!isStop) 
+    {
+      vec3 wt;
+      float etaI = lines[i+0].eta;                                                      
+      float etaT = (i == ubo.lines_size-1) ? 1.0f : lines[i+1].eta;
+      if(etaT == 0.0f)
+        etaT = 1.0f;                                                          
+      if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, wt))
+        return false;
+      rayDirLens = wt;
+    }
+
+  }
+
+  // Transform _rLens_ from lens system space back to camera space
+  //
+  (outRayPos) = vec3(rayPosLens.x,rayPosLens.y,-rayPosLens.z);
+  (outRayDir) = vec3(rayDirLens.x,rayDirLens.y,-rayDirLens.z);
+  return true;  
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+layout( push_constant ) uniform kernelArgs
+{
+  int subPassId;
+  int in_blockSize; 
+  uint iNumElementsY; 
+  uint iNumElementsZ; 
+  uint tFlagsMask;    
+} kgenArgs;
+
+
+void main()
+{
+  bool runThisThread = true;
+  ///////////////////////////////////////////////////////////////// prolog
+  const int tid = int(gl_GlobalInvocationID[0]); 
+  if(tid >= kgenArgs.in_blockSize + 0)
+    runThisThread = false;
+    ///////////////////////////////////////////////////////////////// prolog
+  if(runThisThread)
+  {
+  
+    const int x = (tid + kgenArgs.subPassId*kgenArgs.in_blockSize) % ubo.m_width;  // pitch-linear layout
+    const int y = (tid + kgenArgs.subPassId*kgenArgs.in_blockSize) / ubo.m_height; // subPas is just a uniform slitting of image along the lines
+
+    //float4 color = in_color[tid]*m_storedCos4[tid];
+    vec4 color = vec4(in_color[4*tid+0],in_color[4*tid+1],in_color[4*tid+2],in_color[4*tid+3])*m_storedCos4[tid]; // always float4
+
+    if(ubo.m_spectral_mode != 0) // TODO: spectral framebuffer
+    {
+      const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
+      const uvec2 wavesPacked = m_storedWaves[tid];
+      const uvec2 wavesXY = unpackXY1616(wavesPacked.x);
+      const uvec2 wavesZW = unpackXY1616(wavesPacked.y);
+      vec4 wavelengths = vec4(float(wavesXY[0])*scale + CAM_LAMBDA_MIN,float(wavesXY[1])*scale + CAM_LAMBDA_MIN,float(wavesZW[0])*scale + CAM_LAMBDA_MIN,float(wavesZW[1])*scale + CAM_LAMBDA_MIN);
+                                  
+      const vec3 xyz = SpectrumToXYZ_m_cie_x_m_cie_y_m_cie_z(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, 0, 0, 0);
+      color = vec4(XYZToRGB(xyz), 1.0f);
+    }
+
+    //out_color[y*m_width+x] += color;
+    out_color[(y*ubo.m_width+x)*4+0] += color[0];  // R
+    out_color[(y*ubo.m_width+x)*4+1] += color[1];  // G
+    out_color[(y*ubo.m_width+x)*4+2] += color[2];  // B
+    //out_color[(y*m_width+x)*4+3] += color[3];// A
+  
+  }
+}
+

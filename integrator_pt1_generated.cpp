@@ -17,9 +17,9 @@ ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, 
                               uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
                               bool build_as_add);
 
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated) 
+std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated) 
 { 
-  auto pObj = std::make_shared<Integrator_Generated>(a_maxThreads); 
+  auto pObj = std::make_shared<Integrator_Generated>(a_maxThreads, a_spectral_mode, a_features); 
   pObj->SetVulkanContext(a_ctx);
   pObj->InitVulkanObjects(a_ctx.device, a_ctx.physicalDevice, a_maxThreadsGenerated); 
   return pObj;
@@ -46,6 +46,9 @@ void Integrator_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice
 {
   physicalDevice = a_physicalDevice;
   device         = a_device;
+  m_allCreatedPipelineLayouts.reserve(256);
+  m_allCreatedPipelines.reserve(256);
+  m_allSpecConstVals = ListRequiredFeatures();
   InitHelpers();
   InitBuffers(a_maxThreadsCount, true);
   InitKernels(".spv");
@@ -70,6 +73,8 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_worldViewInv = m_worldViewInv;
   m_uboData.m_envColor = m_envColor;
   m_uboData.m_intergatorType = m_intergatorType;
+  m_uboData.m_skipBounce = m_skipBounce;
+  m_uboData.m_spectral_mode = m_spectral_mode;
   m_uboData.m_traceDepth = m_traceDepth;
   m_uboData.m_winHeight = m_winHeight;
   m_uboData.m_winWidth = m_winWidth;
@@ -77,6 +82,12 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_allRemapLists_capacity = uint32_t( m_allRemapLists.capacity() ); assert( m_allRemapLists.capacity() < maxAllowedSize );
   m_uboData.m_allRemapListsOffsets_size     = uint32_t( m_allRemapListsOffsets.size() );     assert( m_allRemapListsOffsets.size() < maxAllowedSize );
   m_uboData.m_allRemapListsOffsets_capacity = uint32_t( m_allRemapListsOffsets.capacity() ); assert( m_allRemapListsOffsets.capacity() < maxAllowedSize );
+  m_uboData.m_cie_x_size     = uint32_t( m_cie_x.size() );     assert( m_cie_x.size() < maxAllowedSize );
+  m_uboData.m_cie_x_capacity = uint32_t( m_cie_x.capacity() ); assert( m_cie_x.capacity() < maxAllowedSize );
+  m_uboData.m_cie_y_size     = uint32_t( m_cie_y.size() );     assert( m_cie_y.size() < maxAllowedSize );
+  m_uboData.m_cie_y_capacity = uint32_t( m_cie_y.capacity() ); assert( m_cie_y.capacity() < maxAllowedSize );
+  m_uboData.m_cie_z_size     = uint32_t( m_cie_z.size() );     assert( m_cie_z.size() < maxAllowedSize );
+  m_uboData.m_cie_z_capacity = uint32_t( m_cie_z.capacity() ); assert( m_cie_z.capacity() < maxAllowedSize );
   m_uboData.m_instIdToLightInstId_size     = uint32_t( m_instIdToLightInstId.size() );     assert( m_instIdToLightInstId.size() < maxAllowedSize );
   m_uboData.m_instIdToLightInstId_capacity = uint32_t( m_instIdToLightInstId.capacity() ); assert( m_instIdToLightInstId.capacity() < maxAllowedSize );
   m_uboData.m_lights_size     = uint32_t( m_lights.size() );     assert( m_lights.size() < maxAllowedSize );
@@ -95,6 +106,10 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_randomGens_capacity = uint32_t( m_randomGens.capacity() ); assert( m_randomGens.capacity() < maxAllowedSize );
   m_uboData.m_remapInst_size     = uint32_t( m_remapInst.size() );     assert( m_remapInst.size() < maxAllowedSize );
   m_uboData.m_remapInst_capacity = uint32_t( m_remapInst.capacity() ); assert( m_remapInst.capacity() < maxAllowedSize );
+  m_uboData.m_spec_offset_sz_size     = uint32_t( m_spec_offset_sz.size() );     assert( m_spec_offset_sz.size() < maxAllowedSize );
+  m_uboData.m_spec_offset_sz_capacity = uint32_t( m_spec_offset_sz.capacity() ); assert( m_spec_offset_sz.capacity() < maxAllowedSize );
+  m_uboData.m_spec_values_size     = uint32_t( m_spec_values.size() );     assert( m_spec_values.size() < maxAllowedSize );
+  m_uboData.m_spec_values_capacity = uint32_t( m_spec_values.capacity() ); assert( m_spec_values.capacity() < maxAllowedSize );
   m_uboData.m_triIndices_size     = uint32_t( m_triIndices.size() );     assert( m_triIndices.size() < maxAllowedSize );
   m_uboData.m_triIndices_capacity = uint32_t( m_triIndices.capacity() ); assert( m_triIndices.capacity() < maxAllowedSize );
   m_uboData.m_vNorm4f_size     = uint32_t( m_vNorm4f.size() );     assert( m_vNorm4f.size() < maxAllowedSize );
@@ -103,6 +118,8 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_vTexc2f_capacity = uint32_t( m_vTexc2f.capacity() ); assert( m_vTexc2f.capacity() < maxAllowedSize );
   m_uboData.m_vertOffset_size     = uint32_t( m_vertOffset.size() );     assert( m_vertOffset.size() < maxAllowedSize );
   m_uboData.m_vertOffset_capacity = uint32_t( m_vertOffset.capacity() ); assert( m_vertOffset.capacity() < maxAllowedSize );
+  m_uboData.m_wavelengths_size     = uint32_t( m_wavelengths.size() );     assert( m_wavelengths.size() < maxAllowedSize );
+  m_uboData.m_wavelengths_capacity = uint32_t( m_wavelengths.capacity() ); assert( m_wavelengths.capacity() < maxAllowedSize );
   a_pCopyEngine->UpdateBuffer(m_classDataBuffer, 0, &m_uboData, sizeof(m_uboData));
 }
 
@@ -113,11 +130,16 @@ void Integrator_Generated::ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngin
   m_worldViewInv = m_uboData.m_worldViewInv;
   m_envColor = m_uboData.m_envColor;
   m_intergatorType = m_uboData.m_intergatorType;
+  m_skipBounce = m_uboData.m_skipBounce;
+  m_spectral_mode = m_uboData.m_spectral_mode;
   m_traceDepth = m_uboData.m_traceDepth;
   m_winHeight = m_uboData.m_winHeight;
   m_winWidth = m_uboData.m_winWidth;
   m_allRemapLists.resize(m_uboData.m_allRemapLists_size);
   m_allRemapListsOffsets.resize(m_uboData.m_allRemapListsOffsets_size);
+  m_cie_x.resize(m_uboData.m_cie_x_size);
+  m_cie_y.resize(m_uboData.m_cie_y_size);
+  m_cie_z.resize(m_uboData.m_cie_z_size);
   m_instIdToLightInstId.resize(m_uboData.m_instIdToLightInstId_size);
   m_lights.resize(m_uboData.m_lights_size);
   m_matIdByPrimId.resize(m_uboData.m_matIdByPrimId_size);
@@ -127,10 +149,13 @@ void Integrator_Generated::ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngin
   m_packedXY.resize(m_uboData.m_packedXY_size);
   m_randomGens.resize(m_uboData.m_randomGens_size);
   m_remapInst.resize(m_uboData.m_remapInst_size);
+  m_spec_offset_sz.resize(m_uboData.m_spec_offset_sz_size);
+  m_spec_values.resize(m_uboData.m_spec_values_size);
   m_triIndices.resize(m_uboData.m_triIndices_size);
   m_vNorm4f.resize(m_uboData.m_vNorm4f_size);
   m_vTexc2f.resize(m_uboData.m_vTexc2f_size);
   m_vertOffset.resize(m_uboData.m_vertOffset_size);
+  m_wavelengths.resize(m_uboData.m_wavelengths_size);
 }
 
 void Integrator_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine)
@@ -139,6 +164,12 @@ void Integrator_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEn
     a_pCopyEngine->UpdateBuffer(m_vdata.m_allRemapListsBuffer, 0, m_allRemapLists.data(), m_allRemapLists.size()*sizeof(int) );
   if(m_allRemapListsOffsets.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_allRemapListsOffsetsBuffer, 0, m_allRemapListsOffsets.data(), m_allRemapListsOffsets.size()*sizeof(int) );
+  if(m_cie_x.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_cie_xBuffer, 0, m_cie_x.data(), m_cie_x.size()*sizeof(float) );
+  if(m_cie_y.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_cie_yBuffer, 0, m_cie_y.data(), m_cie_y.size()*sizeof(float) );
+  if(m_cie_z.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_cie_zBuffer, 0, m_cie_z.data(), m_cie_z.size()*sizeof(float) );
   if(m_instIdToLightInstId.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_instIdToLightInstIdBuffer, 0, m_instIdToLightInstId.data(), m_instIdToLightInstId.size()*sizeof(unsigned int) );
   if(m_lights.size() > 0)
@@ -157,6 +188,10 @@ void Integrator_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEn
     a_pCopyEngine->UpdateBuffer(m_vdata.m_randomGensBuffer, 0, m_randomGens.data(), m_randomGens.size()*sizeof(struct RandomGenT) );
   if(m_remapInst.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_remapInstBuffer, 0, m_remapInst.data(), m_remapInst.size()*sizeof(int) );
+  if(m_spec_offset_sz.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_spec_offset_szBuffer, 0, m_spec_offset_sz.data(), m_spec_offset_sz.size()*sizeof(struct LiteMath::uint2) );
+  if(m_spec_values.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_spec_valuesBuffer, 0, m_spec_values.data(), m_spec_values.size()*sizeof(float) );
   if(m_triIndices.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_triIndicesBuffer, 0, m_triIndices.data(), m_triIndices.size()*sizeof(unsigned int) );
   if(m_vNorm4f.size() > 0)
@@ -165,6 +200,8 @@ void Integrator_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEn
     a_pCopyEngine->UpdateBuffer(m_vdata.m_vTexc2fBuffer, 0, m_vTexc2f.data(), m_vTexc2f.size()*sizeof(struct LiteMath::float2) );
   if(m_vertOffset.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_vertOffsetBuffer, 0, m_vertOffset.data(), m_vertOffset.size()*sizeof(unsigned int) );
+  if(m_wavelengths.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_wavelengthsBuffer, 0, m_wavelengths.data(), m_wavelengths.size()*sizeof(float) );
 }
 
 void Integrator_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine)
@@ -172,7 +209,7 @@ void Integrator_Generated::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyE
   for(int i=0;i<m_vdata.m_texturesArrayTexture.size();i++)
     a_pCopyEngine->UpdateImage(m_vdata.m_texturesArrayTexture[i], m_textures[i]->data(), m_textures[i]->width(), m_textures[i]->height(), m_textures[i]->bpp(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL); 
   
-  std::vector<VkImageMemoryBarrier> barriers(1);
+  std::array<VkImageMemoryBarrier, 0> barriers;
 
   
   VkCommandBuffer cmdBuff       = a_pCopyEngine->CmdBuffer();
@@ -276,6 +313,36 @@ void Integrator_Generated::PackXYMegaCmd(uint tidX, uint tidY)
   vkCmdPushConstants(m_currCmdBuffer, PackXYMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
   
   vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, PackXYMegaPipeline);
+  vkCmdDispatch    (m_currCmdBuffer, (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
+ 
+}
+
+void Integrator_Generated::PathTraceFromInputRaysMegaCmd(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
+{
+  uint32_t blockSizeX = 256;
+  uint32_t blockSizeY = 1;
+  uint32_t blockSizeZ = 1;
+
+  struct KernelArgsPC
+  {
+    uint32_t m_sizeX;
+    uint32_t m_sizeY;
+    uint32_t m_sizeZ;
+    uint32_t m_tFlags;
+  } pcData;
+  
+  uint32_t sizeX  = uint32_t(tid);
+  uint32_t sizeY  = uint32_t(1);
+  uint32_t sizeZ  = uint32_t(1);
+  
+  pcData.m_sizeX  = tid;
+  pcData.m_sizeY  = 1;
+  pcData.m_sizeZ  = 1;
+  pcData.m_tFlags = m_currThreadFlags;
+
+  vkCmdPushConstants(m_currCmdBuffer, PathTraceFromInputRaysMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
+  
+  vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, PathTraceFromInputRaysMegaPipeline);
   vkCmdDispatch    (m_currCmdBuffer, (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
  
 }
@@ -423,11 +490,20 @@ void Integrator_Generated::PackXYCmd(VkCommandBuffer a_commandBuffer, uint tidX,
   vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
 }
 
+void Integrator_Generated::PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
+{
+  m_currCmdBuffer = a_commandBuffer;
+  VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
+  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, PathTraceFromInputRaysMegaLayout, 0, 1, &m_allGeneratedDS[3], 0, nullptr);
+  PathTraceFromInputRaysMegaCmd(tid, in_rayPosAndNear, in_rayDirAndFar, out_color);
+  vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
+}
+
 void Integrator_Generated::PathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color)
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
-  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, PathTraceMegaLayout, 0, 1, &m_allGeneratedDS[3], 0, nullptr);
+  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, PathTraceMegaLayout, 0, 1, &m_allGeneratedDS[4], 0, nullptr);
   PathTraceMegaCmd(tid, out_color);
   vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
 }
@@ -436,7 +512,7 @@ void Integrator_Generated::NaivePathTraceCmd(VkCommandBuffer a_commandBuffer, ui
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
-  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, NaivePathTraceMegaLayout, 0, 1, &m_allGeneratedDS[4], 0, nullptr);
+  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, NaivePathTraceMegaLayout, 0, 1, &m_allGeneratedDS[5], 0, nullptr);
   NaivePathTraceMegaCmd(tid, out_color);
   vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
 }
@@ -819,6 +895,141 @@ void Integrator_Generated::PackXYBlock(uint tidX, uint tidY, uint32_t a_numPasse
   m_exTimePackXY.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - afterCopy2).count()/1000.f;
 }
 
+void Integrator_Generated::PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses)
+{
+  // (1) get global Vulkan context objects
+  //
+  VkInstance       instance       = m_ctx.instance;
+  VkPhysicalDevice physicalDevice = m_ctx.physicalDevice;
+  VkDevice         device         = m_ctx.device;
+  VkCommandPool    commandPool    = m_ctx.commandPool; 
+  VkQueue          computeQueue   = m_ctx.computeQueue; 
+  VkQueue          transferQueue  = m_ctx.transferQueue;
+  auto             pCopyHelper    = m_ctx.pCopyHelper;
+  auto             pAllocatorSpec = m_ctx.pAllocatorSpecial;
+
+  // (2) create GPU objects
+  //
+  auto outFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  if(PathTraceFromInputRays_local.needToClearOutput)
+    outFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+  std::vector<VkBuffer> buffers;
+  std::vector<VkImage>  images2;
+  std::vector<vk_utils::VulkanImageMem*> images;
+  auto beforeCreateObjects = std::chrono::high_resolution_clock::now();
+  VkBuffer in_rayPosAndNearGPU = vk_utils::createBuffer(device, tid*sizeof(const RayPart1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  buffers.push_back(in_rayPosAndNearGPU);
+  VkBuffer in_rayDirAndFarGPU = vk_utils::createBuffer(device, tid*sizeof(const RayPart2 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  buffers.push_back(in_rayDirAndFarGPU);
+  VkBuffer out_colorGPU = vk_utils::createBuffer(device, tid*sizeof(float4 ), outFlags);
+  buffers.push_back(out_colorGPU);
+  
+
+  VkDeviceMemory buffersMem = VK_NULL_HANDLE; // vk_utils::allocateAndBindWithPadding(device, physicalDevice, buffers);
+  VkDeviceMemory imagesMem  = VK_NULL_HANDLE; // vk_utils::allocateAndBindWithPadding(device, physicalDevice, std::vector<VkBuffer>(), images);
+  
+  vk_utils::MemAllocInfo tempMemoryAllocInfo;
+  tempMemoryAllocInfo.memUsage = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; // TODO, select depending on device and sample/application (???)
+  if(buffers.size() != 0)
+    pAllocatorSpec->Allocate(tempMemoryAllocInfo, buffers);
+  if(images.size() != 0)
+  {
+    pAllocatorSpec->Allocate(tempMemoryAllocInfo, images2);
+    for(auto imgMem : images)
+    {
+      VkImageViewCreateInfo imageView{};
+      imageView.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      imageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+      imageView.image    = imgMem->image;
+      imageView.format   = imgMem->format;
+      imageView.subresourceRange = {};
+      imageView.subresourceRange.aspectMask     = imgMem->aspectMask;
+      imageView.subresourceRange.baseMipLevel   = 0;
+      imageView.subresourceRange.levelCount     = imgMem->mipLvls;
+      imageView.subresourceRange.baseArrayLayer = 0;
+      imageView.subresourceRange.layerCount     = 1;
+      VK_CHECK_RESULT(vkCreateImageView(device, &imageView, nullptr, &imgMem->view));
+    }
+  }
+  
+  auto afterCreateObjects = std::chrono::high_resolution_clock::now();
+  m_exTimePathTraceFromInputRays.msAPIOverhead = std::chrono::duration_cast<std::chrono::microseconds>(afterCreateObjects - beforeCreateObjects).count()/1000.f;
+  
+  auto afterCopy2 = std::chrono::high_resolution_clock::now(); // just declare it here, replace value later
+  
+  auto afterInitBuffers = std::chrono::high_resolution_clock::now();
+  m_exTimePathTraceFromInputRays.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(afterInitBuffers - afterCreateObjects).count()/1000.f;
+  
+  auto beforeSetInOut = std::chrono::high_resolution_clock::now();
+  this->SetVulkanInOutFor_PathTraceFromInputRays(in_rayPosAndNearGPU, 0, in_rayDirAndFarGPU, 0, out_colorGPU, 0); 
+
+  // (3) copy input data to GPU
+  //
+  auto beforeCopy = std::chrono::high_resolution_clock::now();
+  m_exTimePathTraceFromInputRays.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(beforeCopy - beforeSetInOut).count()/1000.f;
+  pCopyHelper->UpdateBuffer(in_rayPosAndNearGPU, 0, in_rayPosAndNear, tid*sizeof(const RayPart1 )); 
+  pCopyHelper->UpdateBuffer(in_rayDirAndFarGPU, 0, in_rayDirAndFar, tid*sizeof(const RayPart2 )); 
+  auto afterCopy = std::chrono::high_resolution_clock::now();
+  m_exTimePathTraceFromInputRays.msCopyToGPU = std::chrono::duration_cast<std::chrono::microseconds>(afterCopy - beforeCopy).count()/1000.f;
+  //  
+  m_exTimePathTraceFromInputRays.msExecuteOnGPU = 0;
+  //// (3.1) clear all outputs if we are in RTV pattern
+  //
+  if(PathTraceFromInputRays_local.needToClearOutput)
+  {
+    VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(device, commandPool);
+    VkCommandBufferBeginInfo beginCommandBufferInfo = {};
+    beginCommandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginCommandBufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
+    vkCmdFillBuffer(commandBuffer, out_colorGPU, 0, VK_WHOLE_SIZE, 0); // zero output buffer out_colorGPU
+    vkEndCommandBuffer(commandBuffer);  
+    auto start = std::chrono::high_resolution_clock::now();
+    vk_utils::executeCommandBufferNow(commandBuffer, computeQueue, device);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    auto stop = std::chrono::high_resolution_clock::now();
+    m_exTimePathTraceFromInputRays.msExecuteOnGPU  += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()/1000.f;
+  }
+
+  // (4) now execute algorithm on GPU
+  //
+  {
+    VkCommandBuffer commandBuffer = vk_utils::createCommandBuffer(device, commandPool);
+    VkCommandBufferBeginInfo beginCommandBufferInfo = {};
+    beginCommandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginCommandBufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    vkBeginCommandBuffer(commandBuffer, &beginCommandBufferInfo);
+    PathTraceFromInputRaysCmd(commandBuffer, tid, in_rayPosAndNear, in_rayDirAndFar, out_color);      
+    vkEndCommandBuffer(commandBuffer);  
+    auto start = std::chrono::high_resolution_clock::now();
+    for(uint32_t pass = 0; pass < a_numPasses; pass++)
+      vk_utils::executeCommandBufferNow(commandBuffer, computeQueue, device);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+    auto stop = std::chrono::high_resolution_clock::now();
+    m_exTimePathTraceFromInputRays.msExecuteOnGPU += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count()/1000.f;
+  }
+  
+  // (5) copy output data to CPU
+  //
+  auto beforeCopy2 = std::chrono::high_resolution_clock::now();
+  pCopyHelper->ReadBuffer(out_colorGPU, 0, out_color, tid*sizeof(float4 ));
+  this->ReadPlainMembers(pCopyHelper);
+  afterCopy2 = std::chrono::high_resolution_clock::now();
+  m_exTimePathTraceFromInputRays.msCopyFromGPU = std::chrono::duration_cast<std::chrono::microseconds>(afterCopy2 - beforeCopy2).count()/1000.f;
+
+  // (6) free resources 
+  //
+  //vkDestroyBuffer(device, in_rayPosAndNearGPU, nullptr);
+  //vkDestroyBuffer(device, in_rayDirAndFarGPU, nullptr);
+  //vkDestroyBuffer(device, out_colorGPU, nullptr);
+  if(buffersMem != VK_NULL_HANDLE)
+    vkFreeMemory(device, buffersMem, nullptr);
+  if(imagesMem != VK_NULL_HANDLE)
+    vkFreeMemory(device, imagesMem, nullptr);
+  
+  m_exTimePathTraceFromInputRays.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - afterCopy2).count()/1000.f;
+}
+
 void Integrator_Generated::PathTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses)
 {
   // (1) get global Vulkan context objects
@@ -1082,6 +1293,8 @@ void Integrator_Generated::GetExecutionTime(const char* a_funcName, float a_out[
     res = m_exTimeCastSingleRay;
   if(std::string(a_funcName) == "PackXY" || std::string(a_funcName) == "PackXYBlock")
     res = m_exTimePackXY;
+  if(std::string(a_funcName) == "PathTraceFromInputRays" || std::string(a_funcName) == "PathTraceFromInputRaysBlock")
+    res = m_exTimePathTraceFromInputRays;
   if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
     res = m_exTimePathTrace;
   if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")

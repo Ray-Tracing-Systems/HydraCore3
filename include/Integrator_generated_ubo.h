@@ -28,6 +28,8 @@ struct Integrator_Generated_UBO_Data
   mat4 m_worldViewInv; 
   vec4 m_envColor; 
   uint m_intergatorType; 
+  uint m_skipBounce; 
+  int m_spectral_mode; 
   uint m_traceDepth; 
   int m_winHeight; 
   int m_winWidth; 
@@ -35,6 +37,12 @@ struct Integrator_Generated_UBO_Data
   uint m_allRemapListsOffsets_size; 
   uint m_allRemapLists_capacity; 
   uint m_allRemapLists_size; 
+  uint m_cie_x_capacity; 
+  uint m_cie_x_size; 
+  uint m_cie_y_capacity; 
+  uint m_cie_y_size; 
+  uint m_cie_z_capacity; 
+  uint m_cie_z_size; 
   uint m_instIdToLightInstId_capacity; 
   uint m_instIdToLightInstId_size; 
   uint m_lights_capacity; 
@@ -55,6 +63,10 @@ struct Integrator_Generated_UBO_Data
   uint m_randomGens_size; 
   uint m_remapInst_capacity; 
   uint m_remapInst_size; 
+  uint m_spec_offset_sz_capacity; 
+  uint m_spec_offset_sz_size; 
+  uint m_spec_values_capacity; 
+  uint m_spec_values_size; 
   uint m_textures_capacity; 
   uint m_textures_size; 
   uint m_triIndices_capacity; 
@@ -65,6 +77,8 @@ struct Integrator_Generated_UBO_Data
   uint m_vTexc2f_size; 
   uint m_vertOffset_capacity; 
   uint m_vertOffset_size; 
+  uint m_wavelengths_capacity; 
+  uint m_wavelengths_size; 
   uint dummy_last;
 };
 

@@ -7,10 +7,12 @@
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+float4x4 ReadMatrixFromString(const std::string& str);
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated);
+#include "integrator_pt1_generated.h" // advanced way
+//std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
 
 int main(int argc, const char** argv)
@@ -68,11 +70,37 @@ int main(int argc, const char** argv)
       gamma = args.getOptionValue<float>("-gamma");
   }
   
+  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+
+  float4x4 look_at;
+  auto override_camera_pos = args.hasOption("-look_at");
+  if(override_camera_pos)
+  {
+    auto str = args.getOptionValue<std::string>("-look_at");
+    std::cout << str << std::endl;
+    look_at = ReadMatrixFromString(str);
+  }
+  
+  const bool enableNaivePT  = (integratorType == "naivept" || integratorType == "all");
+  const bool enableShadowPT = (integratorType == "shadowpt" || integratorType == "all");
+  const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
+  const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////////////////////////////////////////////
+  std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
+
+  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), 
+                                                       WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+
+  //// override parameters which are explicitly defined in command line
+  //
   if(args.hasOption("-width"))
     WIN_WIDTH = args.getOptionValue<int>("-width");
   if(args.hasOption("-height"))
     WIN_HEIGHT = args.getOptionValue<int>("-height");
-  
+  if(args.hasOption("--spectral"))
+    spectral_mode = 1;
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -81,14 +109,40 @@ int main(int argc, const char** argv)
   bool onGPU = args.hasOption("--gpu");
   #ifdef USE_VULKAN
   if(onGPU)
-  {
+  { 
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
-    auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, ctx, WIN_WIDTH*WIN_HEIGHT);
+
+    // simple way
+    //
+    //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
+    //pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features, ctx, WIN_WIDTH*WIN_HEIGHT);
+    
+    // advanced way, init device with features which is required by generated class
+    //
+    std::vector<const char*> requiredExtensions;
+    auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);                                          
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures); 
+     
+    // advanced way, you can disable some pipelines creation which you don't actually need;
+    // this will make application start-up faster
+    //
+    Integrator_Generated::EnabledPipelines().enableRayTraceMega               = enableRT;
+    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; // not used, for testing only
+    Integrator_Generated::EnabledPipelines().enablePackXYMega                 = true;  // always true for this main.cpp;
+    Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
+    Integrator_Generated::EnabledPipelines().enablePathTraceMega              = enableShadowPT || enableMISPT;
+    Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = enableNaivePT;
+
+    // advanced way
+    //
+    auto pObj = std::make_shared<Integrator_Generated>(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features); 
+    pObj->SetVulkanContext(ctx);
+    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, WIN_WIDTH*WIN_HEIGHT); 
+    pImpl = pObj;
   }
   else
   #endif
-    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT);
+    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features);
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -96,6 +150,12 @@ int main(int argc, const char** argv)
   pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
+
+  if(override_camera_pos)
+  {
+    pImpl->SetWorldView(look_at);
+  }
+
   pImpl->CommitDeviceData();
 
   PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
@@ -111,7 +171,7 @@ int main(int argc, const char** argv)
   
   // now test path tracing
   //
-  if(integratorType == "naivept" || integratorType == "all")
+  if(enableNaivePT)
   {
     std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
     std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
@@ -142,7 +202,7 @@ int main(int argc, const char** argv)
   }
   
   const float normConst = 1.0f/float(PASS_NUMBER);
-  if(integratorType == "shadowpt" || integratorType == "all")
+  if(enableShadowPT)
   {
     std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
     
@@ -164,7 +224,7 @@ int main(int argc, const char** argv)
     }
   }
 
-  if(integratorType == "mispt" || integratorType == "all")
+  if(enableMISPT)
   {
     std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
     
@@ -191,7 +251,7 @@ int main(int argc, const char** argv)
     }
   }
   
-  if(integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt")
+  if(enableRT)
   {
     PASS_NUMBER = 1;               // must be always one for RT currently
     const float normConstRT = 1.0f;  // must be always one for RT currently
@@ -218,7 +278,6 @@ int main(int argc, const char** argv)
       SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
     }
   }
-
 
   return 0;
 }

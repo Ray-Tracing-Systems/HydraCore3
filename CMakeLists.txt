@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
+option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -97,6 +98,16 @@ set(VULKAN_SRC
         integrator_pt1_generated_init.cpp
         integrator_pt1_generated_ds.cpp )
 
+set(VULKAN_CAM1
+        cam_plugin/CamPinHole_pinhole_gpu.cpp
+        cam_plugin/CamPinHole_pinhole_gpu_init.cpp
+        cam_plugin/CamPinHole_pinhole_gpu_ds.cpp )
+
+set(VULKAN_CAM2
+        cam_plugin/CamTableLens_tablelens_gpu.cpp
+        cam_plugin/CamTableLens_tablelens_gpu_init.cpp
+        cam_plugin/CamTableLens_tablelens_gpu_ds.cpp )
+
 add_library(miniz external/tinyexr/miniz.c)
 
 set(LOADER_EXTERNAL_SRC
@@ -108,33 +119,56 @@ set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
         external/CrossRT/EmbreeRT.cpp)
 
+if(USE_VULKAN)
+  set (CAM_MAIN cam_plugin/main_with_cam_gpu.cpp)   
+else()
+  set (CAM_MAIN cam_plugin/main_with_cam.cpp)
+endif()
+
+if(CAM_PLUGIN)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  set(MAIN_FILES ${CAM_MAIN}
+                cam_plugin/CamPinHole.cpp
+                cam_plugin/CamTableLens.cpp)
+else()
+  set(MAIN_FILES main.cpp)
+endif()
+
 set(CORE_SRC
-        main.cpp
+        ${MAIN_FILES}
         integrator_rt.cpp
         integrator_pt1.cpp
         integrator_pt2.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
+        integrator_spectrum.cpp
         mi_materials.cpp
+        spectrum.cpp
         imageutils.cpp
         utils.cpp)
 
 
-if(USE_VULKAN)               
-  add_executable(hydra ${CORE_SRC}
-                       ${VULKAN_EXTERNAL_SRC}
-                       ${VULKAN_SRC}
-                       ${LOADER_EXTERNAL_SRC}
-                       ${OTHER_EXTERNAL_SRC})
-
-#  set(LINKED_VULKAN ${Vulkan_LIBRARY})
+if(USE_VULKAN)    
+  if(CAM_PLUGIN)
+    add_executable(hydra ${CORE_SRC}
+                         ${VULKAN_EXTERNAL_SRC}
+                         ${VULKAN_SRC}
+                         ${VULKAN_CAM1}
+                         ${VULKAN_CAM2}
+                         ${LOADER_EXTERNAL_SRC}
+                         ${OTHER_EXTERNAL_SRC})
+  else()
+    add_executable(hydra ${CORE_SRC}
+                         ${VULKAN_EXTERNAL_SRC}
+                         ${VULKAN_SRC}
+                         ${LOADER_EXTERNAL_SRC}
+                         ${OTHER_EXTERNAL_SRC})
+  endif()
 else()
   add_executable(hydra ${CORE_SRC}
                        ${LOADER_EXTERNAL_SRC}
                        ${OTHER_EXTERNAL_SRC})
-#  set(LINKED_VULKAN "")
 endif()
-
 
 set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
@@ -142,6 +176,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   link_directories("${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64")
   set(EMBREE_LIBS ${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+  find_package(Threads REQUIRED)
   link_directories(${CMAKE_SOURCE_DIR}/external/CrossRT/lib)
   set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
 endif()
@@ -166,6 +201,7 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   # add debug specific options here
+  target_link_libraries(hydra LINK_PUBLIC Threads::Threads)
 else()
   target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
 endif()
