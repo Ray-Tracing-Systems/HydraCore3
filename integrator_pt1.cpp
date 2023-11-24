@@ -106,7 +106,7 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
   uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
-    
+
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
@@ -202,6 +202,11 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
 
+  if(lightId < 0) // no lights or invalid light id
+  {
+    *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    return;
+  }
   
   const LightSample lSam = LightSampleRev(lightId, rands, hit.pos);
   const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
