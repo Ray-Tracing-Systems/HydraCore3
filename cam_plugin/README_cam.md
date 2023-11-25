@@ -13,20 +13,16 @@ So, it is supposed that you can take hydra Integrator source code for both CPU a
 2) git checkout gpu  // select gpu branch
 3) clone submodules
    * git submodule init
-   * git submodule init
-4) build volk with Cmake inside folder 'external/volk':
-   * cd external/volk
-   * cmake .
-   * make      // or in any other way 
-6) clone 'comparisonrender' repo in any desired folder
+   * git submodule update
+4) clone 'comparisonrender' repo in any desired folder
   * in this example is it "../comparisonrender" with reletion to HydraCore3 directory
-7) select some build directory 
+5) select some build directory 
   * mkdir build && cd build      
-8) build solution normally with CMake for CPU:
+6) build solution normally with CMake for CPU (on windows need c++20):
   * cmake -DCMAKE_BUILD_TYPE=Release -DUSE_VULKAN=OFF -DCAM_PLUGIN=ON ..
   * make -j 8  // or in any other way 
   * please see VS code config, "CamTest(Tests/Blend/0002)" for example, you need "Tests/Blend/0002" scene from 'comparisonrender' repo
-9) build solution normally with CMake for GPU:
+7) build solution normally with CMake for GPU (on windows need c++20):
   * cmake -DCMAKE_BUILD_TYPE=Release -DUSE_VULKAN=ON -DCAM_PLUGIN=ON ..
   * make -j 8  // or in any other way 
   * please see VS code config, "CamTest(Tests/Blend/0002)" for example, you need "Tests/Blend/0002" scene from 'comparisonrender' repo
