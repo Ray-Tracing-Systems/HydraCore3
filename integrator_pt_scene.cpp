@@ -511,7 +511,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_DIFFUSE);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[DIFFUSE_ROUGHNESS] = 0.0f;
-  mat.data[DIFFUSE_TEXID0]    = 0;
+  mat.data[DIFFUSE_TEXID0]    = as_float(0);
   mat.data[DIFFUSE_SPECID]    = as_float(uint(-1));
 
   static const std::wstring orenNayarNameStr {L"oren-nayar"};
@@ -557,7 +557,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_BLEND);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[BLEND_WEIGHT]      = 1.0f;
-  mat.data[BLEND_TEXID0]      = 0;
+  mat.data[BLEND_TEXID0]      = as_float(0);
 
   mat.data[BLEND_MAT_ID_1]    = as_float(materialNode.child(L"bsdf_1").attribute(L"id").as_uint());
   mat.data[BLEND_MAT_ID_2]    = as_float(materialNode.child(L"bsdf_2").attribute(L"id").as_uint());
@@ -565,7 +565,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   auto nodeWeight = materialNode.child(L"weight");
   if(nodeWeight != nullptr)
   {
-    mat.data[BLEND_WEIGHT] = (hydra_xml::readval1f(nodeWeight), 1.0f);
+    mat.data[BLEND_WEIGHT] = hydra_xml::readval1f(nodeWeight);
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeWeight, texturesInfo, texCache, textures);
     
@@ -573,6 +573,53 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
     mat.row1 [0]  = sampler.row1;
     mat.data[BLEND_TEXID0] = as_float(texID);
   }
+
+  return mat;
+}
+
+Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                             std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             bool is_spectral_mode)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_PLASTIC);  
+  mat.data[UINT_LIGHTID]      = as_float(uint(-1));
+  mat.data[PLASTIC_NONLINEAR] = as_float(0);
+  mat.data[PLASTIC_COLOR_TEXID]  = as_float(0);
+  mat.data[PLASTIC_COLOR_SPECID] = as_float(uint(-1));
+
+
+  auto nodeColor = materialNode.child(L"reflectance");
+  if(nodeColor != nullptr)
+  {
+    mat.colors[PLASTIC_COLOR] = GetColorFromNode(nodeColor, is_spectral_mode);
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, texturesInfo, texCache, textures);
+    
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[PLASTIC_COLOR_TEXID] = as_float(texID);
+
+    auto specId = GetSpectrumIdFromNode(nodeColor);
+    mat.data[PLASTIC_COLOR_SPECID] = as_float(specId);
+  }
+
+  float internal_ior = hydra_xml::readval1f(materialNode.child(L"int_ior"), 1.49f);
+  float external_ior = hydra_xml::readval1f(materialNode.child(L"ext_ior"), 1.000277);
+
+  mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
+
+  mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+  mat.data[PLASTIC_NONLINEAR] = as_float(hydra_xml::readval1u(materialNode.child(L"nonlinear"), 0));
+
+  
+  mat.data[PLASTIC_FDR_INTERIOR] = mi::fresnel_diffuse_reflectance(1.f / mat.data[PLASTIC_IOR_RATIO]);
+  const float d_mean = 0.3333333f * (mat.colors[PLASTIC_COLOR].x  + mat.colors[PLASTIC_COLOR].y  + mat.colors[PLASTIC_COLOR].z); 
+  const float s_mean = 1.f; 
+
+  mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT] = s_mean / (d_mean + s_mean);
 
   return mat;
 }
@@ -585,7 +632,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
-    case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
+    case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
     case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
     case KSPEC_BLEND_STACK_SIZE   : 
@@ -607,6 +654,7 @@ static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
+static const std::wstring plasticMatTypeStr        {L"plastic"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
                                                            int& width, int& height, int& spectral_mode)
@@ -659,6 +707,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     {
       features[KSPEC_MAT_TYPE_BLEND]   = 1;
       features[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+    }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
   }
 
@@ -886,7 +938,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
@@ -899,7 +951,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
@@ -908,12 +960,36 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
+    }
 
     if(materialNode.attribute(L"light_id") != nullptr)
     {
       int lightId = materialNode.attribute(L"light_id").as_int();
-      if(lightId >= 0 && lightId < m_lights.size())
+      if(lightId >= 0 && lightId < static_cast<int>(m_lights.size()))
+      {
+        auto tmp = mat.colors[EMISSION_COLOR] != m_lights[lightId].intensity;
+        if(tmp.x == 0xFFFFFFFF && tmp.y == 0xFFFFFFFF && tmp.z == 0xFFFFFFFF && tmp.w == 0xFFFFFFFF)
+          std::cout << "Color in material for light geom and color in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.colors[EMISSION_COLOR] = m_lights[lightId].intensity;
+
+        if(mat.data[EMISSION_MULT] != m_lights[lightId].mult)
+          std::cout << "Color multiplier in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
         mat.data[EMISSION_MULT] = m_lights[lightId].mult;
+
+        if(mat.data[EMISSION_SPECID0] != m_lights[lightId].ids.x)
+          std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.data[EMISSION_SPECID0] = m_lights[lightId].ids.x;
+      }
     }
 
     m_materials.push_back(mat);

@@ -273,7 +273,7 @@ protected:
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS     = 2;
   static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR = 3;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 4;
-  static constexpr uint32_t KSPEC_SOME_FEATURE_DUMMY = 5;
+  static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC   = 5;
 
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;

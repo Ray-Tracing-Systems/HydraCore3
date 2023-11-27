@@ -6,6 +6,7 @@
 #include "include/cmat_conductor.h"
 #include "include/cmat_glass.h"
 #include "include/cmat_diffuse.h"
+#include "include/cmat_plastic.h"
 
 #include <chrono>
 #include <string>
@@ -196,6 +197,23 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, color, &res);
     }
     break;
+    case MAT_TYPE_PLASTIC:
+    if(KSPEC_MAT_TYPE_PLASTIC != 0)
+    {
+      const float4 rands_1 = rndFloat4_Pseudo(a_gen);
+      const float  rands_2 = rndFloat1_Pseudo(a_gen);
+
+      const uint   texId       = as_uint(m_materials[currMatId].data[PLASTIC_COLOR_TEXID]);
+      const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+      const float4 color       = texColor;
+
+      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
+      if(!m_spectral_mode)
+        reflSpec *= color;
+
+      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands_1, rands_2, v, n, tc, &res);
+    }
+    break;
     default:
     break;
   }
@@ -295,6 +313,24 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         res.val += currVal.val * currMat.weight;
         res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_PLASTIC:
+      if(KSPEC_MAT_TYPE_PLASTIC != 0)
+      {
+        const uint   texId       = as_uint(m_materials[currMat.id].data[PLASTIC_COLOR_TEXID]);
+        const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+        const float4 color       = texColor;
+
+        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
+        if(!m_spectral_mode)
+          reflSpec *= color;
+
+        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, &currVal);
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
         break;
       }
       case MAT_TYPE_BLEND:

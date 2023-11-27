@@ -18,7 +18,7 @@ namespace dr
 
 namespace mi
 {
-  static float fresnel_diffuse_reflectance(float eta) 
+  float fresnel_diffuse_reflectance(float eta) 
   {
     /* Fast mode: the following code approximates the diffuse Frensel reflectance
        for the eta<1 and eta>1 cases. An evaluation of the accuracy led to the

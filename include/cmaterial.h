@@ -31,7 +31,8 @@ enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
                       MAT_TYPE_DIFFUSE   = 4,
-                      MAT_TYPE_BLEND     = 5,
+                      MAT_TYPE_PLASTIC   = 5,
+                      MAT_TYPE_BLEND     = 6,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -111,6 +112,21 @@ static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
 static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
 static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
 static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
+
+// Plastic (mitsuba)
+// colors
+static constexpr uint PLASTIC_COLOR             = 0;
+static constexpr uint PLASTIC_COLOR_LAST_IND    = PLASTIC_COLOR;
+
+// custom
+static constexpr uint PLASTIC_ROUGHNESS           = UINT_MAIN_LAST_IND + 0;
+static constexpr uint PLASTIC_IOR_RATIO           = UINT_MAIN_LAST_IND + 1;
+static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = UINT_MAIN_LAST_IND + 2;
+static constexpr uint PLASTIC_FDR_INTERIOR        = UINT_MAIN_LAST_IND + 3;
+static constexpr uint PLASTIC_NONLINEAR           = UINT_MAIN_LAST_IND + 4;
+static constexpr uint PLASTIC_COLOR_SPECID        = UINT_MAIN_LAST_IND + 5;
+static constexpr uint PLASTIC_COLOR_TEXID         = UINT_MAIN_LAST_IND + 6;
+static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_COLOR_TEXID;
 
 
 // Simple diffuse
@@ -505,6 +521,27 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
   const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
+}
+
+static inline float FrDielectric(float cosTheta_i, float eta) 
+{
+  cosTheta_i = clamp(cosTheta_i, -1.0f, 1.0f);
+  
+  if (cosTheta_i < 0.0f) 
+  {
+      eta = 1.0f / eta;
+      cosTheta_i = -cosTheta_i;
+  }
+
+  float sin2Theta_i = 1.0f - cosTheta_i * cosTheta_i;
+  float sin2Theta_t = sin2Theta_i / (eta * eta);
+  if (sin2Theta_t >= 1.0f)
+      return 1.f;
+  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+
+  float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
+  float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
+  return (r_parl * r_parl + r_perp * r_perp) / 2.0f;
 }
 
 static inline float FrComplexConductor(float cosThetaI, complex eta)
