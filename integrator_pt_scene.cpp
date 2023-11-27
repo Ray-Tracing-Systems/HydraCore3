@@ -511,7 +511,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_DIFFUSE);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[DIFFUSE_ROUGHNESS] = 0.0f;
-  mat.data[DIFFUSE_TEXID0]    = 0;
+  mat.data[DIFFUSE_TEXID0]    = as_float(0);
   mat.data[DIFFUSE_SPECID]    = as_float(uint(-1));
 
   static const std::wstring orenNayarNameStr {L"oren-nayar"};
@@ -557,7 +557,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_BLEND);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[BLEND_WEIGHT]      = 1.0f;
-  mat.data[BLEND_TEXID0]      = 0;
+  mat.data[BLEND_TEXID0]      = as_float(0);
 
   mat.data[BLEND_MAT_ID_1]    = as_float(materialNode.child(L"bsdf_1").attribute(L"id").as_uint());
   mat.data[BLEND_MAT_ID_2]    = as_float(materialNode.child(L"bsdf_2").attribute(L"id").as_uint());
@@ -912,8 +912,27 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     if(materialNode.attribute(L"light_id") != nullptr)
     {
       int lightId = materialNode.attribute(L"light_id").as_int();
-      if(lightId >= 0 && lightId < m_lights.size())
+      if(lightId >= 0 && lightId < static_cast<int>(m_lights.size()))
+      {
+        auto tmp = mat.colors[EMISSION_COLOR] != m_lights[lightId].intensity;
+        if(tmp.x == 0xFFFFFFFF && tmp.y == 0xFFFFFFFF && tmp.z == 0xFFFFFFFF && tmp.w == 0xFFFFFFFF)
+          std::cout << "Color in material for light geom and color in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.colors[EMISSION_COLOR] = m_lights[lightId].intensity;
+
+        if(mat.data[EMISSION_MULT] != m_lights[lightId].mult)
+          std::cout << "Color multiplier in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
         mat.data[EMISSION_MULT] = m_lights[lightId].mult;
+
+        if(mat.data[EMISSION_SPECID0] != m_lights[lightId].ids.x)
+          std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.data[EMISSION_SPECID0] = m_lights[lightId].ids.x;
+      }
     }
 
     m_materials.push_back(mat);
