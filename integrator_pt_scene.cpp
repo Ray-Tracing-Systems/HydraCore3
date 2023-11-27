@@ -683,6 +683,13 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     }
   }
 
+  for(auto settings : g_lastScene.Settings())
+  {
+    width  = settings.width;
+    height = settings.height;
+    break; //take ferst render settings
+  }
+
   g_lastScenePath = scenePathStr;
   g_lastSceneDir  = sceneDirStr;
 
