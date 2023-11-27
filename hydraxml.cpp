@@ -310,9 +310,13 @@ namespace hydra_xml
     return color;
   }
 
-  float readval1f(const pugi::xml_node a_color) 
+  float readval1f(const pugi::xml_node a_color, float default_val) 
   {
-    float color = 0.0f;
+    float color = default_val;
+    if(!a_color)
+    {
+      return color;
+    }
     if (a_color.attribute(L"val") != nullptr)
       color = a_color.attribute(L"val").as_float();
     else
@@ -320,9 +324,13 @@ namespace hydra_xml
     return color;
   }
 
-  int readval1i(const pugi::xml_node a_color)
+  int readval1i(const pugi::xml_node a_color, int default_val)
   {
-    int color = 0;
+    int color = default_val;
+    if(!a_color)
+    {
+      return color;
+    }
     if (a_color.attribute(L"val") != nullptr)
       color = a_color.attribute(L"val").as_int();
     else
@@ -330,9 +338,13 @@ namespace hydra_xml
     return color;
   }
 
-  unsigned int readval1u(const pugi::xml_node a_color)
+  unsigned int readval1u(const pugi::xml_node a_color, uint32_t default_val)
   {
-    unsigned int color = 0;
+    unsigned int color = default_val;
+    if(!a_color)
+    {
+      return color;
+    }
     if (a_color.attribute(L"val") != nullptr)
       color = a_color.attribute(L"val").as_uint();
     else

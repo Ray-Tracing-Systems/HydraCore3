@@ -26,9 +26,9 @@ namespace hydra_xml
   //LiteMath::float3   read3f(pugi::xml_attribute a_attr);
   //LiteMath::float3   read3f(pugi::xml_node a_node);
   LiteMath::float3   readval3f(pugi::xml_node a_node);
-  float              readval1f(const pugi::xml_node a_color);
-  int                readval1i(const pugi::xml_node a_color);
-  unsigned int       readval1u(const pugi::xml_node a_color);
+  float              readval1f(const pugi::xml_node a_color, float default_val = 0.0f);
+  int                readval1i(const pugi::xml_node a_color, int default_val = 1);
+  unsigned int       readval1u(const pugi::xml_node a_color, uint32_t default_val = 1u);
 
   std::variant<float, float3, float4> readvalVariant(const pugi::xml_node &a_node);
 
