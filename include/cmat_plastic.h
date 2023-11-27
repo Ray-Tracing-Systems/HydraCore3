@@ -104,8 +104,8 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
     pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
           
 
-    // const float f_o = FrDielectric(std::abs(dot(lambertDir, n)), eta);
-    // pRes->val      *= (1.0f - f_i) * (1.0f - f_o) / (eta * eta * (1.0f - fdr_int));
+    const float f_o = FrDielectric(std::abs(dot(lambertDir, n)), eta);
+    pRes->val      *= (1.0f - f_i) * (1.0f - f_o) / (eta * eta * (1.0f - fdr_int));
   }
             
 }
@@ -158,11 +158,11 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   float prob_specular    = 0.0f;
   float coeffLambertPdf  = 1.0f;
 
-  f_i                 = FrDielectric(std::abs(dot(v,n)), eta);
-  // const float f_o     = FrDielectric(std::abs(dot(l,n)), eta);  
-  // const float coeff   = (1.f - f_i) * (1.f - f_o) / (eta * eta * (1.f - fdr_int));
-  // lambertVal         *= coeff;
-  // coeffLambertPdf     = coeff; 
+  f_i                 = FrDielectric(std::abs(dot(v, n)), eta);
+  const float f_o     = FrDielectric(std::abs(dot(l, n)), eta);  
+  const float coeff   = (1.f - f_i) * (1.f - f_o) / (eta * eta * (1.f - fdr_int));
+  lambertVal         *= coeff;
+  coeffLambertPdf     = coeff; 
   // prob_specular       = f_i * spec_weight;
   // prob_diffuse        = (1.f - f_i) * (1.f - spec_weight);
   
