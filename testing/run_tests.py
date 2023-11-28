@@ -259,7 +259,7 @@ reqs.append( REQ_HX("spectral",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0002/Images/Spectral-ior-model-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0003/Images/Spectral-diffuse-sphere-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0004/Images/spectral_cornell_mitsuba.png",
-                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0006/Images/spectral_cornell_mitsuba.png"
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/Images/spectral_cornell_mitsuba.png"
                     ],
                     imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
                     naivemul = 16, integrators = ["mispt"], is_spectral = True))
