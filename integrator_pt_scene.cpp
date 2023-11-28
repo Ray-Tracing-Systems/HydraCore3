@@ -1068,6 +1068,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
-
+  
+  // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
+  //
+  if(m_spec_offset_sz.capacity() == 0)
+    m_spec_offset_sz.reserve(16);
+  if(m_spec_values.capacity() == 0)
+    m_spec_values.reserve(16);
+  if(m_wavelengths.capacity() == 0)
+    m_wavelengths.reserve(16);
   return true;
 }
