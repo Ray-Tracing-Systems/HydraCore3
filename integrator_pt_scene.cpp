@@ -385,6 +385,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
       mat.colors[GLTF_COLOR_COAT]  = reflColor;
       mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0); 
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT);
+      SetMiPlastic(&mat, fresnelIOR, 1.0f, color, reflColor);
     }
     else
     {
@@ -393,8 +394,6 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
       mat.colors[GLTF_COLOR_METAL] = reflColor;   // disable coating for such blend type
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL);
     }
-
-    SetMiPlastic(&mat, fresnelIOR, 1.0f, color, reflColor);
   }
   else if(length(reflColor) > 1e-5f)
   {

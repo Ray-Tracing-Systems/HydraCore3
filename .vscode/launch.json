@@ -291,5 +291,161 @@
         ]
     },
 
+    {
+        "name": "Rect (NaivePT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_046/statex_00001.xml",
+                 "-integrator", "naivept", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16384",
+                 "-out", "out_rect_naive.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Rect (ShadowPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_046/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_rect_shadow.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (MisPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_rect_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (NaivePT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "naivept", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16384",
+                 "-out", "out_disk_naive.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (ShadowPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_disk_shadow.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (MisPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_disk_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
     ]
 }

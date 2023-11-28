@@ -5,7 +5,7 @@
 
 
 static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
-  float3 n, float2 tc, float4 color, BsdfSample* pRes)
+                                     float3 n, float2 tc, float4 color, BsdfSample* pRes)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const uint           cflags   = as_uint(a_materials[0].data[UINT_CFLAGS]);
@@ -109,9 +109,9 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
                      float4 color, BsdfEval* res)
 {
-  const uint           cflags   = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float4 specular = a_materials[0].colors[GLTF_COLOR_METAL];
-  const float4 coat     = a_materials[0].colors[GLTF_COLOR_COAT];
+  const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const float4 specular   = a_materials[0].colors[GLTF_COLOR_METAL];
+  const float4 coat       = a_materials[0].colors[GLTF_COLOR_COAT];
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
         float  alpha      = a_materials[0].data[GLTF_FLOAT_ALPHA];
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
@@ -142,7 +142,6 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
 
   if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
     lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
-
       
   if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
   {
@@ -168,7 +167,10 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const float4 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
   const float4 specularColor = ggxVal*fConductor;                                        // eval metal specular component
       
-  const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
+  float  dielectricPdf = lambertPdf * coeffLambertPdf; 
+  if((cflags & GLTF_COMPONENT_COAT) != 0)
+    dielectricPdf += 2.0f * ggxPdf * f_i; 
+                                
   const float4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
 
   res->val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
