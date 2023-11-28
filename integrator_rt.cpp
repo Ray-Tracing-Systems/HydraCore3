@@ -12,6 +12,8 @@ using namespace LiteMath;
 
 void Integrator::kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY)
 {
+  if(tidX >= m_winWidth || tidY >= m_winHeight)
+    return;
   uint offset = tidY*m_winWidth + tidX;
   if(m_tileSize != 1)
   {
