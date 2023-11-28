@@ -12,21 +12,26 @@ using namespace LiteMath;
 
 void Integrator::kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY)
 {
-  const uint inBlockIdX = tidX % 8; // 8x8 blocks
-  const uint inBlockIdY = tidY % 8; // 8x8 blocks
- 
-  const uint localIndex = inBlockIdY*8 + inBlockIdX;
-  const uint wBlocks    = m_winWidth/8;
-
-  const uint blockX     = tidX/8;
-  const uint blockY     = tidY/8;
-  const uint offset     = (blockX + blockY*wBlocks)*8*8 + localIndex;
-
+  uint offset = tidY*m_winWidth + tidX;
+  if(m_tileSize != 1)
+  {
+    const uint inBlockIdX = tidX % m_tileSize; // 8x8 blocks
+    const uint inBlockIdY = tidY % m_tileSize; // 8x8 blocks
+   
+    const uint localIndex = inBlockIdY*m_tileSize + inBlockIdX;
+    const uint wBlocks    = m_winWidth/m_tileSize;
+  
+    const uint blockX     = tidX/m_tileSize;
+    const uint blockY     = tidY/m_tileSize;
+    offset                = (blockX + blockY*wBlocks)*m_tileSize*m_tileSize + localIndex;
+  }
   out_pakedXY[offset] = ((tidY << 16) & 0xFFFF0000) | (tidX & 0x0000FFFF);
 }
 
 void Integrator::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint XY = packedXY[tid];
 
   const uint x = (XY & 0x0000FFFF);
@@ -47,6 +52,8 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
                                    float4* accumColor,    float4* accumuThoroughput,
                                    uint* rayFlags) // 
 {
+  if(tid >= m_maxThreadId)
+    return;
   *accumColor        = make_float4(0,0,0,1);
   *accumuThoroughput = make_float4(1,1,1,1);
   //RandomGen genLocal = m_randomGens[tid];
@@ -71,6 +78,8 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
 bool Integrator::kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                                  Lite_Hit* out_hit, float2* out_bars)
 {
+  if(tid >= m_maxThreadId)
+    return false;
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
@@ -92,12 +101,17 @@ bool Integrator::kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* 
 
 void Integrator::kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color)
 {
+  if(tid >= m_maxThreadId)
+    return;
   out_color[tid] = RealColorToUint32(*a_accumColor);
 }
 
 void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, 
-  uint* out_color)
+                                    uint* out_color)
 { 
+  if(tid >= m_maxThreadId)
+    return;
+
   const Lite_Hit lhit = *in_hit;
   if(lhit.geomId == -1)
   {
@@ -155,6 +169,8 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput,
                                   uint* rayFlags)
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -239,6 +255,8 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
 
 void Integrator::kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color)
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
@@ -265,7 +283,7 @@ static inline float4x4 make_float4x4(const float* a_data)
 }
 
 static inline float2 worldPosToScreenSpace(float3 a_wpos, const int width, const int height, 
-  float4x4 worldView, float4x4 proj)
+                                           float4x4 worldView, float4x4 proj)
 {
   const float4 posWorldSpace  = to_float4(a_wpos, 1.0f);
   const float4 posCamSpace    = mul4x4x4(worldView, posWorldSpace);

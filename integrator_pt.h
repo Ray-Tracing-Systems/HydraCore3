@@ -160,6 +160,20 @@ public:
     m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
     m_winHeight = a_height;
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
+
+    const auto sizeX = a_width  - a_xStart;
+    const auto sizeY = a_height - a_yStart;
+
+    if(sizeX % 8 == 0 && sizeY % 8 == 0)
+      m_tileSize = 8;
+    else if(sizeX % 4 == 0 && sizeY % 4 == 0)
+      m_tileSize = 4;
+    else if(sizeX % 2 == 0 && sizeY % 2 == 0)
+      m_tileSize = 2;
+    else 
+      m_tileSize = 1;
+    
+    m_maxThreadId = sizeX*sizeY;
   }
   
   void SetWorldView(const float4x4& a_mat)
@@ -178,9 +192,9 @@ protected:
   uint m_traceDepth = 10;
   uint m_skipBounce = 0; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
                          ///!< TODO: don't account specular bounces(!)
-  uint m_spp        = 1024;
-  uint m_dummy2     = 0;
-  uint m_dummy3     = 0;
+  uint m_spp         = 1024;
+  uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
+  uint m_maxThreadId = m_winWidth*m_winHeight;
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);

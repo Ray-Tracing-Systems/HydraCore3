@@ -27,6 +27,9 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
                                    float4* accumColor,    float4* accumuThoroughput,
                                    RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
+  if(tid >= m_maxThreadId)
+    return;
+
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
   RandomGen genLocal = m_randomGens[tid];
@@ -39,10 +42,10 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 715 && y == m_winHeight-715-1)
-  {
-    int a = 2;
-  }
+  //if(x == 255 && y == 133)
+  //{
+  //  int a = 2;
+  //}
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -61,7 +64,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
     for (uint32_t i = 0; i < sample_sz; ++i) 
       (*wavelengths)[i] = 0.0f;
   }
-
+ 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
   *gen           = genLocal;
@@ -71,6 +74,9 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                             RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
 {
+  if(tid >= m_maxThreadId)
+    return;
+
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
   *rayFlags          = 0;
@@ -108,6 +114,8 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
 void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
                                  float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags)
 {
+  if(tid >= m_maxThreadId)
+    return;
   uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -187,6 +195,8 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
                                           const uint* rayFlags, uint bounce,
                                           RandomGen* a_gen, float4* out_shadeColor)
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -249,6 +259,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
                                    const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                                    float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* misPrev, uint* rayFlags)
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint currRayFlags = *rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -380,6 +392,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                                        float4* accumColor)
 {
+  if(tid >= m_maxThreadId)
+    return;
   const uint currRayFlags = *rayFlags;
   if(!isOutOfScene(currRayFlags))
     return;
@@ -399,10 +413,12 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
 void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
                                           const float4* wavelengths, float4* out_color)
 {
+  if(tid >= m_maxThreadId)
+    return;
+
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
-
 
   float3 rgb = to_float3(*a_accumColor);
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
@@ -412,8 +428,10 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  //if(x == 715 && y == m_winHeight-715-1)
-  //  colorRes = float4(0,0,1,0);
+  //if(x == 255 && y == 133)
+  //{
+  //  int a = 2;
+  //}
  
   out_color[y*m_winWidth+x] += colorRes;
   m_randomGens[tid] = *gen;
@@ -421,6 +439,8 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
 
 void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
 {
+  if(tid >= m_maxThreadId)
+    return;
   out_color   [tid] += *a_accumColor;
   m_randomGens[tid] = *gen;
 }
