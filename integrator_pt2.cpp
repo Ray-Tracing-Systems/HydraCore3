@@ -183,7 +183,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
         conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, alphaTex, &res);
     }
     break;
-    case MAT_TYPE_FILM:
+    case MAT_TYPE_THIN_FILM:
+    if(KSPEC_MAT_TYPE_THIN_FILM != 0)
     {
       const float4 rands = rndFloat4_Pseudo(a_gen);
 
@@ -192,10 +193,14 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
       
       const float2 alpha = float2(m_materials[a_materialId].data[FILM_ROUGH_V], m_materials[a_materialId].data[FILM_ROUGH_U]);
+      const float4 eta_1 = SampleMatParamSpectrum(currMatId, wavelengths, FILM_ETA_1, FILM_ETA_1_SPECID);
+      const float4 k_1   = SampleMatParamSpectrum(currMatId, wavelengths, FILM_K_1, FILM_K_1_SPECID);
+      const float4 eta_2 = SampleMatParamSpectrum(currMatId, wavelengths, FILM_ETA_2, FILM_ETA_2_SPECID);
+      const float4 k_2   = SampleMatParamSpectrum(currMatId, wavelengths, FILM_K_2, FILM_K_2_SPECID);
       if(trEffectivelySmooth(alpha))
-        filmSmoothSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, &res);
+        filmSmoothSampleAndEval(m_materials.data() + a_materialId, eta_1, k_1, eta_2, k_2, wavelengths, rands, v, n, tc, &res);
       else
-        filmRoughSampleAndEval(m_materials.data() + a_materialId, rands, v, n, tc, alphaTex, &res);
+        filmRoughSampleAndEval(m_materials.data() + a_materialId, eta_1, k_1, eta_2, k_2, wavelengths, rands, v, n, tc, alphaTex, &res);
     }
     break;
     case MAT_TYPE_DIFFUSE:
@@ -292,6 +297,27 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
           const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, &currVal);
+        }
+
+        res.val += currVal.val * currMat.weight;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_THIN_FILM: 
+      if(KSPEC_MAT_TYPE_THIN_FILM != 0)
+      {
+        const uint   texId     = as_uint(m_materials[currMat.id].data[FILM_TEXID0]);
+        const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
+
+        const float2 alpha = float2(m_materials[currMat.id].data[FILM_ROUGH_V], m_materials[currMat.id].data[FILM_ROUGH_U]);
+
+        if(!trEffectivelySmooth(alpha))
+        {
+          const float4 eta_1 = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_ETA_1, FILM_ETA_1_SPECID);
+          const float4 k_1   = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_K_1, FILM_K_1_SPECID);
+          const float4 eta_2 = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_ETA_2, FILM_ETA_2_SPECID);
+          const float4 k_2   = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_K_2, FILM_K_2_SPECID);
+          filmRoughEval(m_materials.data() + currMat.id, eta_1, k_1, eta_2, k_2, wavelengths, l, v, n, tc, alphaTex, &currVal);
         }
 
         res.val += currVal.val * currMat.weight;

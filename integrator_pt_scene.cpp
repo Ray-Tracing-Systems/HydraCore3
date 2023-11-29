@@ -499,13 +499,13 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
 }
 
 Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
-                                        std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                        std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+                                    std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
-  mat.colors[FILM_COLOR]       = float4(1, 1, 1, 0);
-  mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_FILM);  
+  mat.colors[FILM_COLOR]  = float4(1, 1, 1, 0);
+  mat.data[UINT_MTYPE]         = as_float(MAT_TYPE_THIN_FILM);  
   mat.data[UINT_LIGHTID]       = as_float(uint(-1));
 
   auto nodeBSDF = materialNode.child(L"bsdf");
@@ -513,30 +513,22 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   float alpha_u = 0.0f;
   float alpha_v = 0.0f;
 
-  auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+  //auto bsdf_type = nodeBSDF.attribute(L"type").as_string();
+
   auto nodeAlpha = materialNode.child(L"alpha");
   if(nodeAlpha != nullptr)
   {
     alpha_u = nodeAlpha.attribute(L"val").as_float();
     alpha_v = alpha_u;
 
-    HydraSampler alphaSampler = ReadSamplerFromColorNode(nodeAlpha);
-    auto p = texCache.find(alphaSampler);
-    uint32_t texId = 0;
-    if(p == texCache.end())
-    {
-      texCache[alphaSampler] = uint(textures.size());
-      texId  = nodeAlpha.child(L"texture").attribute(L"id").as_uint();
-      textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], alphaSampler.sampler));
-      p = texCache.find(alphaSampler);
-    }
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeAlpha, texturesInfo, texCache, textures);
 
-    if(texId != 0)
+    if(texID != 0)
       alpha_u = alpha_v = 1.0f;
     
-    mat.row0 [0]  = alphaSampler.row0;
-    mat.row1 [0]  = alphaSampler.row1;
-    mat.data[FILM_TEXID0] = as_float(p->second);
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[FILM_TEXID0] = as_float(texID);
   }
   else
   {
@@ -547,21 +539,54 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
   
-  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
-  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
+  auto eta_1       = materialNode.child(L"eta_1").attribute(L"val").as_float();
+  auto eta_1SpecId = GetSpectrumIdFromNode(materialNode.child(L"eta_1"));
+  auto k_1         = materialNode.child(L"k_1").attribute(L"val").as_float();
+  auto k_1SpecId   = GetSpectrumIdFromNode(materialNode.child(L"k_1"));
 
-  auto base_eta  = materialNode.child(L"base_eta").attribute(L"val").as_float();
-  auto base_k    = materialNode.child(L"base_k").attribute(L"val").as_float();
+  auto thickness_1 = materialNode.child(L"thickness_1").attribute(L"val").as_float();
 
-  auto thickness = materialNode.child(L"thickness").attribute(L"val").as_float();
+  auto eta_2       = materialNode.child(L"eta_2").attribute(L"val").as_float();
+  auto eta_2SpecId = GetSpectrumIdFromNode(materialNode.child(L"eta_2"));
+  auto k_2         = materialNode.child(L"k_2").attribute(L"val").as_float();
+  auto k_2SpecId   = GetSpectrumIdFromNode(materialNode.child(L"k_2"));
 
-  mat.data[FILM_ROUGH_U]     = alpha_u;
-  mat.data[FILM_ROUGH_V]     = alpha_v; 
-  mat.data[FILM_ETA]         = eta; 
-  mat.data[FILM_K]           = k;   
-  mat.data[FILM_BASE_ETA]    = base_eta; 
-  mat.data[FILM_BASE_K]      = base_k;  
-  mat.data[FILM_THICKNESS]   = thickness;
+  float layers_num = 1.f;
+  
+  mat.data[FILM_ROUGH_U]      = alpha_u;
+  mat.data[FILM_ROUGH_V]      = alpha_v; 
+  mat.data[FILM_ETA_1]        = eta_1; 
+  mat.data[FILM_K_1]          = k_1;   
+  mat.data[FILM_ETA_2]        = eta_2; 
+  mat.data[FILM_K_2]          = k_2; 
+
+  mat.data[FILM_THICKNESS_1]  = thickness_1;
+
+  mat.data[FILM_ETA_1_SPECID] = as_float(eta_1SpecId);
+  mat.data[FILM_K_1_SPECID]   = as_float(k_1SpecId);
+  mat.data[FILM_ETA_2_SPECID] = as_float(eta_2SpecId);
+  mat.data[FILM_K_2_SPECID]   = as_float(k_2SpecId);
+
+  if(materialNode.child(L"thickness_2") != nullptr)
+  {
+    layers_num = 2.f; 
+
+    auto thickness_2 = materialNode.child(L"thickness_2").attribute(L"val").as_float();
+
+    auto eta_3       = materialNode.child(L"eta_3").attribute(L"val").as_float();
+    auto eta_3SpecId = GetSpectrumIdFromNode(materialNode.child(L"eta_3"));
+    auto k_3         = materialNode.child(L"k_3").attribute(L"val").as_float();
+    auto k_3SpecId   = GetSpectrumIdFromNode(materialNode.child(L"k_3"));
+
+    mat.data[FILM_ETA_3]        = eta_3; 
+    mat.data[FILM_K_3]          = k_3;  
+    mat.data[FILM_THICKNESS_2]  = thickness_2;
+
+    mat.data[FILM_ETA_3_SPECID] = as_float(eta_3SpecId);
+    mat.data[FILM_K_3_SPECID]   = as_float(k_3SpecId);
+  }
+
+  mat.data[FILM_LAYERS_NUM] = layers_num;
 
   return mat;
 }
@@ -650,6 +675,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_TYPE_GLTF      : return "GLTF_LITE";
     case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
+    case KSPEC_MAT_TYPE_THIN_FILM : return "THIN_FILM";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
     case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";

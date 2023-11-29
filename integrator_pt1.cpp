@@ -27,6 +27,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
                                    float4* accumColor,    float4* accumuThoroughput,
                                    RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
+
   if(tid >= m_maxThreadId)
     return;
 

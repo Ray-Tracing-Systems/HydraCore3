@@ -286,14 +286,15 @@ protected:
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF      = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS     = 2;
   static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR = 3;
-  static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 4;
-  static constexpr uint32_t KSPEC_SOME_FEATURE_DUMMY = 5;
+  static constexpr uint32_t KSPEC_MAT_TYPE_THIN_FILM = 4;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 5;
+  static constexpr uint32_t KSPEC_SOME_FEATURE_DUMMY = 6;
 
-  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
-  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
-  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 7;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 8;
+  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 9;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM       = 9; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM       = 10; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

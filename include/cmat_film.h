@@ -2,30 +2,53 @@
 #include "cglobals.h"
 #include "crandom.h"
 #include "cmaterial.h"
+#include "../spectrum.h"
+#include <iostream>
 
-
-static inline void filmSmoothSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
+static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4 eta_1, const float4 k_1, const float4 eta_2, const float4 k_2, const float4 a_wavelengths,
+                                                float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
-  const uint  cflags      = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta         = a_materials[0].data[FILM_ETA];
-  const float k           = a_materials[0].data[FILM_K];
-  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
-  const float base_k      = a_materials[0].data[FILM_BASE_K];
-  const float thickness   = a_materials[0].data[FILM_THICKNESS];
-  
+  //std::cout << eta_1[0] << k_1[0] << eta_2[0] << k_2[0] << std::endl;
+
+  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
+  const float thickness_1 = a_materials[0].data[FILM_THICKNESS_1];
+
+  float3 eta_3;
+  float3 k_3;
+  float thickness_2;
+
+  float layersNum = a_materials[0].data[FILM_LAYERS_NUM];
+
+  if (layersNum > 1.5)
+  {
+    //eta_3 = filmSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    //k_3   = filmSampleKSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    thickness_2 = a_materials[0].data[FILM_THICKNESS_2];
+  }
+
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
   float  pdf              = 1.0f;
-  float3 val              = {
-    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
-    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
-    FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
-  };
   
-  val = (cosThetaOut <= 1e-6f) ? float3(0.0f) : (val / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-
+  float4 val;
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+  for(int i = 0; i < spectralSamples; ++i)
+  {
+    if (layersNum < 1.5)
+    {
+      val[i] = FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), thickness_1, a_wavelengths[i]); 
+    }
+    else if (layersNum < 2.5)
+    {
+      //val[i] = FrFilmRefl2(cosThetaOut, complex(1.0f), complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+    }
+    // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
+    val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+  }
+  
   pRes->val = val; 
   pRes->dir = dir;
   pRes->pdf = pdf;
@@ -33,10 +56,10 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, float4 r
 }
 
 
-static void filmSmoothEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
+static void filmSmoothEval(const Material* a_materials, const float4 eta_1, const float4 k_1, const float4 eta_2, const float4 k_2, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc,
                                 BsdfEval* pRes)
 {
-  pRes->val = {0.0f, 0.0f, 0.0f};
+  pRes->val = {0.0f, 0.0f, 0.0f, 0.0f};
   pRes->pdf = 0.0f;
 }
 
@@ -59,21 +82,49 @@ static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha
   return val;
 }
 
-
-static inline void filmRoughSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                                float3 alpha_tex,
-                                                BsdfSample* pRes)
+static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior, complex ior2, complex ior3, float thickness, float lambda)
 {
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return 0.0f;
+  }
+
+  float cosTheta_o = AbsCosTheta(wo);
+  float cosTheta_i = AbsCosTheta(wi);
+  if (cosTheta_i == 0 || cosTheta_o == 0)
+    return 0.0f;
+
+  float F = FrFilmRefl2(std::abs(dot(wo, wm)), complex(1.0f), ior, ior2, ior3, thickness, lambda);
+  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+
+  return val;
+}
+
+
+static inline void filmRoughSampleAndEval(const Material* a_materials, const float4 eta_1, const float4 k_1, const float4 eta_2, const float4 k_2, const float4 a_wavelengths, 
+                                               float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                                               BsdfSample* pRes)
+{
+  //std::cout << a_wavelengths[0] << std::endl;
   if(v.z == 0)
     return;
 
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta         = a_materials[0].data[FILM_ETA];
-  const float k           = a_materials[0].data[FILM_K];
-  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
-  const float base_k      = a_materials[0].data[FILM_BASE_K];
-  const float thickness   = a_materials[0].data[FILM_THICKNESS];
+  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
 
+  const float thickness_1 = a_materials[0].data[FILM_THICKNESS_1];
+
+  float3 eta_3;
+  float3 k_3;
+  float thickness_2;
+
+  float layersNum = a_materials[0].data[FILM_LAYERS_NUM];
+
+  if (layersNum > 1.5)
+  {
+    //eta_3 = filmSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    //k_3   = filmSampleKSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    thickness_2 = a_materials[0].data[FILM_THICKNESS_2];
+  }
   // const uint  texId = as_uint(a_materials[0].data[FILM_TEXID0]);
 
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
@@ -101,11 +152,19 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, float4 ra
     return;
   }
 
-  float3 val = {
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
-  };
+  float4 val;
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+  for(int i = 0; i < spectralSamples; ++i)
+  {
+    if (layersNum < 1.5)
+    {
+      val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), thickness_1, a_wavelengths[i]);
+    }
+    else if (layersNum < 2.5)
+    {
+      //val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+    }
+  }
 
   pRes->val   = val; 
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
@@ -114,16 +173,27 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, float4 ra
 }
 
 
-static void filmRoughEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 alpha_tex, 
-                                BsdfEval* pRes)
+static void filmRoughEval(const Material* a_materials, const float4 eta_1, const float4 k_1, const float4 eta_2, const float4 k_2, const float4 a_wavelengths,
+                               float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                               BsdfEval* pRes)
 {
-  const uint  cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float eta         = a_materials[0].data[FILM_ETA];
-  const float k           = a_materials[0].data[FILM_K];
-  const float base_eta    = a_materials[0].data[FILM_BASE_ETA];
-  const float base_k      = a_materials[0].data[FILM_BASE_K];
-  const float thickness   = a_materials[0].data[FILM_THICKNESS];
+  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
+  const float thickness_1 = a_materials[0].data[FILM_THICKNESS_1];
+
+  float3 eta_3;
+  float3 k_3;
+  float thickness_2;
+
+  float layersNum = a_materials[0].data[FILM_LAYERS_NUM];
+
+  if (layersNum > 1.5)
+  {
+    //eta_3 = filmSampleEtaSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    //k_3   = filmSampleKSpectrum(a_materials, a_spectra, a_wavelengths, 2);
+    thickness_2 = a_materials[0].data[FILM_THICKNESS_2];
+  }
+
   // const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
                               min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
@@ -143,48 +213,22 @@ static void filmRoughEval(const Material* a_materials, float3 l, float3 v, float
       return;
 
   wm = normalize(wm);
-
-  float3 val = {
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 705.f),
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 530.f),
-    filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta, k), complex(base_eta, base_k), thickness, 465.f)
-  };
-
+  float4 val;
+  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+  for(int i = 0; i < spectralSamples; ++i)
+  {
+    if (layersNum < 1.5)
+    {
+      val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), thickness_1, a_wavelengths[i]);
+    }
+    else if (layersNum < 2.5)
+    {
+      val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+    }
+  }
 
   pRes->val = val;
 
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
-}
-
-static inline void filmSampleAndEval(const Material* a_materials, float4 rands, float3 v, float3 n, float2 tc,
-                                          float3 alpha_tex,
-                                          BsdfSample* pRes)
-{
-  const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
-
-  if(trEffectivelySmooth(alpha))
-  {
-    filmSmoothSampleAndEval(a_materials, rands, v, n, tc, pRes);
-  }
-  else
-  {
-    filmRoughSampleAndEval(a_materials, rands, v, n, tc, alpha_tex, pRes);
-  }
-}
-
-static inline void filmEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-                                float3 alpha_tex,
-                                BsdfEval* pRes)
-{
-  const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
-
-  if(trEffectivelySmooth(alpha))
-  {
-    filmSmoothEval(a_materials, l, v, n, tc, pRes);
-  }
-  else
-  {
-    filmRoughEval(a_materials, l, v, n, tc, alpha_tex, pRes);
-  }
 }

@@ -17,7 +17,7 @@
 rule C_COMPILER__miniz_unscanned_Release
   depfile = $DEP_FILE
   deps = gcc
-  command = ${LAUNCHER}${CODE_CHECK}/usr/bin/gcc-12 $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
+  command = ${LAUNCHER}${CODE_CHECK}/usr/bin/cc $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -o $out -c $in
   description = Building C object $out
 
 
@@ -61,7 +61,7 @@ rule CUSTOM_COMMAND
 # Rule for re-running cmake.
 
 rule RERUN_CMAKE
-  command = /home/roman/.local/lib/python3.10/site-packages/cmake/data/bin/cmake --regenerate-during-build -S/home/roman/Desktop/hydra3/HydraCore3 -B/home/roman/Desktop/hydra3/HydraCore3/build
+  command = /home/roman/.local/lib/python3.10/site-packages/cmake/data/bin/cmake --regenerate-during-build -S/home/roman/Desktop/hydra3spectr/HydraCore3 -B/home/roman/Desktop/hydra3spectr/HydraCore3/build
   description = Re-running CMake...
   generator = 1
 
