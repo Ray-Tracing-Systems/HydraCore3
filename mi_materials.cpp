@@ -46,18 +46,18 @@ namespace mi
   }
 };
 
-void SetMiPlastic(Material* material, float int_ior, float ext_ior, float3 diffuse_reflectance, float3 specular_reflectance)
+void SetMiPlastic(Material* material, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance)
 { 
-  material->colors[GLTF_COLOR_BASE] = to_float4(diffuse_reflectance,0);
-  material->colors[GLTF_COLOR_COAT] = to_float4(specular_reflectance,0);
+  material->colors[GLTF_COLOR_BASE] = diffuse_reflectance;
+  material->colors[GLTF_COLOR_COAT] = specular_reflectance;
   
   const float m_eta = int_ior / ext_ior;
   material->data[GLTF_FLOAT_IOR]        = m_eta;  
   material->data[GLTF_FLOAT_MI_FDR_INT] = mi::fresnel_diffuse_reflectance(1.f / m_eta);
   material->data[GLTF_FLOAT_MI_FDR_EXT] = mi::fresnel_diffuse_reflectance(m_eta);
  
-  const float d_mean = 0.3333333f*(diffuse_reflectance.x  + diffuse_reflectance.y  + diffuse_reflectance.z); 
-  const float s_mean = 0.3333333f*(specular_reflectance.x + specular_reflectance.y + specular_reflectance.z); 
+  const float d_mean = 0.3333333f * (diffuse_reflectance.x  + diffuse_reflectance.y  + diffuse_reflectance.z); 
+  const float s_mean = 0.3333333f * (specular_reflectance.x + specular_reflectance.y + specular_reflectance.z); 
 
   material->data[GLTF_FLOAT_MI_SSW] = s_mean / (d_mean + s_mean);
 }

@@ -2,4 +2,4 @@
 
 #include "include/cmaterial.h"
 
-void SetMiPlastic(Material* material, float int_ior, float ext_ior, float3 diffuse_reflectance, float3 specular_reflectance = float3(1,1,1));
+void SetMiPlastic(Material* material, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance = float4(1));

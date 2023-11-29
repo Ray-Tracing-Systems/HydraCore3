@@ -88,7 +88,7 @@ static inline float SmithGGXMaskingShadowing(const float dotNL, const float dotN
 }
 
 
-static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, const float a_inputIor, 
+static inline void refractionGlassSampleAndEval(const float4 a_colorTransp, const float a_inputIor, 
   const float a_outputIor, const float a_roughTransp, const float3 a_normal, const float3 a_fixNormal,
   const float4 a_rands, const float3 a_rayDir, BsdfSample* a_pRes)
 {
@@ -96,7 +96,7 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
 
   bool   spec = true;
   float  Pss  = 1.0f;                          // Pass single-scattering.
-  float3 Pms  = make_float3(1.0f, 1.0f, 1.0f); // Pass multi-scattering
+  float4 Pms = float4(1.0f); // Pass multi-scattering
 
   RefractResult refrData;
 
@@ -184,13 +184,13 @@ static inline void refractionGlassSampleAndEval(const float3 a_colorTransp, cons
   const float adjointBtdfMult = a_isFwdDir ? 1.0f : (refrData.eta * refrData.eta);
 
   if (refrData.success) a_pRes->val = a_colorTransp * adjointBtdfMult * Pss * Pms * cosMult; 
-  else                  a_pRes->val = make_float3(1.0f, 1.0f, 1.0f) * Pss * Pms * cosMult;
+  else                  a_pRes->val = float4(1.0f) * Pss * Pms * cosMult;
 
   if (spec)             a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   else                  a_pRes->flags |= (RAY_EVENT_G | RAY_EVENT_T);
 
-  if      (refrData.success  && cosThetaOut >= -1e-6f) a_pRes->val = make_float3(0.0f, 0.0f, 0.0f); // refraction/transparency must be under surface!
-  else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->val = make_float3(0.0f, 0.0f, 0.0f); // reflection happened in wrong way
+  if      (refrData.success  && cosThetaOut >= -1e-6f) a_pRes->val = float4(0.0f); // refraction/transparency must be under surface!
+  else if (!refrData.success && cosThetaOut < 1e-6f)   a_pRes->val = float4(0.0f); // reflection happened in wrong way
 }
 
 
@@ -239,12 +239,12 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
   const float3 a_viewDir, const float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-  const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
-  const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
-  const float  ior             = a_materials[0].data[GLASS_FLOAT_IOR];
+  const float4 colorReflect = a_materials[0].colors[GLASS_COLOR_REFLECT];   
+  const float4 colorTransp  = a_materials[0].colors[GLASS_COLOR_TRANSP];
+  const float  ior                  = a_materials[0].data[GLASS_FLOAT_IOR];
 
-  const float3 rayDir          = (-1.0f) * a_viewDir;
-  float relativeIor            = ior / a_misPrev->ior;
+  const float3 rayDir = (-1.0f) * a_viewDir;
+  float relativeIor   = ior / a_misPrev->ior;
 
   if ((a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
   {
@@ -344,6 +344,6 @@ static void glassEval(const Material* a_materials, float3 l, float3 v, float3 n,
   float3 color, BsdfEval* res)
 {
   // because we don't want to sample this material with shadow rays
-  res->val   = make_float3(0.0f, 0.0f, 0.0f);
+  res->val   = float4(0.0f);
   res->pdf   = 0.0f;
 }
