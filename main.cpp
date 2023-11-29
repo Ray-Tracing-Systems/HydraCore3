@@ -4,6 +4,7 @@
 
 #include "integrator_pt.h"
 #include "ArgParser.h"
+#include"mi_materials.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
@@ -22,6 +23,9 @@ int main(int argc, const char** argv)
   #else
   bool enableValidationLayers = false;
   #endif
+
+
+  mi::fresnel_coat_precompute(0.25f, 1.89947379, 1.0f, {0.1f, 0.27f, 0.36f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, false);
 
   int WIN_WIDTH       = 1024;
   int WIN_HEIGHT      = 1024;

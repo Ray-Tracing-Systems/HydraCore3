@@ -544,6 +544,31 @@ static inline float FrDielectric(float cosTheta_i, float eta)
   return (r_parl * r_parl + r_perp * r_perp) / 2.0f;
 }
 
+static inline float4 FrDielectricDetailed(float cosTheta_i, float eta) 
+{
+  cosTheta_i = clamp(cosTheta_i, -1.0f, 1.0f);
+  
+  if (cosTheta_i < 0.0f) 
+  {
+      eta = 1.0f / eta;
+      cosTheta_i = -cosTheta_i;
+  }
+  float r = 0.f;
+
+  float sin2Theta_i = 1.0f - cosTheta_i * cosTheta_i;
+  float sin2Theta_t = sin2Theta_i / (eta * eta);
+  if (sin2Theta_t >= 1.0f)
+      r = 1.f;
+  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+
+  float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
+  float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
+
+  r = (r_parl * r_parl + r_perp * r_perp) / 2.0f;
+
+  return {r, cosTheta_t, eta, 1.f / eta};
+}
+
 static inline float FrComplexConductor(float cosThetaI, complex eta)
 {
   float sinThetaI = 1.0f - cosThetaI * cosThetaI;
