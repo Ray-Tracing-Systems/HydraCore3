@@ -145,29 +145,20 @@ static constexpr uint FILM_COLOR_LAST_IND    = FILM_COLOR;
 // custom
 static constexpr uint FILM_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
 static constexpr uint FILM_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
-static constexpr uint FILM_ETA_1             = UINT_MAIN_LAST_IND + 2;
-static constexpr uint FILM_K_1               = UINT_MAIN_LAST_IND + 3;
-static constexpr uint FILM_ETA_2             = UINT_MAIN_LAST_IND + 4;
-static constexpr uint FILM_K_2               = UINT_MAIN_LAST_IND + 5;
-static constexpr uint FILM_ETA_3             = UINT_MAIN_LAST_IND + 6;
-static constexpr uint FILM_K_3               = UINT_MAIN_LAST_IND + 7;
-static constexpr uint FILM_THICKNESS_1       = UINT_MAIN_LAST_IND + 8;
-static constexpr uint FILM_THICKNESS_2       = UINT_MAIN_LAST_IND + 9;
-static constexpr uint FILM_ETA_1_SPECID      = UINT_MAIN_LAST_IND + 10;
-static constexpr uint FILM_K_1_SPECID        = UINT_MAIN_LAST_IND + 11;
-static constexpr uint FILM_ETA_2_SPECID      = UINT_MAIN_LAST_IND + 12;
-static constexpr uint FILM_K_2_SPECID        = UINT_MAIN_LAST_IND + 13;
-static constexpr uint FILM_ETA_3_SPECID      = UINT_MAIN_LAST_IND + 14;
-static constexpr uint FILM_K_3_SPECID        = UINT_MAIN_LAST_IND + 15;
-static constexpr uint FILM_LAYERS_NUM        = UINT_MAIN_LAST_IND + 16;
-static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 17;
+static constexpr uint FILM_ETA               = UINT_MAIN_LAST_IND + 2;
+static constexpr uint FILM_K                 = UINT_MAIN_LAST_IND + 3;
+static constexpr uint FILM_THICKNESS         = UINT_MAIN_LAST_IND + 4;
+static constexpr uint FILM_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
+static constexpr uint FILM_K_SPECID          = UINT_MAIN_LAST_IND + 6;
+static constexpr uint FILM_NEXT_ID           = UINT_MAIN_LAST_IND + 7;
+static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 8;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
 
 
 
 // The size is taken according to the largest indexes
 static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
-static constexpr uint CUSTOM_DATA_SIZE = 21; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
+static constexpr uint CUSTOM_DATA_SIZE = 18; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
 {

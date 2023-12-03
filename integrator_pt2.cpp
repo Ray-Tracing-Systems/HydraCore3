@@ -193,14 +193,25 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
       
       const float2 alpha = float2(m_materials[a_materialId].data[FILM_ROUGH_V], m_materials[a_materialId].data[FILM_ROUGH_U]);
-      const float4 eta_1 = SampleMatParamSpectrum(currMatId, wavelengths, FILM_ETA_1, FILM_ETA_1_SPECID);
-      const float4 k_1   = SampleMatParamSpectrum(currMatId, wavelengths, FILM_K_1, FILM_K_1_SPECID);
-      const float4 eta_2 = SampleMatParamSpectrum(currMatId, wavelengths, FILM_ETA_2, FILM_ETA_2_SPECID);
-      const float4 k_2   = SampleMatParamSpectrum(currMatId, wavelengths, FILM_K_2, FILM_K_2_SPECID);
+
+      std::vector<float4> etaSpec;
+      std::vector<float4> kSpec;
+      std::vector<float> thickness;
+      uint layerId = a_materialId;
+      while (as_uint(m_materials[layerId].data[FILM_NEXT_ID]) != 0xFFFFFFFF)
+      {
+        etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
+        kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+        thickness.push_back(m_materials[layerId].data[FILM_THICKNESS]);
+        layerId = as_uint(m_materials[layerId].data[FILM_NEXT_ID]);
+      } 
+      etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
+      kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+
       if(trEffectivelySmooth(alpha))
-        filmSmoothSampleAndEval(m_materials.data() + a_materialId, eta_1, k_1, eta_2, k_2, wavelengths, rands, v, n, tc, &res);
+        filmSmoothSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), thickness.data(), etaSpec.size() - 1, wavelengths, rands, v, n, tc, &res);
       else
-        filmRoughSampleAndEval(m_materials.data() + a_materialId, eta_1, k_1, eta_2, k_2, wavelengths, rands, v, n, tc, alphaTex, &res);
+        filmRoughSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), thickness.data(), etaSpec.size() - 1, wavelengths, rands, v, n, tc, alphaTex, &res);
     }
     break;
     case MAT_TYPE_DIFFUSE:
@@ -313,11 +324,20 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         if(!trEffectivelySmooth(alpha))
         {
-          const float4 eta_1 = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_ETA_1, FILM_ETA_1_SPECID);
-          const float4 k_1   = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_K_1, FILM_K_1_SPECID);
-          const float4 eta_2 = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_ETA_2, FILM_ETA_2_SPECID);
-          const float4 k_2   = SampleMatParamSpectrum(currMat.id, wavelengths, FILM_K_2, FILM_K_2_SPECID);
-          filmRoughEval(m_materials.data() + currMat.id, eta_1, k_1, eta_2, k_2, wavelengths, l, v, n, tc, alphaTex, &currVal);
+          std::vector<float4> etaSpec;
+          std::vector<float4> kSpec;
+          std::vector<float> thickness;
+          uint layerId = a_materialId;
+          while (as_uint(m_materials[layerId].data[FILM_NEXT_ID]) != 0xFFFFFFFF)
+          {
+            etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
+            kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+            thickness.push_back(m_materials[layerId].data[FILM_THICKNESS]);
+            layerId = as_uint(m_materials[layerId].data[FILM_NEXT_ID]);
+          } 
+          etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
+          kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+          filmRoughEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), thickness.data(), etaSpec.size() - 1, wavelengths, l, v, n, tc, alphaTex, &currVal);
         }
 
         res.val += currVal.val * currMat.weight;
