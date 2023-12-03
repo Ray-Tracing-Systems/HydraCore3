@@ -24,9 +24,9 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
     {
       val[i] = FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
     }
-    else if (layers == 2)
+    else if (layers > 1)
     {
-      //val[i] = FrFilmRefl2(cosThetaOut, complex(1.0f), complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+      val[i] = FrFilmRefl2(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
     }
     // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
     val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
@@ -65,7 +65,7 @@ static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha
   return val;
 }
 
-static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior, complex ior2, complex ior3, float thickness, float lambda)
+static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alpha, const float4* eta, const float4* k, const float* thickness, uint layers, float lambda, uint comp)
 {
   if(wo.z * wi.z < 0) // not in the same hemisphere
   {
@@ -77,7 +77,7 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
 
-  float F = FrFilmRefl2(std::abs(dot(wo, wm)), complex(1.0f), ior, ior2, ior3, thickness, lambda);
+  float F = FrFilmRefl2(std::abs(dot(wo, wm)), eta, k, thickness, layers, lambda, comp);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
@@ -127,9 +127,9 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
     {
       val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
     }
-    else if (layers == 2)
+    else if (layers > 1)
     {
-      //val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+      val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
     }
   }
 
@@ -172,9 +172,9 @@ static void filmRoughEval(const Material* a_materials, const float4* eta, const 
     {
       val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
     }
-    else if (layers == 2)
+    else if (layers > 1)
     {
-      //val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, complex(eta_1[i], k_1[i]), complex(eta_2[i], k_2[i]), complex(eta_3[i], k_3[i]), thickness_2, a_wavelengths[i]);
+      val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
     }
   }
 
