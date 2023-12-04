@@ -566,6 +566,8 @@ static inline float4 FrDielectricDetailed(float cosTheta_i, float eta)
 
   r = (r_parl * r_parl + r_perp * r_perp) / 2.0f;
 
+  cosTheta_t = cosTheta_i >= 0 ? -cosTheta_t : cosTheta_t;
+
   return {r, cosTheta_t, eta, 1.f / eta};
 }
 
