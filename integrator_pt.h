@@ -53,24 +53,14 @@ public:
 
   void PackXY         (uint tidX, uint tidY);
 
-#ifdef KERNEL_SLICER
-  void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color
-  void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! whitted ray tracing
+  void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
+  void RayTrace       (uint tid, float4* out_color [[size("tid")]]); ///<! whitted ray tracing
+  void NaivePathTrace (uint tid, float4* out_color [[size("tid")]]); ///<! NaivePT
+  void PathTrace      (uint tid, float4* out_color [[size("tid")]]); ///<! MISPT and ShadowPT
 
-  void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
-  void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPart1*  in_rayPosAndNear __attribute__((size("tid"))), 
-                                        const RayPart2*  in_rayDirAndFar  __attribute__((size("tid"))),
-                                        float4*        out_color        __attribute__((size("tid"))));
-#else
-  void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
-  void RayTrace       (uint tid, float4* out_color); ///<! whitted ray tracing
-
-  void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
-  void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
-                              float4* out_color);
-#endif
+  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear [[size("tid")]], 
+                                        const RayDirAndT* in_rayDirAndFar  [[size("tid")]],
+                                        float4*           out_color        [[size("tid")]]);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);

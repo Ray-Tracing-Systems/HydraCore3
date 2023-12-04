@@ -49,4 +49,7 @@ protected:
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;
+
+  static constexpr float CAM_LAMBDA_MIN = 360.0f;
+  static constexpr float CAM_LAMBDA_MAX = 830.0f;
 };

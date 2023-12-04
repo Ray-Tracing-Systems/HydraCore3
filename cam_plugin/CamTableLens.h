@@ -72,4 +72,7 @@ protected:
   float2 m_physSize;
   float m_diagonal;
   float m_aspect;
+
+  static constexpr float CAM_LAMBDA_MIN = 360.0f;
+  static constexpr float CAM_LAMBDA_MAX = 830.0f;
 };
