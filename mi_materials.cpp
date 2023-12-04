@@ -441,7 +441,7 @@ namespace mi
         //           << "smith = " << smith << " , weight = " << weight.x * weight.y
         //           << " , fresnel = " << f << std::endl;
       }
-      std::cout << result[i] << std::endl;
+      // std::cout << result[i] << std::endl;
     }
     return result;
   }
@@ -487,14 +487,14 @@ namespace mi
     }
     internal_reflectance = (internal_reflectance / reflectance.size()) * 2.f;
 
-    std::cout << "internal_transmittance = ";
-    for(auto i = 0; i < transmittance.size(); ++i)
-    {
-      std::cout << transmittance[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "internal_transmittance = ";
+    // for(auto i = 0; i < transmittance.size(); ++i)
+    // {
+    //   std::cout << transmittance[i] << " ";
+    // }
+    // std::cout << std::endl;
     
-    std::cout << "internal_reflectance = " << internal_reflectance << std::endl;
+    // std::cout << "internal_reflectance = " << internal_reflectance << std::endl;
   }
 
 };
