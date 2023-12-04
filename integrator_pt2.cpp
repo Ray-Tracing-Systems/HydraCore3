@@ -211,7 +211,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       if(!m_spectral_mode)
         reflSpec *= color;
 
-      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands_1, rands_2, v, n, tc, &res);
+
+      const uint precomp_id = as_uint(m_materials[currMatId].data[PLASTIC_PRECOMP_ID]);
+
+      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands_1, rands_2, v, n, tc, &res,
+                           m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
     }
     break;
     default:

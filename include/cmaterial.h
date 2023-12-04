@@ -122,10 +122,11 @@ static constexpr uint PLASTIC_COLOR_LAST_IND    = PLASTIC_COLOR;
 static constexpr uint PLASTIC_ROUGHNESS           = UINT_MAIN_LAST_IND + 0;
 static constexpr uint PLASTIC_IOR_RATIO           = UINT_MAIN_LAST_IND + 1;
 static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = UINT_MAIN_LAST_IND + 2;
-static constexpr uint PLASTIC_FDR_INTERIOR        = UINT_MAIN_LAST_IND + 3;
-static constexpr uint PLASTIC_NONLINEAR           = UINT_MAIN_LAST_IND + 4;
-static constexpr uint PLASTIC_COLOR_SPECID        = UINT_MAIN_LAST_IND + 5;
-static constexpr uint PLASTIC_COLOR_TEXID         = UINT_MAIN_LAST_IND + 6;
+static constexpr uint PLASTIC_PRECOMP_ID          = UINT_MAIN_LAST_IND + 3;
+static constexpr uint PLASTIC_PRECOMP_REFLECTANCE = UINT_MAIN_LAST_IND + 4;
+static constexpr uint PLASTIC_NONLINEAR           = UINT_MAIN_LAST_IND + 5;
+static constexpr uint PLASTIC_COLOR_SPECID        = UINT_MAIN_LAST_IND + 6;
+static constexpr uint PLASTIC_COLOR_TEXID         = UINT_MAIN_LAST_IND + 7;
 static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_COLOR_TEXID;
 
 
@@ -603,6 +604,17 @@ static inline float4 hydraFresnelCond(float4 f0, float VdotH, float ior, float r
     return f0;
 
   return f0 + (float4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+}
+
+static inline float lerp_gather(const float *data, float x, size_t size) 
+{
+  x *= float(size - 1);
+  uint32_t index = std::min(uint32_t(x), uint32_t(size - 2));
+
+  float v0 = data[index];
+  float v1 = data[index + 1];
+
+  return lerp(v0, v1, x - float(index));
 }
 
 ////////////////// blends

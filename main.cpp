@@ -25,7 +25,7 @@ int main(int argc, const char** argv)
   #endif
 
 
-  mi::fresnel_coat_precompute(0.25f, 1.89947379, 1.0f, {0.1f, 0.27f, 0.36f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, false);
+  // mi::fresnel_coat_precompute(0.25f, 1.89947379, 1.0f, {0.1f, 0.27f, 0.36f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, false);
 
   int WIN_WIDTH       = 1024;
   int WIN_HEIGHT      = 1024;

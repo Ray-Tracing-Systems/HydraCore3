@@ -98,7 +98,6 @@ namespace dr
 
 namespace mi
 {
-  static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
   static constexpr double M_PI_64 = 3.14159265358979323846;
   static constexpr double EPSILON_64 = 0x1p-53;
 
@@ -446,9 +445,11 @@ namespace mi
     return result;
   }
 
-  void fresnel_coat_precompute(float alpha, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance,
+
+  CoatPrecomputed fresnel_coat_precompute(float alpha, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance,
                                bool is_spectral)
   {
+    CoatPrecomputed res;
     float eta = int_ior / ext_ior;
     float inv_eta_2 = 1.f / (eta * eta);
 
@@ -464,7 +465,7 @@ namespace mi
     d_mean /= sz;
     s_mean /= sz;
 
-    float spec_sampling_weight = s_mean / (d_mean + s_mean);
+    res.specular_sampling_weight = s_mean / (d_mean + s_mean);
 
     std::array<float, MI_ROUGH_TRANSMITTANCE_RES> zeros;
     zeros.fill(0.0f);
@@ -477,15 +478,15 @@ namespace mi
       one_minus_mu_sqr[i] = std::sqrt(1.0f - mu[i] * mu[i]);
     }
 
-    auto transmittance = eval_transmittance<MI_ROUGH_TRANSMITTANCE_RES>(alpha, eta, mu, one_minus_mu_sqr, zeros);
+    res.transmittance = eval_transmittance<MI_ROUGH_TRANSMITTANCE_RES>(alpha, eta, mu, one_minus_mu_sqr, zeros);
 
     auto reflectance = eval_reflectance<MI_ROUGH_TRANSMITTANCE_RES>(alpha, 1.f / eta, mu, one_minus_mu_sqr, zeros);
-    float internal_reflectance = 0.0f;
+    res.internal_reflectance = 0.0f;
     for(auto i = 0; i < reflectance.size(); ++i)
     {
-      internal_reflectance += reflectance[i] * mu[i];
+      res.internal_reflectance += reflectance[i] * mu[i];
     }
-    internal_reflectance = (internal_reflectance / reflectance.size()) * 2.f;
+    res.internal_reflectance = (res.internal_reflectance / reflectance.size()) * 2.f;
 
     // std::cout << "internal_transmittance = ";
     // for(auto i = 0; i < transmittance.size(); ++i)
@@ -495,6 +496,8 @@ namespace mi
     // std::cout << std::endl;
     
     // std::cout << "internal_reflectance = " << internal_reflectance << std::endl;
+
+    return res;
   }
 
 };

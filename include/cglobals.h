@@ -15,7 +15,7 @@ static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
-
+static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
 static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
 

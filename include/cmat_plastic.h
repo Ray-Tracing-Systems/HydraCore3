@@ -22,20 +22,22 @@ static float dielectricRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2
 }
 
 static inline void plasticSampleAndEval(const Material* a_materials, float4 a_reflSpec, float4 rands_1, float rands_2,
-                                        float3 v, float3 n, float2 tc, BsdfSample* pRes)
+                                        float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* transmittance)
 {
   const uint  cflags    = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
   const float eta       = a_materials[0].data[PLASTIC_IOR_RATIO];
-  const float fdr_int   = a_materials[0].data[PLASTIC_FDR_INTERIOR];
   const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
   const uint  nonlinear   = as_uint(a_materials[0].data[PLASTIC_NONLINEAR]);
 
+  const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
 
   float3 ggxDir;
   float  ggxPdf; 
   float  ggxVal;
 
+  float cosTheta_i = 0.0f;
+  float cosTheta_o = 0.0f;
   if(alpha == 0.0f) 
   {
     const float3 pefReflDir = reflect((-1.0f) * v, n);
@@ -43,6 +45,8 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
     ggxDir                  = pefReflDir;
     ggxVal                  = (cosThetaOut <= 1e-6f) ? 0.0f : (1.0f / std::max(cosThetaOut, 1e-6f));
     ggxPdf                  = 1.0f;
+    cosTheta_i = cosThetaOut;
+    cosTheta_o = dot(v, n);
   }
   else
   {
@@ -67,17 +71,21 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
     ggxDir = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
     ggxPdf = trPDF(wo, wm, alpha2) / (4.0f * std::abs(dot(wo, wm))); 
-    ggxVal = dielectricRoughEvalInternal(wo, wi, wm, alpha2, eta);
+    const float f = FrDielectric(std::abs(dot(wo, wm)), eta); 
+    ggxVal = f * dielectricRoughEvalInternal(wo, wi, wm, alpha2, eta);
+    cosTheta_i = AbsCosTheta(wi);
+    cosTheta_o = AbsCosTheta(wo);
   }
 
   const float3 lambertDir   = lambertSample(float2(rands_1.z, rands_1.w), v, n);
   const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
   const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
 
-  const float f_i = FrDielectric(std::abs(dot(v,n)), eta); 
+  float t_i = lerp_gather(transmittance, cosTheta_i, MI_ROUGH_TRANSMITTANCE_RES);
   
-  float prob_specular = f_i * spec_weight;
-  float prob_diffuse  = (1.0f - f_i) * (1.0f - spec_weight);
+  float prob_specular = (1.f - t_i) * spec_weight;
+  float prob_diffuse  = t_i * (1.f - spec_weight);
+
   if(prob_diffuse != 0.0f && prob_specular != 0.0f)
   {
     prob_specular = prob_specular / (prob_specular + prob_diffuse);
@@ -92,20 +100,22 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   if(rands_2 < prob_specular) // specular
   {
     pRes->dir       = ggxDir;
-    pRes->val       = float4(ggxVal) * f_i;
+    pRes->val       = float4(ggxVal);
     pRes->pdf       = ggxPdf * prob_specular;
     pRes->flags     = (alpha == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
   } 
   else // lambert
   {
     pRes->dir       = lambertDir;
-    pRes->val       = lambertVal * a_reflSpec;
     pRes->pdf       = lambertPdf * (1.0f - prob_specular);
     pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
-          
 
-    const float f_o = FrDielectric(std::abs(dot(lambertDir, n)), eta);
-    pRes->val      *= (1.0f - f_i) * (1.0f - f_o) / (eta * eta * (1.0f - fdr_int));
+    float t_o = lerp_gather(transmittance, cosTheta_o, MI_ROUGH_TRANSMITTANCE_RES);
+  
+    float4 diff = lambertVal * a_reflSpec;
+    diff /= 1.f - (nonlinear > 0 ? (diff * internal_refl) : float4(internal_refl));
+    const float inv_eta_2 = 1.f / (eta * eta);
+    pRes->val = diff * (inv_eta_2 * cosTheta_o * t_i * t_o);
   }
             
 }
@@ -117,9 +127,11 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   const uint  cflags    = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
   const float eta       = a_materials[0].data[PLASTIC_IOR_RATIO];
-  const float fdr_int   = a_materials[0].data[PLASTIC_FDR_INTERIOR];
+  const uint  precomp_id  = as_uint(a_materials[0].data[PLASTIC_PRECOMP_ID]);
   const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
   const uint  nonlinear   = as_uint(a_materials[0].data[PLASTIC_NONLINEAR]);
+
+  const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
 
   float ggxVal, ggxPdf;
   if(alpha != 0.0f) 
@@ -160,9 +172,9 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
 
   f_i                 = FrDielectric(std::abs(dot(v, n)), eta);
   const float f_o     = FrDielectric(std::abs(dot(l, n)), eta);  
-  const float coeff   = (1.f - f_i) * (1.f - f_o) / (eta * eta * (1.f - fdr_int));
-  lambertVal         *= coeff;
-  coeffLambertPdf     = coeff; 
+  // const float coeff   = (1.f - f_i) * (1.f - f_o) / (eta * eta * (1.f - fdr_int));
+  // lambertVal         *= coeff;
+  // coeffLambertPdf     = coeff; 
   // prob_specular       = f_i * spec_weight;
   // prob_diffuse        = (1.f - f_i) * (1.f - spec_weight);
   

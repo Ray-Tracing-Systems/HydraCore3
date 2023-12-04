@@ -580,6 +580,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
 Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
@@ -614,12 +615,15 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
   mat.data[PLASTIC_NONLINEAR] = as_float(hydra_xml::readval1u(materialNode.child(L"nonlinear"), 0));
 
+  auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, mat.colors[PLASTIC_COLOR],
+                                            {1.0f, 1.0f, 1.0f, 1.0f}, is_spectral_mode);
   
-  mat.data[PLASTIC_FDR_INTERIOR] = mi::fresnel_diffuse_reflectance(1.f / mat.data[PLASTIC_IOR_RATIO]);
-  const float d_mean = 0.3333333f * (mat.colors[PLASTIC_COLOR].x  + mat.colors[PLASTIC_COLOR].y  + mat.colors[PLASTIC_COLOR].z); 
-  const float s_mean = 1.f; 
+  mat.data[PLASTIC_PRECOMP_REFLECTANCE] = precomp.internal_reflectance;
+  mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT] = precomp.specular_sampling_weight;
 
-  mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT] = s_mean / (d_mean + s_mean);
+  std::copy(precomp.transmittance.begin(), precomp.transmittance.end(), std::back_inserter(precomputed_transmittance));
+
+  mat.data[PLASTIC_PRECOMP_ID] = as_float((precomputed_transmittance.size() / MI_ROUGH_TRANSMITTANCE_RES) - 1u);
 
   return mat;
 }
@@ -962,7 +966,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == plasticMatTypeStr)
     {
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
 
