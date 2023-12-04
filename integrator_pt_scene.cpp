@@ -213,6 +213,8 @@ struct SpectrumInfo
   uint32_t id;
 };
 
+Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
+
 std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
 {
   std::optional<Spectrum> spec;
