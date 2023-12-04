@@ -166,9 +166,6 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
-//std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
-float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH);
-
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
@@ -183,33 +180,15 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     std::cout << "[LoadTextureAndMakeCombined]: can't open '" << fnameA << "'" << std::endl;
   #endif
 
-  std::string filename = hydra_xml::ws2s(a_texInfo.path);
-
   fin.read((char*)wh, sizeof(int)*2);
   if(a_texInfo.bpp == 16)
   {
-    float* pCustomData = nullptr;
-    std::vector<float> data;
-    
-    if(filename.find(".exr") != std::string::npos || filename.find(".EXR") != std::string::npos)
-    {
-      fin.close();
-      pCustomData = LoadImage4fFromEXRUnsafe(filename.c_str(), &wh[0], &wh[1]);
-    }
-    else
-    {
-      data.resize(wh[0]*wh[1]*4);
-      fin.read((char*)data.data(), sizeof(float)*4*data.size());
-      fin.close();
-    }
+    std::vector<float> data(wh[0]*wh[1]*4);
+    fin.read((char*)data.data(), sizeof(float)*4*data.size());
+    fin.close();
 
-    auto pTexture = (pCustomData == nullptr) ? std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data()) : 
-                                               std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)pCustomData);
-
+    auto pTexture = std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data());
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
-
-    if(pCustomData != nullptr)
-       free(pCustomData);
   }
   else
   {
@@ -343,6 +322,16 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     auto specId = GetSpectrumIdFromNode(nodeEmissColor);  
     mat.data[EMISSION_SPECID0] = as_float(specId);
     mat.data[UINT_MTYPE] = as_float(MAT_TYPE_LIGHT_SOURCE);
+
+    auto colorMultNode = nodeEmissColor.child(L"multiplier");
+    if(colorMultNode)
+    {
+      mat.data[EMISSION_MULT] = hydra_xml::readval1f(nodeEmissColor.child(L"multiplier")); 
+    }
+    else
+    {
+      mat.data[EMISSION_MULT] = 1.0f;
+    }
   }
 
   auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
@@ -396,6 +385,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
       mat.colors[GLTF_COLOR_COAT]  = reflColor;
       mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0); 
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT);
+      SetMiPlastic(&mat, fresnelIOR, 1.0f, color, reflColor);
     }
     else
     {
@@ -404,8 +394,6 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
       mat.colors[GLTF_COLOR_METAL] = reflColor;   // disable coating for such blend type
       mat.data[UINT_CFLAGS]        = as_float(GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL);
     }
-
-    SetMiPlastic(&mat, fresnelIOR, 1.0f, color, reflColor);
   }
   else if(length(reflColor) > 1e-5f)
   {
@@ -522,7 +510,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_DIFFUSE);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[DIFFUSE_ROUGHNESS] = 0.0f;
-  mat.data[DIFFUSE_TEXID0]    = 0;
+  mat.data[DIFFUSE_TEXID0]    = as_float(0);
   mat.data[DIFFUSE_SPECID]    = as_float(uint(-1));
 
   static const std::wstring orenNayarNameStr {L"oren-nayar"};
@@ -568,7 +556,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_BLEND);  
   mat.data[UINT_LIGHTID]      = as_float(uint(-1));
   mat.data[BLEND_WEIGHT]      = 1.0f;
-  mat.data[BLEND_TEXID0]      = 0;
+  mat.data[BLEND_TEXID0]      = as_float(0);
 
   mat.data[BLEND_MAT_ID_1]    = as_float(materialNode.child(L"bsdf_1").attribute(L"id").as_uint());
   mat.data[BLEND_MAT_ID_2]    = as_float(materialNode.child(L"bsdf_2").attribute(L"id").as_uint());
@@ -673,6 +661,13 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     }
   }
 
+  for(auto settings : g_lastScene.Settings())
+  {
+    width  = settings.width;
+    height = settings.height;
+    break; //take ferst render settings
+  }
+
   g_lastScenePath = scenePathStr;
   g_lastSceneDir  = sceneDirStr;
 
@@ -731,10 +726,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   for(auto texNode : scene.TextureNodes())
   {
     TextureInfo tex;
-    std::wstring texFile = texNode.attribute(L"loc").as_string(); // default
-    if(texFile == L"")                                            // old-style for delayed-load
-      texFile = texNode.attribute(L"path").as_string();           // may be in any format (!)
-    tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texFile;
+    tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
     if(tex.width != 0 && tex.height != 0)
@@ -788,59 +780,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
 
-  //// (1) load materials
-  //
-  m_materials.resize(0);
-  m_materials.reserve(100);
-
-  for(auto materialNode : scene.MaterialNodes())
-  {
-    Material mat = {};
-    auto mat_type = materialNode.attribute(L"type").as_string();
-    if(mat_type == hydraOldMatTypeStr)
-    {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
-      if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
-        m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
-      else
-        m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
-    }
-    else if(mat_type == roughConductorMatTypeStr)
-    {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
-      m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
-    }
-    else if(mat_type == simpleDiffuseMatTypeStr)
-    {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
-      m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
-    }
-    else if(mat_type == blendMatTypeStr)
-    {
-      mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
-      m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
-      m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
-    }
-
-    m_materials.push_back(mat);
-  }
-
-  // load first camera and update matrix
-  //
-  for(auto cam : scene.Cameras())
-  {
-    float aspect   = float(m_winWidth) / float(m_winHeight);
-    auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
-    auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
-      
-    m_proj         = proj;
-    m_worldView    = worldView;
-    m_projInv      = inverse4x4(proj);
-    m_worldViewInv = inverse4x4(worldView);
-    break; // take first cam
-  }
-
-  // load lights
+  // (1) load lights
   //
   m_instIdToLightInstId.resize(scene.GetInstancesNum(), -1);
 
@@ -852,6 +792,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     const float sizeZ        = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
     float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
     if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
+    if (power == 0.0f) power = 1.0f;
 
     float4 color = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), m_spectral_mode != 0);
     auto matrix  = lightInst.matrix;
@@ -860,22 +801,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     LightSource lightSource{};
     lightSource.ids.x = as_float(lightSpecId);
+    lightSource.mult  = power;
     if(ltype == std::wstring(L"sky"))
     {
-      m_envColor = color * power;
+      m_envColor = color;
     }
     else if(ltype == std::wstring(L"directional"))
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = LIGHT_GEOM_DIRECT;
     }
     else if(shape == L"rect" || shape == L"disk")
     {
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = (shape == L"rect") ? LIGHT_GEOM_RECT : LIGHT_GEOM_DISC;
 
       // extract scale and rotation from transformation matrix
@@ -919,7 +861,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
       lightSource.norm      = float4(0.0f, -1.0f, 0.0f, 0.0f);
-      lightSource.intensity = color * power;
+      lightSource.intensity = color;
       lightSource.geomType  = LIGHT_GEOM_SPHERE;
 
       lightSource.matrix    = float4x4{};
@@ -929,6 +871,89 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_lights.push_back(lightSource);
   }
 
+  //// (2) load materials
+  //
+  m_materials.resize(0);
+  m_materials.reserve(100);
+
+  for(auto materialNode : scene.MaterialNodes())
+  {
+    Material mat = {};
+    auto mat_type = materialNode.attribute(L"type").as_string();
+    
+    mat.data[EMISSION_MULT] = 1.0f;
+
+    if(mat_type == hydraOldMatTypeStr)
+    {
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
+        m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
+      else
+        m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
+    }
+    else if(mat_type == roughConductorMatTypeStr)
+    {
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+      m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
+    }
+    else if(mat_type == simpleDiffuseMatTypeStr)
+    {
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
+    }
+    else if(mat_type == blendMatTypeStr)
+    {
+      mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
+      m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
+      m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+    }
+
+    if(materialNode.attribute(L"light_id") != nullptr)
+    {
+      int lightId = materialNode.attribute(L"light_id").as_int();
+      if(lightId >= 0 && lightId < static_cast<int>(m_lights.size()))
+      {
+        auto tmp = mat.colors[EMISSION_COLOR] != m_lights[lightId].intensity;
+        if(tmp.x == 0xFFFFFFFF && tmp.y == 0xFFFFFFFF && tmp.z == 0xFFFFFFFF && tmp.w == 0xFFFFFFFF)
+          std::cout << "Color in material for light geom and color in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.colors[EMISSION_COLOR] = m_lights[lightId].intensity;
+
+        if(mat.data[EMISSION_MULT] != m_lights[lightId].mult)
+          std::cout << "Color multiplier in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.data[EMISSION_MULT] = m_lights[lightId].mult;
+
+        if(mat.data[EMISSION_SPECID0] != m_lights[lightId].ids.x)
+          std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
+                    << "Using values from light intensity node. lightId = " << lightId << std::endl;
+
+        mat.data[EMISSION_SPECID0] = m_lights[lightId].ids.x;
+      }
+    }
+
+    m_materials.push_back(mat);
+  }
+
+  // load first camera and update matrix
+  //
+  for(auto cam : scene.Cameras())
+  {
+    float aspect   = float(m_winWidth) / float(m_winHeight);
+    auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
+    auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
+      
+    m_exposureMult = cam.exposureMult;
+    m_proj         = proj;
+    m_worldView    = worldView;
+    m_projInv      = inverse4x4(proj);
+    m_worldViewInv = inverse4x4(worldView);
+    break; // take first cam
+  }
+
+  
   //// (2) load meshes
   //
   m_matIdOffsets.reserve(1024);
@@ -954,7 +979,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-    //for(size_t i=0;i<currMesh.vPos4f.size();i++)                                               // #TODO: pack texture coords to fourth components
+    //for(size_t i=0;i<currMesh.vPos4f.size();i++) // pack texture coords to fourth components
     //{
     //  currMesh.vPos4f [i].w = currMesh.vTexCoord2f[i].x;
     //  currMesh.vNorm4f[i].w = currMesh.vTexCoord2f[i].y;
@@ -1043,6 +1068,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
-
+  
+  // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
+  //
+  if(m_spec_offset_sz.capacity() == 0)
+    m_spec_offset_sz.reserve(16);
+  if(m_spec_values.capacity() == 0)
+    m_spec_values.reserve(16);
+  if(m_wavelengths.capacity() == 0)
+    m_wavelengths.reserve(16);
   return true;
 }

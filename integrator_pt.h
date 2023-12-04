@@ -68,7 +68,7 @@ public:
 
   void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                               float4* out_color);
 #endif
 
@@ -76,7 +76,7 @@ public:
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, 
+  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float4* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
@@ -97,7 +97,7 @@ public:
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
-  void kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+  void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                   RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
 
@@ -160,6 +160,20 @@ public:
     m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
     m_winHeight = a_height;
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
+
+    const auto sizeX = a_width  - a_xStart;
+    const auto sizeY = a_height - a_yStart;
+
+    if(sizeX % 8 == 0 && sizeY % 8 == 0)
+      m_tileSize = 8;
+    else if(sizeX % 4 == 0 && sizeY % 4 == 0)
+      m_tileSize = 4;
+    else if(sizeX % 2 == 0 && sizeY % 2 == 0)
+      m_tileSize = 2;
+    else 
+      m_tileSize = 1;
+    
+    m_maxThreadId = sizeX*sizeY;
   }
   
   void SetWorldView(const float4x4& a_mat)
@@ -178,9 +192,9 @@ protected:
   uint m_traceDepth = 10;
   uint m_skipBounce = 0; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
                          ///!< TODO: don't account specular bounces(!)
-  uint m_spp        = 1024;
-  uint m_dummy2     = 0;
-  uint m_dummy3     = 0;
+  uint m_spp         = 1024;
+  uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
+  uint m_maxThreadId = m_winWidth*m_winHeight;
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
@@ -247,6 +261,7 @@ protected:
 
   uint m_intergatorType = INTEGRATOR_STUPID_PT;
   int  m_spectral_mode  = 0;
+  float m_exposureMult = 1.0f;
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;
