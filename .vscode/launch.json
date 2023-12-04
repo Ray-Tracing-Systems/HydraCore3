@@ -6,7 +6,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu", "--spectral",
+        "args": ["--cpu", "--spectral",
                  "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
