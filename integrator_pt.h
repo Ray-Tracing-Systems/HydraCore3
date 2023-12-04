@@ -68,7 +68,7 @@ public:
 
   void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
   void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                               float4* out_color);
 #endif
 
@@ -76,7 +76,7 @@ public:
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, 
+  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float4* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
@@ -97,7 +97,7 @@ public:
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
-  void kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+  void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                   RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
 

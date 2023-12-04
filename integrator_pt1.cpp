@@ -70,7 +70,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *gen           = genLocal;
 }
 
-void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                             RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
 {
@@ -85,8 +85,8 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
   //const int x = int(tid) % m_winWidth;
   //const int y = int(tid) / m_winHeight;
 
-  const RayPart1 rayPosData = in_rayPosAndNear[tid];
-  const RayPart2 rayDirData = in_rayDirAndFar[tid];
+  const RayPosAndW rayPosData = in_rayPosAndNear[tid];
+  const RayDirAndT rayDirData = in_rayDirAndFar[tid];
 
   float3 rayPos = float3(rayPosData.origin[0], rayPosData.origin[1], rayPosData.origin[2]);
   float3 rayDir = float3(rayDirData.direction[0], rayDirData.direction[1], rayDirData.direction[2]);
@@ -94,13 +94,14 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosA
 
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    const uint2 wavesXY = unpackXY1616(rayPosData.waves01);
-    const uint2 wavesZW = unpackXY1616(rayDirData.waves23);
-    const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
-    *wavelengths = float4(float(wavesXY[0])*scale + LAMBDA_MIN,
-                          float(wavesXY[1])*scale + LAMBDA_MIN,
-                          float(wavesZW[0])*scale + LAMBDA_MIN,
-                          float(wavesZW[1])*scale + LAMBDA_MIN);
+    *wavelengths = float4(rayPosData.wave);
+    //const uint2 wavesXY = unpackXY1616(rayPosData.waves01);
+    //const uint2 wavesZW = unpackXY1616(rayDirData.waves23);
+    //const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
+    //*wavelengths = float4(float(wavesXY[0])*scale + LAMBDA_MIN,
+    //                      float(wavesXY[1])*scale + LAMBDA_MIN,
+    //                      float(wavesZW[0])*scale + LAMBDA_MIN,
+    //                      float(wavesZW[1])*scale + LAMBDA_MIN);
   }
   else
     *wavelengths = float4(0,0,0,0);
@@ -513,7 +514,7 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
-void Integrator::PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
+void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;

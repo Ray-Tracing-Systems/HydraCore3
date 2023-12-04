@@ -89,7 +89,7 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   raytraceTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color, uint a_passNum)
+void Integrator::PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #ifndef _DEBUG

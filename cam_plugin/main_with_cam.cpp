@@ -37,7 +37,7 @@ int main(int argc, const char** argv)
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   std::shared_ptr<Integrator>  pRender  = nullptr;
-  std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
+  std::shared_ptr<ICamRaysAPI2> pCamImpl = nullptr;
 
   ArgParser args(argc, argv);
   
@@ -94,8 +94,8 @@ int main(int argc, const char** argv)
   
   const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
 
-  std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
-  std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
+  std::vector<RayPosAndW> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
+  std::vector<RayDirAndT> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
   std::vector<float4>   rayCol(MEGA_TILE_SIZE); ///<! per tile data, output 
 
   std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer (TODO: monochrome FB need also)
