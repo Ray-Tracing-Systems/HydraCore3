@@ -219,96 +219,6 @@ void conductorRoughSampleAndEval_m_materials(uint a_materialsOffset, const vec4 
   pRes.flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
-LightSample directLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands, vec3 illuminationPoint) {
-  const vec3 norm = m_lights[0 + a_pLightOffset].norm.xyz;
-  LightSample res;
-  res.pos  = illuminationPoint - norm*100000.0f;
-  res.norm = norm;
-  return res;
-}
-
-void gltfEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfEval res) {
-  const uint           cflags   = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
-  const vec4 specular = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_METAL];
-  const vec4 coat = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_COAT];
-  const float  roughness  = clamp(1.0f - m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
-        float  alpha      = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ALPHA];
-  const float  fresnelIOR = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_IOR];
-
-  if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
-    alpha = 1.0f;
-      
-  float ggxVal, ggxPdf, VdotH; 
-  if(roughness != 0.0f) // perfect specular reflection in coating layer
-  {
-    ggxVal = ggxEvalBSDF(l, v, n, roughness);
-    ggxPdf = ggxEvalPDF (l, v, n, roughness);
-    VdotH  = dot(v,normalize(v + l));
-  }
-  else
-  {
-    ggxVal = 0.0f;
-    ggxPdf = 0.0f;
-    VdotH  = dot(v,n);
-  }
-
-  float lambertVal       = lambertEvalBSDF(l, v, n);
-  const float lambertPdf = lambertEvalPDF (l, v, n);
-  float f_i              = 1.0f;
-  float prob_diffuse     = 1.0f;
-  float prob_specular    = 0.0f;
-  float coeffLambertPdf  = 1.0f;
-
-  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-    lambertVal *= orennayarFunc(l, v, n, m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
-
-      
-  if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
-  {
-    f_i                                    = FrDielectricPBRT(abs(dot(v,n)), 1.0f, fresnelIOR);
-    const float f_o                        = FrDielectricPBRT(abs(dot(l,n)), 1.0f, fresnelIOR);  
-    const float m_fdr_int                  = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_FDR_INT];
-    const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
-    lambertVal                            *= coeff;
-    coeffLambertPdf                        = coeff; 
-    const float m_specular_sampling_weight = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_SSW];
-    prob_specular                          = f_i * m_specular_sampling_weight;
-    prob_diffuse                           = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-    
-    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
-      prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
-    else
-    {
-      prob_diffuse  = 1.0f;
-      prob_specular = 0.0f;
-    }
-  }
-
-  const vec4 fConductor = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
-  const vec4 specularColor = ggxVal*fConductor;                                        // eval metal specular component
-      
-  const float  dielectricPdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
-  const vec4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
-
-  res.val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
-  res.pdf = alpha * ggxPdf        + (1.0f - alpha) * dielectricPdf; // (3) accumulate final color and pdf
-}
-
-LightSample sphereLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
-  const float theta = 2.0f * M_PI * rands.x;
-  const float phi   = acos(1.0f - 2.0f * rands.y);
-  const float x     = sin(phi) * cos(theta);
-  const float y     = sin(phi) * sin(theta);
-  const float z     = cos(phi);
-  const vec3 lcenter = m_lights[0 + a_pLightOffset].pos.xyz;
-  const float  lradius   = m_lights[0 + a_pLightOffset].size.x;
-  const vec3 samplePos = lcenter + (lradius*1.000001f)*vec3(x, y, z);
-  LightSample res;
-  res.pos  = samplePos;
-  res.norm = normalize(samplePos - lcenter);
-  return res;
-}
-
 void gltfSampleAndEval_m_materials(uint a_materialsOffset, vec4 rands, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfSample pRes) {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const uint           cflags   = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
@@ -485,6 +395,98 @@ void conductorSmoothSampleAndEval_m_materials(uint a_materialsOffset, const vec4
   pRes.flags = RAY_EVENT_S;
 }
 
+LightSample directLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands, vec3 illuminationPoint) {
+  const vec3 norm = m_lights[0 + a_pLightOffset].norm.xyz;
+  LightSample res;
+  res.pos  = illuminationPoint - norm*100000.0f;
+  res.norm = norm;
+  return res;
+}
+
+void gltfEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfEval res) {
+  const uint   cflags     = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+  const vec4 specular = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_METAL];
+  const vec4 coat = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_COAT];
+  const float  roughness  = clamp(1.0f - m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
+        float  alpha      = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ALPHA];
+  const float  fresnelIOR = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_IOR];
+
+  if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
+    alpha = 1.0f;
+      
+  float ggxVal, ggxPdf, VdotH; 
+  if(roughness != 0.0f) // perfect specular reflection in coating layer
+  {
+    ggxVal = ggxEvalBSDF(l, v, n, roughness);
+    ggxPdf = ggxEvalPDF (l, v, n, roughness);
+    VdotH  = dot(v,normalize(v + l));
+  }
+  else
+  {
+    ggxVal = 0.0f;
+    ggxPdf = 0.0f;
+    VdotH  = dot(v,n);
+  }
+
+  float lambertVal       = lambertEvalBSDF(l, v, n);
+  const float lambertPdf = lambertEvalPDF (l, v, n);
+  float f_i              = 1.0f;
+  float prob_diffuse     = 1.0f;
+  float prob_specular    = 0.0f;
+  float coeffLambertPdf  = 1.0f;
+
+  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+    lambertVal *= orennayarFunc(l, v, n, m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+      
+  if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
+  {
+    f_i                                    = FrDielectricPBRT(abs(dot(v,n)), 1.0f, fresnelIOR);
+    const float f_o                        = FrDielectricPBRT(abs(dot(l,n)), 1.0f, fresnelIOR);  
+    const float m_fdr_int                  = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_FDR_INT];
+    const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+    lambertVal                            *= coeff;
+    coeffLambertPdf                        = coeff; 
+    const float m_specular_sampling_weight = m_materials[0 + a_materialsOffset].data[GLTF_FLOAT_MI_SSW];
+    prob_specular                          = f_i * m_specular_sampling_weight;
+    prob_diffuse                           = (1.f - f_i) * (1.f - m_specular_sampling_weight);
+    
+    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
+      prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
+    else
+    {
+      prob_diffuse  = 1.0f;
+      prob_specular = 0.0f;
+    }
+  }
+
+  const vec4 fConductor = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
+  const vec4 specularColor = ggxVal*fConductor;                                        // eval metal specular component
+      
+  float  dielectricPdf = lambertPdf * coeffLambertPdf; 
+  if((cflags & GLTF_COMPONENT_COAT) != 0)
+    dielectricPdf += 2.0f * ggxPdf * f_i; 
+                                
+  const vec4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
+
+  res.val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
+  res.pdf = alpha * ggxPdf        + (1.0f - alpha) * dielectricPdf; // (3) accumulate final color and pdf
+}
+
+LightSample sphereLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
+  const float theta = 2.0f * M_PI * rands.x;
+  const float phi   = acos(1.0f - 2.0f * rands.y);
+  const float x     = sin(phi) * cos(theta);
+  const float y     = sin(phi) * sin(theta);
+  const float z     = cos(phi);
+  const vec3 lcenter = m_lights[0 + a_pLightOffset].pos.xyz;
+  const float  lradius   = m_lights[0 + a_pLightOffset].size.x;
+  const vec3 samplePos = lcenter + (lradius*1.000001f)*vec3(x, y, z);
+  LightSample res;
+  res.pos  = samplePos;
+  res.norm = normalize(samplePos - lcenter);
+  return res;
+}
+
 vec4 SampleMatColorParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
   vec4 res = m_materials[matId].colors[paramId];
   if(a_wavelengths[0] == 0.0f)
@@ -522,24 +524,6 @@ MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, vec4 wavelengths, vec3 l, v
   return make_weight_pair(p1, p2);
 }
 
-vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
-  vec4 res = vec4(m_materials[matId].data[paramId]);
-  if(a_wavelengths[0] == 0.0f)
-    return res;
-
-  const uint specId = floatBitsToUint(m_materials[matId].data[paramSpecId]);
-
-  if(specId < 0xFFFFFFFF)
-  {
-    const uvec2 data = m_spec_offset_sz[specId];
-    const uint offset = data.x;
-    const uint size   = data.y;
-    res = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
-  }
-
-  return res;
-}
-
 uint MaterialBlendSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec2 tc, inout MisData a_misPrev, inout BsdfSample a_pRes) {
   const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[BLEND_TEXID0]);
@@ -568,29 +552,23 @@ uint MaterialBlendSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rando
   return selectedMatId;
 }
 
-vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
-  return ubo.m_envColor;
-}
+vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
+  vec4 res = vec4(m_materials[matId].data[paramId]);
+  if(a_wavelengths[0] == 0.0f)
+    return res;
 
-LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
-  const uint gtype = m_lights[a_lightId].geomType;
-  switch(gtype)
+  const uint specId = floatBitsToUint(m_materials[matId].data[paramSpecId]);
+
+  if(specId < 0xFFFFFFFF)
   {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev_m_lights(a_lightId, rands, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev_m_lights(a_lightId, rands);
-    default:                return areaLightSampleRev_m_lights(a_lightId, rands);
-  };
-}
+    const uvec2 data = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    res = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
+  }
 
-vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
-  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
-  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
-  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
-  return lambertEvalBSDF(l, v, n)*color;
+  return res;
 }
-
-bool isOutOfScene(uint a_flags) { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
 
 BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec2 tc, inout MisData a_misPrev, const uint a_currRayFlags) {
   BsdfSample res;
@@ -671,6 +649,24 @@ BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rand
   return res;
 }
 
+bool isOutOfScene(uint a_flags) { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
+
+LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev_m_lights(a_lightId, rands, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev_m_lights(a_lightId, rands);
+    default:                return areaLightSampleRev_m_lights(a_lightId, rands);
+  };
+}
+
+uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }
+
+vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
+  return ubo.m_envColor;
+}
+
 float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const vec3 lpos, const vec3 lnorm) {
   const uint gtype    = m_lights[a_lightId].geomType;
   const float hitDist = length(illuminationPoint - lpos);
@@ -697,17 +693,15 @@ float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const ve
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
-uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
-
-bool hasNonSpecular(uint a_flags) { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
-
 float LightPdfSelectRev(int a_lightId) { 
   return 1.0f/float(ubo.m_lights_size); // uniform select
 }
 
-bool isDeadRay(uint a_flags) { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
+uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
 
-uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }
+bool hasNonSpecular(uint a_flags) { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
+
+bool isDeadRay(uint a_flags) { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
 
 uint RemapMaterialId(uint a_mId, int a_instId) {
   const int remapListId  = m_remapInst[a_instId];
@@ -883,6 +877,7 @@ vec4 GetLightSourceIntensity(uint a_lightId, in vec4 a_wavelengths) {
       lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
     }
   }
+  lightColor *= m_lights[a_lightId].mult;
   return lightColor;
 }
 
@@ -907,6 +902,14 @@ BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) {
   res.pdf   = 1.0f;
   res.flags = RAY_EVENT_S;
   return res;
+}
+
+vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
+  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
+  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
+  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
+  return lambertEvalBSDF(l, v, n)*color;
 }
 
 // RayScene intersection with 'm_pAccelStruct'
@@ -965,10 +968,12 @@ layout( push_constant ) uniform kernelArgs
 void kernel_ContributeToImage_m_packedXY_out_color(uint tid, in vec4 a_accumColor, in RandomGen gen, uint in_pakedXYOffset, in vec4 wavelengths, uint out_colorOffset) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
+
   const uint XY = m_packedXY[tid + in_pakedXYOffset];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
-
 
   vec3 rgb = a_accumColor.xyz;
   if(KSPEC_SPECTRAL_RENDERING!=0 && ubo.m_spectral_mode != 0) // TODO: spectral framebuffer
@@ -977,13 +982,10 @@ void kernel_ContributeToImage_m_packedXY_out_color(uint tid, in vec4 a_accumColo
     rgb = XYZToRGB(xyz);
   }
 
-  vec4 colorRes = vec4(rgb, 1.0f);
-  // if(x == 247 && (y == 512-412-1))
-  //   colorRes = float4(0,0,1,0);
-  //if(!std::isfinite(color.x) || !std::isfinite(color.y) || !std::isfinite(color.z))
+  vec4 colorRes = ubo.m_exposureMult * vec4(rgb, 1.0f);
+  //if(x == 255 && y == 133)
   //{
   //  int a = 2;
-  //  std::cout << "(x,y) = " << x << ", " << y << std::endl; 
   //}
  
   out_color[y*uint(ubo.m_winWidth)+x + out_colorOffset] += colorRes;
@@ -994,6 +996,9 @@ void kernel_ContributeToImage_m_packedXY_out_color(uint tid, in vec4 a_accumColo
 void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar, inout vec4 wavelengths, inout vec4 accumColor, inout vec4 accumuThoroughput, inout RandomGen gen, inout uint rayFlags, inout MisData misData) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
+
   accumColor        = vec4(0, 0, 0, 0);
   accumuThoroughput = vec4(1, 1, 1, 1);
   RandomGen genLocal = m_randomGens[tid];
@@ -1005,6 +1010,11 @@ void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 ray
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
   const vec2 pixelOffsets = rndFloat2_Pseudo(genLocal);
+
+  //if(x == 255 && y == 133)
+  //{
+  //  int a = 2;
+  //}
 
   vec3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(ubo.m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(ubo.m_winHeight), ubo.m_projInv);
@@ -1023,7 +1033,7 @@ void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 ray
     for (uint i = 0; i < sample_sz; ++i) 
       (wavelengths)[int(i)] = 0.0f;
   }
-
+ 
   rayPosAndNear = vec4(rayPos, 0.0f);
   rayDirAndFar  = vec4(rayDir, FLT_MAX);
   gen           = genLocal;
@@ -1033,6 +1043,8 @@ void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 ray
 void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, in vec4 wavelengths, in vec4 in_hitPart1, in vec4 in_hitPart2, in uint rayFlags, uint bounce, inout RandomGen a_gen, inout vec4 out_shadeColor) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
   const uint currRayFlags = rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -1095,6 +1107,8 @@ void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAnd
 void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hitPart2, in uint in_instId, in vec4 in_shadeColor, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar, in vec4 wavelengths, inout vec4 accumColor, inout vec4 accumThoroughput, inout RandomGen a_gen, inout MisData misPrev, inout uint rayFlags) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
   const uint currRayFlags = rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -1127,8 +1141,9 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
     const vec2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     vec4 texColor = texture(m_textures[texId], texCoordT);
     vec4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
+    float  lightMult  = m_materials[matId].data[EMISSION_MULT];
 
-    vec4 lightIntensity = lightColor * texColor;
+    vec4 lightIntensity = lightColor * texColor * lightMult;
     if(KSPEC_SPECTRAL_RENDERING != 0 && ubo.m_spectral_mode != 0)
     {
       const uint specId = floatBitsToUint(m_materials[matId].data[EMISSION_SPECID0]);
@@ -1139,7 +1154,7 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
         const uint size   = data.y;
         lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, wavelengths, size);
       }
-      lightIntensity = lightColor;
+      lightIntensity = lightColor * lightMult;
     }
 
     const uint lightId = m_instIdToLightInstId[in_instId]; //m_materials[matId].data[UINT_LIGHTID];
@@ -1226,6 +1241,8 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
 void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, inout vec4 out_hit1, inout vec4 out_hit2, inout uint out_instId, inout uint rayFlags) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
   uint currRayFlags = rayFlags;
   if(isDeadRay(currRayFlags))
     return;
@@ -1283,6 +1300,8 @@ void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, ino
 void kernel_HitEnvironment(uint tid, in uint rayFlags, in vec4 rayDirAndFar, in MisData a_prevMisData, in vec4 accumThoroughput, inout vec4 accumColor) 
 {
   
+  if(tid >= ubo.m_maxThreadId)
+    return;
   const uint currRayFlags = rayFlags;
   if(!isOutOfScene(currRayFlags))
     return;

@@ -8,7 +8,7 @@ layout(binding = 1, set = 0) buffer data1 { float out_color[]; }; //
 layout(binding = 2, set = 0) buffer data2 { float m_cie_z[]; }; //
 layout(binding = 3, set = 0) buffer data3 { float m_cie_y[]; }; //
 layout(binding = 4, set = 0) buffer data4 { float m_cie_x[]; }; //
-layout(binding = 5, set = 0) buffer data5 { uvec2 m_storedWaves[]; }; //
+layout(binding = 5, set = 0) buffer data5 { float m_storedWaves[]; }; //
 layout(binding = 6, set = 0) buffer dataUBO { CamPinHole_PINHOLE_GPU_UBO_Data ubo; };
 
 vec3 SpectrumToXYZ_m_cie_x_m_cie_y_m_cie_z(vec4 spec, vec4 lambda, float lambda_min, float lambda_max, uint a_CIE_XOffset, uint a_CIE_YOffset, uint a_CIE_ZOffset) {
@@ -91,11 +91,7 @@ void main()
 
     if(ubo.m_spectral_mode != 0) // TODO: spectral framebuffer
     {
-      const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
-      const uvec2 wavesPacked = m_storedWaves[tid];
-      const uvec2 wavesXY = unpackXY1616(wavesPacked.x);
-      const uvec2 wavesZW = unpackXY1616(wavesPacked.y);
-      vec4 wavelengths = vec4(float(wavesXY[0])*scale + CAM_LAMBDA_MIN,float(wavesXY[1])*scale + CAM_LAMBDA_MIN,float(wavesZW[0])*scale + CAM_LAMBDA_MIN,float(wavesZW[1])*scale + CAM_LAMBDA_MIN);
+      const vec4 wavelengths = vec4(m_storedWaves[tid]);
                                   
       const vec3 xyz = SpectrumToXYZ_m_cie_x_m_cie_y_m_cie_z(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, 0, 0, 0);
       color = vec4(XYZToRGB(xyz), 1.0f);

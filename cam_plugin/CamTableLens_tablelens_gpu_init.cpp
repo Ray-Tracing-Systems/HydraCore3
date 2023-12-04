@@ -239,7 +239,7 @@ void CamTableLens_TABLELENS_GPU::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_randomGensBuffer);
   m_vdata.m_storedCos4Buffer = vk_utils::createBuffer(device, m_storedCos4.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_storedCos4Buffer);
-  m_vdata.m_storedWavesBuffer = vk_utils::createBuffer(device, m_storedWaves.capacity()*sizeof(struct LiteMath::uint2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  m_vdata.m_storedWavesBuffer = vk_utils::createBuffer(device, m_storedWaves.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_storedWavesBuffer);
 
 

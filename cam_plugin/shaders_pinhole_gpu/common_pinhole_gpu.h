@@ -31,17 +31,15 @@ struct CamParameters    ///<! add any parameter you like to this structure
   float farPlane;
   int   spectralMode;
 };
-const float CAM_LAMBDA_MIN = 360.0f;
-const float CAM_LAMBDA_MAX = 830.0f;
-struct RayPart1 
+struct RayPosAndW 
 {
-  float    origin[3]; ///<! ray origin, x,y,z
-  uint waves01;   ///<! Packed 2 first waves in 16 bit xy, fixed point; 0x0000 => CAM_LAMBDA_MIN; 0xFFFF => CAM_LAMBDA_MAX; wave[0] stored in less significant bits.
+  float origin[3]; ///<! ray origin, x,y,z
+  float wave;      ///<! wavelength
 };
-struct RayPart2 
+struct RayDirAndT 
 {
-  float    direction[3]; ///<! normalized ray direction, x,y,z
-  uint waves23;      ///<! Packed 2 last waves in 16 bit xy, fixed point; 0x0000 => CAM_LAMBDA_MIN; 0xFFFF => CAM_LAMBDA_MAX; wave[1] stored in less significant bits.
+  float direction[3]; ///<! normalized ray direction, x,y,z
+  float time;         ///<! time in ... 
 };
 const uint RAY_FLAG_IS_DEAD = 0x80000000;
 const uint RAY_FLAG_OUT_OF_SCENE = 0x40000000;
@@ -81,6 +79,8 @@ struct RandomGenT
 
 };
 #define RandomGen RandomGenT
+const float CAM_LAMBDA_MIN = 360.0f;
+const float CAM_LAMBDA_MAX = 830.0f;
 
 #ifndef SKIP_UBO_INCLUDE
 #include "include/CamPinHole_pinhole_gpu_ubo.h"
@@ -163,13 +163,6 @@ float rndFloat1_Pseudo(inout RandomGen gen) {
   return (float((tmp)))*scale;
 }
 
-uvec2 unpackXY1616(uint packedIndex) {
-  uvec2 res; 
-  res.x = (packedIndex & 0x0000FFFF);         
-  res.y = (packedIndex & 0xFFFF0000) >> 16;   
-  return res;
-}
-
 vec4 SampleWavelengths(float u, float a, float b) {
   // pdf is 1.0f / (b - a)
   vec4 res;
@@ -187,16 +180,14 @@ vec4 SampleWavelengths(float u, float a, float b) {
   return res;
 }
 
-uint packXY1616(uint x, uint y) { return (y << 16u) | (x & 0x0000FFFF); }
-
 #define KGEN_FLAG_RETURN            1
 #define KGEN_FLAG_BREAK             2
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
-#define BASIC_PROJ_LOGIC_H 
+#define CFLOAT_GUARDIAN 
 #define MAXFLOAT FLT_MAX
 #define RTC_RANDOM 
-#define CFLOAT_GUARDIAN 
+#define BASIC_PROJ_LOGIC_H 
 #define SPECTRUM_H 
 

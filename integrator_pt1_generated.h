@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <array>
 
 #include "vk_pipeline.h"
 #include "vk_buffers.h"
@@ -121,14 +122,14 @@ public:
   virtual void RayTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
   virtual void CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uint tid, uint* out_color);
   virtual void PackXYCmd(VkCommandBuffer a_commandBuffer, uint tidX, uint tidY);
-  virtual void PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color);
+  virtual void PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color);
   virtual void PathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
   virtual void NaivePathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
 
   void RayTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
   void CastSingleRayBlock(uint tid, uint* out_color, uint32_t a_numPasses) override;
   void PackXYBlock(uint tidX, uint tidY, uint32_t a_numPasses) override;
-  void PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses) override;
+  void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses) override;
   void PathTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
   void NaivePathTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
 
@@ -151,7 +152,7 @@ public:
   virtual void RayTraceMegaCmd(uint tid, float4* out_color);
   virtual void CastSingleRayMegaCmd(uint tid, uint* out_color);
   virtual void PackXYMegaCmd(uint tidX, uint tidY);
-  virtual void PathTraceFromInputRaysMegaCmd(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color);
+  virtual void PathTraceFromInputRaysMegaCmd(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color);
   virtual void PathTraceMegaCmd(uint tid, float4* out_color);
   virtual void NaivePathTraceMegaCmd(uint tid, float4* out_color);
   

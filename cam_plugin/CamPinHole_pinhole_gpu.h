@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <array>
 
 #include "vk_pipeline.h"
 #include "vk_buffers.h"
@@ -78,10 +79,10 @@ public:
   static VkPhysicalDeviceFeatures2 ListRequiredDeviceFeatures(std::vector<const char*>& deviceExtensions);
   
   virtual void AddSamplesContributionBlockCmd(VkCommandBuffer a_commandBuffer, float* out_color4f, const float* colors4f, uint32_t in_blockSize, uint32_t a_width, uint32_t a_height, int subPassId);
-  virtual void MakeRaysBlockCmd(VkCommandBuffer a_commandBuffer, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId);
+  virtual void MakeRaysBlockCmd(VkCommandBuffer a_commandBuffer, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId);
 
   void AddSamplesContributionBlock(float* out_color4f, const float* colors4f, uint32_t in_blockSize, uint32_t a_width, uint32_t a_height, int subPassId) override;
-  void MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId) override;
+  void MakeRaysBlock(RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId) override;
 
   inline vk_utils::ExecTime GetAddSamplesContributionBlockExecutionTime() const { return m_exTimeAddSamplesContributionBlock; }
   inline vk_utils::ExecTime GetMakeRaysBlockExecutionTime() const { return m_exTimeMakeRaysBlock; }
@@ -91,7 +92,7 @@ public:
 
   virtual void copyKernelFloatCmd(uint32_t length);
   
-  virtual void MakeEyeRayCmd(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId);
+  virtual void MakeEyeRayCmd(int in_blockSize, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, int subPassId);
   virtual void ContribSampleCmd(int in_blockSize, const float* in_color, float* out_color, int subPassId);
   
   struct MemLoc

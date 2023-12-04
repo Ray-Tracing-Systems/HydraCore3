@@ -73,9 +73,12 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_projInv = m_projInv;
   m_uboData.m_worldViewInv = m_worldViewInv;
   m_uboData.m_envColor = m_envColor;
+  m_uboData.m_exposureMult = m_exposureMult;
   m_uboData.m_intergatorType = m_intergatorType;
+  m_uboData.m_maxThreadId = m_maxThreadId;
   m_uboData.m_skipBounce = m_skipBounce;
   m_uboData.m_spectral_mode = m_spectral_mode;
+  m_uboData.m_tileSize = m_tileSize;
   m_uboData.m_traceDepth = m_traceDepth;
   m_uboData.m_winHeight = m_winHeight;
   m_uboData.m_winWidth = m_winWidth;
@@ -130,9 +133,12 @@ void Integrator_Generated::ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngin
   m_projInv = m_uboData.m_projInv;
   m_worldViewInv = m_uboData.m_worldViewInv;
   m_envColor = m_uboData.m_envColor;
+  m_exposureMult = m_uboData.m_exposureMult;
   m_intergatorType = m_uboData.m_intergatorType;
+  m_maxThreadId = m_uboData.m_maxThreadId;
   m_skipBounce = m_uboData.m_skipBounce;
   m_spectral_mode = m_uboData.m_spectral_mode;
+  m_tileSize = m_uboData.m_tileSize;
   m_traceDepth = m_uboData.m_traceDepth;
   m_winHeight = m_uboData.m_winHeight;
   m_winWidth = m_uboData.m_winWidth;
@@ -318,7 +324,7 @@ void Integrator_Generated::PackXYMegaCmd(uint tidX, uint tidY)
  
 }
 
-void Integrator_Generated::PathTraceFromInputRaysMegaCmd(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
+void Integrator_Generated::PathTraceFromInputRaysMegaCmd(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color)
 {
   uint32_t blockSizeX = 256;
   uint32_t blockSizeY = 1;
@@ -491,7 +497,7 @@ void Integrator_Generated::PackXYCmd(VkCommandBuffer a_commandBuffer, uint tidX,
   vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
 }
 
-void Integrator_Generated::PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color)
+void Integrator_Generated::PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color)
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
@@ -896,7 +902,7 @@ void Integrator_Generated::PackXYBlock(uint tidX, uint tidY, uint32_t a_numPasse
   m_exTimePackXY.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - afterCopy2).count()/1000.f;
 }
 
-void Integrator_Generated::PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses)
+void Integrator_Generated::PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses)
 {
   // (1) get global Vulkan context objects
   //
@@ -918,9 +924,9 @@ void Integrator_Generated::PathTraceFromInputRaysBlock(uint tid, const RayPart1*
   std::vector<VkImage>  images2;
   std::vector<vk_utils::VulkanImageMem*> images;
   auto beforeCreateObjects = std::chrono::high_resolution_clock::now();
-  VkBuffer in_rayPosAndNearGPU = vk_utils::createBuffer(device, tid*sizeof(const RayPart1 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkBuffer in_rayPosAndNearGPU = vk_utils::createBuffer(device, tid*sizeof(const RayPosAndW ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   buffers.push_back(in_rayPosAndNearGPU);
-  VkBuffer in_rayDirAndFarGPU = vk_utils::createBuffer(device, tid*sizeof(const RayPart2 ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkBuffer in_rayDirAndFarGPU = vk_utils::createBuffer(device, tid*sizeof(const RayDirAndT ), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   buffers.push_back(in_rayDirAndFarGPU);
   VkBuffer out_colorGPU = vk_utils::createBuffer(device, tid*sizeof(float4 ), outFlags);
   buffers.push_back(out_colorGPU);
@@ -968,8 +974,8 @@ void Integrator_Generated::PathTraceFromInputRaysBlock(uint tid, const RayPart1*
   //
   auto beforeCopy = std::chrono::high_resolution_clock::now();
   m_exTimePathTraceFromInputRays.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(beforeCopy - beforeSetInOut).count()/1000.f;
-  pCopyHelper->UpdateBuffer(in_rayPosAndNearGPU, 0, in_rayPosAndNear, tid*sizeof(const RayPart1 )); 
-  pCopyHelper->UpdateBuffer(in_rayDirAndFarGPU, 0, in_rayDirAndFar, tid*sizeof(const RayPart2 )); 
+  pCopyHelper->UpdateBuffer(in_rayPosAndNearGPU, 0, in_rayPosAndNear, tid*sizeof(const RayPosAndW )); 
+  pCopyHelper->UpdateBuffer(in_rayDirAndFarGPU, 0, in_rayDirAndFar, tid*sizeof(const RayDirAndT )); 
   auto afterCopy = std::chrono::high_resolution_clock::now();
   m_exTimePathTraceFromInputRays.msCopyToGPU = std::chrono::duration_cast<std::chrono::microseconds>(afterCopy - beforeCopy).count()/1000.f;
   //  

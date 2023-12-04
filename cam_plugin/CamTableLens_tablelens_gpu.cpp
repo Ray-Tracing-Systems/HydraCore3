@@ -3,6 +3,7 @@
 #include <limits>
 #include <cassert>
 #include <chrono>
+#include <array>
 
 #include "vk_copy.h"
 #include "vk_context.h"
@@ -102,14 +103,14 @@ void CamTableLens_TABLELENS_GPU::UpdateVectorMembers(std::shared_ptr<vk_utils::I
   if(m_storedCos4.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_storedCos4Buffer, 0, m_storedCos4.data(), m_storedCos4.size()*sizeof(float) );
   if(m_storedWaves.size() > 0)
-    a_pCopyEngine->UpdateBuffer(m_vdata.m_storedWavesBuffer, 0, m_storedWaves.data(), m_storedWaves.size()*sizeof(struct LiteMath::uint2) );
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_storedWavesBuffer, 0, m_storedWaves.data(), m_storedWaves.size()*sizeof(float) );
 }
 
 void CamTableLens_TABLELENS_GPU::UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine)
 { 
 }
 
-void CamTableLens_TABLELENS_GPU::MakeEyeRayCmd(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId)
+void CamTableLens_TABLELENS_GPU::MakeEyeRayCmd(int in_blockSize, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, int subPassId)
 {
   uint32_t blockSizeX = 256;
   uint32_t blockSizeY = 1;
@@ -239,7 +240,7 @@ void CamTableLens_TABLELENS_GPU::AddSamplesContributionBlockCmd(VkCommandBuffer 
 
 }
 
-void CamTableLens_TABLELENS_GPU::MakeRaysBlockCmd(VkCommandBuffer a_commandBuffer, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
+void CamTableLens_TABLELENS_GPU::MakeRaysBlockCmd(VkCommandBuffer a_commandBuffer, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
@@ -364,7 +365,7 @@ void CamTableLens_TABLELENS_GPU::AddSamplesContributionBlock(float* out_color4f,
   m_exTimeAddSamplesContributionBlock.msAPIOverhead += std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - afterCopy2).count()/1000.f;
 }
 
-void CamTableLens_TABLELENS_GPU::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
+void CamTableLens_TABLELENS_GPU::MakeRaysBlock(RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
 {
   // (1) get global Vulkan context objects
   //
@@ -386,9 +387,9 @@ void CamTableLens_TABLELENS_GPU::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, Ra
   std::vector<VkImage>  images2;
   std::vector<vk_utils::VulkanImageMem*> images;
   auto beforeCreateObjects = std::chrono::high_resolution_clock::now();
-  VkBuffer out_rayPosAndNear4fGPU = vk_utils::createBuffer(device, in_blockSize*sizeof(RayPart1 ), outFlags);
+  VkBuffer out_rayPosAndNear4fGPU = vk_utils::createBuffer(device, in_blockSize*sizeof(RayPosAndW ), outFlags);
   buffers.push_back(out_rayPosAndNear4fGPU);
-  VkBuffer out_rayDirAndFar4fGPU = vk_utils::createBuffer(device, in_blockSize*sizeof(RayPart2 ), outFlags);
+  VkBuffer out_rayDirAndFar4fGPU = vk_utils::createBuffer(device, in_blockSize*sizeof(RayDirAndT ), outFlags);
   buffers.push_back(out_rayDirAndFar4fGPU);
   
 
@@ -459,8 +460,8 @@ void CamTableLens_TABLELENS_GPU::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, Ra
   // (5) copy output data to CPU
   //
   auto beforeCopy2 = std::chrono::high_resolution_clock::now();
-  pCopyHelper->ReadBuffer(out_rayPosAndNear4fGPU, 0, out_rayPosAndNear4f, in_blockSize*sizeof(RayPart1 ));
-  pCopyHelper->ReadBuffer(out_rayDirAndFar4fGPU, 0, out_rayDirAndFar4f, in_blockSize*sizeof(RayPart2 ));
+  pCopyHelper->ReadBuffer(out_rayPosAndNear4fGPU, 0, out_rayPosAndNear4f, in_blockSize*sizeof(RayPosAndW ));
+  pCopyHelper->ReadBuffer(out_rayDirAndFar4fGPU, 0, out_rayDirAndFar4f, in_blockSize*sizeof(RayDirAndT ));
   this->ReadPlainMembers(pCopyHelper);
   afterCopy2 = std::chrono::high_resolution_clock::now();
   m_exTimeMakeRaysBlock.msCopyFromGPU = std::chrono::duration_cast<std::chrono::microseconds>(afterCopy2 - beforeCopy2).count()/1000.f;

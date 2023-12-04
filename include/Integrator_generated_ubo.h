@@ -27,9 +27,12 @@ struct Integrator_Generated_UBO_Data
   mat4 m_projInv; 
   mat4 m_worldViewInv; 
   vec4 m_envColor; 
+  float m_exposureMult; 
   uint m_intergatorType; 
+  uint m_maxThreadId; 
   uint m_skipBounce; 
   int m_spectral_mode; 
+  uint m_tileSize; 
   uint m_traceDepth; 
   int m_winHeight; 
   int m_winWidth; 

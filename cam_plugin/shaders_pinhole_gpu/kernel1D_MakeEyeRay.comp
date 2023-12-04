@@ -3,9 +3,9 @@
 
 #include "common_pinhole_gpu.h"
 
-layout(binding = 0, set = 0) buffer data0 { RayPart1 out_rayPosAndNear4f[]; }; //
-layout(binding = 1, set = 0) buffer data1 { RayPart2 out_rayDirAndFar4f[]; }; //
-layout(binding = 2, set = 0) buffer data2 { uvec2 m_storedWaves[]; }; //
+layout(binding = 0, set = 0) buffer data0 { RayPosAndW out_rayPosAndNear4f[]; }; //
+layout(binding = 1, set = 0) buffer data1 { RayDirAndT out_rayDirAndFar4f[]; }; //
+layout(binding = 2, set = 0) buffer data2 { float m_storedWaves[]; }; //
 layout(binding = 3, set = 0) buffer data3 { RandomGenT m_randomGens[]; }; //
 layout(binding = 4, set = 0) buffer dataUBO { CamPinHole_PINHOLE_GPU_UBO_Data ubo; };
 
@@ -55,27 +55,22 @@ void main()
       m_randomGens[tid] = genLocal;
     }
 
-    RayPart1 p1;
-    RayPart2 p2;
-
-    const uint wavesX = uint32_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint wavesY = uint32_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint wavesZ = uint32_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint wavesW = uint32_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    RayPosAndW p1;
+    RayDirAndT p2;
 
     p1.origin[0] = rayPos[0];
     p1.origin[1] = rayPos[1];
     p1.origin[2] = rayPos[2];
-    p1.waves01  = packXY1616(wavesX,wavesY); // 
+    p1.wave      = wavelengths.x;
 
     p2.direction[0] = rayDir[0];
     p2.direction[1] = rayDir[1];
     p2.direction[2] = rayDir[2];
-    p2.waves23     = packXY1616(wavesZ,wavesW); // 
+    p2.time         = 0.0f;
   
     out_rayPosAndNear4f[tid] = p1;
     out_rayDirAndFar4f [tid] = p2;
-    m_storedWaves      [tid] = uvec2(p1.waves01,p2.waves23); // just remember waves in our buffer for camera
+    m_storedWaves      [tid] = wavelengths.x; // just remember waves in our buffer for camera
   
   }
 }
