@@ -166,7 +166,7 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
-std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
+std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma = false)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
   int wh[2] = {0,0};
@@ -200,7 +200,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     //#TODO: use gamma and invserse sRGB to get same results with sSRB   
 
     auto pTexture = std::make_shared< Image2D<uint32_t> >(wh[0], wh[1], data.data());
-    pTexture->setSRGB(true);
+    pTexture->setSRGB(!a_disableGamma);
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
   }
  
@@ -246,7 +246,7 @@ uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
 
 std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                                      std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+                                                      std::vector< std::shared_ptr<ICombinedImageSampler> > &textures, bool a_disableGamma = false)
 {
   HydraSampler sampler = ReadSamplerFromColorNode(node);
   auto p = texCache.find(sampler);
@@ -255,7 +255,7 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
   {
     texCache[sampler] = uint(textures.size());
     texId  = node.child(L"texture").attribute(L"id").as_uint();
-    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler));
+    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, a_disableGamma));
     p = texCache.find(sampler);
   }
 
@@ -971,7 +971,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
         const bool invertY = (invertNode.attribute(L"y").as_int() == 1);
         
-        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures); // todo: gamma?
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures, true); 
         
         mat.row0[1] = sampler.row0;
         mat.row1[1] = sampler.row1;
