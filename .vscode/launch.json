@@ -503,7 +503,34 @@
     },
 
     {
-        "name": "(NormalBump)",
+        "name": "(NormalBump1)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/015_hydra_mat_bump-normal/statex_00001.xml",
+                 "-integrator", "shadowpt", 
+                 "-width", "1024",
+                 "-height", "512",
+                 "-spp", "64",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(NormalBump2)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",

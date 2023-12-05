@@ -198,7 +198,15 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float4 rands = rndFloat4_Pseudo(a_gen);
       
       const uint   texId     = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
-      const float4 texColor  = m_textures[texId]->sample(texCoordT);
+            float4 texColor  = m_textures[texId]->sample(texCoordT);
+
+      //if(normalMapId != 0xFFFFFFFF) // draw normal map
+      //{
+      //  texColor.x = std::abs(n.x);
+      //  texColor.y = std::abs(n.y);
+      //  texColor.z = std::abs(n.z);
+      //}
+
       const float4 color     = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
       gltfSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, color, &res);
     }
@@ -295,7 +303,15 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
-        const float4 texColor  = (m_textures[texId]->sample(texCoordT));
+              float4 texColor  = (m_textures[texId]->sample(texCoordT));
+        
+        //if(normalMapId != 0xFFFFFFFF) // draw normal map
+        //{
+        //  texColor.x = std::abs(n.x);
+        //  texColor.y = std::abs(n.y);
+        //  texColor.z = std::abs(n.z);
+        //}
+
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
         gltfEval(m_materials.data() + currMat.id, l, v, n, tc, color, &currVal);
 
