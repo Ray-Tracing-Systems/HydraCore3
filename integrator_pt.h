@@ -229,7 +229,7 @@ protected:
                                 
   std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float2>           m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+  std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
   std::vector<int>              m_remapInst;
   std::vector<int>              m_allRemapLists;

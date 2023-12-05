@@ -979,7 +979,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_triIndices.reserve(128000*3);
 
   m_vNorm4f.resize(0);
-  m_vTexc2f.resize(0);
+  m_vTang4f.resize(0);
+  //m_vTexc2f.resize(0);
 
   m_pAccelStruct->ClearGeom();
   for(auto meshPath : scene.MeshFiles())
@@ -992,18 +993,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
     m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
+    const size_t lastVertex = m_vNorm4f.size();
 
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-    //for(size_t i=0;i<currMesh.vPos4f.size();i++) // pack texture coords to fourth components
-    //{
-    //  currMesh.vPos4f [i].w = currMesh.vTexCoord2f[i].x;
-    //  currMesh.vNorm4f[i].w = currMesh.vTexCoord2f[i].y;
-    //}
+    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());    
+    m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());     
 
-    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(),     currMesh.vNorm4f.end());     // #TODO: store compressed normal and tangent together
-    m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
+    for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
+      m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
+      m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+    }
+    //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
 
   //// (3) make instances of created meshes

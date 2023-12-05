@@ -154,13 +154,21 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
     const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
   
-    const float3 A_norm = to_float3(m_vNorm4f[A + vertOffset]);
-    const float3 B_norm = to_float3(m_vNorm4f[B + vertOffset]);
-    const float3 C_norm = to_float3(m_vNorm4f[C + vertOffset]);
+    const float4 A_data_N = m_vNorm4f[A + vertOffset];
+    const float4 B_data_N = m_vNorm4f[B + vertOffset];
+    const float4 C_data_N = m_vNorm4f[C + vertOffset];
 
-    const float2 A_texc = m_vTexc2f[A + vertOffset];
-    const float2 B_texc = m_vTexc2f[B + vertOffset];
-    const float2 C_texc = m_vTexc2f[C + vertOffset];
+    const float4 A_data_T = m_vTang4f[A + vertOffset];
+    const float4 B_data_T = m_vTang4f[B + vertOffset];
+    const float4 C_data_T = m_vTang4f[C + vertOffset];
+
+    const float3 A_norm = to_float3(A_data_N);
+    const float3 B_norm = to_float3(B_data_N);
+    const float3 C_norm = to_float3(C_data_N);
+
+    const float2 A_texc = float2(A_data_N.w, A_data_T.w); //m_vTexc2f[A + vertOffset];
+    const float2 B_texc = float2(B_data_N.w, B_data_T.w); //m_vTexc2f[B + vertOffset];
+    const float2 C_texc = float2(C_data_N.w, C_data_T.w); //m_vTexc2f[C + vertOffset];
       
     float3 hitNorm     = (1.0f - uv.x - uv.y)*A_norm + uv.y*B_norm + uv.x*C_norm;
     float2 hitTexCoord = (1.0f - uv.x - uv.y)*A_texc + uv.y*B_texc + uv.x*C_texc;
