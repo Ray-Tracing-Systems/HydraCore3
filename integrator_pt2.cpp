@@ -131,6 +131,40 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
   return make_weight_pair(p1, p2);
 }
 
+/*
+
+static inline float3 BumpMapping(const float3 tangent, const float3 bitangent, const float3 normal, const float2 a_texCoord,
+                                 __global const PlainMaterial* pHitMaterial, __global const EngineGlobals* a_globals, texture2d_t a_texNormal, 
+                                 __private const ProcTextureList* a_ptList)
+{
+  const float3   normalTS         = materialNormalMapFetch(pHitMaterial, a_texCoord, a_texNormal, a_globals, a_ptList);
+  const float3x3 tangentTransform = make_float3x3(tangent, bitangent, normal);
+
+  return normalize(mul3x3x3(inverse(tangentTransform), normalTS));
+}
+*/
+
+static inline float3 NormalMapTransform(const uint materialFlags, float3 normalFromTex)
+{
+  float3 normalTS = make_float3(2.0f * normalFromTex.x - 1.0f, 2.0f * normalFromTex.y - 1.0f, normalFromTex.z);
+  //float3 normalTS = make_float3(0, 0, 1);
+
+  if (materialFlags & FLAG_NMAP_INVERT_X)
+    normalTS.y *= (-1.0f);
+
+  if (materialFlags & FLAG_NMAP_INVERT_Y)
+    normalTS.x *= (-1.0f);
+
+  if (materialFlags & FLAG_NMAP_SWAP_XY)
+  {
+    float temp = normalTS.x;
+    normalTS.x = normalTS.y;
+    normalTS.y = temp;
+  }
+
+  return normalize(normalTS);
+}
+
 
 BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
@@ -150,8 +184,21 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
   }
-
-  //assert(currMatId < m_materials.size());
+  
+  // bump mapping
+  //
+  const uint normalMapId = as_uint(m_materials[currMatId].data[UINT_NMAP_ID]);
+  if(normalMapId != 0xFFFFFFFF)
+  {
+    const uint   mflags    = as_uint(m_materials[currMatId].data[UINT_CFLAGS]);
+    const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
+    const float4 normalTex = m_textures[normalMapId]->sample(texCoordT);
+    const float3 normalTS  = NormalMapTransform(mflags, to_float3(normalTex));
+    
+    const float3 bitan     = cross(n, tan);
+    const float3x3 tangentTransform = make_float3x3(tan, bitan, n);
+    //n = normalize(mul3x3x3(inverse(tangentTransform), normalTS));
+  }
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   switch(mtype)
@@ -162,8 +209,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float4 rands = rndFloat4_Pseudo(a_gen);
       
       const uint   texId     = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
-      const float4 texColor  = (m_textures[texId]->sample(texCoordT));
-      const float4 color     = (m_materials[currMatId].colors[GLTF_COLOR_BASE])*texColor;
+      const float4 texColor  = m_textures[texId]->sample(texCoordT);
+      const float4 color     = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
       gltfSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, color, &res);
     }
     break;

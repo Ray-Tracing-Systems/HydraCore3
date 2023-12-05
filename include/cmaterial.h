@@ -25,7 +25,10 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       GLTF_COMPONENT_COAT      = 2,
                       GLTF_COMPONENT_METAL     = 4,
                       GLTF_METAL_PERF_MIRROR   = 8, 
-                      GLTF_COMPONENT_ORENNAYAR = 16 }; // bit fields
+                      GLTF_COMPONENT_ORENNAYAR = 16,
+                      FLAG_NMAP_INVERT_X       = 32,
+                      FLAG_NMAP_INVERT_Y       = 64,
+                      FLAG_NMAP_SWAP_XY        = 128 }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,

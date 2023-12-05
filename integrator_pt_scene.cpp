@@ -965,7 +965,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       else
       {
         auto normalNode  = dispNode.child(L"normal_map");
-        auto invertNode  = normalNode.child(L"invert");
+        auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
         auto textureNode = normalNode.child(L"texture");
 
         const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
@@ -976,6 +976,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         mat.row0[1] = sampler.row0;
         mat.row1[1] = sampler.row1;
         mat.data[UINT_NMAP_ID] = as_float(texID);
+
+        if(invertX)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X)); 
+        if(invertY)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_Y));
       }
     }
 
