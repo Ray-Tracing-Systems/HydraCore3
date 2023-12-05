@@ -128,8 +128,24 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
 
   if(hit.geomId != uint32_t(-1))
   {
-    const float2 uv       = float2(hit.coords[0], hit.coords[1]);
-    const float3 hitPos   = to_float3(rayPos) + (hit.t*0.999999f)*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
+    const float2 uv     = float2(hit.coords[0], hit.coords[1]);
+    const float3 hitPos = to_float3(rayPos) + (hit.t*0.999999f)*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
+    
+    // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
+    /////////////////////////////////////////////////////////////////////////////////
+    // // get distance vectors from triangle vertices
+    // vec3 tmpu = P - A, tmpv = P - B, tmpw = P - C
+    // // project these onto the tangent planes
+    // // defined by the shading normals
+    // float dotu = min (0.0, dot(tmpu , nA))
+    // float dotv = min (0.0, dot(tmpv , nB))
+    // float dotw = min (0.0, dot(tmpw , nC))
+    // tmpu -= dotu*nA
+    // tmpv -= dotv*nB
+    // tmpw -= dotw*nC
+    // // finally P' is the barycentric mean of these three
+    // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
+    /////////////////////////////////////////////////////////////////////////////////
 
     const uint triOffset  = m_matIdOffsets[hit.geomId];
     const uint vertOffset = m_vertOffset  [hit.geomId];

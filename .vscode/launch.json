@@ -485,7 +485,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "16",
+                 "-spp", "256",
                  //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
                  "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
