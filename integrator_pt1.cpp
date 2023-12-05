@@ -113,7 +113,7 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
 
 void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                 float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags)
+                                 float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -153,31 +153,21 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
     const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
     const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
-  
-    const float4 A_data_N = m_vNorm4f[A + vertOffset];
-    const float4 B_data_N = m_vNorm4f[B + vertOffset];
-    const float4 C_data_N = m_vNorm4f[C + vertOffset];
 
-    const float4 A_data_T = m_vTang4f[A + vertOffset];
-    const float4 B_data_T = m_vTang4f[B + vertOffset];
-    const float4 C_data_T = m_vTang4f[C + vertOffset];
+    const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
+    const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
 
-    const float3 A_norm = to_float3(A_data_N);
-    const float3 B_norm = to_float3(B_data_N);
-    const float3 C_norm = to_float3(C_data_N);
+    float3 hitNorm     = to_float3(data1);
+    float3 hitTang     = to_float3(data2);
+    float2 hitTexCoord = float2(data1.w, data2.w);
 
-    const float2 A_texc = float2(A_data_N.w, A_data_T.w); //m_vTexc2f[A + vertOffset];
-    const float2 B_texc = float2(B_data_N.w, B_data_T.w); //m_vTexc2f[B + vertOffset];
-    const float2 C_texc = float2(C_data_N.w, C_data_T.w); //m_vTexc2f[C + vertOffset];
-      
-    float3 hitNorm     = (1.0f - uv.x - uv.y)*A_norm + uv.y*B_norm + uv.x*C_norm;
-    float2 hitTexCoord = (1.0f - uv.x - uv.y)*A_texc + uv.y*B_texc + uv.x*C_texc;
-  
     // transform surface point with matrix and flip normal if needed
     //
     hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
+    hitTang                = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
     const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
     hitNorm                = flipNorm * hitNorm;
+    hitTang                = flipNorm * hitTang; // do we need this ??
     
     if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
@@ -188,6 +178,7 @@ void Integrator::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const f
     *rayFlags              = packMatId(currRayFlags, midRemaped);
     *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
     *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
+    *out_hit3              = to_float4(hitTang, 0.0f);
     *out_instId            = hit.instId;
   }
   else
@@ -486,9 +477,9 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
 
   for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
-    float4 shadeColor, hitPart1, hitPart2;
+    float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -517,9 +508,9 @@ void Integrator::PathTrace(uint tid, float4* out_color)
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
-    float4   shadeColor, hitPart1, hitPart2;
+    float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -552,9 +543,9 @@ void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAnd
   
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
-    float4   shadeColor, hitPart1, hitPart2;
+    float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
