@@ -132,7 +132,7 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
 }
 
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   BsdfSample res;
@@ -213,7 +213,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc)
 {
   BsdfEval res;
   {

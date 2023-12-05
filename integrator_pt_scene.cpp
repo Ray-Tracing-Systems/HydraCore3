@@ -950,6 +950,34 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         mat.data[EMISSION_SPECID0] = as_float(m_lights[lightId].specId);
       }
     }
+    
+    // setup normal map
+    //
+    mat.data[UINT_NMAP_ID] = as_float(0xFFFFFFFF);
+    if(materialNode.child(L"displacement") != nullptr)
+    {
+      auto dispNode = materialNode.child(L"displacement");
+      if(dispNode.attribute(L"type").as_string() != std::wstring(L"normal_bump"))
+      {
+        std::string bumpType = hydra_xml::ws2s(dispNode.attribute(L"type").as_string());
+        std::cout << "[Integrator::LoadScene]: bump type '" << bumpType.c_str() << "' is not supported! only 'normal_bump' is allowed."  << std::endl;
+      }
+      else
+      {
+        auto normalNode  = dispNode.child(L"normal_map");
+        auto invertNode  = normalNode.child(L"invert");
+        auto textureNode = normalNode.child(L"texture");
+
+        const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
+        const bool invertY = (invertNode.attribute(L"y").as_int() == 1);
+        
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures); // todo: gamma?
+        
+        mat.row0[1] = sampler.row0;
+        mat.row1[1] = sampler.row1;
+        mat.data[UINT_NMAP_ID] = as_float(texID);
+      }
+    }
 
     m_materials.push_back(mat);
   }

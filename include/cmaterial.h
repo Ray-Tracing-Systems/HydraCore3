@@ -51,7 +51,8 @@ enum MATERIAL_EVENT {
 static constexpr uint UINT_MTYPE                  = 0;  ///< one of 'MATERIAL_TYPES'
 static constexpr uint UINT_CFLAGS                 = 1;  ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
 static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light if this material is light 
-static constexpr uint UINT_MAIN_LAST_IND          = 3;  ///< the last general index
+static constexpr uint UINT_NMAP_ID                = 3;  ///< identifier of normal map id or 0xFFFFFFFF
+static constexpr uint UINT_MAIN_LAST_IND          = 4;  ///< the last general index
 
 // GLTF
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
@@ -146,8 +147,8 @@ struct Material
 {
   float4 colors[COLOR_DATA_SIZE]; ///< colors data
 
-  float4 row0[1];     ///< texture matrix
-  float4 row1[1];     ///< texture matrix
+  float4 row0[2];     ///< texture matrix
+  float4 row1[2];     ///< texture matrix
       
   float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
