@@ -790,6 +790,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
+    const std::wstring ldist = lightInst.lightNode.attribute(L"distribution").as_string();
+
     const float sizeX        = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
     const float sizeZ        = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
     float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
@@ -802,8 +804,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
 
     LightSource lightSource{};
-    lightSource.ids.x = as_float(lightSpecId);
-    lightSource.mult  = power;
+    lightSource.specId   = lightSpecId;
+    lightSource.mult     = power;
+    lightSource.distType = LIGHT_DIST_LAMBERT;
     if(ltype == std::wstring(L"sky"))
     {
       m_envColor = color;
@@ -870,6 +873,18 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.size      = float2(radius, radius);
       lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
     }
+    else if (shape == L"point")
+    {
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = color;
+      lightSource.geomType  = LIGHT_GEOM_POINT;
+      lightSource.distType  = (ldist == L"uniform" || ldist == L"omni") ? LIGHT_DIST_OMNI : LIGHT_DIST_LAMBERT;
+      lightSource.pdfA      = 1.0f;
+      lightSource.size      = float2(0,0);
+      lightSource.matrix    = float4x4{};
+    }
+
     m_lights.push_back(lightSource);
   }
 
@@ -928,11 +943,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
         mat.data[EMISSION_MULT] = m_lights[lightId].mult;
 
-        if(mat.data[EMISSION_SPECID0] != m_lights[lightId].ids.x)
+        if(as_uint(mat.data[EMISSION_SPECID0]) != m_lights[lightId].specId)
           std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
                     << "Using values from light intensity node. lightId = " << lightId << std::endl;
 
-        mat.data[EMISSION_SPECID0] = m_lights[lightId].ids.x;
+        mat.data[EMISSION_SPECID0] = as_float(m_lights[lightId].specId);
       }
     }
 

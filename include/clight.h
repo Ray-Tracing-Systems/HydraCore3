@@ -6,6 +6,10 @@ static constexpr uint LIGHT_GEOM_RECT   = 1;
 static constexpr uint LIGHT_GEOM_DISC   = 2;
 static constexpr uint LIGHT_GEOM_SPHERE = 3;
 static constexpr uint LIGHT_GEOM_DIRECT = 4;
+static constexpr uint LIGHT_GEOM_POINT  = 5;
+
+static constexpr uint LIGHT_DIST_LAMBERT = 0;
+static constexpr uint LIGHT_DIST_OMNI    = 1;
 
 struct LightSource
 {
@@ -13,10 +17,19 @@ struct LightSource
   float4   pos;       ///<! translation aclually stored here
   float4   intensity; ///<! brightress, i.e. screen value if light is visable directly
   float4   norm;
+  
   float2   size;
   float    pdfA;
-  uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE
-  float3   ids;       /// (spec_id, tex_id, ies_id)
+  uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE, ...
+  
+  uint     distType;  ///<! LIGHT_DIST_LAMBERT, LIGHT_DIST_OMNI, ...
+  uint     dummy1;
+  uint     dummy2;
+  uint     dummy3;
+
+  uint     specId;
+  uint     texId;
+  uint     iesId;
   float    mult;
 };
 
@@ -24,6 +37,7 @@ struct LightSample
 {
   float3 pos;
   float3 norm;
+  bool   isOmni;
 };
 
 static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2 rands)
@@ -37,8 +51,9 @@ static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2
   }
   const float3 samplePos = mul3x3(a_pLight[0].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[0].pos) + epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm);
   LightSample res;
-  res.pos  = samplePos;
-  res.norm = to_float3(a_pLight[0].norm);
+  res.pos    = samplePos;
+  res.norm   = to_float3(a_pLight[0].norm);
+  res.isOmni = false;
   return res;
 }
 
@@ -62,37 +77,17 @@ static inline LightSample directLightSampleRev(const LightSource* a_pLight, floa
 {
   const float3 norm = to_float3(a_pLight[0].norm);
   LightSample res;
-  res.pos  = illuminationPoint - norm*100000.0f;
-  res.norm = norm;
+  res.pos    = illuminationPoint - norm*100000.0f;
+  res.norm   = norm;
+  res.isOmni = false;
   return res;
 }
 
-//static inline void DirectLightSampleRev(__global const PlainLight* pLight, float3 rands, float3 illuminatingPoint,
-//                                        __private ShadowSample* a_out)
-//{
-//  float3 lpos = lightPos(pLight);
-//  float3 norm = lightNorm(pLight);
-//
-//  float pdfW = 1.0f;
-//  if (pLight->data[DIRECT_LIGHT_SSOFTNESS] > 1e-5f)
-//  {
-//    const float cosAlpha = pLight->data[DIRECT_LIGHT_ALPHA_COS];
-//    norm = MapSamplesToCone(cosAlpha, make_float2(rands.x, rands.y), norm);
-//    //pdfW = 1.0f / (2.0f * M_PI * (1.0f - cosAlpha));
-//  }
-//
-//  float3 AC    = illuminatingPoint - lpos;
-//  float  CBLen = dot(normalize(AC), norm)*length(AC);
-//
-//  float3 samplePos = illuminatingPoint - norm*CBLen;
-//  float hitDist    = CBLen; // length(samplePos - illuminatingPoint);
-//
-//  const float3 color = lightBaseColor(pLight)*directLightAttenuation(pLight, illuminatingPoint);
-//
-//  a_out->isPoint    = true; // (pdfW == 1.0f);
-//  a_out->pos        = samplePos;
-//  a_out->color      = color*pdfW;
-//  a_out->pdf        = pdfW;
-//  a_out->maxDist    = hitDist;
-//  a_out->cosAtLight = 1.0f;
-//}
+static inline LightSample pointLightSampleRev(const LightSource* a_pLight)
+{
+  LightSample res;
+  res.pos    = to_float3(a_pLight[0].pos);
+  res.norm   = to_float3(a_pLight[0].norm);
+  res.isOmni = (a_pLight[0].distType == LIGHT_DIST_OMNI);
+  return res;
+}

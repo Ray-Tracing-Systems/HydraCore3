@@ -23,6 +23,7 @@ LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illim
   {
     case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
     case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
     default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
   };
 }
@@ -55,6 +56,15 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
       const float3 dirToV  = normalize(lpos - illuminationPoint);
       cosVal = std::abs(dot(dirToV, lnorm));
     }
+    break;
+
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
+        cosVal = 1.0f;
+      else
+        cosVal = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    };
     break;
 
     default:

@@ -449,18 +449,18 @@
     },
 
     {
-        "name": "(LightTest/RGB)",
+        "name": "(PointLights)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", //"--spectral",
-                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_rgb_from_spectr_hydra2.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_213/statex_00001.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
-                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
-                 "-out", "out_cpu_rgb.bmp"],
+                 "-spp", "16",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -476,18 +476,18 @@
     },
 
     {
-        "name": "(LightTest/Spectral)",
+        "name": "(FlatNormals)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", "--spectral",
-                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_spectral_hydra3.xml",
-                 "-integrator", "shadowpt", 
+        "args": ["--cpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/011_normals_subdivisons/statex_00001.xml",
+                 "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
-                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
-                 "-out", "out_cpu_spec.bmp"],
+                 "-spp", "16",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -501,6 +501,7 @@
             }
         ]
     },
+
 
     ]
 }

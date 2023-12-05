@@ -42,10 +42,10 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  //if(x == 255 && y == 133)
-  //{
-  //  int a = 2;
-  //}
+  if(x == 200 && y == 1024-100-1)
+  {
+    int a = 2;
+  }
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -175,7 +175,7 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
   float4 lightColor = m_lights[a_lightId].intensity;  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    const uint specId = as_uint(m_lights[a_lightId].ids.x);
+    const uint specId = m_lights[a_lightId].specId;
   
     if(specId < 0xFFFFFFFF)
     {
@@ -230,8 +230,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
   const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
-  
-  if(!inShadow && dot(shadowRayDir, lSam.norm) < 0.0f) 
+  const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
+
+  if(!inShadow && inIllumArea) 
   {
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
     const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
