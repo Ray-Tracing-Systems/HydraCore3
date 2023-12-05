@@ -159,7 +159,8 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
   const float4 normalTex = m_textures[normalMapId]->sample(texCoordT);
   const float3 normalTS  = NormalMapTransform(mflags, to_float3(normalTex));
   
-  const float3 bitan     = cross(n, tan);
+  //const float3 bitan = cross(tan, n);
+  const float3 bitan = cross(n, tan);
   const float3x3 tangentTransform = make_float3x3(tan, bitan, n);
 
   return normalize(mul3x3x3(inverse3(tangentTransform), normalTS));
