@@ -246,7 +246,7 @@ uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
 
 std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                                      std::vector< std::shared_ptr<ICombinedImageSampler> > &textures, bool a_disableGamma = false)
+                                                      std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
   HydraSampler sampler = ReadSamplerFromColorNode(node);
   auto p = texCache.find(sampler);
@@ -254,8 +254,14 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
   if(p == texCache.end())
   {
     texCache[sampler] = uint(textures.size());
-    texId  = node.child(L"texture").attribute(L"id").as_uint();
-    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, a_disableGamma));
+    auto texNode = node.child(L"texture");
+    texId  = texNode.attribute(L"id").as_uint();
+
+    bool disableGamma = false;
+    if(texNode.attribute(L"input_gamma").as_int() == 1)
+      disableGamma = true;
+
+    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, disableGamma));
     p = texCache.find(sampler);
   }
 
@@ -971,20 +977,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         auto normalNode  = dispNode.child(L"normal_map");
         auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
         auto textureNode = normalNode.child(L"texture");
-
-        const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
-        const bool invertY = (invertNode.attribute(L"y").as_int() == 1);
         
-        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures, true); 
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures); 
         
         mat.row0[1] = sampler.row0;
         mat.row1[1] = sampler.row1;
         mat.data[UINT_NMAP_ID] = as_float(texID);
 
+        const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
+        const bool invertY = (invertNode.attribute(L"y").as_int() == 1);
+        const bool swapXY  = (invertNode.attribute(L"swap_xy").as_int() == 1);
+
         if(invertX)
           mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X)); 
         if(invertY)
           mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_Y));
+        if(swapXY)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_SWAP_XY));
 
         m_actualFeatures[KSPEC_BUMP_MAPPING] = 1; // enable bump mapping feature
       }
