@@ -42,7 +42,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 317 && y == 256-136-1)
+  if(x == 415 && y == 256-130-1)
   {
     int a = 2;
   }
@@ -446,10 +446,11 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  //if(x == 255 && y == 133)
-  //{
-  //  int a = 2;
-  //}
+  if(x == 415 && (y == 256-130-1))
+  {
+    int a = 2;
+    //colorRes = float4(1,0,0,0);
+  }
  
   out_color[y*m_winWidth+x] += colorRes;
   m_randomGens[tid] = *gen;

@@ -185,9 +185,22 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
   }
   
+  // BSDF is multiplied (outside) by cosThetaOut1.
+  // When normal map is enables this becames wrong because normal is changed;
+  // First : return cosThetaOut in sam;
+  // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+  //
   const uint normalMapId = as_uint(m_materials[currMatId].data[UINT_NMAP_ID]);
+  float bumpCosMult = 1.0f; 
   if(normalMapId != 0xFFFFFFFF)
+  {
+    float3 oldNormal = n;
     n = BumpMapping(normalMapId, currMatId, n, tan, tc);
+    
+    const float cosThetaOut1 = std::abs(dot((-1.0f)*v, oldNormal));
+    const float cosThetaOut2 = std::abs(dot((-1.0f)*v, n));
+    bumpCosMult = cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
+  }
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   switch(mtype)
@@ -254,6 +267,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     break;
   }
   
+  res.val *= bumpCosMult;
   return res;
 }
 
@@ -284,10 +298,24 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       else
         needPop = true; // if not blend, pop on next iter
     } 
-
+    
+    // BSDF is multiplied (outside) by old cosThetaOut.
+    // When normal map is enables this becames wrong because normal is changed;
+    // First : return cosThetaOut in sam;
+    // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+    //
+    float bumpCosMult = 1.0f; 
     const uint normalMapId = as_uint(m_materials[currMat.id].data[UINT_NMAP_ID]);
-    if(normalMapId != 0xFFFFFFFF)
+    if(normalMapId != 0xFFFFFFFF) 
+    {
+      const float3 oldNormal = n;
       n = BumpMapping(normalMapId, currMat.id, n, tan, tc);
+      const float3 lDir     = l;     
+      const float  clampVal = 1e-6f;  
+      const float cosThetaOut1 = std::max(dot(lDir, oldNormal), 0.0f);
+      const float cosThetaOut2 = std::max(dot(lDir, n),     0.0f);
+      bumpCosMult              = cosThetaOut2 / std::max(cosThetaOut1, clampVal);
+    }
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
@@ -303,7 +331,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
-              float4 texColor  = (m_textures[texId]->sample(texCoordT));
+              float4 texColor  = m_textures[texId]->sample(texCoordT);
         
         //if(normalMapId != 0xFFFFFFFF) // draw normal map
         //{
@@ -315,7 +343,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
         gltfEval(m_materials.data() + currMat.id, l, v, n, tc, color, &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
 
         break;
@@ -325,7 +353,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         glassEval(m_materials.data() + currMat.id, l, v, n, tc, float3(0,0,0), &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -334,8 +362,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[CONDUCTOR_TEXID0]);
         const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
-
-        const float2 alpha = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
+        const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
 
         if(!trEffectivelySmooth(alpha))
         {
@@ -344,7 +371,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, &currVal);
         }
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -359,7 +386,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, color, &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
