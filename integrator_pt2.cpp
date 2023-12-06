@@ -161,7 +161,7 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
   const float3   bitan = cross(n, tan);
   const float3x3 tangentTransform = make_float3x3(tan, bitan, n);
 
-  return normalize(mul3x3x3(inverse3(tangentTransform), normalTS));
+  return normalize(inverse3x3(tangentTransform)*normalTS);
 }
 
 BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
@@ -191,7 +191,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   const uint normalMapId   = as_uint(m_materials[currMatId].data[UINT_NMAP_ID]);
   const float3 geomNormal  = n;
         float3 shadeNormal = n;
-        
+
   if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
     shadeNormal = BumpMapping(normalMapId, currMatId, geomNormal, tan, tc);
 
