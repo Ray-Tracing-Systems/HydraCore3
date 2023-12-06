@@ -191,16 +191,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
   //
   const uint normalMapId = as_uint(m_materials[currMatId].data[UINT_NMAP_ID]);
-  float bumpCosMult = 1.0f; 
+  float3 oldNormal = n;
   if(normalMapId != 0xFFFFFFFF)
-  {
-    float3 oldNormal = n;
     n = BumpMapping(normalMapId, currMatId, n, tan, tc);
-    
-    const float cosThetaOut1 = std::abs(dot((-1.0f)*v, oldNormal));
-    const float cosThetaOut2 = std::abs(dot((-1.0f)*v, n));
-    bumpCosMult = cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
-  }
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   switch(mtype)
@@ -267,7 +260,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     break;
   }
   
-  res.val *= bumpCosMult;
+  if(normalMapId != 0xFFFFFFFF)
+  {
+    const float cosThetaOut1 = std::abs(dot(res.dir, oldNormal));
+    const float cosThetaOut2 = std::abs(dot(res.dir, n));
+    res.val *= cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
+  }
+
   return res;
 }
 
@@ -315,6 +314,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       const float cosThetaOut1 = std::max(dot(lDir, oldNormal), 0.0f);
       const float cosThetaOut2 = std::max(dot(lDir, n),     0.0f);
       bumpCosMult              = cosThetaOut2 / std::max(cosThetaOut1, clampVal);
+      if (cosThetaOut1 <= 0.0f)
+        bumpCosMult = 0.0f;
     }
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
