@@ -589,6 +589,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
     case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
+    case KSPEC_BUMP_MAPPING       : return "BUMP";
     case KSPEC_BLEND_STACK_SIZE   : 
     {
       std::stringstream strout;
@@ -661,6 +662,9 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       features[KSPEC_MAT_TYPE_BLEND]   = 1;
       features[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
+
+    if(materialNode.child(L"displacement") != nullptr)
+      features[KSPEC_BUMP_MAPPING] = 1;
   }
 
   for(auto settings : g_lastScene.Settings())
@@ -981,6 +985,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
           mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X)); 
         if(invertY)
           mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_Y));
+
+        m_actualFeatures[KSPEC_BUMP_MAPPING] = 1; // enable bump mapping feature
       }
     }
 

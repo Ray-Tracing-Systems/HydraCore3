@@ -282,8 +282,9 @@ protected:
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING       = 9;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM       = 9; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM       = 10; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
