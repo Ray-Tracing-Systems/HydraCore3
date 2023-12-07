@@ -545,6 +545,42 @@ static inline float FrDielectric(float cosTheta_i, float eta)
   return (r_parl * r_parl + r_perp * r_perp) / 2.0f;
 }
 
+static inline float FresnelMitsuba(float cos_theta_i, float eta) 
+{
+  auto outside_mask = cos_theta_i >= 0.f;
+
+  float rcp_eta = 1.0f / eta,
+        eta_it = outside_mask ? eta : rcp_eta,
+        eta_ti = outside_mask ? rcp_eta : eta;
+
+  /* Using Snell's law, calculate the squared sine of the
+      angle between the surface normal and the transmitted ray */
+  float cos_theta_t_sqr = -(-cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
+
+  /* Find the absolute cosines of the incident/transmitted rays */
+  float cos_theta_i_abs = std::abs(cos_theta_i);
+  float cos_theta_t_abs = std::sqrt(cos_theta_t_sqr);
+
+  auto index_matched = eta == 1.f;
+  auto special_case  = index_matched || cos_theta_i_abs == 0.f;
+
+  float r_sc = index_matched ? 0.f : 1.f;
+
+  /* Amplitudes of reflected waves */
+  float a_s = (-eta_it * cos_theta_t_abs + cos_theta_i_abs) / (eta_it * cos_theta_t_abs + cos_theta_i_abs);
+
+  float a_p = (-eta_it * cos_theta_i_abs + cos_theta_t_abs) / (eta_it * cos_theta_i_abs + cos_theta_t_abs);
+
+  float r = 0.5f * (a_s * a_s + a_p * a_p);
+
+  r = special_case ? r_sc : r;
+
+  /* Adjust the sign of the transmitted direction */
+  float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
+
+  return r;
+}
+
 static inline float4 FrDielectricDetailed(float cosTheta_i, float eta) 
 {
   cosTheta_i = clamp(cosTheta_i, -1.0f, 1.0f);

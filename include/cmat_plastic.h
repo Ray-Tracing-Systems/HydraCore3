@@ -259,7 +259,7 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   if(wi.z == 0)
     return;
 
-  // wi = float3{-0.000852187979, 0.00306384265, 0.999994874};
+  // wi = float3{-0.00309263915, 0.00147612393, 0.99999404};
 
   float cos_theta_i = wi.z;
   float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
@@ -280,7 +280,7 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
   // rands_2 = 0.286642551;
 
-  // rands_1 = {0.385110825, 0.979427397, 0.880511522, 0.258460701};
+  // rands = {0.385110825, 0.979427397, 0.286642551, 0.0};
 
   const bool sample_specular = rands.z < prob_specular;
   const bool sample_diffuse  = !sample_specular;
@@ -315,12 +315,11 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   float val = F * D * G / (4.f * cos_theta_i);
 
   float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
-  float4 diffuse = a_reflSpec;
-  diffuse /= 1.f - (nonlinear > 0 ? (diffuse * internal_refl) : float4(internal_refl));
+  float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
   const float inv_eta_2 = 1.f / (eta * eta);
 
   pRes->dir   = normalize(wo.x * s + wo.y * t + wo.z * n);
-  pRes->val   = float4(val) + diffuse * (inv_eta_2 * cos_theta_o * t_i * t_o / M_PI);
+  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * cos_theta_o * t_i * t_o );
   pRes->pdf   = pdf;
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
@@ -338,59 +337,6 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
 
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
 
-  float ggxVal, ggxPdf;
-  if(alpha != 0.0f) 
-  {
-    const float2 alpha2 = float2(alpha, alpha);
-
-    float3 nx, ny, nz = n;
-    CoordinateSystem(nz, &nx, &ny);
-
-    const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
-    const float3 wi = float3(dot(l, nx), dot(l, ny), dot(l, nz));
-
-    if(wo.z * wi.z < 0.0f)
-      return;
-
-    float3 wm = wo + wi;
-    if (dot(wm, wm) == 0)
-        return;
-
-    wm = normalize(wm);
-
-    ggxVal = dielectricRoughEvalInternal(wo, wi, wm, alpha2, eta);
-    wm     = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
-    ggxPdf = trPDF(wo, wm, alpha2) / (4.0f * std::abs(dot(wo, wm)));
-  }
-  else
-  {
-    ggxVal = 0.0f;
-    ggxPdf = 0.0f;
-  }
-
-  float lambertVal       = lambertEvalBSDF(l, v, n);
-  const float lambertPdf = lambertEvalPDF (l, v, n);
-  float f_i              = 1.0f;
-  float prob_diffuse     = 1.0f;
-  float prob_specular    = 0.0f;
-  float coeffLambertPdf  = 1.0f;
-
-  f_i                 = FrDielectric(std::abs(dot(v, n)), eta);
-  const float f_o     = FrDielectric(std::abs(dot(l, n)), eta);  
-  // const float coeff   = (1.f - f_i) * (1.f - f_o) / (eta * eta * (1.f - fdr_int));
-  // lambertVal         *= coeff;
-  // coeffLambertPdf     = coeff; 
-  // prob_specular       = f_i * spec_weight;
-  // prob_diffuse        = (1.f - f_i) * (1.f - spec_weight);
-  
-  // if(prob_diffuse != 0.0f && prob_specular != 0.0f)
-  //   prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
-  // else
-  // {
-  //   prob_diffuse  = 1.0f;
-  //   prob_specular = 0.0f;
-  // }
-
-  pRes->val = lambertVal * a_reflSpec + ggxVal * f_i; 
-  pRes->pdf = lambertPdf * coeffLambertPdf + 2.0f * ggxPdf * f_i;
+  pRes->val = float4(0.0f); 
+  pRes->pdf = 1.0f;
 }
