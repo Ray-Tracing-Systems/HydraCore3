@@ -135,13 +135,13 @@ static inline float3 NormalMapTransform(const uint materialFlags, float3 normalF
 {
   float3 normalTS = make_float3(2.0f * normalFromTex.x - 1.0f, 2.0f * normalFromTex.y - 1.0f, normalFromTex.z);
 
-  if (materialFlags & FLAG_NMAP_INVERT_X)
+  if((materialFlags & FLAG_NMAP_INVERT_X) != 0)
     normalTS.x *= (-1.0f);
 
-  if (materialFlags & FLAG_NMAP_INVERT_Y)
+  if((materialFlags & FLAG_NMAP_INVERT_Y) != 0)
     normalTS.y *= (-1.0f);
 
-  if (materialFlags & FLAG_NMAP_SWAP_XY)
+  if((materialFlags & FLAG_NMAP_SWAP_XY) != 0)
   {
     float temp = normalTS.x;
     normalTS.x = normalTS.y;
