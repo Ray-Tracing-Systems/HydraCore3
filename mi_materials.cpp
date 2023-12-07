@@ -229,122 +229,6 @@ namespace mi
   }
 
 
-  float sin_theta_2(const float3 &v) 
-  { 
-    return dr::fmadd(v.x, v.x, v.y * v.y); 
-  }
-
-  /** \brief Give a unit direction, this function returns the sine and cosine
-     * of the azimuth in a reference spherical coordinate system 
-     */
-  std::pair<float, float> sincos_phi(const float3 &v) 
-  {
-    float sin_theta2 = sin_theta_2(v);
-    float inv_sin_theta = 1.f / std::sqrt(sin_theta_2(v));
-
-    float2 result = {v.x * inv_sin_theta, v.y * inv_sin_theta};
-
-    result = std::abs(sin_theta2) <= 4.f * EPSILON ? float2(1.f, 0.f) : clamp(result, -1.f, 1.f);
-
-    return { result.y, result.x };
-  }
-
-  /// Low-distortion concentric square to disk mapping by Peter Shirley
-  float2 square_to_uniform_disk_concentric(const float2 &sample) 
-  {
-    float x = dr::fmsub(2.f, sample.x, 1.f),
-          y = dr::fmsub(2.f, sample.y, 1.f);
-
-    float phi, r;
-    if (x == 0 && y == 0) 
-    {
-      r = phi = 0;
-    } 
-    else if (x * x > y * y) 
-    {
-      r = x;
-      phi = (M_PI / 4.f) * (y / x);
-    } 
-    else 
-    {
-      r = y;
-      phi = (M_PI / 2.f) - (x / y) * (M_PI / 4.f);
-    }
-    return {r * std::cos(phi), r * std::sin(phi)};
-  }
-
-  /**
-     * \brief Smith's shadowing-masking function for a single direction
-     *
-     * \param v
-     *     An arbitrary direction
-     * \param m
-     *     The microfacet normal
-  */
-  float smith_g1(const float3 &v, const float3 &m, float2 alpha) 
-  {
-    float xy_alpha_2 = alpha.x * v.x * alpha.x * v.x + alpha.y * v.y * alpha.y * v.y,
-          tan_theta_alpha_2 = xy_alpha_2 / (v.z * v.z),
-          result;
-
-
-    result = 2.f / (1.f + std::sqrt(1.f + tan_theta_alpha_2));
-
-    // Perpendicular incidence -- no shadowing/masking
-    if(xy_alpha_2 == 0.f)
-      result = 1.f;
-
-    /* Ensure consistent orientation (can't see the back
-        of the microfacet from the front and vice versa) */
-
-    if(v.z * dot(v, m) <= 0.f)
-      result = 0.f;
-
-    return result;
-  }
-
-  float2 sample_visible_11(float cos_theta_i, float2 sample)
-  {
-    float2 p = square_to_uniform_disk_concentric(sample);
-
-    float s = 0.5f * (1.f + cos_theta_i);
-    p.y = lerp(std::sqrt(1.f - p.x * p.x), p.y, s);
-
-    // Project onto chosen side of the hemisphere
-    float x = p.x, y = p.y,
-          z = std::sqrt(1.f - dot(p, p));
-
-    // Convert to slope
-    float sin_theta_i = std::sqrt(1.f - cos_theta_i * cos_theta_i);
-    float norm = 1.f / (dr::fmadd(sin_theta_i, y, cos_theta_i * z));
-    return float2(dr::fmsub(cos_theta_i, y, sin_theta_i * z), x) * norm;
-  }
-
-  float3 sample_visible_normal(float3 wi, float2 rands, float2 alpha)
-  {
-    float sin_phi, cos_phi, cos_theta;
-
-    // Step 1: stretch wi
-    float3 wi_p = normalize(float3(alpha.x * wi.x, alpha.y * wi.y, wi.z));
-
-    std::tie(sin_phi, cos_phi) = sincos_phi(wi_p);
-    cos_theta = wi_p.z;
-
-    // Step 2: simulate P22_{wi}(slope.x, slope.y, 1, 1)
-    float2 slope = sample_visible_11(cos_theta, rands);
-
-    // Step 3: rotate & unstretch
-    slope = float2(
-        dr::fmsub(cos_phi, slope.x, sin_phi * slope.y) * alpha.x,
-        dr::fmadd(sin_phi, slope.x, cos_phi * slope.y) * alpha.y);
-
-    // Step 4: compute normal
-    float3 m = normalize(float3(-slope.x, -slope.y, 1));
-
-
-    return m;
-  }
-
   float3 refract(const float3 &wi, const float3 &m, float cos_theta_t, float eta_ti) 
   {
     return m * dr::fmadd(dot(wi, m), eta_ti, cos_theta_t) - wi * eta_ti;
@@ -379,7 +263,7 @@ namespace mi
         node.y = node.y * 0.5f + 0.5f;
 
         // float3 normal_pbrt = trSample(wi, node, {alpha, alpha});
-        float3 normal = sample_visible_normal(wi, node, {alpha, alpha});
+        float3 normal = to_float3(sample_visible_normal(wi, node, {alpha, alpha}));
         auto fres = FrDielectricDetailed(dot(wi, normal), eta);
         auto f = fres.x;
         auto cos_theta_t = fres.y;
@@ -424,7 +308,7 @@ namespace mi
         node.x = node.x * 0.5f + 0.5f;
         node.y = node.y * 0.5f + 0.5f;
 
-        float3 normal = sample_visible_normal(wi, node, {alpha, alpha});
+        float3 normal = to_float3(sample_visible_normal(wi, node, {alpha, alpha}));
         float3 wo     = mi::reflect(wi, normal);
         auto fres     = FrDielectricDetailed(dot(wi, normal), eta);
         auto f = fres.x;
@@ -496,6 +380,11 @@ namespace mi
     // std::cout << std::endl;
     
     // std::cout << "internal_reflectance = " << internal_reflectance << std::endl;
+
+    // std::cout << "lerp_gather = " << lerp_gather(res.transmittance.data(), 0.999994874, MI_ROUGH_TRANSMITTANCE_RES) << std::endl;
+    // // 0.898716927 for alpha = 0.25
+    // std::cout << "lerp_gather = " << lerp_gather(res.transmittance.data(), 0.648724854, MI_ROUGH_TRANSMITTANCE_RES) << std::endl;
+    // // 0.869521677 for alpha = 0.25
 
     return res;
   }

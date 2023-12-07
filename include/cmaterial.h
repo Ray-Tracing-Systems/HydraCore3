@@ -617,6 +617,177 @@ static inline float lerp_gather(const float *data, float x, size_t size)
   return lerp(v0, v1, x - float(index));
 }
 
+
+//////////////////////
+// GGX from Mitsuba3
+
+static inline float sin_theta_2(const float3 &v) 
+{ 
+  return v.x * v.x + v.y * v.y; 
+}
+
+/** \brief Give a unit direction, this function returns the sine and cosine
+   * of the azimuth in a reference spherical coordinate system 
+   */
+static inline float2 sincos_phi(const float3 &v) 
+{
+  float sin_theta2 = sin_theta_2(v);
+  float inv_sin_theta = 1.f / std::sqrt(sin_theta_2(v));
+
+  float2 result = {v.x * inv_sin_theta, v.y * inv_sin_theta};
+
+  result = std::abs(sin_theta2) <= 4.f * EPSILON_32 ? float2(1.f, 0.f) : clamp(result, -1.f, 1.f);
+
+  return { result.y, result.x };
+}
+
+/// Low-distortion concentric square to disk mapping by Peter Shirley
+static inline float2 square_to_uniform_disk_concentric(const float2 &sample) 
+{
+  float x = 2.f * sample.x - 1.f,
+        y = 2.f * sample.y - 1.f;
+
+  float phi, r;
+  if (x == 0 && y == 0) 
+  {
+    r = phi = 0;
+  } 
+  else if (x * x > y * y) 
+  {
+    r = x;
+    phi = (M_PI / 4.f) * (y / x);
+  } 
+  else 
+  {
+    r = y;
+    phi = (M_PI / 2.f) - (x / y) * (M_PI / 4.f);
+  }
+  return {r * std::cos(phi), r * std::sin(phi)};
+}
+
+static inline float3 square_to_cosine_hemisphere(const float2 &sample) 
+{
+    // Low-distortion warping technique based on concentric disk mapping
+    float2 p = square_to_uniform_disk_concentric(sample);
+
+    // Guard against numerical imprecisions
+    float z = std::sqrt(1.f - (p.x * p.x + p.y * p.y));
+
+    return { p.x, p.y, z };
+}
+
+/**
+   * \brief Smith's shadowing-masking function for a single direction
+   *
+   * \param v
+   *     An arbitrary direction
+   * \param m
+   *     The microfacet normal
+*/
+static inline float smith_g1(const float3 &v, const float3 &m, float2 alpha) 
+{
+  float xy_alpha_2 = alpha.x * v.x * alpha.x * v.x + alpha.y * v.y * alpha.y * v.y,
+        tan_theta_alpha_2 = xy_alpha_2 / (v.z * v.z),
+        result;
+
+
+  result = 2.f / (1.f + std::sqrt(1.f + tan_theta_alpha_2));
+
+  // Perpendicular incidence -- no shadowing/masking
+  if(xy_alpha_2 == 0.f)
+    result = 1.f;
+
+  /* Ensure consistent orientation (can't see the back
+      of the microfacet from the front and vice versa) */
+
+  if(v.z * dot(v, m) <= 0.f)
+    result = 0.f;
+
+  return result;
+}
+
+static inline float sqr(float val)
+{
+  return val * val;
+}
+
+static inline float eval_microfacet(const float3 &m, float2 alpha, int type = 1) 
+{
+  float alpha_uv = alpha.x * alpha.y;
+  float cos_theta = m.z;
+  float cos_theta_2 = cos_theta * cos_theta;
+
+  float result = 0.0f;
+  if (type == 0) // Beckmann distribution function for Gaussian random surfaces 
+  {
+      result = std::exp(-(sqr(m.x / alpha.x) + sqr(m.y / alpha.y)) / cos_theta_2) / (M_PI * alpha_uv * sqr(cos_theta_2));
+  } 
+  else // GGX / Trowbridge-Reitz distribution function 
+  {
+      result = 1.f / (M_PI * alpha_uv * sqr(sqr(m.x / alpha.x) + sqr(m.y / alpha.y) + sqr(m.z)));
+  }
+
+  return result * cos_theta > 1e-20f ? result : 0.f;
+}
+
+static inline float2 sample_visible_11(float cos_theta_i, float2 sample)
+{
+  float2 p = square_to_uniform_disk_concentric(sample);
+
+  float s = 0.5f * (1.f + cos_theta_i);
+  p.y = lerp(std::sqrt(1.f - p.x * p.x), p.y, s);
+
+  // Project onto chosen side of the hemisphere
+  float x = p.x, y = p.y,
+        z = std::sqrt(1.f - dot(p, p));
+
+  // Convert to slope
+  float sin_theta_i = std::sqrt(1.f - cos_theta_i * cos_theta_i);
+  float norm = 1.f / (sin_theta_i * y + cos_theta_i * z);
+  return float2(cos_theta_i * y - sin_theta_i * z, x) * norm;
+}
+
+static inline float4 sample_visible_normal(float3 wi, float2 rands, float2 alpha)
+{
+  // Step 1: stretch wi
+  float3 wi_p = normalize(float3(alpha.x * wi.x, alpha.y * wi.y, wi.z));
+
+  const float2 sincos = sincos_phi(wi_p);
+  const float sin_phi = sincos.x;
+  const float cos_phi = sincos.y;
+
+  const float cos_theta = wi_p.z;
+
+  // Step 2: simulate P22_{wi}(slope.x, slope.y, 1, 1)
+  float2 slope = sample_visible_11(cos_theta, rands);
+
+  // Step 3: rotate & unstretch
+  slope = float2((cos_phi * slope.x - sin_phi * slope.y) * alpha.x,
+                  (sin_phi * slope.x + cos_phi * slope.y) * alpha.y);
+
+  // Step 4: compute normal
+  float3 m = normalize(float3(-slope.x, -slope.y, 1));
+
+  float pdf = eval_microfacet(m, alpha) * smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
+
+  return {m.x, m.y, m.z, pdf};
+}
+
+// Smith's separable shadowing-masking approximation
+static inline float microfacet_G(const float3 &wi, const float3 &wo, const float3 &m, float2 alpha) 
+{
+  return smith_g1(wi, m, alpha) * smith_g1(wo, m, alpha);
+}
+
+static inline float microfacet_pdf(const float3 &wi, const float3 &m, float2 alpha) 
+{
+  float result = eval_microfacet(m, alpha);
+
+  result *= smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
+
+  return result;
+}
+
 ////////////////// blends
 
 struct MatIdWeight

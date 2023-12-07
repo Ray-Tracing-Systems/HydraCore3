@@ -200,8 +200,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     case MAT_TYPE_PLASTIC:
     if(KSPEC_MAT_TYPE_PLASTIC != 0)
     {
-      const float4 rands_1 = rndFloat4_Pseudo(a_gen);
-      const float  rands_2 = rndFloat1_Pseudo(a_gen);
+      const float4 rands = rndFloat4_Pseudo(a_gen);
 
       const uint   texId       = as_uint(m_materials[currMatId].data[PLASTIC_COLOR_TEXID]);
       const float4 texColor    = (m_textures[texId]->sample(texCoordT));
@@ -214,7 +213,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
       const uint precomp_id = as_uint(m_materials[currMatId].data[PLASTIC_PRECOMP_ID]);
 
-      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands_1, rands_2, v, n, tc, &res,
+      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, &res,
                            m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
     }
     break;
