@@ -20,6 +20,18 @@
 
 using LiteImage::ICombinedImageSampler;
 
+struct SceneInfo
+{
+  int width;
+  int height;
+  int spectral;
+  uint32_t maxMeshes;
+  uint32_t maxTotalVertices;
+  uint32_t maxTotalPrimitives;
+  uint32_t maxPrimitivesPerMesh;
+  uint64_t memGeom;
+  uint64_t memTextures;
+};
 
 class Integrator // : public DataClass, IRenderer
 {
@@ -35,16 +47,13 @@ public:
 
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
-    uint32_t maxMeshes            = 4096;
-    uint32_t maxTotalVertices     = 16'000'000;
-    uint32_t maxTotalPrimitives   = 16'000'000;
-    uint32_t maxPrimitivesPerMesh = 4'000'000;
-
-    a_restrictions[0] = maxMeshes;
-    a_restrictions[1] = maxTotalVertices;
-    a_restrictions[2] = maxTotalPrimitives;
-    a_restrictions[3] = maxPrimitivesPerMesh;
+    a_restrictions[0] = g_lastSceneInfo.maxMeshes;
+    a_restrictions[1] = g_lastSceneInfo.maxTotalVertices;
+    a_restrictions[2] = g_lastSceneInfo.maxTotalPrimitives;
+    a_restrictions[3] = g_lastSceneInfo.maxPrimitivesPerMesh;
   }
+
+  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 
   void InitRandomGens(int a_maxThreads);
 
@@ -295,9 +304,7 @@ protected:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
-public:
-  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
-                                                        int& width, int& height, int& spectral_mode);
+  static SceneInfo   g_lastSceneInfo;
 };
 
 #endif

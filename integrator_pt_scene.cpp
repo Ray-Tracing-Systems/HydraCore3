@@ -611,14 +611,21 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
 hydra_xml::HydraScene   g_lastScene;
 std::string Integrator::g_lastScenePath;
 std::string Integrator::g_lastSceneDir;
+SceneInfo   Integrator::g_lastSceneInfo;
+
 static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
 
-std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
-                                                           int& width, int& height, int& spectral_mode)
+std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
+  if(pSceneInfo == nullptr)
+  {
+    std::cout << "[Integrator::PreliminarySceneAnalysis]: nullptr pSceneInfo" << std::endl;
+    exit(0);
+  }
+
   std::vector<uint32_t> features;
   
   std::string scenePathStr(a_scenePath);
@@ -632,11 +639,11 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   //// initial feature map
   //
-  features.resize(TOTAL_FEATURES_NUM); // disable all features by default
-  for(auto& feature : features)              //
-    feature = 0;                             //
-  features[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends (i.e. blends are disabled!)
-  features[KSPEC_SPECTRAL_RENDERING] = (spectral_mode == 0) ? 0 : 1;
+  features.resize(TOTAL_FEATURES_NUM);  // disable all features by default
+  for(auto& feature : features)         //
+    feature = 0;                        //
+  features[KSPEC_BLEND_STACK_SIZE]   = 1; // set smallest possible stack size for blends (i.e. blends are disabled!)
+  features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
   //// list reauired material features
   //
@@ -648,7 +655,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       float4 transpColor = float4(0, 0, 0, 0);
       auto nodeTransp = materialNode.child(L"transparency");
       if (nodeTransp != nullptr)
-        transpColor = GetColorFromNode(nodeTransp.child(L"color"), spectral_mode);
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), pSceneInfo->spectral);
   
       if(LiteMath::length3f(transpColor) > 1e-5f)
         features[KSPEC_MAT_TYPE_GLASS] = 1;
@@ -675,14 +682,64 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   for(auto settings : g_lastScene.Settings())
   {
-    width  = settings.width;
-    height = settings.height;
+    pSceneInfo->width  = settings.width;
+    pSceneInfo->height = settings.height;
     break; //take ferst render settings
   }
 
   g_lastScenePath = scenePathStr;
   g_lastSceneDir  = sceneDirStr;
+  g_lastSceneInfo.maxMeshes            = 1024;
+  g_lastSceneInfo.maxTotalVertices     = 4'000'000;
+  g_lastSceneInfo.maxTotalPrimitives   = 4'000'000;
+  g_lastSceneInfo.maxPrimitivesPerMesh = 1'000'000;
+  
+  g_lastSceneInfo.memTextures = 0;
+  for(auto texNode : g_lastScene.TextureNodes())
+  {
+    uint32_t width  = texNode.attribute(L"width").as_uint();
+    uint32_t height = texNode.attribute(L"height").as_uint();
+    size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
 
+    if(width == 0 || height == 0)
+    {
+      width  = 256;
+      height = 256;
+      byteSize = 256*256*4;
+    }
+
+    //if(byteSize < width*height*4) // what if we have single channel 8 bit texture ...
+    //  byteSize = width*height*4;  //
+
+    g_lastSceneInfo.memTextures += uint64_t(byteSize);
+  }
+  
+  g_lastSceneInfo.memGeom = 0;
+  uint32_t meshesNum = 0;
+  uint64_t maxTotalVertices = 0;
+  uint64_t maxTotalPrimitives = 0;
+
+  for(auto node : g_lastScene.GeomNodes())
+  {
+    const uint64_t byteSize = std::max<uint64_t>(node.attribute(L"bytesize").as_ullong(), 1024);
+    const uint32_t vertNum  = node.attribute(L"vertNum").as_uint();
+    const uint32_t trisNum  = node.attribute(L"triNum").as_uint();
+    //const uint64_t byteSize = sizeof(float)*8*vertNum + trisNum*4*sizeof(uint32_t) + 1024;
+    if(g_lastSceneInfo.maxPrimitivesPerMesh < trisNum)
+      g_lastSceneInfo.maxPrimitivesPerMesh = trisNum;
+    maxTotalVertices   += uint64_t(vertNum);
+    maxTotalPrimitives += uint64_t(trisNum);
+    meshesNum          += 1;
+    g_lastSceneInfo.memGeom += byteSize;
+  }
+  
+  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024*256;
+  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024*256;
+
+  g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
+  g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
+
+  (*pSceneInfo) = g_lastSceneInfo;
   return features;
 }
 
@@ -1033,7 +1090,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_pAccelStruct->ClearGeom();
   for(auto meshPath : scene.MeshFiles())
   {
+    #ifdef _DEBUG
     std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
+    #endif
     auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
     auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
@@ -1066,8 +1125,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     if(inst.instId != realInstId)
     {
+      #ifdef _DEBUG
       std::cout << "[Integrator::LoadScene]: WARNING, bad instance id: written in xml: inst.instId is '" <<  inst.instId << "', realInstId by node order is '" << realInstId << "'" << std::endl;
       std::cout << "[Integrator::LoadScene]: -->      instances must be written in a sequential order, perform 'inst.instId = realInstId'" << std::endl;
+      #endif
       inst.instId = realInstId;
     }
     m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);

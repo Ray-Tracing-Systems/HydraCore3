@@ -109,7 +109,13 @@ int main(int argc, const char** argv)
     //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
     //
     std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-    auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+
+    SceneInfo sceneInfo = {};
+    sceneInfo.spectral  = spectral_mode;
+    auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo); 
+    WIN_WIDTH     = sceneInfo.width;
+    WIN_HEIGHT    = sceneInfo.height;
+    spectral_mode = sceneInfo.spectral;
     
     // (2) init device with apropriate features for both hydra and camera plugin
     //
