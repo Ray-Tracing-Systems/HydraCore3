@@ -626,6 +626,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     exit(0);
   }
 
+  g_lastSceneInfo.spectral = pSceneInfo->spectral;
+
   std::vector<uint32_t> features;
   
   std::string scenePathStr(a_scenePath);
