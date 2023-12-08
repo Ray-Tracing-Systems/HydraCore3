@@ -12,23 +12,24 @@ layout (constant_id = 5) const int KSPEC_SOME_FEATURE_DUMMY = 5;
 layout (constant_id = 6) const int KSPEC_SPECTRAL_RENDERING = 6;
 layout (constant_id = 7) const int KSPEC_MAT_TYPE_BLEND = 7;
 layout (constant_id = 8) const int KSPEC_BLEND_STACK_SIZE = 8;
+layout (constant_id = 9) const int KSPEC_BUMP_MAPPING = 9;
 
 layout(binding = 0, set = 0) buffer data0 { vec4 out_color[]; }; //
 layout(binding = 1, set = 0) buffer data1 { float m_cie_x[]; }; //
 layout(binding = 2, set = 0) buffer data2 { uint m_matIdByPrimId[]; }; //
 layout(binding = 3, set = 0) buffer data3 { RandomGenT m_randomGens[]; }; //
 layout(binding = 4, set = 0) buffer data4 { vec4 m_vNorm4f[]; }; //
-layout(binding = 5, set = 0) buffer data5 { vec2 m_vTexc2f[]; }; //
+layout(binding = 5, set = 0) buffer data5 { vec4 m_vTang4f[]; }; //
 layout(binding = 6, set = 0) buffer data6 { uint m_triIndices[]; }; //
-layout(binding = 7, set = 0) buffer data7 { float m_cie_z[]; }; //
-layout(binding = 8, set = 0) buffer data8 { Material m_materials[]; }; //
-layout(binding = 9, set = 0) buffer data9 { int m_allRemapLists[]; }; //
-layout(binding = 10, set = 0) buffer data10 { float m_wavelengths[]; }; //
+layout(binding = 7, set = 0) buffer data7 { int m_allRemapLists[]; }; //
+layout(binding = 8, set = 0) buffer data8 { float m_wavelengths[]; }; //
+layout(binding = 9, set = 0) buffer data9 { float m_cie_z[]; }; //
+layout(binding = 10, set = 0) buffer data10 { Material m_materials[]; }; //
 layout(binding = 11, set = 0) buffer data11 { int m_remapInst[]; }; //
-layout(binding = 12, set = 0) buffer data12 { uint m_packedXY[]; }; //
-layout(binding = 13, set = 0) uniform sampler2D m_textures[]; //
-layout(binding = 14, set = 0) buffer data14 { uint m_vertOffset[]; }; //
-layout(binding = 15, set = 0) buffer data15 { float m_spec_values[]; }; //
+layout(binding = 12, set = 0) buffer data12 { uint m_vertOffset[]; }; //
+layout(binding = 13, set = 0) buffer data13 { float m_spec_values[]; }; //
+layout(binding = 14, set = 0) buffer data14 { uint m_packedXY[]; }; //
+layout(binding = 15, set = 0) uniform sampler2D m_textures[]; //
 layout(binding = 16, set = 0) buffer data16 { uint m_instIdToLightInstId[]; }; //
 layout(binding = 17, set = 0) buffer data17 { uvec2 m_spec_offset_sz[]; }; //
 layout(binding = 18, set = 0) uniform accelerationStructureEXT m_pAccelStruct;
@@ -39,49 +40,36 @@ layout(binding = 22, set = 0) buffer data22 { int m_allRemapListsOffsets[]; }; /
 layout(binding = 23, set = 0) buffer data23 { mat4 m_normMatrices[]; }; //
 layout(binding = 24, set = 0) buffer dataUBO { Integrator_Generated_UBO_Data ubo; };
 
-void diffuseEval_m_materials(uint a_materialsOffset, vec4 a_reflSpec, vec3 l, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfEval res) {
-  const uint             cflags = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
- 
-  float lambertVal       = lambertEvalBSDF(l, v, n);
-  const float lambertPdf = lambertEvalPDF (l, v, n);
-
-  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-    lambertVal *= orennayarFunc(l, v, n, m_materials[0 + a_materialsOffset].data[DIFFUSE_ROUGHNESS]);
-
-  res.val = lambertVal * a_reflSpec; 
-  res.pdf = lambertPdf; 
+LightSample pointLightSampleRev_m_lights(uint a_pLightOffset) {
+  LightSample res;
+  res.pos    = m_lights[0 + a_pLightOffset].pos.xyz;
+  res.norm   = m_lights[0 + a_pLightOffset].norm.xyz;
+  res.isOmni = (m_lights[0 + a_pLightOffset].distType == LIGHT_DIST_OMNI);
+  return res;
 }
 
-void conductorRoughEval_m_materials(uint a_materialsOffset, const vec4 etaSpec, const vec4 kSpec, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 alpha_tex, inout BsdfEval pRes) {
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+LightSample sphereLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
+  const float theta = 2.0f * M_PI * rands.x;
+  const float phi   = acos(1.0f - 2.0f * rands.y);
+  const float x     = sin(phi) * cos(theta);
+  const float y     = sin(phi) * sin(theta);
+  const float z     = cos(phi);
+  const vec3 lcenter = m_lights[0 + a_pLightOffset].pos.xyz;
+  const float  lradius   = m_lights[0 + a_pLightOffset].size.x;
+  const vec3 samplePos = lcenter + (lradius*1.000001f)*vec3(x, y, z);
+  LightSample res;
+  res.pos  = samplePos;
+  res.norm = normalize(samplePos - lcenter);
+  return res;
+}
 
-  const vec2 alpha = vec2(min(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_V], alpha_tex.x),min(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
-
-  vec3 nx,  ny, nz = n;
-  CoordinateSystem(nz, nx, ny);
-
-  // v = (-1.0f) * v;
-  const vec3 wo = vec3(dot(v, nx),dot(v, ny),dot(v, nz));
-  const vec3 wi = vec3(dot(l, nx),dot(l, ny),dot(l, nz));
-
-  if(wo.z * wi.z < 0.0f)
-    return;
-
-  vec3 wm = wo + wi;
-  if (dot(wm, wm) == 0)
-      return;
-
-  wm = normalize(wm);
-  vec4 val;
-  for(uint i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
-  {
-    val[int(i)] = conductorRoughEvalInternal(wo, wi, wm, alpha, make_complex(etaSpec[int(i)],kSpec[int(i)]));
-  }
-
-  pRes.val = val;
-
-  wm        = FaceForward(wm, vec3(0.0f,0.0f,1.0f));
-  pRes.pdf = trPDF(wo, wm, alpha) / (4.0f * abs(dot(wo, wm)));
+LightSample directLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands, vec3 illuminationPoint) {
+  const vec3 norm = m_lights[0 + a_pLightOffset].norm.xyz;
+  LightSample res;
+  res.pos    = illuminationPoint - norm*100000.0f;
+  res.norm   = norm;
+  res.isOmni = false;
+  return res;
 }
 
 vec4 SampleSpectrum_m_wavelengths_m_spec_values(uint a_spec_wavelengthsOffset, uint a_spec_valuesOffset, vec4 a_wavelengths, uint a_sz) {
@@ -111,27 +99,6 @@ vec4 SampleSpectrum_m_wavelengths_m_spec_values(uint a_spec_wavelengthsOffset, u
     } 
   }
   return sampleSpec;
-}
-
-void glassEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval res) {
-  // because we don't want to sample this material with shadow rays
-  res.val   = vec4(0.0f);
-  res.pdf   = 0.0f;
-}
-
-LightSample areaLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
-  vec2 sampleOff = 2.0f * (vec2(-0.5f,-0.5f) + rands) * m_lights[0 + a_pLightOffset].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
-  if(m_lights[0 + a_pLightOffset].geomType == LIGHT_GEOM_DISC)
-  {
-    const float offsetX = rands.x * 2.0f - 1.0f;
-    const float offsetY = rands.y * 2.0f - 1.0f;
-    sampleOff = MapSamplesToDisc(vec2(offsetX,offsetY))*m_lights[0 + a_pLightOffset].size.x; 
-  }
-  const vec3 samplePos = mul3x3(m_lights[0 + a_pLightOffset].matrix, vec3(sampleOff.x,0.0f,sampleOff.y)) + m_lights[0 + a_pLightOffset].pos.xyz + epsilonOfPos(m_lights[0 + a_pLightOffset].pos.xyz) * m_lights[0 + a_pLightOffset].norm.xyz;
-  LightSample res;
-  res.pos  = samplePos;
-  res.norm = m_lights[0 + a_pLightOffset].norm.xyz;
-  return res;
 }
 
 vec3 SpectrumToXYZ_m_cie_x_m_cie_y_m_cie_z(vec4 spec, vec4 lambda, float lambda_min, float lambda_max, uint a_CIE_XOffset, uint a_CIE_YOffset, uint a_CIE_ZOffset) {
@@ -217,6 +184,38 @@ void conductorRoughSampleAndEval_m_materials(uint a_materialsOffset, const vec4 
   pRes.dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes.pdf   = trPDF(wo, wm, alpha) / (4.0f * abs(dot(wo, wm)));
   pRes.flags = RAY_FLAG_HAS_NON_SPEC;
+}
+
+void conductorRoughEval_m_materials(uint a_materialsOffset, const vec4 etaSpec, const vec4 kSpec, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 alpha_tex, inout BsdfEval pRes) {
+  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+
+  const vec2 alpha = vec2(min(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_V], alpha_tex.x),min(m_materials[0 + a_materialsOffset].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
+
+  vec3 nx,  ny, nz = n;
+  CoordinateSystem(nz, nx, ny);
+
+  // v = (-1.0f) * v;
+  const vec3 wo = vec3(dot(v, nx),dot(v, ny),dot(v, nz));
+  const vec3 wi = vec3(dot(l, nx),dot(l, ny),dot(l, nz));
+
+  if(wo.z * wi.z < 0.0f)
+    return;
+
+  vec3 wm = wo + wi;
+  if (dot(wm, wm) == 0)
+      return;
+
+  wm = normalize(wm);
+  vec4 val;
+  for(uint i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    val[int(i)] = conductorRoughEvalInternal(wo, wi, wm, alpha, make_complex(etaSpec[int(i)],kSpec[int(i)]));
+  }
+
+  pRes.val = val;
+
+  wm        = FaceForward(wm, vec3(0.0f,0.0f,1.0f));
+  pRes.pdf = trPDF(wo, wm, alpha) / (4.0f * abs(dot(wo, wm)));
 }
 
 void gltfSampleAndEval_m_materials(uint a_materialsOffset, vec4 rands, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfSample pRes) {
@@ -395,14 +394,6 @@ void conductorSmoothSampleAndEval_m_materials(uint a_materialsOffset, const vec4
   pRes.flags = RAY_EVENT_S;
 }
 
-LightSample directLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands, vec3 illuminationPoint) {
-  const vec3 norm = m_lights[0 + a_pLightOffset].norm.xyz;
-  LightSample res;
-  res.pos  = illuminationPoint - norm*100000.0f;
-  res.norm = norm;
-  return res;
-}
-
 void gltfEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfEval res) {
   const uint   cflags     = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
   const vec4 specular = m_materials[0 + a_materialsOffset].colors[GLTF_COLOR_METAL];
@@ -472,37 +463,39 @@ void gltfEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 t
   res.pdf = alpha * ggxPdf        + (1.0f - alpha) * dielectricPdf; // (3) accumulate final color and pdf
 }
 
-LightSample sphereLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
-  const float theta = 2.0f * M_PI * rands.x;
-  const float phi   = acos(1.0f - 2.0f * rands.y);
-  const float x     = sin(phi) * cos(theta);
-  const float y     = sin(phi) * sin(theta);
-  const float z     = cos(phi);
-  const vec3 lcenter = m_lights[0 + a_pLightOffset].pos.xyz;
-  const float  lradius   = m_lights[0 + a_pLightOffset].size.x;
-  const vec3 samplePos = lcenter + (lradius*1.000001f)*vec3(x, y, z);
+LightSample areaLightSampleRev_m_lights(uint a_pLightOffset, vec2 rands) {
+  vec2 sampleOff = 2.0f * (vec2(-0.5f,-0.5f) + rands) * m_lights[0 + a_pLightOffset].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
+  if(m_lights[0 + a_pLightOffset].geomType == LIGHT_GEOM_DISC)
+  {
+    const float offsetX = rands.x * 2.0f - 1.0f;
+    const float offsetY = rands.y * 2.0f - 1.0f;
+    sampleOff = MapSamplesToDisc(vec2(offsetX,offsetY))*m_lights[0 + a_pLightOffset].size.x; 
+  }
+  const vec3 samplePos = mul3x3(m_lights[0 + a_pLightOffset].matrix, vec3(sampleOff.x,0.0f,sampleOff.y)) + m_lights[0 + a_pLightOffset].pos.xyz + epsilonOfPos(m_lights[0 + a_pLightOffset].pos.xyz) * m_lights[0 + a_pLightOffset].norm.xyz;
   LightSample res;
-  res.pos  = samplePos;
-  res.norm = normalize(samplePos - lcenter);
+  res.pos    = samplePos;
+  res.norm   = m_lights[0 + a_pLightOffset].norm.xyz;
+  res.isOmni = false;
   return res;
 }
 
-vec4 SampleMatColorParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
-  vec4 res = m_materials[matId].colors[paramId];
-  if(a_wavelengths[0] == 0.0f)
-    return res;
+void glassEval_m_materials(uint a_materialsOffset, vec3 l, vec3 v, vec3 n, vec2 tc, vec3 color, inout BsdfEval res) {
+  // because we don't want to sample this material with shadow rays
+  res.val   = vec4(0.0f);
+  res.pdf   = 0.0f;
+}
 
-  const uint specId = floatBitsToUint(m_materials[matId].data[paramSpecId]);
+void diffuseEval_m_materials(uint a_materialsOffset, vec4 a_reflSpec, vec3 l, vec3 v, vec3 n, vec2 tc, vec4 color, inout BsdfEval res) {
+  const uint             cflags = floatBitsToUint(m_materials[0 + a_materialsOffset].data[UINT_CFLAGS]);
+ 
+  float lambertVal       = lambertEvalBSDF(l, v, n);
+  const float lambertPdf = lambertEvalPDF (l, v, n);
 
-  if(specId < 0xFFFFFFFF)
-  {
-    const uvec2 data = m_spec_offset_sz[specId];
-    const uint offset = data.x;
-    const uint size   = data.y;
-    res = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
-  }
+  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+    lambertVal *= orennayarFunc(l, v, n, m_materials[0 + a_materialsOffset].data[DIFFUSE_ROUGHNESS]);
 
-  return res;
+  res.val = lambertVal * a_reflSpec; 
+  res.pdf = lambertPdf; 
 }
 
 MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec2 tc) {
@@ -552,6 +545,36 @@ uint MaterialBlendSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rando
   return selectedMatId;
 }
 
+vec4 SampleMatColorParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
+  vec4 res = m_materials[matId].colors[paramId];
+  if(a_wavelengths[0] == 0.0f)
+    return res;
+
+  const uint specId = floatBitsToUint(m_materials[matId].data[paramSpecId]);
+
+  if(specId < 0xFFFFFFFF)
+  {
+    const uvec2 data = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    res = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
+  }
+
+  return res;
+}
+
+vec3 BumpMapping(uint normalMapId, uint currMatId, vec3 n, vec3 tan, vec2 tc) {
+  const uint   mflags    = floatBitsToUint(m_materials[currMatId].data[UINT_CFLAGS]);
+  const vec2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
+  const vec4 normalTex = texture(m_textures[normalMapId], texCoordT);
+  const vec3 normalTS = NormalMapTransform(mflags, normalTex.xyz);
+  
+  const vec3 bitan = cross(n, tan);
+  const mat3 tangentTransform = make_float3x3(tan, bitan, n);
+
+  return normalize(inverse(tangentTransform)*normalTS);
+}
+
 vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
   vec4 res = vec4(m_materials[matId].data[paramId]);
   if(a_wavelengths[0] == 0.0f)
@@ -570,7 +593,9 @@ vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint p
   return res;
 }
 
-BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec2 tc, inout MisData a_misPrev, const uint a_currRayFlags) {
+bool isOutOfScene(uint a_flags) { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
+
+BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec3 tan, vec2 tc, inout MisData a_misPrev, const uint a_currRayFlags) {
   BsdfSample res;
   {
     res.val   = vec4(0,0,0,0);
@@ -586,36 +611,42 @@ BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rand
     currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, res);
     mtype     = floatBitsToUint(m_materials[currMatId].data[UINT_MTYPE]);
   }
+  
+  // BSDF is multiplied (outside) by cosThetaOut1.
+  // When normal map is enables this becames wrong because normal is changed;
+  // First : return cosThetaOut in sam;
+  // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+  //
+  const uint normalMapId   = floatBitsToUint(m_materials[currMatId].data[UINT_NMAP_ID]);
+  const vec3 geomNormal = n;
+        vec3 shadeNormal = n;
 
-  //assert(currMatId < m_materials.size());
+  if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
+    shadeNormal = BumpMapping(normalMapId, currMatId, geomNormal, tan, tc);
 
   const vec2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
+  const vec4 rands = rndFloat4_Pseudo(a_gen);
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
-      const vec4 rands = rndFloat4_Pseudo(a_gen);
-      
-      const uint   texId     = floatBitsToUint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
-      const vec4 texColor = (texture(m_textures[texId], texCoordT));
-      const vec4 color = (m_materials[currMatId].colors[GLTF_COLOR_BASE])*texColor;
-      gltfSampleAndEval_m_materials(currMatId, rands, v, n, tc, color, res);
+      const uint   texId    = floatBitsToUint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
+      const vec4 texColor = texture(m_textures[texId], texCoordT);
+      const vec4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
+      gltfSampleAndEval_m_materials(currMatId, rands, v, shadeNormal, tc, color, res);
     }
     break;
     case MAT_TYPE_GLASS: 
     if(KSPEC_MAT_TYPE_GLASS != 0)
     {
-      const vec4 rands = rndFloat4_Pseudo(a_gen);
-
-      glassSampleAndEval_m_materials(currMatId, rands, v, n, tc, res, a_misPrev);
+      glassSampleAndEval_m_materials(currMatId, rands, v, geomNormal, tc, res, a_misPrev);
     }
     break;
     case MAT_TYPE_CONDUCTOR:
     if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
     {
-      const vec4 rands = rndFloat4_Pseudo(a_gen);
-
       const uint   texId     = floatBitsToUint(m_materials[currMatId].data[CONDUCTOR_TEXID0]);
       const vec3 alphaTex = (texture(m_textures[texId], texCoordT)).xyz;
       
@@ -623,48 +654,43 @@ BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rand
       const vec4 etaSpec = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
       const vec4 kSpec = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval_m_materials(currMatId, etaSpec, kSpec, rands, v, n, tc, res);
+        conductorSmoothSampleAndEval_m_materials(currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, res);
       else
-        conductorRoughSampleAndEval_m_materials(currMatId, etaSpec, kSpec, rands, v, n, tc, alphaTex, res);
+        conductorRoughSampleAndEval_m_materials(currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, res);
     }
     break;
     case MAT_TYPE_DIFFUSE:
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
-      const vec4 rands = rndFloat4_Pseudo(a_gen);
-
       const uint   texId       = floatBitsToUint(m_materials[currMatId].data[DIFFUSE_TEXID0]);
-      const vec4 texColor = (texture(m_textures[texId], texCoordT));
+      const vec4 texColor = texture(m_textures[texId], texCoordT);
       const vec4 color = texColor;
-
       const vec4 reflSpec = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
-      diffuseSampleAndEval_m_materials(currMatId, reflSpec, rands, v, n, tc, color, res);
+      diffuseSampleAndEval_m_materials(currMatId, reflSpec, rands, v, shadeNormal, tc, color, res);
     }
     break;
     default:
     break;
   }
   
+  // BSDF is multiplied (outside) by cosThetaOut1.
+  // When normal map is enables this becames wrong because normal is changed;
+  // First : return cosThetaOut in sam;
+  // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+  //
+  if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
+  {
+    const float cosThetaOut1 = abs(dot(res.dir, geomNormal));
+    const float cosThetaOut2 = abs(dot(res.dir, shadeNormal));
+    res.val *= cosThetaOut2 / max(cosThetaOut1, 1e-10f);
+  }
+
   return res;
 }
 
-bool isOutOfScene(uint a_flags) { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
-
-LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
-  const uint gtype = m_lights[a_lightId].geomType;
-  switch(gtype)
-  {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev_m_lights(a_lightId, rands, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev_m_lights(a_lightId, rands);
-    default:                return areaLightSampleRev_m_lights(a_lightId, rands);
-  };
-}
-
-uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }
-
-vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
-  return ubo.m_envColor;
+float LightPdfSelectRev(int a_lightId) { 
+  return 1.0f/float(ubo.m_lights_size); // uniform select
 }
 
 float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const vec3 lpos, const vec3 lnorm) {
@@ -685,6 +711,15 @@ float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const ve
     }
     break;
 
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
+        cosVal = 1.0f;
+      else
+        cosVal = max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    };
+    break;
+
     default:
     cosVal  = max(dot(ray_dir, -1.0f*lnorm), 0.0f);
     break;
@@ -693,8 +728,8 @@ float LightEvalPDF(int a_lightId, vec3 illuminationPoint, vec3 ray_dir, const ve
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
-float LightPdfSelectRev(int a_lightId) { 
-  return 1.0f/float(ubo.m_lights_size); // uniform select
+vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
+  return ubo.m_envColor;
 }
 
 uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
@@ -702,6 +737,8 @@ uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
 bool hasNonSpecular(uint a_flags) { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
 
 bool isDeadRay(uint a_flags) { return (a_flags & RAY_FLAG_IS_DEAD)        != 0; }
+
+uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }
 
 uint RemapMaterialId(uint a_mId, int a_instId) {
   const int remapListId  = m_remapInst[a_instId];
@@ -747,7 +784,49 @@ uint RemapMaterialId(uint a_mId, int a_instId) {
   return res;
 }
 
-BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec2 tc) {
+BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) { 
+  // const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
+  const vec4 specular = (m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
+  const vec4 coat = (m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
+  // const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
+  float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
+  
+  const vec3 pefReflDir = reflect((-1.0f)*v, n);
+  const vec4 reflColor = alpha*specular + (1.0f - alpha)*coat;
+
+  //if(a_materialId == 4)
+  //{
+  //  int a = 2;
+  //}
+
+  BsdfSample res;
+  res.dir   = pefReflDir;
+  res.val   = reflColor;
+  res.pdf   = 1.0f;
+  res.flags = RAY_EVENT_S;
+  return res;
+}
+
+vec4 GetLightSourceIntensity(uint a_lightId, in vec4 a_wavelengths) {
+  vec4 lightColor = m_lights[a_lightId].intensity;  
+  if(KSPEC_SPECTRAL_RENDERING !=0 && ubo.m_spectral_mode != 0)
+  {
+    const uint specId = m_lights[a_lightId].specId;
+  
+    if(specId < 0xFFFFFFFF)
+    {
+      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
+      const uvec2 data = m_spec_offset_sz[specId];
+      const uint offset = data.x;
+      const uint size   = data.y;
+      lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
+    }
+  }
+  lightColor *= m_lights[a_lightId].mult;
+  return lightColor;
+}
+
+BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec3 tan, vec2 tc) {
   BsdfEval res;
   {
     res.val = vec4(0,0,0,0);
@@ -773,6 +852,27 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
       else
         needPop = true; // if not blend, pop on next iter
     } 
+    
+    // BSDF is multiplied (outside) by old cosThetaOut.
+    // When normal map is enables this becames wrong because normal is changed;
+    // First : return cosThetaOut in sam;
+    // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+    //
+    const vec3 geomNormal = n;
+          vec3 shadeNormal = n;
+    float bumpCosMult = 1.0f; 
+    const uint normalMapId = floatBitsToUint(m_materials[currMat.id].data[UINT_NMAP_ID]);
+    if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF) 
+    {
+      shadeNormal = BumpMapping(normalMapId, currMat.id, geomNormal, tan, tc);
+      const vec3 lDir = l;     
+      const float  clampVal = 1e-6f;  
+      const float cosThetaOut1 = max(dot(lDir, geomNormal), 0.0f);
+      const float cosThetaOut2 = max(dot(lDir, shadeNormal), 0.0f);
+      bumpCosMult              = cosThetaOut2 / max(cosThetaOut1, clampVal);
+      if (cosThetaOut1 <= 0.0f)
+        bumpCosMult = 0.0f;
+    }
 
     const vec2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = floatBitsToUint(m_materials[currMat.id].data[UINT_MTYPE]);
@@ -788,11 +888,11 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const uint   texId     = floatBitsToUint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
-        const vec4 texColor = (texture(m_textures[texId], texCoordT));
+        const vec4 texColor = texture(m_textures[texId], texCoordT);
         const vec4 color = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval_m_materials(currMat.id, l, v, n, tc, color, currVal);
+        gltfEval_m_materials(currMat.id, l, v, shadeNormal, tc, color, currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
 
         break;
@@ -800,9 +900,9 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
       case MAT_TYPE_GLASS:
       if(KSPEC_MAT_TYPE_GLASS != 0)
       {
-        glassEval_m_materials(currMat.id, l, v, n, tc, vec3(0,0,0), currVal);
+        glassEval_m_materials(currMat.id, l, v, geomNormal, tc, vec3(0,0,0), currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -811,17 +911,16 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
       {
         const uint   texId     = floatBitsToUint(m_materials[currMat.id].data[CONDUCTOR_TEXID0]);
         const vec3 alphaTex = (texture(m_textures[texId], texCoordT)).xyz;
-
         const vec2 alpha = vec2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V],m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
 
         if(!trEffectivelySmooth(alpha))
         {
           const vec4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
           const vec4 kSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
-          conductorRoughEval_m_materials(currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, currVal);
+          conductorRoughEval_m_materials(currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, currVal);
         }
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -834,16 +933,16 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
 
         const vec4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
-        diffuseEval_m_materials(currMat.id, reflSpec, l, v, n, tc, color, currVal);
+        diffuseEval_m_materials(currMat.id, reflSpec, l, v, shadeNormal, tc, color, currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
       case MAT_TYPE_BLEND:
       if(KSPEC_MAT_TYPE_BLEND != 0)
       {
-        MatIdWeightPair childMats = MaterialBlendEval(currMat, wavelengths, l, v, n, tc);
+        MatIdWeightPair childMats = MaterialBlendEval(currMat, wavelengths, l, v, geomNormal, tc);
         currMat = childMats.first;
         needPop = false;                        // we already put 'childMats.first' in 'currMat'
         if(top + 1 <= KSPEC_BLEND_STACK_SIZE)
@@ -862,46 +961,15 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
   return res;
 }
 
-vec4 GetLightSourceIntensity(uint a_lightId, in vec4 a_wavelengths) {
-  vec4 lightColor = m_lights[a_lightId].intensity;  
-  if(KSPEC_SPECTRAL_RENDERING !=0 && ubo.m_spectral_mode != 0)
+LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
   {
-    const uint specId = floatBitsToUint(m_lights[a_lightId].ids.x);
-  
-    if(specId < 0xFFFFFFFF)
-    {
-      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-      const uvec2 data = m_spec_offset_sz[specId];
-      const uint offset = data.x;
-      const uint size   = data.y;
-      lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
-    }
-  }
-  lightColor *= m_lights[a_lightId].mult;
-  return lightColor;
-}
-
-BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) { 
-  // const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
-  const vec4 specular = (m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
-  const vec4 coat = (m_materials[a_materialId].colors[GLTF_COLOR_COAT]);
-  // const float  roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS];
-  float alpha            = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];
-  
-  const vec3 pefReflDir = reflect((-1.0f)*v, n);
-  const vec4 reflColor = alpha*specular + (1.0f - alpha)*coat;
-
-  //if(a_materialId == 4)
-  //{
-  //  int a = 2;
-  //}
-
-  BsdfSample res;
-  res.dir   = pefReflDir;
-  res.val   = reflColor;
-  res.pdf   = 1.0f;
-  res.flags = RAY_EVENT_S;
-  return res;
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev_m_lights(a_lightId, rands, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev_m_lights(a_lightId, rands);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev_m_lights(a_lightId);
+    default:                return areaLightSampleRev_m_lights(a_lightId, rands);
+  };
 }
 
 vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
@@ -983,10 +1051,11 @@ void kernel_ContributeToImage_m_packedXY_out_color(uint tid, in vec4 a_accumColo
   }
 
   vec4 colorRes = ubo.m_exposureMult * vec4(rgb, 1.0f);
-  //if(x == 255 && y == 133)
-  //{
-  //  int a = 2;
-  //}
+  if(x == 415 && (y == 256-130-1))
+  {
+    int a = 2;
+    //colorRes = float4(1,0,0,0);
+  }
  
   out_color[y*uint(ubo.m_winWidth)+x + out_colorOffset] += colorRes;
   m_randomGens[tid] = gen;
@@ -1011,10 +1080,10 @@ void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 ray
   const uint y = (XY & 0xFFFF0000) >> 16;
   const vec2 pixelOffsets = rndFloat2_Pseudo(genLocal);
 
-  //if(x == 255 && y == 133)
-  //{
-  //  int a = 2;
-  //}
+  if(x == 327 && y == 256-126-1)
+  {
+    int a = 2;
+  }
 
   vec3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(ubo.m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(ubo.m_winHeight), ubo.m_projInv);
@@ -1040,7 +1109,7 @@ void kernel_InitEyeRay2_m_packedXY(uint tid, uint packedXYOffset, inout vec4 ray
 
 }
 
-void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, in vec4 wavelengths, in vec4 in_hitPart1, in vec4 in_hitPart2, in uint rayFlags, uint bounce, inout RandomGen a_gen, inout vec4 out_shadeColor) 
+void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, in vec4 wavelengths, in vec4 in_hitPart1, in vec4 in_hitPart2, in vec4 in_hitPart3, in uint rayFlags, uint bounce, inout RandomGen a_gen, inout vec4 out_shadeColor) 
 {
   
   if(tid >= ubo.m_maxThreadId)
@@ -1059,6 +1128,7 @@ void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAnd
   SurfaceHit hit;
   hit.pos  = data1.xyz;
   hit.norm = data2.xyz;
+  hit.tang = in_hitPart3.xyz;
   hit.uv   = vec2(data1.w,data2.w);
 
   const vec2 rands = rndFloat2_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
@@ -1077,10 +1147,11 @@ void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAnd
   const vec3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const vec3 shadowRayPos = hit.pos + hit.norm*max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
   const bool inShadow = m_pAccelStruct_RayQuery_AnyHit(vec4(shadowRayPos, 0.0f), vec4(shadowRayDir, hitDist*0.9995f));
-  
-  if(!inShadow && dot(shadowRayDir, lSam.norm) < 0.0f) 
+  const bool inIllumArea = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
+
+  if(!inShadow && inIllumArea) 
   {
-    const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.uv);
+    const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
     const float cosThetaOut = max(dot(shadowRayDir, hit.norm), 0.0f);
     
     float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
@@ -1104,7 +1175,7 @@ void kernel_SampleLightSource(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAnd
 
 }
 
-void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hitPart2, in uint in_instId, in vec4 in_shadeColor, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar, in vec4 wavelengths, inout vec4 accumColor, inout vec4 accumThoroughput, inout RandomGen a_gen, inout MisData misPrev, inout uint rayFlags) 
+void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hitPart2, in vec4 in_hitPart3, in uint in_instId, in vec4 in_shadeColor, inout vec4 rayPosAndNear, inout vec4 rayDirAndFar, in vec4 wavelengths, inout vec4 accumColor, inout vec4 accumThoroughput, inout RandomGen a_gen, inout MisData misPrev, inout uint rayFlags) 
 {
   
   if(tid >= ubo.m_maxThreadId)
@@ -1127,11 +1198,11 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
   SurfaceHit hit;
   hit.pos  = data1.xyz;
   hit.norm = data2.xyz;
+  hit.tang = in_hitPart3.xyz;
   hit.uv   = vec2(data1.w,data2.w);
   
   const MisData prevBounce = misPrev;
   const float   prevPdfW   = prevBounce.matSamplePdf;
-  // const float   prevPdfA   = (prevPdfW >= 0.0f) ? PdfWtoA(prevPdfW, length(ray_pos - hit.norm), prevBounce.cosTheta) : 1.0f;
 
   // process light hit case
   //
@@ -1202,7 +1273,7 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
     return;
   }
   
-  const BsdfSample matSam = MaterialSampleAndEval(matId, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
   const vec4 bxdfVal = matSam.val * (1.0f / max(matSam.pdf, 1e-20f));
   const float  cosTheta   = abs(dot(matSam.dir, hit.norm)); 
 
@@ -1238,7 +1309,7 @@ void kernel_NextBounce(uint tid, uint bounce, in vec4 in_hitPart1, in vec4 in_hi
 
 }
 
-void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, inout vec4 out_hit1, inout vec4 out_hit2, inout uint out_instId, inout uint rayFlags) 
+void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, inout vec4 out_hit1, inout vec4 out_hit2, inout vec4 out_hit3, inout uint out_instId, inout uint rayFlags) 
 {
   
   if(tid >= ubo.m_maxThreadId)
@@ -1256,6 +1327,22 @@ void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, ino
   {
     const vec2 uv = vec2(hit.coords[0],hit.coords[1]);
     const vec3 hitPos = rayPos.xyz + (hit.t*0.999999f)*rayDir.xyz; // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
+    
+    // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
+    /////////////////////////////////////////////////////////////////////////////////
+    // // get distance vectors from triangle vertices
+    // vec3 tmpu = P - A, tmpv = P - B, tmpw = P - C
+    // // project these onto the tangent planes
+    // // defined by the shading normals
+    // float dotu = min (0.0, dot(tmpu , nA))
+    // float dotv = min (0.0, dot(tmpv , nB))
+    // float dotw = min (0.0, dot(tmpw , nC))
+    // tmpu -= dotu*nA
+    // tmpv -= dotv*nB
+    // tmpw -= dotw*nC
+    // // finally P' is the barycentric mean of these three
+    // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
+    /////////////////////////////////////////////////////////////////////////////////
 
     const uint triOffset  = m_matIdOffsets[hit.geomId];
     const uint vertOffset = m_vertOffset  [hit.geomId];
@@ -1263,23 +1350,21 @@ void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, ino
     const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
     const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
     const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
-  
-    const vec3 A_norm = m_vNorm4f[A + vertOffset].xyz;
-    const vec3 B_norm = m_vNorm4f[B + vertOffset].xyz;
-    const vec3 C_norm = m_vNorm4f[C + vertOffset].xyz;
 
-    const vec2 A_texc = m_vTexc2f[A + vertOffset];
-    const vec2 B_texc = m_vTexc2f[B + vertOffset];
-    const vec2 C_texc = m_vTexc2f[C + vertOffset];
-      
-    vec3 hitNorm = (1.0f - uv.x - uv.y)*A_norm + uv.y*B_norm + uv.x*C_norm;
-    vec2 hitTexCoord = (1.0f - uv.x - uv.y)*A_texc + uv.y*B_texc + uv.x*C_texc;
-  
+    const vec4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
+    const vec4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
+
+    vec3 hitNorm = data1.xyz;
+    vec3 hitTang = data2.xyz;
+    vec2 hitTexCoord = vec2(data1.w,data2.w);
+
     // transform surface point with matrix and flip normal if needed
     //
     hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
+    hitTang                = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
     const float flipNorm   = dot(rayDir.xyz, hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
     hitNorm                = flipNorm * hitNorm;
+    hitTang                = flipNorm * hitTang; // do we need this ??
     
     if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
@@ -1290,6 +1375,7 @@ void kernel_RayTrace2(uint tid, in vec4 rayPosAndNear, in vec4 rayDirAndFar, ino
     rayFlags              = packMatId(currRayFlags, midRemaped);
     out_hit1              = vec4(hitPos, hitTexCoord.x); 
     out_hit2              = vec4(hitNorm, hitTexCoord.y);
+    out_hit3              = vec4(hitTang, 0.0f);
     out_instId            = hit.instId;
   }
   else
@@ -1337,16 +1423,16 @@ void main()
 
   for(uint depth = 0; depth < ubo.m_traceDepth; depth++) 
   {
-    vec4 shadeColor,  hitPart1,  hitPart2;
+    vec4 shadeColor,  hitPart1,  hitPart2,  hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, rayPosAndNear, rayDirAndFar, hitPart1, hitPart2, instId, rayFlags);
+    kernel_RayTrace2(tid, rayPosAndNear, rayDirAndFar, hitPart1, hitPart2, hitPart3, instId, rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, rayPosAndNear, rayDirAndFar, wavelengths, hitPart1, hitPart2, rayFlags, depth,
+    kernel_SampleLightSource(tid, rayPosAndNear, rayDirAndFar, wavelengths, hitPart1, hitPart2, hitPart3, rayFlags, depth,
                              gen, shadeColor);
 
-    kernel_NextBounce(tid, depth, hitPart1, hitPart2, instId, shadeColor,
+    kernel_NextBounce(tid, depth, hitPart1, hitPart2, hitPart3, instId, shadeColor,
                       rayPosAndNear, rayDirAndFar, wavelengths, accumColor, accumThroughput, gen, mis, rayFlags);
 
     if(isDeadRay(rayFlags))

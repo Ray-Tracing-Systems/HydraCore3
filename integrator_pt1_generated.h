@@ -285,8 +285,8 @@ protected:
     size_t   m_triIndicesOffset = 0;
     VkBuffer m_vNorm4fBuffer = VK_NULL_HANDLE;
     size_t   m_vNorm4fOffset = 0;
-    VkBuffer m_vTexc2fBuffer = VK_NULL_HANDLE;
-    size_t   m_vTexc2fOffset = 0;
+    VkBuffer m_vTang4fBuffer = VK_NULL_HANDLE;
+    size_t   m_vTang4fOffset = 0;
     VkBuffer m_vertOffsetBuffer = VK_NULL_HANDLE;
     size_t   m_vertOffsetOffset = 0;
     VkBuffer m_wavelengthsBuffer = VK_NULL_HANDLE;

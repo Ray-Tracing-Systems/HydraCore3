@@ -20,6 +20,18 @@
 
 using LiteImage::ICombinedImageSampler;
 
+struct SceneInfo
+{
+  int width;
+  int height;
+  int spectral;
+  uint32_t maxMeshes;
+  uint32_t maxTotalVertices;
+  uint32_t maxTotalPrimitives;
+  uint32_t maxPrimitivesPerMesh;
+  uint64_t memGeom;
+  uint64_t memTextures;
+};
 
 class Integrator // : public DataClass, IRenderer
 {
@@ -35,16 +47,13 @@ public:
 
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
-    uint32_t maxMeshes            = 4096;
-    uint32_t maxTotalVertices     = 16'000'000;
-    uint32_t maxTotalPrimitives   = 16'000'000;
-    uint32_t maxPrimitivesPerMesh = 4'000'000;
-
-    a_restrictions[0] = maxMeshes;
-    a_restrictions[1] = maxTotalVertices;
-    a_restrictions[2] = maxTotalPrimitives;
-    a_restrictions[3] = maxPrimitivesPerMesh;
+    a_restrictions[0] = g_lastSceneInfo.maxMeshes;
+    a_restrictions[1] = g_lastSceneInfo.maxTotalVertices;
+    a_restrictions[2] = g_lastSceneInfo.maxTotalPrimitives;
+    a_restrictions[3] = g_lastSceneInfo.maxPrimitivesPerMesh;
   }
+
+  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 
   void InitRandomGens(int a_maxThreads);
 
@@ -95,19 +104,19 @@ public:
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags);
+                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
 
-  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
+  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                          float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
-  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
+  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, 
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, 
+                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
                                 const uint* rayFlags, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
@@ -202,13 +211,13 @@ protected:
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
-
+  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc,
+  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                       MisData* a_misPrev, BsdfSample* a_pRes);
@@ -229,7 +238,7 @@ protected:
                                 
   std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float2>           m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+  std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
   std::vector<int>              m_remapInst;
   std::vector<int>              m_allRemapLists;
@@ -282,8 +291,9 @@ protected:
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING       = 9;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM       = 9; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM       = 10; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -294,9 +304,7 @@ protected:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
-public:
-  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
-                                                        int& width, int& height, int& spectral_mode);
+  static SceneInfo   g_lastSceneInfo;
 };
 
 #endif

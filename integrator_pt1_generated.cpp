@@ -118,8 +118,8 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   m_uboData.m_triIndices_capacity = uint32_t( m_triIndices.capacity() ); assert( m_triIndices.capacity() < maxAllowedSize );
   m_uboData.m_vNorm4f_size     = uint32_t( m_vNorm4f.size() );     assert( m_vNorm4f.size() < maxAllowedSize );
   m_uboData.m_vNorm4f_capacity = uint32_t( m_vNorm4f.capacity() ); assert( m_vNorm4f.capacity() < maxAllowedSize );
-  m_uboData.m_vTexc2f_size     = uint32_t( m_vTexc2f.size() );     assert( m_vTexc2f.size() < maxAllowedSize );
-  m_uboData.m_vTexc2f_capacity = uint32_t( m_vTexc2f.capacity() ); assert( m_vTexc2f.capacity() < maxAllowedSize );
+  m_uboData.m_vTang4f_size     = uint32_t( m_vTang4f.size() );     assert( m_vTang4f.size() < maxAllowedSize );
+  m_uboData.m_vTang4f_capacity = uint32_t( m_vTang4f.capacity() ); assert( m_vTang4f.capacity() < maxAllowedSize );
   m_uboData.m_vertOffset_size     = uint32_t( m_vertOffset.size() );     assert( m_vertOffset.size() < maxAllowedSize );
   m_uboData.m_vertOffset_capacity = uint32_t( m_vertOffset.capacity() ); assert( m_vertOffset.capacity() < maxAllowedSize );
   m_uboData.m_wavelengths_size     = uint32_t( m_wavelengths.size() );     assert( m_wavelengths.size() < maxAllowedSize );
@@ -160,7 +160,7 @@ void Integrator_Generated::ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngin
   m_spec_values.resize(m_uboData.m_spec_values_size);
   m_triIndices.resize(m_uboData.m_triIndices_size);
   m_vNorm4f.resize(m_uboData.m_vNorm4f_size);
-  m_vTexc2f.resize(m_uboData.m_vTexc2f_size);
+  m_vTang4f.resize(m_uboData.m_vTang4f_size);
   m_vertOffset.resize(m_uboData.m_vertOffset_size);
   m_wavelengths.resize(m_uboData.m_wavelengths_size);
 }
@@ -203,8 +203,8 @@ void Integrator_Generated::UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEn
     a_pCopyEngine->UpdateBuffer(m_vdata.m_triIndicesBuffer, 0, m_triIndices.data(), m_triIndices.size()*sizeof(unsigned int) );
   if(m_vNorm4f.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_vNorm4fBuffer, 0, m_vNorm4f.data(), m_vNorm4f.size()*sizeof(struct LiteMath::float4) );
-  if(m_vTexc2f.size() > 0)
-    a_pCopyEngine->UpdateBuffer(m_vdata.m_vTexc2fBuffer, 0, m_vTexc2f.data(), m_vTexc2f.size()*sizeof(struct LiteMath::float2) );
+  if(m_vTang4f.size() > 0)
+    a_pCopyEngine->UpdateBuffer(m_vdata.m_vTang4fBuffer, 0, m_vTang4f.data(), m_vTang4f.size()*sizeof(struct LiteMath::float4) );
   if(m_vertOffset.size() > 0)
     a_pCopyEngine->UpdateBuffer(m_vdata.m_vertOffsetBuffer, 0, m_vertOffset.data(), m_vertOffset.size()*sizeof(unsigned int) );
   if(m_wavelengths.size() > 0)

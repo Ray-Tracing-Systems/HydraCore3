@@ -61,6 +61,7 @@ struct SurfaceHitT
 {
   vec3 pos;
   vec3 norm;
+  vec3 tang;
   vec2 uv;
 };
 #define SurfaceHit SurfaceHitT
@@ -133,6 +134,12 @@ mat4 inverse4x4(mat4 m) { return inverse(m); }
 vec3 mul4x3(mat4 m, vec3 v) { return (m*vec4(v, 1.0f)).xyz; }
 vec3 mul3x3(mat4 m, vec3 v) { return (m*vec4(v, 0.0f)).xyz; }
 
+mat3 make_float3x3(vec3 a, vec3 b, vec3 c) { // different way than mat3(a,b,c)
+  return mat3(a.x, b.x, c.x,
+              a.y, b.y, c.y,
+              a.z, b.z, c.z);
+}
+
 bool Quadratic(float A, float B, float C, inout float t0, inout float t1) {
   // Find quadratic discriminant
   double discrim = double(B) * double(B) - 4. * double(A) * double(C);
@@ -160,13 +167,6 @@ bool Quadratic(float A, float B, float C, inout float t0, inout float t1) {
 
 vec3 faceforward(const vec3 n, const vec3 v) { return (dot(n, v) < 0.f) ? (-1.0f)*n : n; }
 
-uint NextState(inout RandomGen gen) {
-  const uint x = (gen.state).x * 17 + (gen.state).y * 13123;
-  (gen.state).x = (x << 13) ^ x;
-  (gen.state).y ^= (x << 7);
-  return x;
-}
-
 bool Refract(const vec3 wi, const vec3 n, float eta, inout vec3 wt) {
   // Compute $\cos \theta_\roman{t}$ using Snell's law
   float cosThetaI  = dot(n, wi);
@@ -186,6 +186,13 @@ float SpectrumAverage(vec4 spec) {
   return sum / float(SPECTRUM_SAMPLE_SZ);
 }
 
+uint NextState(inout RandomGen gen) {
+  const uint x = (gen.state).x * 17 + (gen.state).y * 13123;
+  (gen.state).x = (x << 13) ^ x;
+  (gen.state).y ^= (x << 7);
+  return x;
+}
+
 vec3 XYZToRGB(vec3 xyz) {
   vec3 rgb;
   rgb[0] = +3.240479f * xyz[0] - 1.537150f * xyz[1] - 0.498535f * xyz[2];
@@ -193,6 +200,19 @@ vec3 XYZToRGB(vec3 xyz) {
   rgb[2] = +0.055648f * xyz[0] - 0.204043f * xyz[1] + 1.057311f * xyz[2];
 
   return rgb;
+}
+
+vec4 rndFloat4_Pseudo(inout RandomGen gen) {
+  uint x = NextState(gen);
+
+  const uint x1 = (x * (x * x * 15731 + 74323) + 871483);
+  const uint y1 = (x * (x * x * 13734 + 37828) + 234234);
+  const uint z1 = (x * (x * x * 11687 + 26461) + 137589);
+  const uint w1 = (x * (x * x * 15707 + 789221) + 1376312589);
+
+  const float scale = (1.0f / 4294967296.0f);
+
+  return vec4(float((x1)), float((y1)), float((z1)), float((w1)))*scale;
 }
 
 vec4 SampleWavelengths(float u, float a, float b) {
@@ -256,27 +276,14 @@ vec2 MapSamplesToDisc(vec2 xy) {
   return res;
 }
 
-vec4 rndFloat4_Pseudo(inout RandomGen gen) {
-  uint x = NextState(gen);
-
-  const uint x1 = (x * (x * x * 15731 + 74323) + 871483);
-  const uint y1 = (x * (x * x * 13734 + 37828) + 234234);
-  const uint z1 = (x * (x * x * 11687 + 26461) + 137589);
-  const uint w1 = (x * (x * x * 15707 + 789221) + 1376312589);
-
-  const float scale = (1.0f / 4294967296.0f);
-
-  return vec4(float((x1)), float((y1)), float((z1)), float((w1)))*scale;
-}
-
 #define KGEN_FLAG_RETURN            1
 #define KGEN_FLAG_BREAK             2
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
-#define SPECTRUM_H 
-#define RTC_RANDOM 
 #define BASIC_PROJ_LOGIC_H 
 #define CFLOAT_GUARDIAN 
+#define RTC_RANDOM 
+#define SPECTRUM_H 
 #define MAXFLOAT FLT_MAX
 

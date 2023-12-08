@@ -36,6 +36,7 @@ typedef struct SurfaceHitT
 {
   float3 pos;
   float3 norm;
+  float3 tang;
   float2 uv;
 }SurfaceHit;
 

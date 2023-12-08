@@ -96,7 +96,12 @@ int main(int argc, const char** argv)
   //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
   //
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-  auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+  SceneInfo sceneInfo = {};
+  sceneInfo.spectral  = spectral_mode;
+  auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo); 
+  WIN_WIDTH     = sceneInfo.width;
+  WIN_HEIGHT    = sceneInfo.height;
+  spectral_mode = sceneInfo.spectral;
     
   // (2) init device with apropriate features for both hydra and camera plugin
   //
@@ -112,8 +117,10 @@ int main(int argc, const char** argv)
   //
   if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
     devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
-    
-  auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
+
+  sceneInfo.memGeom += MEGA_TILE_SIZE*4*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float); // + some reserve may be 
+
+  auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra, sceneInfo.memGeom, sceneInfo.memTextures); 
 
   // (3) Explicitly disable all pipelines which you don't need.
   //     This will make application start-up faster.

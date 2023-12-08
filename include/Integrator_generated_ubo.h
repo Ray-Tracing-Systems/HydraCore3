@@ -76,8 +76,8 @@ struct Integrator_Generated_UBO_Data
   uint m_triIndices_size; 
   uint m_vNorm4f_capacity; 
   uint m_vNorm4f_size; 
-  uint m_vTexc2f_capacity; 
-  uint m_vTexc2f_size; 
+  uint m_vTang4f_capacity; 
+  uint m_vTang4f_size; 
   uint m_vertOffset_capacity; 
   uint m_vertOffset_size; 
   uint m_wavelengths_capacity; 

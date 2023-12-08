@@ -11,7 +11,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "64",
+                 "-spp", "256",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,
@@ -32,7 +32,7 @@
         "name": "GPU render (1)",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
+        "program": "${workspaceFolder}/bin-debug/hydra",
         "args": ["--gpu", "--spectral",
                  "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
                  "-integrator", "mispt", 
@@ -65,7 +65,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "16",
+                 "-spp", "256",
                  "-out", "OUT_COLOR.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -82,16 +82,16 @@
     },
 
     {
-        "name": "CPU render (debug)",
+        "name": "GPU render (debug) / statues",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--cpu", //"--spectral",
-                "-in", "/media/vs/data2/repos/msu-graphics-group/scenes/02_casual_effects/conference/statex_00001.xml",
+        "args": ["--gpu", //"--spectral",
+                "-in", "/home/frol/Downloads/L4.1_statues_hydra/statex_00001.xml",
                 "-integrator", "mispt", 
-                "-width", "512",
-                "-height", "512",
-                "-spp", "32",
+                "-width", "1024",
+                "-height", "1024",
+                "-spp", "256",
                 // "-scn_dir", "../Hydra3Tests",
                 "-out", "DEBUG.bmp"],
         "stopAtEntry": false,
@@ -107,20 +107,20 @@
             }
         ]
     },
+
     {
-        "name": "GPU render",
+        "name": "GPU render (release) / statues",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu",
-                 "-in", "/media/vs/data2/repos/msu-graphics-group/scenes/02_casual_effects/conference/statex_00001.xml",
-                 //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
-                 "-look_at", "\"-0.513511 -0.0173401 -0.857908 0 -6.79865e-08 0.999796 -0.0202079 0 0.858083 -0.0103769 -0.513407 0 -3.2102 -9.09411 -3.49829 1\"",
-                 "-integrator", "mispt", 
-                 "-width", "1024",
-                 "-height", "1024",
-                 "-spp", "512", 
-                 "-out", "out_gpu_conference.bmp"],
+        "args": ["--gpu", //"--spectral",
+                "-in", "/home/frol/Downloads/L4.1_statues_hydra/statex_00001.xml",
+                "-integrator", "mispt", 
+                "-width", "1024",
+                "-height", "1024",
+                "-spp", "256",
+                // "-scn_dir", "../Hydra3Tests",
+                "-out", "RELEASE.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -134,20 +134,20 @@
             }
         ]
     },
+
     {
-        "name": "GPU render (debug)",
+        "name": "GPU render (release) / hairballs",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--gpu",
-                 "-in", "/media/vs/data2/repos/msu-graphics-group/scenes/02_casual_effects/conference/statex_00001.xml",
-                 //"-in", "/media/vs/data2/repos/msu-graphics-group/scenes/01_simple_scenes/bunny_cornell.xml",
-                 "-look_at", "\"-0.513511 -0.0173401 -0.857908 0 -6.79865e-08 0.999796 -0.0202079 0 0.858083 -0.0103769 -0.513407 0 -3.2102 -9.09411 -3.49829 1\"",
-                 "-integrator", "mispt", 
-                 "-width", "1600",
-                 "-height", "1024",
-                 "-spp", "512", 
-                 "-out", "out_gpu_conference.bmp"],
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                "-in", "/home/frol/Downloads/L3.1_Hair_ball_hydra/statex_00001.xml",
+                "-integrator", "mispt", 
+                "-width", "4096",
+                "-height", "4096",
+                "-spp", "1024",
+                // "-scn_dir", "../Hydra3Tests",
+                "-out", "hairballs.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -161,6 +161,7 @@
             }
         ]
     },
+    
     {
         "name": "Bunny",
         "type": "cppdbg",
@@ -449,18 +450,18 @@
     },
 
     {
-        "name": "(LightTest/RGB)",
+        "name": "(PointLights)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", //"--spectral",
-                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_rgb_from_spectr_hydra2.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_213/statex_00001.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
-                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
-                 "-out", "out_cpu_rgb.bmp"],
+                 "-spp", "16",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -476,18 +477,18 @@
     },
 
     {
-        "name": "(LightTest/Spectral)",
+        "name": "(FlatNormals)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", "--spectral",
-                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_spectral_hydra3.xml",
-                 "-integrator", "shadowpt", 
+        "args": ["--cpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/011_normals_subdivisons/statex_00001.xml",
+                 "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "256",
-                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
-                 "-out", "out_cpu_spec.bmp"],
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -501,6 +502,61 @@
             }
         ]
     },
+
+    {
+        "name": "(NormalBump1)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/015_hydra_mat_bump-normal/statex_00001.xml",
+                 "-integrator", "naivept", 
+                 "-width", "512",
+                 "-height", "256",
+                 "-spp", "4096",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_gpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(NormalBump2)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_127/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_gpu_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
 
     ]
 }

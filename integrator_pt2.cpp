@@ -23,6 +23,7 @@ LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illim
   {
     case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
     case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
     default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
   };
 }
@@ -55,6 +56,15 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
       const float3 dirToV  = normalize(lpos - illuminationPoint);
       cosVal = std::abs(dot(dirToV, lnorm));
     }
+    break;
+
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
+        cosVal = 1.0f;
+      else
+        cosVal = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    };
     break;
 
     default:
@@ -121,8 +131,40 @@ MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 waveleng
   return make_weight_pair(p1, p2);
 }
 
+static inline float3 NormalMapTransform(const uint materialFlags, float3 normalFromTex)
+{
+  float3 normalTS = make_float3(2.0f * normalFromTex.x - 1.0f, 2.0f * normalFromTex.y - 1.0f, normalFromTex.z);
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  if((materialFlags & FLAG_NMAP_INVERT_X) != 0)
+    normalTS.x *= (-1.0f);
+
+  if((materialFlags & FLAG_NMAP_INVERT_Y) != 0)
+    normalTS.y *= (-1.0f);
+
+  if((materialFlags & FLAG_NMAP_SWAP_XY) != 0)
+  {
+    float temp = normalTS.x;
+    normalTS.x = normalTS.y;
+    normalTS.y = temp;
+  }
+
+  return normalTS; // normalize(normalTS); // do we nedd this normalize here?
+}
+
+float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc)
+{
+  const uint   mflags    = as_uint(m_materials[currMatId].data[UINT_CFLAGS]);
+  const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
+  const float4 normalTex = m_textures[normalMapId]->sample(texCoordT);
+  const float3 normalTS  = NormalMapTransform(mflags, to_float3(normalTex));
+  
+  const float3   bitan = cross(n, tan);
+  const float3x3 tangentTransform = make_float3x3(tan, bitan, n);
+
+  return normalize(inverse3x3(tangentTransform)*normalTS);
+}
+
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   BsdfSample res;
@@ -140,36 +182,42 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
   }
+  
+  // BSDF is multiplied (outside) by cosThetaOut1.
+  // When normal map is enables this becames wrong because normal is changed;
+  // First : return cosThetaOut in sam;
+  // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+  //
+  const uint normalMapId   = as_uint(m_materials[currMatId].data[UINT_NMAP_ID]);
+  const float3 geomNormal  = n;
+        float3 shadeNormal = n;
 
-  //assert(currMatId < m_materials.size());
+  if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
+    shadeNormal = BumpMapping(normalMapId, currMatId, geomNormal, tan, tc);
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
+  const float4 rands     = rndFloat4_Pseudo(a_gen);
+
   switch(mtype)
   {
     case MAT_TYPE_GLTF:
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
-      const float4 rands = rndFloat4_Pseudo(a_gen);
-      
-      const uint   texId     = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
-      const float4 texColor  = (m_textures[texId]->sample(texCoordT));
-      const float4 color     = (m_materials[currMatId].colors[GLTF_COLOR_BASE])*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, color, &res);
+      const uint   texId    = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
+      const float4 texColor = m_textures[texId]->sample(texCoordT);
+      const float4 color    = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
+      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, &res);
     }
     break;
     case MAT_TYPE_GLASS: 
     if(KSPEC_MAT_TYPE_GLASS != 0)
     {
-      const float4 rands = rndFloat4_Pseudo(a_gen);
-
-      glassSampleAndEval(m_materials.data() + currMatId, rands, v, n, tc, &res, a_misPrev);
+      glassSampleAndEval(m_materials.data() + currMatId, rands, v, geomNormal, tc, &res, a_misPrev);
     }
     break;
     case MAT_TYPE_CONDUCTOR:
     if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
     {
-      const float4 rands = rndFloat4_Pseudo(a_gen);
-
       const uint   texId     = as_uint(m_materials[currMatId].data[CONDUCTOR_TEXID0]);
       const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
       
@@ -177,33 +225,42 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float4 etaSpec = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
       const float4 kSpec   = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, &res);
+        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
-        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, n, tc, alphaTex, &res);
+        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
     }
     break;
     case MAT_TYPE_DIFFUSE:
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
-      const float4 rands = rndFloat4_Pseudo(a_gen);
-
       const uint   texId       = as_uint(m_materials[currMatId].data[DIFFUSE_TEXID0]);
-      const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+      const float4 texColor    = m_textures[texId]->sample(texCoordT);
       const float4 color       = texColor;
-
       const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
-      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, color, &res);
+      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
     }
     break;
     default:
     break;
   }
   
+  // BSDF is multiplied (outside) by cosThetaOut1.
+  // When normal map is enables this becames wrong because normal is changed;
+  // First : return cosThetaOut in sam;
+  // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+  //
+  if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
+  {
+    const float cosThetaOut1 = std::abs(dot(res.dir, geomNormal));
+    const float cosThetaOut2 = std::abs(dot(res.dir, shadeNormal));
+    res.val *= cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
+  }
+
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc)
 {
   BsdfEval res;
   {
@@ -230,6 +287,27 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       else
         needPop = true; // if not blend, pop on next iter
     } 
+    
+    // BSDF is multiplied (outside) by old cosThetaOut.
+    // When normal map is enables this becames wrong because normal is changed;
+    // First : return cosThetaOut in sam;
+    // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
+    //
+    const float3 geomNormal = n;
+          float3 shadeNormal = n;
+    float bumpCosMult = 1.0f; 
+    const uint normalMapId = as_uint(m_materials[currMat.id].data[UINT_NMAP_ID]);
+    if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF) 
+    {
+      shadeNormal = BumpMapping(normalMapId, currMat.id, geomNormal, tan, tc);
+      const float3 lDir     = l;     
+      const float  clampVal = 1e-6f;  
+      const float cosThetaOut1 = std::max(dot(lDir, geomNormal),  0.0f);
+      const float cosThetaOut2 = std::max(dot(lDir, shadeNormal), 0.0f);
+      bumpCosMult              = cosThetaOut2 / std::max(cosThetaOut1, clampVal);
+      if (cosThetaOut1 <= 0.0f)
+        bumpCosMult = 0.0f;
+    }
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   mtype     = as_uint(m_materials[currMat.id].data[UINT_MTYPE]);
@@ -245,11 +323,11 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
-        const float4 texColor  = (m_textures[texId]->sample(texCoordT));
+        const float4 texColor  = m_textures[texId]->sample(texCoordT);
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, n, tc, color, &currVal);
+        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
 
         break;
@@ -257,9 +335,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_GLASS:
       if(KSPEC_MAT_TYPE_GLASS != 0)
       {
-        glassEval(m_materials.data() + currMat.id, l, v, n, tc, float3(0,0,0), &currVal);
+        glassEval(m_materials.data() + currMat.id, l, v, geomNormal, tc, float3(0,0,0), &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -268,17 +346,16 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[CONDUCTOR_TEXID0]);
         const float3 alphaTex  = to_float3(m_textures[texId]->sample(texCoordT));
-
-        const float2 alpha = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
+        const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
 
         if(!trEffectivelySmooth(alpha))
         {
           const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, CONDUCTOR_ETA_SPECID);
           const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K, CONDUCTOR_K_SPECID);
-          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, n, tc, alphaTex, &currVal);
+          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
@@ -291,16 +368,16 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         const float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
-        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, color, &currVal);
+        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, color, &currVal);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
       }
       case MAT_TYPE_BLEND:
       if(KSPEC_MAT_TYPE_BLEND != 0)
       {
-        auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, n, tc);
+        auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, geomNormal, tc);
         currMat = childMats.first;
         needPop = false;                        // we already put 'childMats.first' in 'currMat'
         if(top + 1 <= KSPEC_BLEND_STACK_SIZE)

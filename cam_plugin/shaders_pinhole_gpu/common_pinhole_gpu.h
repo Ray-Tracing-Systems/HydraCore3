@@ -61,6 +61,7 @@ struct SurfaceHitT
 {
   vec3 pos;
   vec3 norm;
+  vec3 tang;
   vec2 uv;
 };
 #define SurfaceHit SurfaceHitT
@@ -126,6 +127,12 @@ mat4 inverse4x4(mat4 m) { return inverse(m); }
 vec3 mul4x3(mat4 m, vec3 v) { return (m*vec4(v, 1.0f)).xyz; }
 vec3 mul3x3(mat4 m, vec3 v) { return (m*vec4(v, 0.0f)).xyz; }
 
+mat3 make_float3x3(vec3 a, vec3 b, vec3 c) { // different way than mat3(a,b,c)
+  return mat3(a.x, b.x, c.x,
+              a.y, b.y, c.y,
+              a.z, b.z, c.z);
+}
+
 float SpectrumAverage(vec4 spec) {
   float sum = spec[0];
   for (uint i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
@@ -185,8 +192,8 @@ vec4 SampleWavelengths(float u, float a, float b) {
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
-#define CFLOAT_GUARDIAN 
 #define MAXFLOAT FLT_MAX
+#define CFLOAT_GUARDIAN 
 #define RTC_RANDOM 
 #define BASIC_PROJ_LOGIC_H 
 #define SPECTRUM_H 

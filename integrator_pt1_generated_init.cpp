@@ -155,7 +155,7 @@ Integrator_Generated::~Integrator_Generated()
   vkDestroyBuffer(device, m_vdata.m_spec_valuesBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_triIndicesBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_vNorm4fBuffer, nullptr);
-  vkDestroyBuffer(device, m_vdata.m_vTexc2fBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_vTang4fBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_vertOffsetBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_wavelengthsBuffer, nullptr);
   for(auto obj : m_vdata.m_texturesArrayTexture)
@@ -204,6 +204,9 @@ const VkSpecializationInfo* Integrator_Generated::GetAllSpecInfo()
   m_allSpecConstInfo[8].constantID = 8;
   m_allSpecConstInfo[8].size       = sizeof(uint32_t);
   m_allSpecConstInfo[8].offset     = 8*sizeof(uint32_t);
+  m_allSpecConstInfo[9].constantID = 9;
+  m_allSpecConstInfo[9].size       = sizeof(uint32_t);
+  m_allSpecConstInfo[9].offset     = 9*sizeof(uint32_t);
   m_allSpecInfo.dataSize      = m_allSpecConstVals.size()*sizeof(uint32_t);
   m_allSpecInfo.mapEntryCount = static_cast<uint32_t>(m_allSpecConstInfo.size());
   m_allSpecInfo.pMapEntries   = m_allSpecConstInfo.data();
@@ -401,8 +404,8 @@ void Integrator_Generated::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_triIndicesBuffer);
   m_vdata.m_vNorm4fBuffer = vk_utils::createBuffer(device, m_vNorm4f.capacity()*sizeof(struct LiteMath::float4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_vNorm4fBuffer);
-  m_vdata.m_vTexc2fBuffer = vk_utils::createBuffer(device, m_vTexc2f.capacity()*sizeof(struct LiteMath::float2), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-  memberVectors.push_back(m_vdata.m_vTexc2fBuffer);
+  m_vdata.m_vTang4fBuffer = vk_utils::createBuffer(device, m_vTang4f.capacity()*sizeof(struct LiteMath::float4), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_vTang4fBuffer);
   m_vdata.m_vertOffsetBuffer = vk_utils::createBuffer(device, m_vertOffset.capacity()*sizeof(unsigned int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_vertOffsetBuffer);
   m_vdata.m_wavelengthsBuffer = vk_utils::createBuffer(device, m_wavelengths.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
