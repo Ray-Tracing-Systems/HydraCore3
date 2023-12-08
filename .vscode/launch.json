@@ -32,7 +32,7 @@
         "name": "GPU render (1)",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin-debug/hydra",
+        "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral",
                  "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
                  "-integrator", "mispt", 
