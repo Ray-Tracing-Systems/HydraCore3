@@ -328,8 +328,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
         if(!m_spectral_mode)
           reflSpec *= color;
-
-        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, &currVal);
+        const uint precomp_id = as_uint(m_materials[currMat.id].data[PLASTIC_PRECOMP_ID]);
+        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, &currVal, 
+                    m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
 
         res.val += currVal.val * currMat.weight;
         res.pdf += currVal.pdf * currMat.weight;

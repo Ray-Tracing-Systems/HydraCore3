@@ -778,7 +778,7 @@ static inline float2 sample_visible_11(float cos_theta_i, float2 sample)
         z = std::sqrt(1.f - dot(p, p));
 
   // Convert to slope
-  float sin_theta_i = std::sqrt(1.f - cos_theta_i * cos_theta_i);
+  float sin_theta_i = std::sqrt(std::max(1.f - cos_theta_i * cos_theta_i, 0.0f));
   float norm = 1.f / (sin_theta_i * y + cos_theta_i * z);
   return float2(cos_theta_i * y - sin_theta_i * z, x) * norm;
 }

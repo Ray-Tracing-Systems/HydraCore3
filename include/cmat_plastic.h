@@ -245,8 +245,8 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
   const float2 alpha2 = {alpha, alpha};
 
-  // n = {0.00234923372, 0.241463557, 0.970407009};
-  // v = {0.00075211667, -0.242878497, -0.970056355};
+  // n = {0, 0.707106829, 0.707106829};
+  // v = {-0.00075211667, 0.242878497, 0.970056355};
 
   // float3 nx, ny, nz = n;
   // CoordinateSystem(nz, &nx, &ny);
@@ -255,11 +255,11 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   CoordinateSystemV2(n, &s, &t);
   t = normalize(cross(n, s));
   
-  float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
-  if(wi.z == 0)
+  const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+  if(wi.z <= 0)
     return;
 
-  // wi = float3{-0.00309263915, 0.00147612393, 0.99999404};
+  // wi = float3{0.00075211667, 0.514192462, 0.857674479};
 
   float cos_theta_i = wi.z;
   float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
@@ -308,9 +308,11 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
   float pdf = D * smith_g1(wi, H, alpha2) / (4.f * cos_theta_i);
   pdf *= prob_specular;
-  pdf += prob_diffuse * (wo.z / M_PI);
+  pdf += prob_diffuse * INV_PI * cos_theta_o;
 
-  const float F = FrDielectric(std::abs(dot(wi, H)), eta); 
+  assert(pdf > 0.0f);
+
+  const float F = FrDielectric(dot(wi, H), eta); 
   float G = microfacet_G(wi, wo, H, alpha2);
   float val = F * D * G / (4.f * cos_theta_i);
 
@@ -326,7 +328,7 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
 
 static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
-                        BsdfEval* pRes)
+                        BsdfEval* pRes, const float* transmittance)
 {
   const uint  cflags    = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
@@ -334,9 +336,55 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   const uint  precomp_id  = as_uint(a_materials[0].data[PLASTIC_PRECOMP_ID]);
   const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
   const uint  nonlinear   = as_uint(a_materials[0].data[PLASTIC_NONLINEAR]);
-
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
 
-  pRes->val = float4(0.0f); 
-  pRes->pdf = 1.0f;
+  const float2 alpha2 {alpha, alpha};
+  
+  float3 s, t;
+  CoordinateSystemV2(n, &s, &t);
+  t = normalize(cross(n, s));
+  
+  const float3 wo = float3(dot(l, s), dot(l, t), dot(l, n));
+  const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+  const float cos_theta_i = wi.z;
+  const float cos_theta_o = wo.z;
+  if(wi.z * wo.z <= 0)
+    return;
+
+  float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
+
+  float prob_specular = (1.f - t_i) * spec_weight;
+  float prob_diffuse  = t_i * (1.f - spec_weight);
+
+  if(prob_diffuse != 0.0f && prob_specular != 0.0f)
+  {
+    prob_specular = prob_specular / (prob_specular + prob_diffuse);
+    prob_diffuse  = 1.f - prob_specular;
+  }
+  else
+  {
+    prob_diffuse  = 1.0f;
+    prob_specular = 0.0f;
+  }
+
+ 
+  float3 H = normalize(wo + wi);
+  float  D = eval_microfacet(H, alpha2);
+  float smith_g1_wi = smith_g1(wi, H, alpha2);
+
+  float pdf = D * smith_g1_wi / (4.f * cos_theta_i);
+  pdf *= prob_specular;
+  pdf += prob_diffuse * INV_PI * cos_theta_o;
+
+
+  const float F = FrDielectric(dot(wi, H), eta); 
+  float G = smith_g1(wi, H, alpha2) * smith_g1_wi;
+  float val = F * D * G / (4.f * cos_theta_i);
+
+  float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
+  float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
+  const float inv_eta_2 = 1.f / (eta * eta);
+
+  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * cos_theta_o * t_i * t_o );
+  pRes->pdf   = pdf;
 }

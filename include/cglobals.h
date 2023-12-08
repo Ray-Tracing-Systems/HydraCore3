@@ -100,13 +100,13 @@ static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
 static inline void CoordinateSystemV2(const float3 &n, float3* s, float3* t) 
 {
   float sign = n.z >= 0 ? 1 : -1;
-  float a    = -(1.0f / sign + n.z);
+  float a    = -(1.0f / (sign + n.z));
   float b    = n.x * n.y * a;
 
   float tmp = (n.z >= 0 ? n.x * n.x * a : -n.x * n.x * a);
   (*s) = float3{tmp + 1,
                 n.z >= 0 ? b : -b,
-                n.z >= 0 ? -n.x : n.z};
+                n.z >= 0 ? -n.x : n.x};
   
   (*t) = float3{b, n.y * n.y * a + sign, -n.y};
 }
