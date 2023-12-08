@@ -314,6 +314,9 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   float G = microfacet_G(wi, wo, H, alpha2);
   float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
 
+  if (cos_theta_i == 0 || cos_theta_o == 0)
+    val = 0.0f;
+
   float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
   const float inv_eta_2 = 1.f / (eta * eta);
@@ -378,6 +381,9 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   const float F = FrDielectric(dot(wi, H), eta); 
   float G = smith_g1(wi, H, alpha2) * smith_g1_wi;
   float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
+
+  if (cos_theta_i == 0 || cos_theta_o == 0)
+    val = 0.0f;
 
   float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
