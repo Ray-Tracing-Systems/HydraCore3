@@ -310,18 +310,16 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   pdf *= prob_specular;
   pdf += prob_diffuse * INV_PI * cos_theta_o;
 
-  assert(pdf > 0.0f);
-
   const float F = FrDielectric(dot(wi, H), eta); 
   float G = microfacet_G(wi, wo, H, alpha2);
-  float val = F * D * G / (4.f * cos_theta_i);
+  float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
 
   float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
   const float inv_eta_2 = 1.f / (eta * eta);
 
   pRes->dir   = normalize(wo.x * s + wo.y * t + wo.z * n);
-  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * cos_theta_o * t_i * t_o );
+  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * /*cos_theta_o **/ t_i * t_o );
   pRes->pdf   = pdf;
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
@@ -379,12 +377,12 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
 
   const float F = FrDielectric(dot(wi, H), eta); 
   float G = smith_g1(wi, H, alpha2) * smith_g1_wi;
-  float val = F * D * G / (4.f * cos_theta_i);
+  float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
 
   float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float4 diffuse = a_reflSpec / (1.f - (nonlinear > 0 ? (a_reflSpec * internal_refl) : float4(internal_refl)));
   const float inv_eta_2 = 1.f / (eta * eta);
 
-  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * cos_theta_o * t_i * t_o );
+  pRes->val   = float4(val) + diffuse * (INV_PI * inv_eta_2 * /*cos_theta_o **/ t_i * t_o );
   pRes->pdf   = pdf;
 }
