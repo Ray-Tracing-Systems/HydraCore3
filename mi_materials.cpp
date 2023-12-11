@@ -331,7 +331,7 @@ namespace mi
 
 
   CoatPrecomputed fresnel_coat_precompute(float alpha, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance,
-                               bool is_spectral)
+                               bool is_spectral, const std::vector<float>& reflectance_spectrum)
   {
     CoatPrecomputed res;
     float eta = int_ior / ext_ior;
@@ -350,6 +350,20 @@ namespace mi
     s_mean /= sz;
 
     res.specular_sampling_weight = s_mean / (d_mean + s_mean);
+
+    if(is_spectral)
+    {
+      assert(reflectance_spectrum.size() > 0);
+      float acc = 0.0f;
+      for(const auto& val: reflectance_spectrum)
+      {
+        acc += val;
+      }
+      acc = acc / reflectance_spectrum.size();
+
+      res.specular_sampling_weight = s_mean / (acc + s_mean);
+    }
+
 
     std::array<float, MI_ROUGH_TRANSMITTANCE_RES> zeros;
     zeros.fill(0.0f);

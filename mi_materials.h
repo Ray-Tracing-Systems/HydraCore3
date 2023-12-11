@@ -16,5 +16,5 @@ namespace mi
     float specular_sampling_weight;
   };
   CoatPrecomputed fresnel_coat_precompute(float alpha, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance,
-                              bool is_spectral);
+                                          bool is_spectral, const std::vector<float>& reflectance_spectrum);
 }
