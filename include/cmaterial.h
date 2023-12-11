@@ -678,10 +678,10 @@ static inline float2 sincos_phi(const float3 &v)
 }
 
 /// Low-distortion concentric square to disk mapping by Peter Shirley
-static inline float2 square_to_uniform_disk_concentric(const float2 &sample) 
+static inline float2 square_to_uniform_disk_concentric(const float2 &s) 
 {
-  float x = 2.f * sample.x - 1.f,
-        y = 2.f * sample.y - 1.f;
+  float x = 2.f * s.x - 1.f,
+        y = 2.f * s.y - 1.f;
 
   float phi, r;
   if (x == 0 && y == 0) 
@@ -701,10 +701,10 @@ static inline float2 square_to_uniform_disk_concentric(const float2 &sample)
   return {r * std::cos(phi), r * std::sin(phi)};
 }
 
-static inline float3 square_to_cosine_hemisphere(const float2 &sample) 
+static inline float3 square_to_cosine_hemisphere(const float2 &s) 
 {
     // Low-distortion warping technique based on concentric disk mapping
-    float2 p = square_to_uniform_disk_concentric(sample);
+    float2 p = square_to_uniform_disk_concentric(s);
 
     // Guard against numerical imprecisions
     float z = std::sqrt(1.f - (p.x * p.x + p.y * p.y));
@@ -766,9 +766,9 @@ static inline float eval_microfacet(const float3 &m, float2 alpha, int type = 1)
   return result * cos_theta > 1e-20f ? result : 0.f;
 }
 
-static inline float2 sample_visible_11(float cos_theta_i, float2 sample)
+static inline float2 sample_visible_11(float cos_theta_i, float2 samp)
 {
-  float2 p = square_to_uniform_disk_concentric(sample);
+  float2 p = square_to_uniform_disk_concentric(samp);
 
   float s = 0.5f * (1.f + cos_theta_i);
   p.y = lerp(std::sqrt(1.f - p.x * p.x), p.y, s);
@@ -804,7 +804,7 @@ static inline float4 sample_visible_normal(float3 wi, float2 rands, float2 alpha
   // Step 4: compute normal
   float3 m = normalize(float3(-slope.x, -slope.y, 1));
 
-  float pdf = eval_microfacet(m, alpha) * smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
+  float pdf = eval_microfacet(m, alpha, 1) * smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
 
   return {m.x, m.y, m.z, pdf};
 }
@@ -817,7 +817,7 @@ static inline float microfacet_G(const float3 &wi, const float3 &wo, const float
 
 static inline float microfacet_pdf(const float3 &wi, const float3 &m, float2 alpha) 
 {
-  float result = eval_microfacet(m, alpha);
+  float result = eval_microfacet(m, alpha, 1);
 
   result *= smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
 
