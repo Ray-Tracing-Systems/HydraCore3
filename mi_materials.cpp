@@ -329,6 +329,51 @@ namespace mi
     return result;
   }
 
+  float spectrum_mean(const std::vector<float>& spectrum)
+  {
+    // std::vector<float> cdf(spectrum.size() - 1);
+    uint2 valid = {uint32_t(- 1), uint32_t(- 1)};
+
+    double range = double(LAMBDA_MAX) - double(LAMBDA_MIN),
+           interval_size = range / (spectrum.size() - 1),
+           integral = 0.;
+
+    float max_val = spectrum[0];
+    for (size_t i = 0; i < spectrum.size() - 1; ++i) {
+        double y0 = (double) spectrum[i],
+               y1 = (double) spectrum[i + 1];
+
+        double value = 0.5 * interval_size * (y0 + y1);
+
+        // max_val = std::max(max_val, (float) y1);
+
+        integral += value;
+        // cdf[i] = (float) integral;
+
+        if (y0 < 0. || y1 < 0.) 
+        {
+          std::cout << "ERROR! Negative values in spectrum!" << std::endl;
+          throw(std::exception());
+        } 
+        else if (value > 0.) 
+        {
+          // Determine the first and last wavelength bin with nonzero density
+          if (valid.x == uint32_t(-1))
+              valid.x = uint32_t(i);
+          valid.y = uint32_t(i);
+        }
+    }
+
+    if(valid.x == uint32_t(-1) || valid.y == uint32_t(-1))
+    {
+      std::cout << "ERROR! No probability mass found for spectrum!" << std::endl;
+      throw(std::exception());
+    }
+
+    float mean = float(integral)/(LAMBDA_MAX - LAMBDA_MIN);
+
+    return mean;
+  }
 
   CoatPrecomputed fresnel_coat_precompute(float alpha, float int_ior, float ext_ior, float4 diffuse_reflectance, float4 specular_reflectance,
                                bool is_spectral, const std::vector<float>& reflectance_spectrum)
@@ -349,21 +394,12 @@ namespace mi
     d_mean /= sz;
     s_mean /= sz;
 
-    res.specular_sampling_weight = s_mean / (d_mean + s_mean);
-
     if(is_spectral)
     {
-      assert(reflectance_spectrum.size() > 0);
-      float acc = 0.0f;
-      for(const auto& val: reflectance_spectrum)
-      {
-        acc += val;
-      }
-      acc = acc / reflectance_spectrum.size();
-
-      res.specular_sampling_weight = s_mean / (acc + s_mean);
+      d_mean = spectrum_mean(reflectance_spectrum);
     }
 
+    res.specular_sampling_weight = s_mean / (d_mean + s_mean);
 
     std::array<float, MI_ROUGH_TRANSMITTANCE_RES> zeros;
     zeros.fill(0.0f);

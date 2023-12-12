@@ -15,12 +15,6 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
   const float2 alpha2 = {alpha, alpha};
 
-  // n = {0, 0.707106829, 0.707106829};
-  // v = {-0.00075211667, 0.242878497, 0.970056355};
-
-  // float3 nx, ny, nz = n;
-  // CoordinateSystem(nz, &nx, &ny);
-
   float3 s, t;
   CoordinateSystemV2(n, &s, &t);
   t = normalize(cross(n, s));
@@ -29,9 +23,8 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   if(wi.z <= 0)
     return;
 
-  // wi = float3{0.00075211667, 0.514192462, 0.857674479};
+  const float cos_theta_i = std::max(wi.z, EPSILON_32);
 
-  float cos_theta_i = wi.z;
   // float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
   float t_i = 0.0f;
   {
@@ -59,10 +52,6 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
     prob_specular = 0.0f;
   }
 
-  // rands_2 = 0.286642551;
-
-  // rands = {0.385110825, 0.979427397, 0.286642551, 0.0};
-
   const bool sample_specular = rands.z < prob_specular;
   const bool sample_diffuse  = !sample_specular;
 
@@ -78,11 +67,12 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
     wo = square_to_cosine_hemisphere({rands.x, rands.y});
   }
 
-  float cos_theta_o = wo.z;
-  if(wi.z * wo.z < 0)
+  if(cos_theta_i * wo.z <= 0)
   {
     return;
   }
+
+  const float cos_theta_o = std::max(wo.z, EPSILON_32);
 
   float3 H = normalize(wo + wi);
   float  D = eval_microfacet(H, alpha2, 1);
@@ -94,9 +84,6 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
   const float F = FrDielectric(dot(wi, H), eta); 
   float G = microfacet_G(wi, wo, H, alpha2);
   float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
-
-  if (cos_theta_i == 0 || cos_theta_o == 0)
-    val = 0.0f;
 
   // float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float t_o = 0.0f;
@@ -140,10 +127,12 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   
   const float3 wo = float3(dot(l, s), dot(l, t), dot(l, n));
   const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
-  const float cos_theta_i = wi.z;
-  const float cos_theta_o = wo.z;
   if(wi.z * wo.z <= 0)
+  {
     return;
+  }
+  const float cos_theta_i = std::max(wi.z, EPSILON_32);
+  const float cos_theta_o = std::max(wo.z, EPSILON_32);
 
   // float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
   float t_i = 0.0f;
@@ -183,11 +172,8 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
 
 
   const float F = FrDielectric(dot(wi, H), eta); 
-  float G = smith_g1(wi, H, alpha2) * smith_g1_wi;
+  float G = smith_g1(wo, H, alpha2) * smith_g1_wi;
   float val = F * D * G / (4.f * cos_theta_i * cos_theta_o);
-
-  if (cos_theta_i == 0 || cos_theta_o == 0)
-    val = 0.0f;
 
   // float t_o = lerp_gather(transmittance, cos_theta_o, MI_ROUGH_TRANSMITTANCE_RES); 
   float t_o = 0.0f;

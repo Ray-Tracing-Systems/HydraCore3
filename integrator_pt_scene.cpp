@@ -583,6 +583,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
                              const std::vector<float> &spectra,
+                             const std::vector<float> &wavelengths,
                              const std::vector<uint2> &spec_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
@@ -595,6 +596,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
 
   auto nodeColor = materialNode.child(L"reflectance");
+  uint32_t specId = 0xFFFFFFFF;
   if(nodeColor != nullptr)
   {
     mat.colors[PLASTIC_COLOR] = GetColorFromNode(nodeColor, is_spectral_mode);
@@ -605,7 +607,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
     mat.row1 [0]  = sampler.row1;
     mat.data[PLASTIC_COLOR_TEXID] = as_float(texID);
 
-    auto specId = GetSpectrumIdFromNode(nodeColor);
+    specId = GetSpectrumIdFromNode(nodeColor);
     mat.data[PLASTIC_COLOR_SPECID] = as_float(specId);
   }
 
@@ -619,10 +621,19 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
   std::vector<float> spectrum;
   
-  if(is_spectral_mode && mat.data[PLASTIC_COLOR_SPECID] != 0xFFFFFFFF)
+  if(is_spectral_mode && specId != 0xFFFFFFFF)
   {
-    const auto offsets = spec_offsets[mat.data[PLASTIC_COLOR_SPECID]];
-    std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+    const auto offsets = spec_offsets[specId];
+    spectrum.reserve(offsets.y);
+    for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
+    {
+      if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
+      {
+        spectrum.push_back(spectra[i]);
+      }
+    }
+    
+    // std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
   }
 
   auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, mat.colors[PLASTIC_COLOR],
@@ -976,7 +987,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == plasticMatTypeStr)
     {
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode, m_spec_values, m_spec_offset_sz);
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+                                m_spec_values, m_wavelengths, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
 
