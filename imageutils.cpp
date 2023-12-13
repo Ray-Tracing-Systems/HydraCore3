@@ -89,13 +89,74 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
 
 void FlipYAndNormalizeImage3D(float* data, int width, int height, int channels, float a_normConst = 1.0f)
 {
-
+  const size_t size = size_t(width*height*channels);
+  for(size_t i=0;i<size;i++)
+    data[i] *= a_normConst;
+  /*for(int y1=0;y1<height;y1++) 
+  {
+    const int y2 = height-y1-1;  
+    if(y1 == y2)
+      continue;
+    if(channels <= 4) {
+      const int offsetY1 = y1*width*channels;
+      const int offsetY2 = y2*width*channels; 
+      for(int x=0;x<width*channels;x++) {
+        float tmp        = a_normConst*data[offsetY1+x];
+        data[offsetY1+x] = a_normConst*data[offsetY2+x];
+        data[offsetY2+x] = tmp;
+      }
+    } 
+    else
+    {
+      for(int x=0;x<width;x++) 
+      {
+        
+      }
+    }
+  }*/
 }
 
 bool SaveImage3DToEXR(const float* data, int width, int height, int channels, const char* outfilename) 
 {
+  EXRHeader header;
+  InitEXRHeader(&header);
 
-  return false;
+  EXRImage image;
+  InitEXRImage(&image);
+  image.num_channels = 1;
+
+  const float* image_ptr[1] = {data};
+
+  image.images = (unsigned char**)image_ptr;
+  image.width  = width;
+  image.height = height;
+  header.num_channels = 1;
+  header.channels     = (EXRChannelInfo *)malloc(sizeof(EXRChannelInfo) * header.num_channels);
+
+  strncpy(header.channels[0].name, "Y", 255); header.channels[0].name[strlen("Y")] = '\0';
+
+  header.pixel_types           = (int*)malloc(sizeof(int) * header.num_channels);
+  header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels);
+  for (int i = 0; i < header.num_channels; i++) {
+    header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+    header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+  }
+ 
+  const char* err = nullptr; 
+  int ret = SaveEXRImageToFile(&image, &header, outfilename, &err);
+  if (ret != TINYEXR_SUCCESS) {
+    fprintf(stderr, "Save EXR err: %s\n", err);
+    FreeEXRErrorMessage(err); // free's buffer for an error message
+    return false;
+  }
+  //printf("Saved exr file. [%s] \n", outfilename);
+
+  free(header.channels);
+  free(header.pixel_types);
+  free(header.requested_pixel_types);
+
+
+  return true;
 }
 
 void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)

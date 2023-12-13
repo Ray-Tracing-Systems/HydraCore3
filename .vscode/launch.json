@@ -38,6 +38,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
+                 "-channels", "1",
                  "-spp", "64",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_LAMBERT_RGB_CPU.exr"],
