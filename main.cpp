@@ -6,8 +6,9 @@
 #include "ArgParser.h"
 #include"mi_materials.h"
 
-bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
+void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+
 float4x4 ReadMatrixFromString(const std::string& str);
 
 #ifdef USE_VULKAN
@@ -201,7 +202,7 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr"; 
-      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
+      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {
@@ -224,7 +225,7 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr"; 
-      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
+      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {
@@ -251,7 +252,7 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
+      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {  
@@ -279,7 +280,7 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, true);
+      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {

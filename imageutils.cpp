@@ -87,6 +87,28 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
   return true;
 }
 
+void FlipYAndNormalizeImage3D(float* data, int width, int height, int channels, float a_normConst = 1.0f)
+{
+
+}
+
+bool SaveImage3DToEXR(const float* data, int width, int height, int channels, const char* outfilename) 
+{
+
+  return false;
+}
+
+void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)
+{
+  if(channels == 4)
+    SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);
+  else
+  {
+    FlipYAndNormalizeImage3D(data, width, height, channels, a_normConst);
+    SaveImage3DToEXR(data, width, height, channels, outfilename);
+  }
+}
+
 static inline float clamp(float u, float a, float b) { return std::min(std::max(a, u), b); }
 
 static inline unsigned RealColorToUint32(float real_color[4])

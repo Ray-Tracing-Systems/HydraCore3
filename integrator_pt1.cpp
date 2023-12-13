@@ -452,7 +452,12 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
     //colorRes = float4(1,0,0,0);
   }
   
-  if(channels <= 4)
+  if(channels == 1)
+  {
+    const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    out_color[y*m_winWidth+x] += mono;
+  }
+  else if(channels <= 4)
   {
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
