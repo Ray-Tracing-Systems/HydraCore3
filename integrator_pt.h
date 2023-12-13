@@ -20,6 +20,18 @@
 
 using LiteImage::ICombinedImageSampler;
 
+struct SceneInfo
+{
+  int width;
+  int height;
+  int spectral;
+  uint32_t maxMeshes;
+  uint32_t maxTotalVertices;
+  uint32_t maxTotalPrimitives;
+  uint32_t maxPrimitivesPerMesh;
+  uint64_t memGeom;
+  uint64_t memTextures;
+};
 
 class Integrator // : public DataClass, IRenderer
 {
@@ -35,16 +47,13 @@ public:
 
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
-    uint32_t maxMeshes            = 4096;
-    uint32_t maxTotalVertices     = 16'000'000;
-    uint32_t maxTotalPrimitives   = 16'000'000;
-    uint32_t maxPrimitivesPerMesh = 4'000'000;
-
-    a_restrictions[0] = maxMeshes;
-    a_restrictions[1] = maxTotalVertices;
-    a_restrictions[2] = maxTotalPrimitives;
-    a_restrictions[3] = maxPrimitivesPerMesh;
+    a_restrictions[0] = g_lastSceneInfo.maxMeshes;
+    a_restrictions[1] = g_lastSceneInfo.maxTotalVertices;
+    a_restrictions[2] = g_lastSceneInfo.maxTotalPrimitives;
+    a_restrictions[3] = g_lastSceneInfo.maxPrimitivesPerMesh;
   }
+
+  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 
   void InitRandomGens(int a_maxThreads);
 
@@ -53,30 +62,20 @@ public:
 
   void PackXY         (uint tidX, uint tidY);
 
-#ifdef KERNEL_SLICER
-  void CastSingleRay  (uint tid, uint* out_color   __attribute__((size("tid"))) ); ///<! ray casting, draw diffuse or emisive color
-  void RayTrace       (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! whitted ray tracing
+  void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
+  void RayTrace       (uint tid, float4* out_color [[size("tid")]]); ///<! whitted ray tracing
+  void NaivePathTrace (uint tid, float4* out_color [[size("tid")]]); ///<! NaivePT
+  void PathTrace      (uint tid, float4* out_color [[size("tid")]]); ///<! MISPT and ShadowPT
 
-  void NaivePathTrace (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! NaivePT
-  void PathTrace      (uint tid, float4* out_color __attribute__((size("tid"))) ); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPart1*  in_rayPosAndNear __attribute__((size("tid"))), 
-                                        const RayPart2*  in_rayDirAndFar  __attribute__((size("tid"))),
-                                        float4*        out_color        __attribute__((size("tid"))));
-#else
-  void CastSingleRay  (uint tid, uint* out_color); ///<! ray casting, draw diffuse or emisive color
-  void RayTrace       (uint tid, float4* out_color); ///<! whitted ray tracing
-
-  void NaivePathTrace (uint tid, float4* out_color); ///<! NaivePT
-  void PathTrace      (uint tid, float4* out_color); ///<! MISPT and ShadowPT
-  void PathTraceFromInputRays(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
-                              float4* out_color);
-#endif
+  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear [[size("tid")]], 
+                                        const RayDirAndT* in_rayDirAndFar  [[size("tid")]],
+                                        float4*           out_color        [[size("tid")]]);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, 
+  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float4* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
 
@@ -97,7 +96,7 @@ public:
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
-  void kernel_InitEyeRayFromInput(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar,
+  void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                   RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
 
@@ -105,19 +104,19 @@ public:
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, uint* out_instId, uint* rayFlags);
+                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
 
-  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const uint* in_instId,
+  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                          float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
-  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2,
+  void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, 
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, 
+                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
                                 const uint* rayFlags, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
@@ -160,6 +159,20 @@ public:
     m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
     m_winHeight = a_height;
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
+
+    const auto sizeX = a_width  - a_xStart;
+    const auto sizeY = a_height - a_yStart;
+
+    if(sizeX % 8 == 0 && sizeY % 8 == 0)
+      m_tileSize = 8;
+    else if(sizeX % 4 == 0 && sizeY % 4 == 0)
+      m_tileSize = 4;
+    else if(sizeX % 2 == 0 && sizeY % 2 == 0)
+      m_tileSize = 2;
+    else 
+      m_tileSize = 1;
+    
+    m_maxThreadId = sizeX*sizeY;
   }
   
   void SetWorldView(const float4x4& a_mat)
@@ -178,9 +191,9 @@ protected:
   uint m_traceDepth = 10;
   uint m_skipBounce = 0; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
                          ///!< TODO: don't account specular bounces(!)
-  uint m_spp        = 1024;
-  uint m_dummy2     = 0;
-  uint m_dummy3     = 0;
+  uint m_spp         = 1024;
+  uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
+  uint m_maxThreadId = m_winWidth*m_winHeight;
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
@@ -198,13 +211,13 @@ protected:
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
-
+  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc,
+  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                       MisData* a_misPrev, BsdfSample* a_pRes);
@@ -225,7 +238,7 @@ protected:
                                 
   std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float2>           m_vTexc2f;       ///< vertTexc = m_vTexc2f[vertOffs + vertId]
+  std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
   std::vector<int>              m_remapInst;
   std::vector<int>              m_allRemapLists;
@@ -280,8 +293,9 @@ protected:
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING       = 9;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM       = 9; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM       = 10; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -292,9 +306,7 @@ protected:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
-public:
-  static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
-                                                        int& width, int& height, int& spectral_mode);
+  static SceneInfo   g_lastSceneInfo;
 };
 
 #endif

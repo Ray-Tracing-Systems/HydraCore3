@@ -168,7 +168,6 @@ inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
   return rgb;
 }
 
-Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 std::vector<float> Get_CIE_lambda();
 std::vector<float> Get_CIE_X();
 std::vector<float> Get_CIE_Y();

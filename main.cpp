@@ -93,9 +93,13 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-
-  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), 
-                                                       WIN_WIDTH, WIN_HEIGHT, spectral_mode);
+  
+  SceneInfo sceneInfo = {};
+  sceneInfo.spectral  = spectral_mode;
+  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo); 
+  WIN_WIDTH     = sceneInfo.width;
+  WIN_HEIGHT    = sceneInfo.height;
+  spectral_mode = sceneInfo.spectral;
 
   //// override parameters which are explicitly defined in command line
   //
@@ -125,7 +129,7 @@ int main(int argc, const char** argv)
     //
     std::vector<const char*> requiredExtensions;
     auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);                                          
-    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures); 
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, sceneInfo.memGeom, sceneInfo.memTextures); 
      
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster

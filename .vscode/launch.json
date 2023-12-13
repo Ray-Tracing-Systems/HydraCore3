@@ -7,13 +7,13 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", "--spectral",
-                 "-in", "../Hydra3Tests/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "4096",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_CPU_plastic_spectral_mis.bmp"],
+                 "-spp", "64",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -35,7 +35,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral" ,
                 "-in", "../Hydra3Tests/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml",
-                "-integrator", "mispt", 
+                "-integrator", "mispt",
                 "-width", "1024",
                 "-height", "1024",
                 "-spp", "4096",
@@ -62,7 +62,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", "--spectral",
                 "-in", "../Hydra3Tests/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml",
-                "-integrator", "mispt", 
+                "-integrator", "mispt",
                 "-width", "1024",
                 "-height", "1024",
                 "-spp", "512",
@@ -115,7 +115,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral",
                 "-in", "../Hydra3Tests/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml",
-                "-integrator", "mispt", 
+                "-integrator", "mispt",
                 "-width", "1024",
                 "-height", "1024",
                 "-spp", "512",
@@ -193,10 +193,11 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
                  "-in",  "/home/frol/PROG/alex_refs/02_sponza1/statex_00001.xml",
-                 "-out", "/home/frol/PROG/alex_refs/02_sponza1/renders/02_sponza_secondary.bmp",
-                 //"-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                 "-out", "sponza.bmp",
+                 "-width", "1600",
+                 "-height", "1200",
                  "-integrator", "mispt", 
-                 "-spp", "16384"],
+                 "-spp", "256"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -290,6 +291,271 @@
             }
         ]
     },
+
+    {
+        "name": "Rect (NaivePT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_046/statex_00001.xml",
+                 "-integrator", "naivept",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16384",
+                 "-out", "out_rect_naive.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Rect (ShadowPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_046/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_rect_shadow.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (MisPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_rect_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (NaivePT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "naivept",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16384",
+                 "-out", "out_disk_naive.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (ShadowPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "shadowpt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_disk_shadow.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Disk (MisPT)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "../HydraAPI-tests/tests/test_047/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-out", "out_disk_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(PointLights)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_213/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(FlatNormals)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/011_normals_subdivisons/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_cpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(NormalBump1)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/3dsMaxTests/015_hydra_mat_bump-normal/statex_00001.xml",
+                 "-integrator", "naivept",
+                 "-width", "512",
+                 "-height", "256",
+                 "-spp", "4096",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_gpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "(NormalBump2)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", //"--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_127/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "out_gpu_mis.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
 
     ]
 }
