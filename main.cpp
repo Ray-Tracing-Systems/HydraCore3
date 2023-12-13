@@ -31,6 +31,7 @@ int main(int argc, const char** argv)
   int WIN_HEIGHT      = 1024;
   int PASS_NUMBER     = 1024;
   int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
+  int CHANNELS        = 4;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
@@ -112,7 +113,7 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  std::vector<float4> realColor(WIN_WIDTH*WIN_HEIGHT);
+  std::vector<float> realColor(WIN_WIDTH*WIN_HEIGHT*CHANNELS);
 
   bool onGPU = args.hasOption("--gpu");
   #ifdef USE_VULKAN
@@ -182,11 +183,11 @@ int main(int argc, const char** argv)
   if(enableNaivePT)
   {
     std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
-    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
     std::cout << std::endl;
     pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
@@ -200,12 +201,12 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr"; 
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
   
@@ -214,21 +215,21 @@ int main(int argc, const char** argv)
   {
     std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
     
-    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
     
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr"; 
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
 
@@ -236,11 +237,11 @@ int main(int argc, const char** argv)
   {
     std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
     
-    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
     std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
@@ -250,12 +251,12 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {  
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
   
@@ -265,10 +266,10 @@ int main(int argc, const char** argv)
     const float normConstRT = 1.0f;  // must be always one for RT currently
     std::cout << "[main]: RayBlock ... " << std::endl;
 
-    std::fill(realColor.begin(), realColor.end(), LiteMath::float4{});
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
    
     pImpl->UpdateMembersPlainData();
-    pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, realColor.data(), PASS_NUMBER);
+    pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
 
     pImpl->GetExecutionTime("RayTraceBlock", timings);
     std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
@@ -278,12 +279,12 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      SaveImage4fToEXR((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, true);
+      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, true);
     }
     else
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.bmp";
-      SaveImage4fToBMP((const float*)realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
+      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
     }
   }
 

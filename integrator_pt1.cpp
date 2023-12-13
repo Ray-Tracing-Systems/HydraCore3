@@ -428,8 +428,8 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
 }
 
 
-void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
-                                          const float4* wavelengths, float4* out_color)
+void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
+                                          const float4* wavelengths, float* out_color)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -451,23 +451,36 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
     int a = 2;
     //colorRes = float4(1,0,0,0);
   }
- 
-  out_color[y*m_winWidth+x] += colorRes;
+  
+  if(channels == 3 || channels == 4)
+  {
+    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+  }
+
   m_randomGens[tid] = *gen;
 }
 
-void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
+void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, float* out_color)
 {
   if(tid >= m_maxThreadId)
     return;
-  out_color   [tid] += *a_accumColor;
+  float4 color = *a_accumColor;
+  if(channels == 4)
+  {
+    out_color[tid*4+0] += color[0];
+    out_color[tid*4+1] += color[1];
+    out_color[tid*4+2] += color[2];
+    out_color[tid*4+3] += color[3];
+  }
   m_randomGens[tid] = *gen;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Integrator::NaivePathTrace(uint tid, float4* out_color)
+void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -494,11 +507,11 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                        &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
+  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
                            out_color);
 }
 
-void Integrator::PathTrace(uint tid, float4* out_color)
+void Integrator::PathTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -529,10 +542,10 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
-void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color)
+void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -566,5 +579,5 @@ void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAnd
   
   //////////////////////////////////////////////////// same as for PathTrace
 
-  kernel_CopyColorToOutput(tid, &accumColor, &gen, out_color);
+  kernel_CopyColorToOutput(tid, channels, &accumColor, &gen, out_color);
 }
