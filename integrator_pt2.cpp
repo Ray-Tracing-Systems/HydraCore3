@@ -255,7 +255,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
       const uint precomp_id = as_uint(m_materials[currMatId].data[PLASTIC_PRECOMP_ID]);
 
-      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, n, tc, &res,
+      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
                            m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
     }
     break;
@@ -403,10 +403,10 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         if(m_spectral_mode == 0)
           reflSpec *= color;
         const uint precomp_id = as_uint(m_materials[currMat.id].data[PLASTIC_PRECOMP_ID]);
-        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, n, tc, &currVal, 
+        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
                     m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
 
-        res.val += currVal.val * currMat.weight;
+        res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
         break;
