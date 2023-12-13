@@ -452,7 +452,7 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
     //colorRes = float4(1,0,0,0);
   }
   
-  if(channels == 3 || channels == 4)
+  if(channels <= 4)
   {
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;

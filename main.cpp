@@ -24,14 +24,12 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
 
+  int FB_WIDTH        = 1024;
+  int FB_HEIGHT       = 1024;
+  int FB_CHANNELS     = 4;
 
-  // mi::fresnel_coat_precompute(0.25f, 1.89947379, 1.0f, {0.1f, 0.27f, 0.36f, 0.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, false);
-
-  int WIN_WIDTH       = 1024;
-  int WIN_HEIGHT      = 1024;
   int PASS_NUMBER     = 1024;
   int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
-  int CHANNELS        = 4;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
@@ -98,22 +96,24 @@ int main(int argc, const char** argv)
   SceneInfo sceneInfo = {};
   sceneInfo.spectral  = spectral_mode;
   auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo); 
-  WIN_WIDTH     = sceneInfo.width;
-  WIN_HEIGHT    = sceneInfo.height;
+  FB_WIDTH      = sceneInfo.width;
+  FB_HEIGHT     = sceneInfo.height;
   spectral_mode = sceneInfo.spectral;
 
   //// override parameters which are explicitly defined in command line
   //
   if(args.hasOption("-width"))
-    WIN_WIDTH = args.getOptionValue<int>("-width");
+    FB_WIDTH = args.getOptionValue<int>("-width");
   if(args.hasOption("-height"))
-    WIN_HEIGHT = args.getOptionValue<int>("-height");
+    FB_HEIGHT = args.getOptionValue<int>("-height");
+  if(args.hasOption("-channels"))
+    FB_CHANNELS = args.getOptionValue<int>("-channels");
   if(args.hasOption("--spectral"))
     spectral_mode = 1;
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  std::vector<float> realColor(WIN_WIDTH*WIN_HEIGHT*CHANNELS);
+  std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
 
   bool onGPU = args.hasOption("--gpu");
   #ifdef USE_VULKAN
@@ -124,7 +124,7 @@ int main(int argc, const char** argv)
     // simple way
     //
     //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    //pImpl = CreateIntegrator_Generated(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features, ctx, WIN_WIDTH*WIN_HEIGHT);
+    //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
     
     // advanced way, init device with features which is required by generated class
     //
@@ -144,19 +144,19 @@ int main(int argc, const char** argv)
 
     // advanced way
     //
-    auto pObj = std::make_shared<Integrator_Generated>(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features); 
+    auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, spectral_mode, features); 
     pObj->SetVulkanContext(ctx);
-    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, WIN_WIDTH*WIN_HEIGHT); 
+    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, WIN_WIDTH*FB_HEIGHT); 
     pImpl = pObj;
   }
   else
   #endif
-    pImpl = std::make_shared<Integrator>(WIN_WIDTH*WIN_HEIGHT, spectral_mode, features);
+    pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
-  pImpl->SetViewport(0,0,WIN_WIDTH,WIN_HEIGHT);
+  pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
 
@@ -174,7 +174,7 @@ int main(int argc, const char** argv)
   // remember (x,y) coords for each thread to make our threading 1D
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl; 
-  pImpl->PackXYBlock(WIN_WIDTH, WIN_HEIGHT, 1);
+  pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
 
   float timings[4] = {0,0,0,0};
   
@@ -187,7 +187,7 @@ int main(int argc, const char** argv)
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+    pImpl->NaivePathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
     
     std::cout << std::endl;
     pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
@@ -201,12 +201,12 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr"; 
-      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp"; 
-      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
   
@@ -219,17 +219,17 @@ int main(int argc, const char** argv)
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
     
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr"; 
-      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp"; 
-      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
 
@@ -241,7 +241,7 @@ int main(int argc, const char** argv)
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
     std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
@@ -251,12 +251,12 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, true);
+      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, true);
     }
     else
     {  
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConst, gamma);
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
     }
   }
   
@@ -269,7 +269,7 @@ int main(int argc, const char** argv)
     std::fill(realColor.begin(), realColor.end(), 0.0f);
    
     pImpl->UpdateMembersPlainData();
-    pImpl->RayTraceBlock(WIN_WIDTH*WIN_HEIGHT, CHANNELS, realColor.data(), PASS_NUMBER);
+    pImpl->RayTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
 
     pImpl->GetExecutionTime("RayTraceBlock", timings);
     std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
@@ -279,12 +279,12 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, true);
+      SaveImage4fToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, true);
     }
     else
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.bmp";
-      SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, outName.c_str(), normConstRT, gamma);
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
     }
   }
 

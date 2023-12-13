@@ -265,7 +265,7 @@ void Integrator::kernel_ContributeToImage3(uint tid, uint channels, const float4
 
   float4 color = *a_accumColor;
   //out_color[y*m_winWidth+x] += color;
-  if(channels == 3 || channels == 4)
+  if(channels <= 4)
   {
     out_color[(y*m_winWidth+x)*channels + 0] += color.x;
     out_color[(y*m_winWidth+x)*channels + 1] += color.y;
