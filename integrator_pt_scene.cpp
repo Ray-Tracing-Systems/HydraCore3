@@ -1327,5 +1327,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_spec_values.reserve(16);
   if(m_wavelengths.capacity() == 0)
     m_wavelengths.reserve(16);
+  if(m_precomp_coat_transmittance.capacity() == 0)
+    m_precomp_coat_transmittance.reserve(16);
   return true;
 }
