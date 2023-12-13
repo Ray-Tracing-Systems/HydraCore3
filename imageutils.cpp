@@ -92,28 +92,21 @@ void FlipYAndNormalizeImage3D(float* data, int width, int height, int channels, 
   const size_t size = size_t(width*height*channels);
   for(size_t i=0;i<size;i++)
     data[i] *= a_normConst;
-  /*for(int y1=0;y1<height;y1++) 
+  
+  std::vector<float> line(width*channels);
+  for(int y1=0;y1<height;y1++) 
   {
     const int y2 = height-y1-1;  
     if(y1 == y2)
       continue;
-    if(channels <= 4) {
-      const int offsetY1 = y1*width*channels;
-      const int offsetY2 = y2*width*channels; 
-      for(int x=0;x<width*channels;x++) {
-        float tmp        = a_normConst*data[offsetY1+x];
-        data[offsetY1+x] = a_normConst*data[offsetY2+x];
-        data[offsetY2+x] = tmp;
-      }
-    } 
-    else
-    {
-      for(int x=0;x<width;x++) 
-      {
-        
-      }
-    }
-  }*/
+  
+    const int offsetY1 = y1*width*channels;
+    const int offsetY2 = y2*width*channels; 
+    
+    memcpy(line.data(),     data + offsetY1, width*channels*sizeof(float));
+    memcpy(data + offsetY1, data + offsetY2, width*channels*sizeof(float));
+    memcpy(data + offsetY2, line.data(),     width*channels*sizeof(float));
+  }
 }
 
 bool SaveImage3DToEXR(const float* data, int width, int height, int channels, const char* outfilename) 
@@ -155,7 +148,6 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   free(header.pixel_types);
   free(header.requested_pixel_types);
 
-
   return true;
 }
 
@@ -165,8 +157,16 @@ void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channe
     SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);
   else
   {
-    FlipYAndNormalizeImage3D(data, width, height, channels, a_normConst);
-    SaveImage3DToEXR(data, width, height, channels, outfilename);
+    //FlipYAndNormalizeImage3D(data, width, height, channels, a_normConst);
+    std::vector<float> image2(width*height*channels);
+    for(int y=0;y<height;y++) {
+      const int offsetY1 = y*width*channels;
+      const int offsetY2 = (height-y-1)*width*channels;
+      for(int x=0;x<width*channels;x++) {
+        image2[offsetY2+x] = data[offsetY1+x]*a_normConst;
+      }
+    }   
+    SaveImage3DToEXR(image2.data(), width, height, channels, outfilename);
   }
 }
 
