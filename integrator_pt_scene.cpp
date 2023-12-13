@@ -650,6 +650,13 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
 
   mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+
+  // dirty hack 
+  if(mat.data[PLASTIC_ROUGHNESS] == 0.0f)
+  {
+    mat.data[PLASTIC_ROUGHNESS] = 1e-6f;
+  }
+
   mat.data[PLASTIC_NONLINEAR] = as_float(hydra_xml::readval1u(materialNode.child(L"nonlinear"), 0));
 
   std::vector<float> spectrum;
