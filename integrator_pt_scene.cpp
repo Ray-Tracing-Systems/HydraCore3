@@ -584,6 +584,32 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   return mat;
 }
 
+float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex)
+{
+  float* ptr = (float*)(tex->data());
+  float4 res{0.0f};
+  size_t tex_sz = tex->width() * tex->height();
+  uint32_t channels = tex->bpp() / sizeof(float);
+  for(size_t i = 0; i < tex_sz / channels; ++i)
+  {  
+    for(size_t j = 0; j < channels; ++i)
+    {
+      res.M[j] += ptr[i * channels + j];
+    }
+  }
+
+  if(channels == 1)
+  {
+    res.w = res.x;
+    res.z = res.x;
+    res.y = res.x;
+  }
+
+  res = res / (tex_sz);
+
+  return res;
+}
+
 Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
@@ -643,7 +669,18 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
     // std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
   }
 
-  auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, mat.colors[PLASTIC_COLOR],
+  float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];
+
+  if(!is_spectral_mode)
+  {
+    uint32_t colorTexId = as_uint(mat.data[PLASTIC_COLOR_TEXID]);
+    if(colorTexId > 0 && colorTexId != 0xFFFFFFFF)
+    {
+      diffuse_reflectance *= image2D_average(textures[colorTexId]);
+    }
+  }
+
+  auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, diffuse_reflectance,
                                             {1.0f, 1.0f, 1.0f, 1.0f}, is_spectral_mode, spectrum);
 
   mat.data[PLASTIC_PRECOMP_REFLECTANCE] = precomp.internal_reflectance;
