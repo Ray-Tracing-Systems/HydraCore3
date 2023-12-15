@@ -94,21 +94,36 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
 
   EXRImage image;
   InitEXRImage(&image);
-  image.num_channels = 1;
+  image.num_channels = channels;
 
-  const float* image_ptr[1] = {data};
+  std::vector<const float*> image_ptr(channels);
+  for(int c=0;c<channels;c++)
+    image_ptr[c] = data + c*width*height;
 
-  image.images = (unsigned char**)image_ptr;
+  std::vector<EXRChannelInfo> channelsVec(channels);
+  std::vector<int>            auxIntData(2*channels);
+
+  image.images = (unsigned char**)image_ptr.data();
   image.width  = width;
   image.height = height;
-  header.num_channels = 1;
-  header.channels     = (EXRChannelInfo *)malloc(sizeof(EXRChannelInfo) * header.num_channels);
 
-  strncpy(header.channels[0].name, "Y", 255); header.channels[0].name[strlen("Y")] = '\0';
+  header.num_channels          = 1;
+  header.channels              = channelsVec.data();
+  header.pixel_types           = auxIntData.data();
+  header.requested_pixel_types = auxIntData.data() + channels;
 
-  header.pixel_types           = (int*)malloc(sizeof(int) * header.num_channels);
-  header.requested_pixel_types = (int*)malloc(sizeof(int) * header.num_channels);
-  for (int i = 0; i < header.num_channels; i++) {
+  constexpr float IMG_LAMBDA_MIN = 360.0f;
+  constexpr float IMG_LAMBDA_MAX = 830.0f;
+
+  for (int i = 0; i < channels; i++) {
+    const float t      = float(i)/float(channels);
+    const float lamdba = IMG_LAMBDA_MIN + t*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+    std::stringstream strout;
+    strout.precision(3);
+    strout << "Y." << lamdba;
+    std::string tmp = strout.str();
+    memset (header.channels[i].name, 0, 256);
+    strncpy(header.channels[i].name, tmp.c_str(), 255);
     header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
     header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
   }
@@ -122,20 +137,16 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   }
   //printf("Saved exr file. [%s] \n", outfilename);
 
-  free(header.channels);
-  free(header.pixel_types);
-  free(header.requested_pixel_types);
-
   return true;
 }
 
-void FlipYAndNormalizeImage3D(float* data, int width, int height, int channels, float a_normConst = 1.0f)
+void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_normConst = 1.0f)
 {  
   const int halfHeight = height / 2;
   for (int y = 0; y < halfHeight; ++y) {
-    const int offsetY1 = y * width * channels;
-    const int offsetY2 = (height - y - 1) * width * channels;
-    for (int x = 0; x < width * channels; ++x) {
+    const int offsetY1 = y * width;
+    const int offsetY2 = (height - y - 1) * width;
+    for (int x = 0; x < width; ++x) {
       const float tmp    = a_normConst*data[offsetY1 + x];
       data[offsetY1 + x] = a_normConst*data[offsetY2 + x];
       data[offsetY2 + x] = tmp;
@@ -149,7 +160,8 @@ void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channe
     SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);
   else
   {
-    FlipYAndNormalizeImage3D(data, width, height, channels, a_normConst);  
+    for(int c=0;c<channels;c++)
+      FlipYAndNormalizeImage2D1f(data + width*height*c, width, height, a_normConst);  
     SaveImage3DToEXR(data, width, height, channels, outfilename);
   }
 }

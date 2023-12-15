@@ -32,7 +32,7 @@
         "name": "LambertRGB(CPU)",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
+        "program": "${workspaceFolder}/bin-debug/hydra",
         "args": ["--cpu", 
                  "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
                  "-integrator", "mispt", 

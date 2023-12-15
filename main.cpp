@@ -24,6 +24,17 @@ int main(int argc, const char** argv)
   #else
   bool enableValidationLayers = false;
   #endif
+  
+  // test saving 3D image
+  {
+    std::vector<float> data(640*480*8);
+    for(int z=0;z<8;z++)
+      for(int y=0;y<480;y++)
+        for(int x=0;x<640;x++)
+          data[z*(640*480) + y*640 + x] = (float(x) + float(y) + 2.0f*float(z)*float(z)) / (std::sqrt(float(x*y)) + 0.1f);
+    FlipYAndSaveFrameBufferToEXR(data.data(), 640, 480, 8, "z_test.exr", 1.0f);
+    exit(0);
+  }
 
   int FB_WIDTH        = 1024;
   int FB_HEIGHT       = 1024;
