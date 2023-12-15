@@ -94,7 +94,6 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
 
   EXRImage image;
   InitEXRImage(&image);
-  image.num_channels = channels;
 
   std::vector<const float*> image_ptr(channels);
   for(int c=0;c<channels;c++)
@@ -103,11 +102,12 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   std::vector<EXRChannelInfo> channelsVec(channels);
   std::vector<int>            auxIntData(2*channels);
 
-  image.images = (unsigned char**)image_ptr.data();
-  image.width  = width;
-  image.height = height;
+  image.images       = (unsigned char**)image_ptr.data();
+  image.width        = width;
+  image.height       = height;
+  image.num_channels = channels;
 
-  header.num_channels          = 1;
+  header.num_channels          = channels;
   header.channels              = channelsVec.data();
   header.pixel_types           = auxIntData.data();
   header.requested_pixel_types = auxIntData.data() + channels;
@@ -119,9 +119,9 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
     const float t      = float(i)/float(channels);
     const float lamdba = IMG_LAMBDA_MIN + t*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
     std::stringstream strout;
-    strout.precision(3);
-    strout << "Y." << lamdba;
+    strout << int(lamdba) << ".Y";
     std::string tmp = strout.str();
+    std::cout << tmp.c_str() << std::endl;
     memset (header.channels[i].name, 0, 256);
     strncpy(header.channels[i].name, tmp.c_str(), 255);
     header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
