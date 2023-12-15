@@ -161,7 +161,7 @@ int main(int argc, const char** argv)
     //
     auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, spectral_mode, features); 
     pObj->SetVulkanContext(ctx);
-    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, WIN_WIDTH*FB_HEIGHT); 
+    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, FB_WIDTH*FB_HEIGHT); 
     pImpl = pObj;
   }
   else

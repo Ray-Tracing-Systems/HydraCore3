@@ -468,9 +468,11 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
     auto waves = *wavelengths;
     auto color = *a_accumColor;
     for(int i=0;i<4;i++) {
-      float t = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
-      int channelId = std::min(int(float(channels)*t), int(channels)-1);
-      out_color[(y*m_winWidth+x) + channelId*m_winWidth*m_winHeight] += color[i];
+      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
+      const int offsetPixel = int(y)*m_winWidth + int(x);
+      const int offsetLayer = channelId*m_winWidth*m_winHeight;
+      out_color[offsetLayer + offsetPixel] += color[i];
     }
   }
 
