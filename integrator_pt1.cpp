@@ -446,11 +446,11 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  if(x == 415 && (y == 256-130-1))
-  {
-    int a = 2;
-    //colorRes = float4(1,0,0,0);
-  }
+  //if(x == 415 && (y == 256-130-1))
+  //{
+  //  int a = 2;
+  //  //colorRes = float4(1,0,0,0);
+  //}
   
   if(channels == 1)
   {
@@ -462,6 +462,16 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
     out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+  }
+  else
+  {
+    auto waves = *wavelengths;
+    auto color = *a_accumColor;
+    for(int i=0;i<4;i++) {
+      float t = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+      int channelId = std::min(int(float(channels)*t), int(channels)-1);
+      out_color[(y*m_winWidth+x) + channelId*m_winWidth*m_winHeight] += color[i];
+    }
   }
 
   m_randomGens[tid] = *gen;

@@ -116,12 +116,14 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   constexpr float IMG_LAMBDA_MAX = 830.0f;
 
   for (int i = 0; i < channels; i++) {
-    const float t      = float(i)/float(channels);
-    const float lamdba = IMG_LAMBDA_MIN + t*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+    const float t0     = float(i)/float(channels);
+    const float t1     = float(i+1)/float(channels);
+    const float lamdba0 = IMG_LAMBDA_MIN + t0*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+    const float lamdba1 = IMG_LAMBDA_MIN + t1*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
     std::stringstream strout;
-    strout << int(lamdba) << ".Y";
+    strout << int(lamdba0) << "-" << int(lamdba1)-1 << ".Y";
     std::string tmp = strout.str();
-    std::cout << tmp.c_str() << std::endl;
+    //std::cout << tmp.c_str() << std::endl;
     memset (header.channels[i].name, 0, 256);
     strncpy(header.channels[i].name, tmp.c_str(), 255);
     header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
@@ -154,7 +156,7 @@ void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_norm
   }
 }
 
-void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)
+void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)
 {
   if(channels == 4)
     SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);

@@ -6,7 +6,7 @@
 #include "ArgParser.h"
 #include"mi_materials.h"
 
-void FlipYAndSaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
+void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
 float4x4 ReadMatrixFromString(const std::string& str);
@@ -25,16 +25,16 @@ int main(int argc, const char** argv)
   bool enableValidationLayers = false;
   #endif
   
-  // test saving 3D image
-  {
-    std::vector<float> data(640*480*8);
-    for(int z=0;z<8;z++)
-      for(int y=0;y<480;y++)
-        for(int x=0;x<640;x++)
-          data[z*(640*480) + y*640 + x] = 0.1f*float(z) + 0.05f*(float(x) + float(y) + 2.0f*float(z)*float(z)) / (std::sqrt(float(x*y)) + 0.1f);
-    FlipYAndSaveFrameBufferToEXR(data.data(), 640, 480, 8, "z_test.exr", 1.0f);
-    exit(0);
-  }
+  //// test saving 3D image
+  //{
+  //  std::vector<float> data(640*480*8);
+  //  for(int z=0;z<8;z++)
+  //    for(int y=0;y<480;y++)
+  //      for(int x=0;x<640;x++)
+  //        data[z*(640*480) + y*640 + x] = 0.1f*float(z) + 0.05f*(float(x) + float(y) + 2.0f*float(z)*float(z)) / (std::sqrt(float(x*y)) + 0.1f);
+  //  SaveFrameBufferToEXR(data.data(), 640, 480, 8, "z_test.exr", 1.0f);
+  //  exit(0);
+  //}
 
   int FB_WIDTH        = 1024;
   int FB_HEIGHT       = 1024;
@@ -122,6 +122,9 @@ int main(int argc, const char** argv)
     FB_CHANNELS = args.getOptionValue<int>("-channels");
   if(args.hasOption("--spectral"))
     spectral_mode = 1;
+  
+  if(FB_CHANNELS == 2 || FB_CHANNELS == 3) // we don't support these values currently
+    FB_CHANNELS = 4;
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -213,7 +216,7 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr"; 
-      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {
@@ -236,7 +239,7 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr"; 
-      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {
@@ -263,7 +266,7 @@ int main(int argc, const char** argv)
     if(saveHDR) 
     {
       const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {  
@@ -291,7 +294,7 @@ int main(int argc, const char** argv)
     if(saveHDR)
     {
       const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      FlipYAndSaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
     }
     else
     {
