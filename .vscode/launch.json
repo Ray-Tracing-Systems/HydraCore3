@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "CPU render (1)",
+        "name": "SpectralBlend(CPU)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
@@ -11,7 +11,89 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
+                 "-channels", "16",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_CPU.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SpectralBlend(GPU/Debug)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "LambertRGB(CPU/Common)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
                  "-spp", "64",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_LAMBERT_RGB_CPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SpectralBlend(CPU/Common)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,
@@ -29,18 +111,18 @@
     },
 
     {
-        "name": "GPU render (1)",
+        "name": "LambertRGB(GPU/Debug)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--gpu", "--spectral" ,
-                "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
-                "-integrator", "mispt",
-                "-width", "1024",
-                "-height", "1024",
-                "-spp", "256",
-                "-scn_dir", "../comparisonrender",
-                 "-out", "OUT_BLEND_GPU.bmp"],
+        "args": ["--gpu", 
+                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_LAMBERT_RGB_GPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -54,6 +136,8 @@
             }
         ]
     },
-   
+    
+
+
     ]
 }

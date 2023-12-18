@@ -178,7 +178,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
   uint32_t currMatId = a_materialId;
   uint     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
-  while(mtype == MAT_TYPE_BLEND)
+  while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
     currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
