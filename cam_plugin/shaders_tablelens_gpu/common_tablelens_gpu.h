@@ -281,9 +281,9 @@ vec2 MapSamplesToDisc(vec2 xy) {
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
+#define MAXFLOAT FLT_MAX
+#define RTC_RANDOM 
 #define BASIC_PROJ_LOGIC_H 
 #define CFLOAT_GUARDIAN 
-#define RTC_RANDOM 
 #define SPECTRUM_H 
-#define MAXFLOAT FLT_MAX
 

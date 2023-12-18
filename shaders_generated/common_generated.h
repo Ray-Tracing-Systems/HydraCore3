@@ -978,10 +978,10 @@ uint fakeOffset(uint x, uint y, uint pitch) { return y*pitch + x; }  // RTV patt
 #define KGEN_REDUCTION_LAST_STEP    16
 #define BASIC_PROJ_LOGIC_H 
 #define TEST_CLASS_H 
-#define SPECTRUM_H 
+#define CFLOAT_GUARDIAN 
+#define IMAGE2D_H 
 #define MAXFLOAT FLT_MAX
 #define RTC_RANDOM 
-#define IMAGE2D_H 
-#define CFLOAT_GUARDIAN 
+#define SPECTRUM_H 
 #define RTC_MATERIAL 
 
