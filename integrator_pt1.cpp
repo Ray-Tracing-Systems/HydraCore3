@@ -483,7 +483,9 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
 {
   if(tid >= m_maxThreadId)
     return;
-  float4 color = *a_accumColor;
+  
+  const float4 color = *a_accumColor;
+
   if(channels == 4)
   {
     out_color[tid*4+0] += color[0];
@@ -491,6 +493,9 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
     out_color[tid*4+2] += color[2];
     out_color[tid*4+3] += color[3];
   }
+  else if(channels == 1)
+    out_color[tid] += color[0];
+
   m_randomGens[tid] = *gen;
 }
 

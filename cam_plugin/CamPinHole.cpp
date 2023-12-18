@@ -98,7 +98,15 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float* in_color,
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
-    float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3]); // always float4
+    //float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3]); // always float4
+    float4 color;   
+    if(m_spectral_mode != 0)
+    {
+      float data = in_color[tid];
+      color = float4(data,data,data,data);
+    }
+    else
+      color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3]);
 
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
