@@ -136,6 +136,31 @@
             }
         ]
     },
+
+    {
+        "name": "Checker(FalconEye)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_spectral_hydra3_v1.xml",
+                 "-integrator", "mispt", 
+                 "-spp", "1024",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "z_out_checker.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     
 
 

@@ -437,12 +437,72 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
-
-  float3 rgb = to_float3(*a_accumColor);
+  
+  float4 specSamples = *a_accumColor; 
+  float3 rgb         = to_float3(specSamples);
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
   {
-    const float3 xyz = SpectrumToXYZ(*a_accumColor, *wavelengths, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-    rgb = XYZToRGB(xyz);
+    float4 waves = *wavelengths;
+    
+    if(m_camResponseSpectrumId[0] < 0)
+    {
+      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      rgb = XYZToRGB(xyz);
+    }
+    else
+    {
+      float4 responceX, responceY, responceZ;
+      {
+        int specId = m_camResponseSpectrumId[0];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceX = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceX = float4(1,1,1,1);
+
+        specId = m_camResponseSpectrumId[1];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceY = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceY = responceX;
+
+        specId = m_camResponseSpectrumId[2];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceZ = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceZ = responceY;
+      }
+
+      if(m_camResponseType == CAM_RESPONCE_XYZ)
+      {
+        const float3 xyz = SpectrumToXYZ2(specSamples, waves, responceX, responceY, responceZ, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+        rgb = XYZToRGB(xyz);
+      }
+      else
+      {
+        rgb = float3(0,0,0);
+        for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
+          rgb.x += specSamples[i]*responceX[i];
+          rgb.y += specSamples[i]*responceY[i];
+          rgb.z += specSamples[i]*responceZ[i]; 
+        } 
+      }
+
+    }
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
