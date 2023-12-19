@@ -141,6 +141,8 @@ int main(int argc, const char** argv)
     //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
     //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
     
+    sceneInfo.memGeom += FB_WIDTH*FB_HEIGHT*FB_CHANNELS + 50*1024*1024; // reservse for frame buffer and other
+
     // advanced way, init device with features which is required by generated class
     //
     std::vector<const char*> requiredExtensions;
