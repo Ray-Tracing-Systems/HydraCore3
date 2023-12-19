@@ -142,6 +142,15 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   return true;
 }
 
+void SaveImage3DToImage3D1f(const float* data, int width, int height, int channels, const char* outfilename) 
+{ 
+  std::ofstream fout(outfilename, std::ios::binary);
+  int xyz[3] = {width, height, channels};
+  fout.write((const char*)xyz, sizeof(int)*3);
+  fout.write((const char*)data, sizeof(float)*size_t(width*height*channels));
+  fout.close();
+}
+
 void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_normConst = 1.0f)
 {  
   const int halfHeight = height / 2;
@@ -164,7 +173,11 @@ void SaveFrameBufferToEXR(float* data, int width, int height, int channels, cons
   {
     for(int c=0;c<channels;c++)
       FlipYAndNormalizeImage2D1f(data + width*height*c, width, height, a_normConst);  
-    SaveImage3DToEXR(data, width, height, channels, outfilename);
+
+    if(std::string(outfilename).find(".image3d1f") != std::string::npos) 
+      SaveImage3DToImage3D1f(data, width, height, channels, outfilename);
+    else 
+      SaveImage3DToEXR(data, width, height, channels, outfilename);
   }
 }
 

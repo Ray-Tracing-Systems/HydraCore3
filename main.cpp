@@ -68,7 +68,11 @@ int main(int argc, const char** argv)
   if(args.hasOption("-scn_dir"))
     sceneDir = args.getOptionValue<std::string>("-scn_dir");
 
-  const bool saveHDR = imageOut.find(".exr") != std::string::npos;
+  const bool saveHDR = imageOut.find(".exr") != std::string::npos || 
+                       imageOut.find(".image1f") != std::string::npos || 
+                       imageOut.find(".image4f") != std::string::npos || 
+                       imageOut.find(".image3d1f") != std::string::npos;
+                       
   const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
 
   if(args.hasOption("-integrator"))
