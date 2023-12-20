@@ -102,7 +102,13 @@ int main(int argc, const char** argv)
   WIN_WIDTH     = sceneInfo.width;
   WIN_HEIGHT    = sceneInfo.height;
   spectral_mode = sceneInfo.spectral;
-    
+
+  if(args.hasOption("-width"))
+    WIN_WIDTH = args.getOptionValue<int>("-width");
+  if(args.hasOption("-height"))
+    WIN_HEIGHT = args.getOptionValue<int>("-height");
+  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  
   // (2) init device with apropriate features for both hydra and camera plugin
   //
   unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
