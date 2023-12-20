@@ -144,10 +144,7 @@ int main(int argc, const char** argv)
   auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>();
   //auto pCamImpl = std::make_shared<CamPinHole_PINHOLE_GPU>();  
 
-  pRender->SetVulkanContext(ctx);
   pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-    
-  pCamImpl->SetVulkanContext(ctx);
   pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
 
   // alloc all reauired buffers on GPU
@@ -171,8 +168,8 @@ int main(int argc, const char** argv)
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
 
-  pRender->CommitDeviceData();                       // copy internal camera     data from CPU to GPU
-  pCamImpl->CommitDeviceData();                      // copy internal integrator data from CPU to GPU
+  pRender->CommitDeviceData(ctx.pCopyHelper);        // copy internal camera     data from CPU to GPU
+  pCamImpl->CommitDeviceData(ctx.pCopyHelper);       // copy internal integrator data from CPU to GPU
 
   SPP_TOTAL = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line

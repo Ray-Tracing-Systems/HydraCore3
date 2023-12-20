@@ -82,10 +82,6 @@ bool IntersectSphericalElement(float radius, float zCenter, vec3 rayPos, vec3 ra
   return true;
 }
 
-float LensRearZ() { return lines[0].thickness; }
-
-float LensRearRadius() { return lines[0].apertureRadius; }
-
 bool TraceLensesFromFilm(const vec3 inRayPos, const vec3 inRayDir, inout vec3 outRayPos, inout vec3 outRayDir) {
   float elementZ = 0;
   // Transform _rCamera_ from camera to lens system space
@@ -148,6 +144,10 @@ bool TraceLensesFromFilm(const vec3 inRayPos, const vec3 inRayDir, inout vec3 ou
   (outRayDir) = vec3(rayDirLens.x,rayDirLens.y,-rayDirLens.z);
   return true;  
 }
+
+float LensRearRadius() { return lines[0].apertureRadius; }
+
+float LensRearZ() { return lines[0].thickness; }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

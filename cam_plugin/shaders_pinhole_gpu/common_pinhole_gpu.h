@@ -192,9 +192,9 @@ vec4 SampleWavelengths(float u, float a, float b) {
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
-#define MAXFLOAT FLT_MAX
+#define CFLOAT_GUARDIAN 
 #define SPECTRUM_H 
 #define RTC_RANDOM 
-#define CFLOAT_GUARDIAN 
 #define BASIC_PROJ_LOGIC_H 
+#define MAXFLOAT FLT_MAX
 

@@ -168,6 +168,8 @@ void CamPinHole_PINHOLE_GPU::InitKernels(const char* a_filePath)
 
 void CamPinHole_PINHOLE_GPU::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuffersOverlay)
 {
+  ReserveEmptyVectors();
+  
   m_maxThreadCount = a_maxThreadsCount;
   std::vector<VkBuffer> allBuffers;
   allBuffers.reserve(64);
@@ -218,6 +220,20 @@ void CamPinHole_PINHOLE_GPU::InitBuffers(size_t a_maxThreadsCount, bool a_tempBu
       if(i != largestIndex)
         AssignBuffersToMemory(groups[i].bufsClean, internalBuffersMem.memObject);
   }
+}
+
+void CamPinHole_PINHOLE_GPU::ReserveEmptyVectors()
+{
+  if(m_cie_x.capacity() == 0)
+    m_cie_x.reserve(4);
+  if(m_cie_y.capacity() == 0)
+    m_cie_y.reserve(4);
+  if(m_cie_z.capacity() == 0)
+    m_cie_z.reserve(4);
+  if(m_randomGens.capacity() == 0)
+    m_randomGens.reserve(4);
+  if(m_storedWaves.capacity() == 0)
+    m_storedWaves.reserve(4);
 }
 
 void CamPinHole_PINHOLE_GPU::InitMemberBuffers()

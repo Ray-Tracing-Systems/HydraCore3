@@ -380,10 +380,6 @@ float trLambda(vec3 w, vec2 alpha) {
   return (sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
 }
 
-float AbsCosTheta(vec3 w) {
-  return abs(w.z);
-}
-
 float trD(vec3 wm, vec2 alpha) {
   float tan2Theta = Tan2Theta(wm);
   if (isinf(tan2Theta))
@@ -393,6 +389,14 @@ float trD(vec3 wm, vec2 alpha) {
       return 0;
   float e = tan2Theta * ((CosPhi(wm) / alpha.x) * (CosPhi(wm) / alpha.x) + (SinPhi(wm) / alpha.y) * (SinPhi(wm) / alpha.y));
   return 1.0f / (M_PI * alpha.x * alpha.y * cos4Theta * (1 + e) * (1 + e));
+}
+
+float AbsCosTheta(vec3 w) {
+  return abs(w.z);
+}
+
+float trG1(vec3 w, vec2 alpha) { 
+  return 1.0f / (1.0f + trLambda(w, alpha)); 
 }
 
 void CoordinateSystem(vec3 v1, inout vec3 v2, inout vec3 v3) {
@@ -412,12 +416,22 @@ void CoordinateSystem(vec3 v1, inout vec3 v2, inout vec3 v3) {
   (v3) = cross(v1, (v2));
 }
 
-float trG1(vec3 w, vec2 alpha) { 
-  return 1.0f / (1.0f + trLambda(w, alpha)); 
+uint NextState(inout RandomGen gen) {
+  const uint x = (gen.state).x * 17 + (gen.state).y * 13123;
+  (gen.state).x = (x << 13) ^ x;
+  (gen.state).y ^= (x << 7);
+  return x;
 }
 
-vec3 reflect2(const vec3 dir, const vec3 n) {  
-  return normalize(dir - 2.0f * dot(dir, n) * n);  // dir - vector from light
+float sinPhiPBRT(const vec3 w, const float sintheta) {
+  if (sintheta == 0.0f)
+    return 0.0f;
+  else
+    return clamp(w.y / sintheta, -1.0f, 1.0f);
+}
+
+float trD(vec3 w, vec3 wm, vec2 alpha) {
+  return trG1(w, alpha) / AbsCosTheta(w) * trD(wm, alpha) * abs(dot(w, wm));
 }
 
 float FrComplexConductor(float cosThetaI, complex eta) {
@@ -428,6 +442,53 @@ float FrComplexConductor(float cosThetaI, complex eta) {
   complex r_parl = complex_div((complex_sub(complex_mul(eta,to_complex(cosThetaI)),cosThetaT)),(complex_add(complex_mul(eta,to_complex(cosThetaI)),cosThetaT)));
   complex r_perp = complex_div((real_sub_complex(cosThetaI,complex_mul(eta,cosThetaT))),(real_add_complex(cosThetaI,complex_mul(eta,cosThetaT))));
   return (complex_norm(r_parl) + complex_norm(r_perp)) / 2.0f;
+}
+
+float trG(vec3 wo, vec3 wi, vec2 alpha) { 
+  return 1.0f / (1.0f + trLambda(wo, alpha) + trLambda(wi, alpha)); 
+}
+
+vec2 SampleUniformDiskPolar(vec2 u) {
+  float r = sqrt(u[0]);
+  float theta = M_TWOPI * u[1];
+  return vec2(r * cos(theta),r * sin(theta));
+}
+
+vec3 reflect2(const vec3 dir, const vec3 n) {  
+  return normalize(dir - 2.0f * dot(dir, n) * n);  // dir - vector from light
+}
+
+float cosPhiPBRT(const vec3 w, const float sintheta) {
+  if (sintheta == 0.0f)
+    return 1.0f;
+  else
+    return clamp(w.x / sintheta, -1.0f, 1.0f);
+}
+
+float fresnelSlick(const float VdotH) {
+  const float tmp = 1.0f - abs(VdotH);
+  return (tmp*tmp)*(tmp*tmp)*tmp;
+}
+
+float GGX_GeomShadMask(const float cosThetaN, const float alpha) {
+  // Height - Correlated G.
+  //const float tanNV      = sqrt(1.0f - cosThetaN * cosThetaN) / cosThetaN;
+  //const float a          = 1.0f / (alpha * tanNV);
+  //const float lambda     = (-1.0f + sqrt(1.0f + 1.0f / (a*a))) / 2.0f;
+  //const float G          = 1.0f / (1.0f + lambda);
+
+  // Optimized and equal to the commented-out formulas on top.
+  const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
+  const float tan2         = (1.0f - cosTheta_sqr) / max(cosTheta_sqr, 1e-6f);
+  const float GP           = 2.0f / (1.0f + sqrt(1.0f + alpha * alpha * tan2));
+  return GP;
+}
+
+float GGX_Distribution(const float cosThetaNH, const float alpha) {
+  const float alpha2 = alpha * alpha;
+  const float NH_sqr = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
+  const float den    = NH_sqr * alpha2 + (1.0f - NH_sqr);
+  return alpha2 / max(float((M_PI)) * den * den, 1e-6f);
 }
 
 vec3 MapSampleToCosineDistribution(float r1, float r2, vec3 direction, vec3 hit_norm, float power) {
@@ -469,82 +530,9 @@ vec3 MapSampleToCosineDistribution(float r1, float r2, vec3 direction, vec3 hit_
   return res;
 }
 
-uint NextState(inout RandomGen gen) {
-  const uint x = (gen.state).x * 17 + (gen.state).y * 13123;
-  (gen.state).x = (x << 13) ^ x;
-  (gen.state).y ^= (x << 7);
-  return x;
-}
-
-float trD(vec3 w, vec3 wm, vec2 alpha) {
-  return trG1(w, alpha) / AbsCosTheta(w) * trD(wm, alpha) * abs(dot(w, wm));
-}
-
-vec2 SampleUniformDiskPolar(vec2 u) {
-  float r = sqrt(u[0]);
-  float theta = M_TWOPI * u[1];
-  return vec2(r * cos(theta),r * sin(theta));
-}
-
-float GGX_GeomShadMask(const float cosThetaN, const float alpha) {
-  // Height - Correlated G.
-  //const float tanNV      = sqrt(1.0f - cosThetaN * cosThetaN) / cosThetaN;
-  //const float a          = 1.0f / (alpha * tanNV);
-  //const float lambda     = (-1.0f + sqrt(1.0f + 1.0f / (a*a))) / 2.0f;
-  //const float G          = 1.0f / (1.0f + lambda);
-
-  // Optimized and equal to the commented-out formulas on top.
-  const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
-  const float tan2         = (1.0f - cosTheta_sqr) / max(cosTheta_sqr, 1e-6f);
-  const float GP           = 2.0f / (1.0f + sqrt(1.0f + alpha * alpha * tan2));
-  return GP;
-}
-
 vec3 SphericalDirectionPBRT(const float sintheta, const float costheta, const float phi) { 
   return vec3(sintheta * cos(phi),sintheta * sin(phi),costheta); 
 }
-
-float GGX_Distribution(const float cosThetaNH, const float alpha) {
-  const float alpha2 = alpha * alpha;
-  const float NH_sqr = clamp(cosThetaNH * cosThetaNH, 0.0f, 1.0f);
-  const float den    = NH_sqr * alpha2 + (1.0f - NH_sqr);
-  return alpha2 / max(float((M_PI)) * den * den, 1e-6f);
-}
-
-float fresnelSlick(const float VdotH) {
-  const float tmp = 1.0f - abs(VdotH);
-  return (tmp*tmp)*(tmp*tmp)*tmp;
-}
-
-float trG(vec3 wo, vec3 wi, vec2 alpha) { 
-  return 1.0f / (1.0f + trLambda(wo, alpha) + trLambda(wi, alpha)); 
-}
-
-float sinPhiPBRT(const vec3 w, const float sintheta) {
-  if (sintheta == 0.0f)
-    return 0.0f;
-  else
-    return clamp(w.y / sintheta, -1.0f, 1.0f);
-}
-
-float cosPhiPBRT(const vec3 w, const float sintheta) {
-  if (sintheta == 0.0f)
-    return 1.0f;
-  else
-    return clamp(w.x / sintheta, -1.0f, 1.0f);
-}
-
-vec3 refract2(const vec3 dir, const vec3 n, const float relativeIor) {  
-  const float cosi = dot(dir, n);        // dir - vector from light. The normal should always look at the light vector.
-  const float eta  = 1.0f / relativeIor; // Since the incoming vector and the normal are directed in the same direction.
-  const float k    = 1.0f - eta * eta * (1.0f - cosi * cosi);
-  if (k < 0)       
-    return reflect2(dir, n); // full internal reflection 
-  else         
-    return normalize(eta * dir - (eta * cosi + sqrt(k)) * n); // the refracted vector    
-}
-
-float epsilonOfPos(vec3 hitPos) { return max(max(abs(hitPos.x), max(abs(hitPos.y), abs(hitPos.z))), 2.0f*GEPSILON)*GEPSILON; }
 
 vec3 ggxSample(const vec2 rands, const vec3 v, const vec3 n, const float roughness) {
   const float roughSqr = roughness * roughness;
@@ -561,6 +549,43 @@ vec3 ggxSample(const vec2 rands, const vec3 v, const vec3 n, const float roughne
   const vec3 wi = 2.0f * dot(wo, wh) * wh - wo;      // Compute incident direction by reflecting about wm  
   return normalize(wi.x * nx + wi.y * ny + wi.z * nz); // back to normal coordinate system
 }
+
+float ggxEvalBSDF(const vec3 l, const vec3 v, const vec3 n, const float roughness) {
+  if(abs(dot(l, n)) < 1e-5f)
+    return 0.0f; 
+ 
+  const float dotNV = dot(n, v);  
+  const float dotNL = dot(n, l);
+  if (dotNV < 1e-6f || dotNL < 1e-6f)
+    return 0.0f; 
+
+  const float  roughSqr = roughness * roughness;
+  const vec3 h = normalize(v + l); // half vector.
+  const float dotNH = dot(n, h);
+  const float D     = GGX_Distribution(dotNH, roughSqr);
+  const float G     = GGX_GeomShadMask(dotNV, roughSqr)*GGX_GeomShadMask(dotNL, roughSqr);      
+
+  return (D * G / max(4.0f * dotNV * dotNL, 1e-6f));  // Pass single-scattering
+}
+
+float conductorRoughEvalInternal(vec3 wo, vec3 wi, vec3 wm, vec2 alpha, complex ior) {
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return 0.0f;
+  }
+
+  float cosTheta_o = AbsCosTheta(wo);
+  float cosTheta_i = AbsCosTheta(wi);
+  if (cosTheta_i == 0 || cosTheta_o == 0)
+    return 0.0f;
+
+  float F = FrComplexConductor(abs(dot(wo, wm)), ior);
+  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+
+  return val;
+}
+
+float epsilonOfPos(vec3 hitPos) { return max(max(abs(hitPos.x), max(abs(hitPos.y), abs(hitPos.z))), 2.0f*GEPSILON)*GEPSILON; }
 
 float fresnel2(vec3 v, vec3 n, float ior) {
   // Calculating the angle of incidence of light
@@ -585,28 +610,33 @@ float fresnel2(vec3 v, vec3 n, float ior) {
   }
 }
 
-float conductorRoughEvalInternal(vec3 wo, vec3 wi, vec3 wm, vec2 alpha, complex ior) {
-  if(wo.z * wi.z < 0) // not in the same hemisphere
-  {
-    return 0.0f;
-  }
-
-  float cosTheta_o = AbsCosTheta(wo);
-  float cosTheta_i = AbsCosTheta(wi);
-  if (cosTheta_i == 0 || cosTheta_o == 0)
-    return 0.0f;
-
-  float F = FrComplexConductor(abs(dot(wo, wm)), ior);
-  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
-
-  return val;
-}
-
 float rndFloat1_Pseudo(inout RandomGen gen) {
   const uint x = NextState(gen);
   const uint tmp = (x * (x * x * 15731 + 74323) + 871483);
   const float scale      = (1.0f / 4294967296.0f);
   return (float((tmp)))*scale;
+}
+
+vec4 hydraFresnelCond(vec4 f0, float VdotH, float ior, float roughness) {  
+  if(ior == 0.0f) // fresnel reflactance is disabled
+    return f0;
+
+  return f0 + (vec4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+}
+
+float trPDF(vec3 w, vec3 wm, vec2 alpha) { 
+  return trD(w, wm, alpha); 
+}
+
+vec3 FaceForward(vec3 v, vec3 n2) {
+    return (dot(v, n2) < 0.f) ? (-1.0f) * v : v;
+}
+
+MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b) {
+  MatIdWeightPair res;
+  res.first  = a;
+  res.second = b;
+  return res;
 }
 
 vec2 MapSamplesToDisc(vec2 xy) {
@@ -653,59 +683,33 @@ vec2 MapSamplesToDisc(vec2 xy) {
   return res;
 }
 
-float ggxEvalPDF(const vec3 l, const vec3 v, const vec3 n, const float roughness) { 
-  const float dotNV = dot(n, v);
-  const float dotNL = dot(n, l);
-  if (dotNV < 1e-6f || dotNL < 1e-6f)
-    return 1.0f;
-
-  const float  roughSqr  = roughness * roughness;
-    
-  const vec3 h = normalize(v + l); // half vector.
-  const float dotNH = dot(n, h);
-  const float dotHV = dot(h, v);
-  const float D     = GGX_Distribution(dotNH, roughSqr);
-  return  D * dotNH / (4.0f * max(dotHV, 1e-6f));
+vec3 refract2(const vec3 dir, const vec3 n, const float relativeIor) {  
+  const float cosi = dot(dir, n);        // dir - vector from light. The normal should always look at the light vector.
+  const float eta  = 1.0f / relativeIor; // Since the incoming vector and the normal are directed in the same direction.
+  const float k    = 1.0f - eta * eta * (1.0f - cosi * cosi);
+  if (k < 0)       
+    return reflect2(dir, n); // full internal reflection 
+  else         
+    return normalize(eta * dir - (eta * cosi + sqrt(k)) * n); // the refracted vector    
 }
 
-MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b) {
-  MatIdWeightPair res;
-  res.first  = a;
-  res.second = b;
-  return res;
-}
+vec3 NormalMapTransform(const uint materialFlags, vec3 normalFromTex) {
+  vec3 normalTS = vec3(2.0f * normalFromTex.x - 1.0f, 2.0f * normalFromTex.y - 1.0f, normalFromTex.z);
 
-float FrDielectricPBRT(float cosThetaI, float etaI, float etaT) {
-  cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
-  // Potentially swap indices of refraction
-  bool entering = cosThetaI > 0.0f;
-  if (!entering) 
+  if((materialFlags & FLAG_NMAP_INVERT_X) != 0)
+    normalTS.x *= (-1.0f);
+
+  if((materialFlags & FLAG_NMAP_INVERT_Y) != 0)
+    normalTS.y *= (-1.0f);
+
+  if((materialFlags & FLAG_NMAP_SWAP_XY) != 0)
   {
-    const float tmp = etaI;
-    etaI = etaT;
-    etaT = tmp;
-    cosThetaI = abs(cosThetaI);
+    float temp = normalTS.x;
+    normalTS.x = normalTS.y;
+    normalTS.y = temp;
   }
 
-  // Compute _cosThetaT_ using Snell's law
-  float sinThetaI = sqrt(max(0.0f, 1.0f - cosThetaI * cosThetaI));
-  float sinThetaT = etaI / etaT * sinThetaI;
-
-  // Handle total internal reflection
-  if (sinThetaT >= 1.0f) 
-    return 1.0f;
-
-  const float cosThetaT = sqrt(max(0.0f, 1.0f - sinThetaT * sinThetaT));
-  const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
-  const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
-  return 0.5f*(Rparl * Rparl + Rperp * Rperp);
-}
-
-vec4 hydraFresnelCond(vec4 f0, float VdotH, float ior, float roughness) {  
-  if(ior == 0.0f) // fresnel reflactance is disabled
-    return f0;
-
-  return f0 + (vec4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+  return normalTS; // normalize(normalTS); // do we nedd this normalize here?
 }
 
 vec3 trSample(vec3 wo, vec2 rands, vec2 alpha) {
@@ -733,30 +737,49 @@ vec3 trSample(vec3 wo, vec2 rands, vec2 alpha) {
   return normalize(vec3(alpha.x * nh.x,alpha.y * nh.y,max(1e-6f, nh.z)));
 }
 
-vec3 lambertSample(const vec2 rands, const vec3 v, const vec3 n) {
-  return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
-}
-
-float ggxEvalBSDF(const vec3 l, const vec3 v, const vec3 n, const float roughness) {
-  if(abs(dot(l, n)) < 1e-5f)
-    return 0.0f; 
- 
-  const float dotNV = dot(n, v);  
+float ggxEvalPDF(const vec3 l, const vec3 v, const vec3 n, const float roughness) { 
+  const float dotNV = dot(n, v);
   const float dotNL = dot(n, l);
   if (dotNV < 1e-6f || dotNL < 1e-6f)
-    return 0.0f; 
+    return 1.0f;
 
-  const float  roughSqr = roughness * roughness;
+  const float  roughSqr  = roughness * roughness;
+    
   const vec3 h = normalize(v + l); // half vector.
   const float dotNH = dot(n, h);
+  const float dotHV = dot(h, v);
   const float D     = GGX_Distribution(dotNH, roughSqr);
-  const float G     = GGX_GeomShadMask(dotNV, roughSqr)*GGX_GeomShadMask(dotNL, roughSqr);      
-
-  return (D * G / max(4.0f * dotNV * dotNL, 1e-6f));  // Pass single-scattering
+  return  D * dotNH / (4.0f * max(dotHV, 1e-6f));
 }
 
 float lambertEvalPDF(vec3 l, vec3 v, vec3 n) { 
   return abs(dot(l, n)) * INV_PI;
+}
+
+float FrDielectricPBRT(float cosThetaI, float etaI, float etaT) {
+  cosThetaI = clamp(cosThetaI, -1.0f, 1.0f);
+  // Potentially swap indices of refraction
+  bool entering = cosThetaI > 0.0f;
+  if (!entering) 
+  {
+    const float tmp = etaI;
+    etaI = etaT;
+    etaT = tmp;
+    cosThetaI = abs(cosThetaI);
+  }
+
+  // Compute _cosThetaT_ using Snell's law
+  float sinThetaI = sqrt(max(0.0f, 1.0f - cosThetaI * cosThetaI));
+  float sinThetaT = etaI / etaT * sinThetaI;
+
+  // Handle total internal reflection
+  if (sinThetaT >= 1.0f) 
+    return 1.0f;
+
+  const float cosThetaT = sqrt(max(0.0f, 1.0f - sinThetaT * sinThetaT));
+  const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
+  const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
+  return 0.5f*(Rparl * Rparl + Rperp * Rperp);
 }
 
 float orennayarFunc(const vec3 a_l, const vec3 a_v, const vec3 a_n, const float a_roughness) {
@@ -816,31 +839,8 @@ float lambertEvalBSDF(vec3 l, vec3 v, vec3 n) {
   return INV_PI;
 }
 
-float trPDF(vec3 w, vec3 wm, vec2 alpha) { 
-  return trD(w, wm, alpha); 
-}
-
-vec3 NormalMapTransform(const uint materialFlags, vec3 normalFromTex) {
-  vec3 normalTS = vec3(2.0f * normalFromTex.x - 1.0f, 2.0f * normalFromTex.y - 1.0f, normalFromTex.z);
-
-  if((materialFlags & FLAG_NMAP_INVERT_X) != 0)
-    normalTS.x *= (-1.0f);
-
-  if((materialFlags & FLAG_NMAP_INVERT_Y) != 0)
-    normalTS.y *= (-1.0f);
-
-  if((materialFlags & FLAG_NMAP_SWAP_XY) != 0)
-  {
-    float temp = normalTS.x;
-    normalTS.x = normalTS.y;
-    normalTS.y = temp;
-  }
-
-  return normalTS; // normalize(normalTS); // do we nedd this normalize here?
-}
-
-vec3 FaceForward(vec3 v, vec3 n2) {
-    return (dot(v, n2) < 0.f) ? (-1.0f) * v : v;
+vec3 lambertSample(const vec2 rands, const vec3 v, const vec3 n) {
+  return MapSampleToCosineDistribution(rands.x, rands.y, n, n, 1.0f);
 }
 
 vec2 mulRows2x4(const vec4 row0, const vec4 row1, vec2 v) {
@@ -850,21 +850,11 @@ vec2 mulRows2x4(const vec4 row0, const vec4 row1, vec2 v) {
   return res;
 }
 
-float SpectrumAverage(vec4 spec) {
-  float sum = spec[0];
-  for (uint i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
-    sum += spec[int(i)];
-  return sum / float(SPECTRUM_SAMPLE_SZ);
+float PdfAtoW(const float aPdfA, const float aDist, const float aCosThere) {
+  return (aPdfA*aDist*aDist) / max(aCosThere, 1e-30f);
 }
 
 float misHeuristicPower1(float p) { return isfinite(p) ? abs(p) : 0.0f; }
-
-MatIdWeight make_id_weight(uint a, float b) {
-  MatIdWeight res;
-  res.id  = a;
-  res.weight = b;
-  return res;
-}
 
 vec4 rndFloat4_Pseudo(inout RandomGen gen) {
   uint x = NextState(gen);
@@ -879,18 +869,22 @@ vec4 rndFloat4_Pseudo(inout RandomGen gen) {
   return vec4(float((x1)), float((y1)), float((z1)), float((w1)))*scale;
 }
 
+float SpectrumAverage(vec4 spec) {
+  float sum = spec[0];
+  for (uint i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
+    sum += spec[int(i)];
+  return sum / float(SPECTRUM_SAMPLE_SZ);
+}
+
 bool trEffectivelySmooth(vec2 alpha) { 
   return max(alpha.x, alpha.y) < 1e-3f; 
 }
 
-float PdfAtoW(const float aPdfA, const float aDist, const float aCosThere) {
-  return (aPdfA*aDist*aDist) / max(aCosThere, 1e-30f);
-}
-
-vec3 OffsRayPos(const vec3 a_hitPos, const vec3 a_surfaceNorm, const vec3 a_sampleDir) {
-  const float signOfNormal2 = dot(a_sampleDir, a_surfaceNorm) < 0.0f ? -1.0f : 1.0f;
-  const float offsetEps     = epsilonOfPos(a_hitPos);
-  return a_hitPos + signOfNormal2*offsetEps*a_surfaceNorm;
+MatIdWeight make_id_weight(uint a, float b) {
+  MatIdWeight res;
+  res.id  = a;
+  res.weight = b;
+  return res;
 }
 
 vec3 EyeRayDirNormalized(float x, float y, mat4 a_mViewProjInv) {
@@ -898,16 +892,6 @@ vec3 EyeRayDirNormalized(float x, float y, mat4 a_mViewProjInv) {
   pos = a_mViewProjInv * pos;
   pos /= pos.w;
   return normalize(pos.xyz);
-}
-
-void transform_ray3f(mat4 a_mWorldViewInv, inout vec3 ray_pos, inout vec3 ray_dir) {
-  vec3 pos = mul4x3(a_mWorldViewInv, (ray_pos));
-  vec3 pos2 = mul4x3(a_mWorldViewInv, ((ray_pos) + 100.0f*(ray_dir)));
-
-  vec3 diff = pos2 - pos;
-
-  (ray_pos)  = pos;
-  (ray_dir)  = normalize(diff);
 }
 
 vec3 XYZToRGB(vec3 xyz) {
@@ -922,6 +906,22 @@ vec3 XYZToRGB(vec3 xyz) {
 float misWeightHeuristic(float a, float b) {
   const float w = misHeuristicPower1(a) / max(misHeuristicPower1(a) + misHeuristicPower1(b), 1e-30f);
   return isfinite(w) ? w : 0.0f;
+}
+
+void transform_ray3f(mat4 a_mWorldViewInv, inout vec3 ray_pos, inout vec3 ray_dir) {
+  vec3 pos = mul4x3(a_mWorldViewInv, (ray_pos));
+  vec3 pos2 = mul4x3(a_mWorldViewInv, ((ray_pos) + 100.0f*(ray_dir)));
+
+  vec3 diff = pos2 - pos;
+
+  (ray_pos)  = pos;
+  (ray_dir)  = normalize(diff);
+}
+
+vec3 OffsRayPos(const vec3 a_hitPos, const vec3 a_surfaceNorm, const vec3 a_sampleDir) {
+  const float signOfNormal2 = dot(a_sampleDir, a_surfaceNorm) < 0.0f ? -1.0f : 1.0f;
+  const float offsetEps     = epsilonOfPos(a_hitPos);
+  return a_hitPos + signOfNormal2*offsetEps*a_surfaceNorm;
 }
 
 vec4 SampleWavelengths(float u, float a, float b) {
@@ -976,12 +976,12 @@ uint fakeOffset(uint x, uint y, uint pitch) { return y*pitch + x; }  // RTV patt
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
+#define SPECTRUM_H 
 #define BASIC_PROJ_LOGIC_H 
 #define TEST_CLASS_H 
-#define CFLOAT_GUARDIAN 
 #define IMAGE2D_H 
-#define MAXFLOAT FLT_MAX
 #define RTC_RANDOM 
-#define SPECTRUM_H 
+#define CFLOAT_GUARDIAN 
 #define RTC_MATERIAL 
+#define MAXFLOAT FLT_MAX
 
