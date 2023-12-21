@@ -28,6 +28,7 @@ int main(int argc, const char** argv)
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string opticFile      = "optics.dat";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   std::shared_ptr<Integrator>  pRender  = nullptr;
@@ -43,6 +44,9 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-scn_dir"))
     sceneDir = args.getOptionValue<std::string>("-scn_dir");
+
+  if(args.hasOption("-optics_file"))
+    opticFile = args.getOptionValue<std::string>("-optics_file");
 
   int camType = 1;
 
@@ -112,7 +116,7 @@ int main(int argc, const char** argv)
   
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode, opticFile});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
