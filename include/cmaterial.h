@@ -237,7 +237,7 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   // wi = a_l = newDir
   //
   float3 nx, ny, nz = a_n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
 
   ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
 
@@ -317,7 +317,7 @@ static inline float3 ggxSample(const float2 rands, const float3 v, const float3 
   const float roughSqr = roughness * roughness;
     
   float3 nx, ny, nz = n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
     
   const float3 wo       = float3(dot(v, nx), dot(v, ny), dot(v, nz));
   const float phi       = rands.x * M_TWOPI;

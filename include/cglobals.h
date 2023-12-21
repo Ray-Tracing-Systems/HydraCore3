@@ -141,7 +141,7 @@ static inline float3 MapSampleToCosineDistribution(float r1, float r2, float3 di
   deviation.z = cos_theta;
 
   float3 ny = direction, nx, nz;
-  CoordinateSystem(ny, &nx, &nz);
+  CoordinateSystemV2(ny, &nx, &nz);
 
   {
     float3 temp = ny;

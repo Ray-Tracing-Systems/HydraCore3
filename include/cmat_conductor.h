@@ -70,11 +70,11 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
   // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
 
 
-  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
-                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
   float3 nx, ny, nz = n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
   const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
   if(wo.z == 0)
     return;
@@ -109,11 +109,11 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
 {
   // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
 
-  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.x), 
-                              min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.y));
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
   float3 nx, ny, nz = n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
 
   // v = (-1.0f) * v;
   const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));

@@ -17,7 +17,7 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
   float3 s = n;
   float3 t = n;
-  CoordinateSystem(n, &s, &t);
+  CoordinateSystemV2(n, &s, &t);
   
   const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
   if(wi.z <= 0)
@@ -123,7 +123,7 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
   
   float3 s = n;
   float3 t = n;
-  CoordinateSystem(n, &s, &t);
+  CoordinateSystemV2(n, &s, &t);
   
   const float3 wo = float3(dot(l, s), dot(l, t), dot(l, n));
   const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));

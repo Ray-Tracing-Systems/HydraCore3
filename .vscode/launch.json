@@ -137,6 +137,32 @@
         ]
     },
     
+    {
+        "name": "CPU Debug",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--cpu", "--spectral",
+                 "-in", "../Hydra3Tests/Tests/Spectral/0002/Spectral-ior-model-hydra3.xml",
+                 "-integrator", "naivept", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "64",
+                 "-scn_dir", "../Hydra3Tests",
+                 "-out", "DEBUG.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
 
 
     ]
