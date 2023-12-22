@@ -31,11 +31,13 @@ int main(int argc, const char** argv)
   int WIN_WIDTH  = 1024;
   int WIN_HEIGHT = 1024;
   int SPP_TOTAL  = 1024;
+  int CHANNELS   = 4;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string opticFile      = "optics.dat";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   ArgParser args(argc, argv);
@@ -63,6 +65,10 @@ int main(int argc, const char** argv)
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   if(args.hasOption("--spectral"))
     spectral_mode = 1;
+  if(spectral_mode == 1) /////////////////////////////////////////////////////////////// (!!!) single wave per ray in spectral mode (!!!)
+    CHANNELS = 1;
+  if(args.hasOption("-optics_file"))
+    opticFile = args.getOptionValue<std::string>("-optics_file");
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -124,7 +130,7 @@ int main(int argc, const char** argv)
   if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
     devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
 
-  sceneInfo.memGeom += MEGA_TILE_SIZE*4*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float); // memory for our image data 
+  sceneInfo.memGeom += MEGA_TILE_SIZE*CHANNELS*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float) + 50*1024*1024; // memory for our image data and some reserve
 
   auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra, sceneInfo.memGeom, sceneInfo.memTextures); 
 
@@ -151,7 +157,7 @@ int main(int argc, const char** argv)
   // 
   VkBuffer rayPosGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   VkBuffer rayDirGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  VkBuffer rayColGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkBuffer rayColGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*CHANNELS*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
   VkBuffer frameBuferGPU = vk_utils::createBuffer(ctx.device, WIN_WIDTH*WIN_HEIGHT*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
@@ -162,7 +168,7 @@ int main(int argc, const char** argv)
   
   std::cout << "[main_cam_gpu]: Loading scene ... " << scenePath.c_str() << std::endl;
 
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode, opticFile});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
@@ -242,7 +248,7 @@ int main(int argc, const char** argv)
     } 
 
     pCamImpl->MakeRaysBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, subPassId);
-    pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, nullptr, nullptr, nullptr);
+    pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, CHANNELS, nullptr, nullptr, nullptr);
     pCamImpl->AddSamplesContributionBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);      
   }
 

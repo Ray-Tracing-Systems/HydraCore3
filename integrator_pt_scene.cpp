@@ -572,7 +572,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   auto nodeWeight = materialNode.child(L"weight");
   if(nodeWeight != nullptr)
   {
-    mat.data[BLEND_WEIGHT] = (hydra_xml::readval1f(nodeWeight), 1.0f);
+    mat.data[BLEND_WEIGHT] = hydra_xml::readval1f(nodeWeight);
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeWeight, texturesInfo, texCache, textures);
     
@@ -580,6 +580,122 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
     mat.row1 [0]  = sampler.row1;
     mat.data[BLEND_TEXID0] = as_float(texID);
   }
+
+  return mat;
+}
+
+float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex)
+{
+  float* ptr = (float*)(tex->data());
+  float4 res{0.0f};
+  size_t tex_sz = tex->width() * tex->height();
+  uint32_t channels = tex->bpp() / sizeof(float);
+  for(size_t i = 0; i < tex_sz / channels; ++i)
+  {  
+    for(size_t j = 0; j < channels; ++i)
+    {
+      res.M[j] += ptr[i * channels + j];
+    }
+  }
+
+  if(channels == 1)
+  {
+    res.w = res.x;
+    res.z = res.x;
+    res.y = res.x;
+  }
+
+  res = res / (tex_sz);
+
+  return res;
+}
+
+Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                             std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
+                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             std::vector<float> &precomputed_transmittance,
+                             bool is_spectral_mode,
+                             const std::vector<float> &spectra,
+                             const std::vector<float> &wavelengths,
+                             const std::vector<uint2> &spec_offsets)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_PLASTIC);
+  mat.data[UINT_LIGHTID]      = as_float(uint(-1));
+  mat.data[PLASTIC_NONLINEAR] = as_float(0);
+  mat.data[PLASTIC_COLOR_TEXID]  = as_float(0);
+  mat.data[PLASTIC_COLOR_SPECID] = as_float(uint(-1));
+
+
+  auto nodeColor = materialNode.child(L"reflectance");
+  uint32_t specId = 0xFFFFFFFF;
+  if(nodeColor != nullptr)
+  {
+    mat.colors[PLASTIC_COLOR] = GetColorFromNode(nodeColor, is_spectral_mode);
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, texturesInfo, texCache, textures);
+
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[PLASTIC_COLOR_TEXID] = as_float(texID);
+
+    specId = GetSpectrumIdFromNode(nodeColor);
+    mat.data[PLASTIC_COLOR_SPECID] = as_float(specId);
+  }
+
+  float internal_ior = hydra_xml::readval1f(materialNode.child(L"int_ior"), 1.49f);
+  float external_ior = hydra_xml::readval1f(materialNode.child(L"ext_ior"), 1.000277);
+
+  mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
+
+  mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+
+  // dirty hack 
+  if(mat.data[PLASTIC_ROUGHNESS] == 0.0f)
+  {
+    mat.data[PLASTIC_ROUGHNESS] = 1e-6f;
+  }
+
+  mat.data[PLASTIC_NONLINEAR] = as_float(hydra_xml::readval1u(materialNode.child(L"nonlinear"), 0));
+
+  std::vector<float> spectrum;
+
+  if(is_spectral_mode && specId != 0xFFFFFFFF)
+  {
+    const auto offsets = spec_offsets[specId];
+    spectrum.reserve(offsets.y);
+    for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
+    {
+      if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
+      {
+        spectrum.push_back(spectra[i]);
+      }
+    }
+
+    // std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+  }
+
+  float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];
+
+  if(!is_spectral_mode)
+  {
+    uint32_t colorTexId = as_uint(mat.data[PLASTIC_COLOR_TEXID]);
+    if(colorTexId > 0 && colorTexId != 0xFFFFFFFF)
+    {
+      diffuse_reflectance *= image2D_average(textures[colorTexId]);
+    }
+  }
+
+  auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, diffuse_reflectance,
+                                            {1.0f, 1.0f, 1.0f, 1.0f}, is_spectral_mode, spectrum);
+
+  mat.data[PLASTIC_PRECOMP_REFLECTANCE] = precomp.internal_reflectance;
+  mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT] = precomp.specular_sampling_weight;
+
+  std::copy(precomp.transmittance.begin(), precomp.transmittance.end(), std::back_inserter(precomputed_transmittance));
+
+  mat.data[PLASTIC_PRECOMP_ID] = as_float((precomputed_transmittance.size() / MI_ROUGH_TRANSMITTANCE_RES) - 1u);
 
   return mat;
 }
@@ -592,11 +708,11 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
-    case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
+    case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
     case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
     case KSPEC_BUMP_MAPPING       : return "BUMP";
-    case KSPEC_BLEND_STACK_SIZE   : 
+    case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
       strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
@@ -617,6 +733,7 @@ static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
+static const std::wstring plasticMatTypeStr        {L"plastic"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
@@ -677,6 +794,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       features[KSPEC_MAT_TYPE_BLEND]   = 1;
       features[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_PLASTIC] = 1;
+    }
 
     if(materialNode.child(L"displacement") != nullptr)
       features[KSPEC_BUMP_MAPPING] = 1;
@@ -695,7 +816,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   g_lastSceneInfo.maxTotalVertices     = 4'000'000;
   g_lastSceneInfo.maxTotalPrimitives   = 4'000'000;
   g_lastSceneInfo.maxPrimitivesPerMesh = 1'000'000;
-  
+
   g_lastSceneInfo.memTextures = 0;
   for(auto texNode : g_lastScene.TextureNodes())
   {
@@ -715,7 +836,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
     g_lastSceneInfo.memTextures += uint64_t(byteSize);
   }
-  
+
   g_lastSceneInfo.memGeom = 0;
   uint32_t meshesNum = 0;
   uint64_t maxTotalVertices = 0;
@@ -734,7 +855,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     meshesNum          += 1;
     g_lastSceneInfo.memGeom += byteSize;
   }
-  
+
   g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024*256;
   g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024*256;
 
@@ -971,7 +1092,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
@@ -984,7 +1105,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
@@ -992,6 +1113,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+    }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+                                m_spec_values, m_wavelengths, m_spec_offset_sz);
+      m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
 
     if(materialNode.attribute(L"light_id") != nullptr)
@@ -1019,7 +1146,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         mat.data[EMISSION_SPECID0] = as_float(m_lights[lightId].specId);
       }
     }
-    
+
     // setup normal map
     //
     mat.data[UINT_NMAP_ID] = as_float(0xFFFFFFFF);
@@ -1036,9 +1163,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         auto normalNode  = dispNode.child(L"normal_map");
         auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
         auto textureNode = normalNode.child(L"texture");
-        
-        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures); 
-        
+
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures);
+
         mat.row0[1] = sampler.row0;
         mat.row1[1] = sampler.row1;
         mat.data[UINT_NMAP_ID] = as_float(texID);
@@ -1048,7 +1175,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         const bool swapXY  = (invertNode.attribute(L"swap_xy").as_int() == 1);
 
         if(invertX)
-          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X)); 
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X));
         if(invertY)
           mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_Y));
         if(swapXY)
@@ -1074,6 +1201,29 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_worldView    = worldView;
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
+
+    auto sensorNode = cam.node.child(L"sensor");
+    if(sensorNode != nullptr)
+    {
+      auto responceNode = sensorNode.child(L"response");
+      if(responceNode != nullptr)
+      {
+        std::wstring responceType = responceNode.attribute(L"type").as_string();
+        if(responceType == L"xyz" || responceType == L"XYZ")
+          m_camResponseType = CAM_RESPONCE_XYZ;
+        else
+          m_camResponseType = CAM_RESPONCE_RGB;
+        
+        int id = 0;
+        for(auto spec : responceNode.children(L"spectrum")) {
+          m_camResponseSpectrumId[id] = spec.attribute(L"id").as_int();
+          id++;
+          if(id >= 3)
+            break;
+        }
+      }
+    }
+
     break; // take first cam
   }
 
@@ -1107,8 +1257,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());    
-    m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());     
+    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
+    m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
 
     for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
       m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
@@ -1198,7 +1348,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
-  
+
   // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
   //
   if(m_spec_offset_sz.capacity() == 0)
@@ -1207,5 +1357,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_spec_values.reserve(16);
   if(m_wavelengths.capacity() == 0)
     m_wavelengths.reserve(16);
+  if(m_precomp_coat_transmittance.capacity() == 0)
+    m_precomp_coat_transmittance.reserve(16);
   return true;
 }

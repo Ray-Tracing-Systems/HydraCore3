@@ -428,8 +428,8 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
 }
 
 
-void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
-                                          const float4* wavelengths, float4* out_color)
+void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
+                                          const float4* wavelengths, float* out_color)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -437,37 +437,128 @@ void Integrator::kernel_ContributeToImage(uint tid, const float4* a_accumColor, 
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
-
-  float3 rgb = to_float3(*a_accumColor);
-  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
+  
+  float4 specSamples = *a_accumColor; 
+  float3 rgb         = to_float3(specSamples);
+  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
-    const float3 xyz = SpectrumToXYZ(*a_accumColor, *wavelengths, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-    rgb = XYZToRGB(xyz);
+    float4 waves = *wavelengths;
+    
+    if(m_camResponseSpectrumId[0] < 0)
+    {
+      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      rgb = XYZToRGB(xyz);
+    }
+    else
+    {
+      float4 responceX, responceY, responceZ;
+      {
+        int specId = m_camResponseSpectrumId[0];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceX = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceX = float4(1,1,1,1);
+
+        specId = m_camResponseSpectrumId[1];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceY = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceY = responceX;
+
+        specId = m_camResponseSpectrumId[2];
+        if(specId >= 0)
+        {
+          const uint2 data  = m_spec_offset_sz[specId];
+          const uint offset = data.x;
+          const uint size   = data.y;
+          responceZ = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+        }
+        else
+          responceZ = responceY;
+      }
+
+      float3 xyz = float3(0,0,0);
+      for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
+        xyz.x += specSamples[i]*responceX[i];
+        xyz.y += specSamples[i]*responceY[i];
+        xyz.z += specSamples[i]*responceZ[i]; 
+      } 
+
+      if(m_camResponseType == CAM_RESPONCE_XYZ)
+        rgb = XYZToRGB(xyz);
+      else
+        rgb = xyz;
+    }
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  if(x == 415 && (y == 256-130-1))
+  //if(x == 415 && (y == 256-130-1))
+  //{
+  //  int a = 2;
+  //  //colorRes = float4(1,0,0,0);
+  //}
+  
+  if(channels == 1)
   {
-    int a = 2;
-    //colorRes = float4(1,0,0,0);
+    const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    out_color[y*m_winWidth+x] += mono;
   }
- 
-  out_color[y*m_winWidth+x] += colorRes;
+  else if(channels <= 4)
+  {
+    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+  }
+  else
+  {
+    auto waves = *wavelengths;
+    auto color = *a_accumColor;
+    for(int i=0;i<4;i++) {
+      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
+      const int offsetPixel = int(y)*m_winWidth + int(x);
+      const int offsetLayer = channelId*m_winWidth*m_winHeight;
+      out_color[offsetLayer + offsetPixel] += color[i];
+    }
+  }
+
   m_randomGens[tid] = *gen;
 }
 
-void Integrator::kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, float4* out_color)
+void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, float* out_color)
 {
   if(tid >= m_maxThreadId)
     return;
-  out_color   [tid] += *a_accumColor;
+  
+  const float4 color = *a_accumColor;
+
+  if(channels == 4)
+  {
+    out_color[tid*4+0] += color[0];
+    out_color[tid*4+1] += color[1];
+    out_color[tid*4+2] += color[2];
+    out_color[tid*4+3] += color[3];
+  }
+  else if(channels == 1)
+    out_color[tid] += color[0];
+
   m_randomGens[tid] = *gen;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Integrator::NaivePathTrace(uint tid, float4* out_color)
+void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -494,11 +585,11 @@ void Integrator::NaivePathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                        &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
+  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
                            out_color);
 }
 
-void Integrator::PathTrace(uint tid, float4* out_color)
+void Integrator::PathTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -529,10 +620,10 @@ void Integrator::PathTrace(uint tid, float4* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor);
 
-  kernel_ContributeToImage(tid, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
-void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color)
+void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -566,5 +657,5 @@ void Integrator::PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAnd
   
   //////////////////////////////////////////////////// same as for PathTrace
 
-  kernel_CopyColorToOutput(tid, &accumColor, &gen, out_color);
+  kernel_CopyColorToOutput(tid, channels, &accumColor, &gen, out_color);
 }

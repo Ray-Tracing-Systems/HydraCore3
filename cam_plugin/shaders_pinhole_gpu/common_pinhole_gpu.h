@@ -46,8 +46,10 @@ const uint RAY_FLAG_OUT_OF_SCENE = 0x40000000;
 const uint RAY_FLAG_HIT_LIGHT = 0x20000000;
 const uint RAY_FLAG_HAS_NON_SPEC = 0x10000000;
 const uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
+const uint MI_ROUGH_TRANSMITTANCE_RES = 64;
 const float LAMBDA_MIN = 360.0f;
 const float LAMBDA_MAX = 830.0f;
+const float EPSILON_32 = 5.960464477539063E-8;
 const uint SPECTRUM_SAMPLE_SZ = 4;
 struct Lite_HitT
 {
@@ -192,9 +194,9 @@ vec4 SampleWavelengths(float u, float a, float b) {
 #define KGEN_FLAG_DONT_SET_EXIT     4
 #define KGEN_FLAG_SET_EXIT_NEGATIVE 8
 #define KGEN_REDUCTION_LAST_STEP    16
-#define CFLOAT_GUARDIAN 
-#define SPECTRUM_H 
 #define RTC_RANDOM 
 #define BASIC_PROJ_LOGIC_H 
+#define SPECTRUM_H 
+#define CFLOAT_GUARDIAN 
 #define MAXFLOAT FLT_MAX
 

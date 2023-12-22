@@ -65,16 +65,14 @@ public:
     UpdateTextureMembers(a_pCopyEngine);
   }
   
-  virtual void CommitDeviceData(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper) // you have to define this virtual function in the original imput class
+  virtual void CommitDeviceData(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper) 
   {
     InitMemberBuffers();
     UpdateAll(a_pCopyHelper);
-  }  
-  void CommitDeviceData() override { CommitDeviceData(m_ctx.pCopyHelper); }  
+  }
+  virtual void CommitDeviceData() override { CommitDeviceData(m_ctx.pCopyHelper); }  
   void GetExecutionTime(const char* a_funcName, float a_out[4]) override; 
   
-
-  virtual void ReserveEmptyVectors();
   virtual void UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);

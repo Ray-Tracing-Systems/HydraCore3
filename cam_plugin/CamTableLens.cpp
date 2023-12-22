@@ -289,7 +289,14 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float* in_colo
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
     //float4 color = in_color[tid]*m_storedCos4[tid];
-    float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3])*m_storedCos4[tid]; // always float4
+    float4 color;   
+    if(m_spectral_mode != 0)
+    {
+      float data = in_color[tid]*m_storedCos4[tid];
+      color = float4(data,data,data,data);
+    }
+    else
+      color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3])*m_storedCos4[tid]; 
 
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {

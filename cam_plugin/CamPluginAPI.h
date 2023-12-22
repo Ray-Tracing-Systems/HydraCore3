@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>      // uint32_t
 #include <cstddef>      // for size_t
+#include <string>
 
 struct CamParameters    ///<! add any parameter you like to this structure
 {
@@ -9,6 +10,7 @@ struct CamParameters    ///<! add any parameter you like to this structure
   float nearPlane;
   float farPlane;
   int   spectralMode;
+  std::string opticFile;
 };
 
 struct RayPosAndW 

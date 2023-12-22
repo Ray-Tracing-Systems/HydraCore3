@@ -170,8 +170,6 @@ void CamTableLens_TABLELENS_GPU::InitKernels(const char* a_filePath)
 
 void CamTableLens_TABLELENS_GPU::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuffersOverlay)
 {
-  ReserveEmptyVectors();
-  
   m_maxThreadCount = a_maxThreadsCount;
   std::vector<VkBuffer> allBuffers;
   allBuffers.reserve(64);
@@ -222,24 +220,6 @@ void CamTableLens_TABLELENS_GPU::InitBuffers(size_t a_maxThreadsCount, bool a_te
       if(i != largestIndex)
         AssignBuffersToMemory(groups[i].bufsClean, internalBuffersMem.memObject);
   }
-}
-
-void CamTableLens_TABLELENS_GPU::ReserveEmptyVectors()
-{
-  if(lines.capacity() == 0)
-    lines.reserve(4);
-  if(m_cie_x.capacity() == 0)
-    m_cie_x.reserve(4);
-  if(m_cie_y.capacity() == 0)
-    m_cie_y.reserve(4);
-  if(m_cie_z.capacity() == 0)
-    m_cie_z.reserve(4);
-  if(m_randomGens.capacity() == 0)
-    m_randomGens.reserve(4);
-  if(m_storedCos4.capacity() == 0)
-    m_storedCos4.reserve(4);
-  if(m_storedWaves.capacity() == 0)
-    m_storedWaves.reserve(4);
 }
 
 void CamTableLens_TABLELENS_GPU::InitMemberBuffers()

@@ -149,6 +149,7 @@ Integrator_Generated::~Integrator_Generated()
   vkDestroyBuffer(device, m_vdata.m_materialsBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_normMatricesBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_packedXYBuffer, nullptr);
+  vkDestroyBuffer(device, m_vdata.m_precomp_coat_transmittanceBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_randomGensBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_remapInstBuffer, nullptr);
   vkDestroyBuffer(device, m_vdata.m_spec_offset_szBuffer, nullptr);
@@ -311,8 +312,6 @@ void Integrator_Generated::InitKernels(const char* a_filePath)
 
 void Integrator_Generated::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuffersOverlay)
 {
-  ReserveEmptyVectors();
-  
   m_maxThreadCount = a_maxThreadsCount;
   std::vector<VkBuffer> allBuffers;
   allBuffers.reserve(64);
@@ -365,52 +364,6 @@ void Integrator_Generated::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuff
   }
 }
 
-void Integrator_Generated::ReserveEmptyVectors()
-{
-  if(m_allRemapLists.capacity() == 0)
-    m_allRemapLists.reserve(4);
-  if(m_allRemapListsOffsets.capacity() == 0)
-    m_allRemapListsOffsets.reserve(4);
-  if(m_cie_x.capacity() == 0)
-    m_cie_x.reserve(4);
-  if(m_cie_y.capacity() == 0)
-    m_cie_y.reserve(4);
-  if(m_cie_z.capacity() == 0)
-    m_cie_z.reserve(4);
-  if(m_instIdToLightInstId.capacity() == 0)
-    m_instIdToLightInstId.reserve(4);
-  if(m_lights.capacity() == 0)
-    m_lights.reserve(4);
-  if(m_matIdByPrimId.capacity() == 0)
-    m_matIdByPrimId.reserve(4);
-  if(m_matIdOffsets.capacity() == 0)
-    m_matIdOffsets.reserve(4);
-  if(m_materials.capacity() == 0)
-    m_materials.reserve(4);
-  if(m_normMatrices.capacity() == 0)
-    m_normMatrices.reserve(4);
-  if(m_packedXY.capacity() == 0)
-    m_packedXY.reserve(4);
-  if(m_randomGens.capacity() == 0)
-    m_randomGens.reserve(4);
-  if(m_remapInst.capacity() == 0)
-    m_remapInst.reserve(4);
-  if(m_spec_offset_sz.capacity() == 0)
-    m_spec_offset_sz.reserve(4);
-  if(m_spec_values.capacity() == 0)
-    m_spec_values.reserve(4);
-  if(m_triIndices.capacity() == 0)
-    m_triIndices.reserve(4);
-  if(m_vNorm4f.capacity() == 0)
-    m_vNorm4f.reserve(4);
-  if(m_vTang4f.capacity() == 0)
-    m_vTang4f.reserve(4);
-  if(m_vertOffset.capacity() == 0)
-    m_vertOffset.reserve(4);
-  if(m_wavelengths.capacity() == 0)
-    m_wavelengths.reserve(4);
-}
-
 void Integrator_Generated::InitMemberBuffers()
 {
   std::vector<VkBuffer> memberVectors;
@@ -440,6 +393,8 @@ void Integrator_Generated::InitMemberBuffers()
   memberVectors.push_back(m_vdata.m_normMatricesBuffer);
   m_vdata.m_packedXYBuffer = vk_utils::createBuffer(device, m_packedXY.capacity()*sizeof(unsigned int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_packedXYBuffer);
+  m_vdata.m_precomp_coat_transmittanceBuffer = vk_utils::createBuffer(device, m_precomp_coat_transmittance.capacity()*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  memberVectors.push_back(m_vdata.m_precomp_coat_transmittanceBuffer);
   m_vdata.m_randomGensBuffer = vk_utils::createBuffer(device, m_randomGens.capacity()*sizeof(struct RandomGenT), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
   memberVectors.push_back(m_vdata.m_randomGensBuffer);
   m_vdata.m_remapInstBuffer = vk_utils::createBuffer(device, m_remapInst.capacity()*sizeof(int), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);

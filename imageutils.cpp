@@ -87,6 +87,100 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
   return true;
 }
 
+bool SaveImage3DToEXR(const float* data, int width, int height, int channels, const char* outfilename) 
+{
+  EXRHeader header;
+  InitEXRHeader(&header);
+
+  EXRImage image;
+  InitEXRImage(&image);
+
+  std::vector<const float*> image_ptr(channels);
+  for(int c=0;c<channels;c++)
+    image_ptr[c] = data + c*width*height;
+
+  std::vector<EXRChannelInfo> channelsVec(channels);
+  std::vector<int>            auxIntData(2*channels);
+
+  image.images       = (unsigned char**)image_ptr.data();
+  image.width        = width;
+  image.height       = height;
+  image.num_channels = channels;
+
+  header.num_channels          = channels;
+  header.channels              = channelsVec.data();
+  header.pixel_types           = auxIntData.data();
+  header.requested_pixel_types = auxIntData.data() + channels;
+
+  constexpr float IMG_LAMBDA_MIN = 360.0f;
+  constexpr float IMG_LAMBDA_MAX = 830.0f;
+
+  for (int i = 0; i < channels; i++) {
+    const float t0     = float(i)/float(channels);
+    const float t1     = float(i+1)/float(channels);
+    const float lamdba0 = IMG_LAMBDA_MIN + t0*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+    const float lamdba1 = IMG_LAMBDA_MIN + t1*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+    std::stringstream strout;
+    strout << int(lamdba0) << "-" << int(lamdba1)-1 << ".Y";
+    std::string tmp = strout.str();
+    //std::cout << tmp.c_str() << std::endl;
+    memset (header.channels[i].name, 0, 256);
+    strncpy(header.channels[i].name, tmp.c_str(), 255);
+    header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+    header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+  }
+ 
+  const char* err = nullptr; 
+  int ret = SaveEXRImageToFile(&image, &header, outfilename, &err);
+  if (ret != TINYEXR_SUCCESS) {
+    fprintf(stderr, "Save EXR err: %s\n", err);
+    FreeEXRErrorMessage(err); // free's buffer for an error message
+    return false;
+  }
+  //printf("Saved exr file. [%s] \n", outfilename);
+
+  return true;
+}
+
+void SaveImage3DToImage3D1f(const float* data, int width, int height, int channels, const char* outfilename) 
+{ 
+  std::ofstream fout(outfilename, std::ios::binary);
+  int xyz[3] = {width, height, channels};
+  fout.write((const char*)xyz, sizeof(int)*3);
+  fout.write((const char*)data, sizeof(float)*size_t(width*height*channels));
+  fout.close();
+}
+
+void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_normConst = 1.0f)
+{  
+  const int halfHeight = height / 2;
+  for (int y = 0; y < halfHeight; ++y) {
+    const int offsetY1 = y * width;
+    const int offsetY2 = (height - y - 1) * width;
+    for (int x = 0; x < width; ++x) {
+      const float tmp    = a_normConst*data[offsetY1 + x];
+      data[offsetY1 + x] = a_normConst*data[offsetY2 + x];
+      data[offsetY2 + x] = tmp;
+    }
+  }
+}
+
+void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)
+{
+  if(channels == 4)
+    SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);
+  else
+  {
+    for(int c=0;c<channels;c++)
+      FlipYAndNormalizeImage2D1f(data + width*height*c, width, height, a_normConst);  
+
+    if(std::string(outfilename).find(".image3d1f") != std::string::npos) 
+      SaveImage3DToImage3D1f(data, width, height, channels, outfilename);
+    else 
+      SaveImage3DToEXR(data, width, height, channels, outfilename);
+  }
+}
+
 static inline float clamp(float u, float a, float b) { return std::min(std::max(a, u), b); }
 
 static inline unsigned RealColorToUint32(float real_color[4])

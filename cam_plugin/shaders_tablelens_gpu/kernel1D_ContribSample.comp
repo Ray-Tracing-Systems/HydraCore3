@@ -179,7 +179,14 @@ void main()
     const int y = (tid + kgenArgs.subPassId*kgenArgs.in_blockSize) / ubo.m_height; // subPas is just a uniform slitting of image along the lines
 
     //float4 color = in_color[tid]*m_storedCos4[tid];
-    vec4 color = vec4(in_color[4*tid+0],in_color[4*tid+1],in_color[4*tid+2],in_color[4*tid+3])*m_storedCos4[tid]; // always float4
+    vec4 color;   
+    if(ubo.m_spectral_mode != 0)
+    {
+      float data = in_color[tid]*m_storedCos4[tid];
+      color = vec4(data,data,data,data);
+    }
+    else
+      color = vec4(in_color[4*tid+0],in_color[4*tid+1],in_color[4*tid+2],in_color[4*tid+3])*m_storedCos4[tid]; 
 
     if(ubo.m_spectral_mode != 0) // TODO: spectral framebuffer
     {

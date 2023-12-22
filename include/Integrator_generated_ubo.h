@@ -27,6 +27,8 @@ struct Integrator_Generated_UBO_Data
   mat4 m_projInv; 
   mat4 m_worldViewInv; 
   vec4 m_envColor; 
+  int m_camResponseSpectrumId[3]; 
+  int m_camResponseType; 
   float m_exposureMult; 
   uint m_intergatorType; 
   uint m_maxThreadId; 
@@ -62,6 +64,8 @@ struct Integrator_Generated_UBO_Data
   uint m_pAccelStruct_size; 
   uint m_packedXY_capacity; 
   uint m_packedXY_size; 
+  uint m_precomp_coat_transmittance_capacity; 
+  uint m_precomp_coat_transmittance_size; 
   uint m_randomGens_capacity; 
   uint m_randomGens_size; 
   uint m_remapInst_capacity; 

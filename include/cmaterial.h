@@ -34,7 +34,8 @@ enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
                       MAT_TYPE_GLASS     = 2,
                       MAT_TYPE_CONDUCTOR = 3,
                       MAT_TYPE_DIFFUSE   = 4,
-                      MAT_TYPE_BLEND     = 5,
+                      MAT_TYPE_PLASTIC   = 5,
+                      MAT_TYPE_BLEND     = 6,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -115,6 +116,22 @@ static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
 static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
 static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
 static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
+
+// Plastic (mitsuba)
+// colors
+static constexpr uint PLASTIC_COLOR             = 0;
+static constexpr uint PLASTIC_COLOR_LAST_IND    = PLASTIC_COLOR;
+
+// custom
+static constexpr uint PLASTIC_ROUGHNESS           = UINT_MAIN_LAST_IND + 0;
+static constexpr uint PLASTIC_IOR_RATIO           = UINT_MAIN_LAST_IND + 1;
+static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = UINT_MAIN_LAST_IND + 2;
+static constexpr uint PLASTIC_PRECOMP_ID          = UINT_MAIN_LAST_IND + 3;
+static constexpr uint PLASTIC_PRECOMP_REFLECTANCE = UINT_MAIN_LAST_IND + 4;
+static constexpr uint PLASTIC_NONLINEAR           = UINT_MAIN_LAST_IND + 5;
+static constexpr uint PLASTIC_COLOR_SPECID        = UINT_MAIN_LAST_IND + 6;
+static constexpr uint PLASTIC_COLOR_TEXID         = UINT_MAIN_LAST_IND + 7;
+static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_COLOR_TEXID;
 
 
 // Simple diffuse
@@ -220,7 +237,7 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   // wi = a_l = newDir
   //
   float3 nx, ny, nz = a_n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
 
   ///////////////////////////////////////////////////////////////////////////// to PBRT coordinate system
 
@@ -300,7 +317,7 @@ static inline float3 ggxSample(const float2 rands, const float3 v, const float3 
   const float roughSqr = roughness * roughness;
     
   float3 nx, ny, nz = n;
-  CoordinateSystem(nz, &nx, &ny);
+  CoordinateSystemV2(nz, &nx, &ny);
     
   const float3 wo       = float3(dot(v, nx), dot(v, ny), dot(v, nz));
   const float phi       = rands.x * M_TWOPI;
@@ -511,6 +528,90 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
 }
 
+static inline float FrDielectric(float cosTheta_i, float eta) 
+{
+  cosTheta_i = clamp(cosTheta_i, -1.0f, 1.0f);
+  
+  if (cosTheta_i < 0.0f) 
+  {
+      eta = 1.0f / eta;
+      cosTheta_i = -cosTheta_i;
+  }
+
+  float sin2Theta_i = 1.0f - cosTheta_i * cosTheta_i;
+  float sin2Theta_t = sin2Theta_i / (eta * eta);
+  if (sin2Theta_t >= 1.0f)
+      return 1.f;
+  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+
+  float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
+  float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
+  return (r_parl * r_parl + r_perp * r_perp) / 2.0f;
+}
+
+static inline float FresnelMitsuba(float cos_theta_i, float eta) 
+{
+  auto outside_mask = cos_theta_i >= 0.f;
+
+  float rcp_eta = 1.0f / eta,
+        eta_it = outside_mask ? eta : rcp_eta,
+        eta_ti = outside_mask ? rcp_eta : eta;
+
+  /* Using Snell's law, calculate the squared sine of the
+      angle between the surface normal and the transmitted ray */
+  float cos_theta_t_sqr = -(-cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
+
+  /* Find the absolute cosines of the incident/transmitted rays */
+  float cos_theta_i_abs = std::abs(cos_theta_i);
+  float cos_theta_t_abs = std::sqrt(cos_theta_t_sqr);
+
+  auto index_matched = eta == 1.f;
+  auto special_case  = index_matched || cos_theta_i_abs == 0.f;
+
+  float r_sc = index_matched ? 0.f : 1.f;
+
+  /* Amplitudes of reflected waves */
+  float a_s = (-eta_it * cos_theta_t_abs + cos_theta_i_abs) / (eta_it * cos_theta_t_abs + cos_theta_i_abs);
+
+  float a_p = (-eta_it * cos_theta_i_abs + cos_theta_t_abs) / (eta_it * cos_theta_i_abs + cos_theta_t_abs);
+
+  float r = 0.5f * (a_s * a_s + a_p * a_p);
+
+  r = special_case ? r_sc : r;
+
+  /* Adjust the sign of the transmitted direction */
+  float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
+
+  return r;
+}
+
+static inline float4 FrDielectricDetailed(float cosTheta_i, float eta) 
+{
+  cosTheta_i = clamp(cosTheta_i, -1.0f, 1.0f);
+  
+  if (cosTheta_i < 0.0f) 
+  {
+      eta = 1.0f / eta;
+      cosTheta_i = -cosTheta_i;
+  }
+  float r = 0.f;
+
+  float sin2Theta_i = 1.0f - cosTheta_i * cosTheta_i;
+  float sin2Theta_t = sin2Theta_i / (eta * eta);
+  if (sin2Theta_t >= 1.0f)
+      r = 1.f;
+  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+
+  float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
+  float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
+
+  r = (r_parl * r_parl + r_perp * r_perp) / 2.0f;
+
+  cosTheta_t = cosTheta_i >= 0 ? -cosTheta_t : cosTheta_t;
+
+  return {r, cosTheta_t, eta, 1.f / eta};
+}
+
 static inline float FrComplexConductor(float cosThetaI, complex eta)
 {
   float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -543,6 +644,188 @@ static inline float4 hydraFresnelCond(float4 f0, float VdotH, float ior, float r
     return f0;
 
   return f0 + (float4(1.0f) - f0) * fresnelSlick(VdotH); // return bsdf * (f0 + (1 - f0) * (1 - abs(VdotH))^5)
+}
+
+static inline float lerp_gather(const float *data, float x, size_t size) 
+{
+  x *= float(size - 1);
+  uint32_t index = std::min(uint32_t(x), uint32_t(size - 2));
+
+  float v0 = data[index];
+  float v1 = data[index + 1];
+
+  return lerp(v0, v1, x - float(index));
+}
+
+
+//////////////////////
+// GGX from Mitsuba3
+
+static inline float sin_theta_2(const float3 &v) 
+{ 
+  return v.x * v.x + v.y * v.y; 
+}
+
+/** \brief Give a unit direction, this function returns the sine and cosine
+   * of the azimuth in a reference spherical coordinate system 
+   */
+static inline float2 sincos_phi(const float3 &v) 
+{
+  float sin_theta2 = sin_theta_2(v);
+  float inv_sin_theta = 1.f / std::sqrt(sin_theta_2(v));
+
+  float2 result = {v.x * inv_sin_theta, v.y * inv_sin_theta};
+
+  result = std::abs(sin_theta2) <= 4.f * EPSILON_32 ? float2(1.f, 0.f) : clamp(result, -1.f, 1.f);
+
+  return { result.y, result.x };
+}
+
+/// Low-distortion concentric square to disk mapping by Peter Shirley
+static inline float2 square_to_uniform_disk_concentric(const float2 &s) 
+{
+  float x = 2.f * s.x - 1.f,
+        y = 2.f * s.y - 1.f;
+
+  float phi, r;
+  if (x == 0 && y == 0) 
+  {
+    r = phi = 0;
+  } 
+  else if (x * x > y * y) 
+  {
+    r = x;
+    phi = (M_PI / 4.f) * (y / x);
+  } 
+  else 
+  {
+    r = y;
+    phi = (M_PI / 2.f) - (x / y) * (M_PI / 4.f);
+  }
+  return {r * std::cos(phi), r * std::sin(phi)};
+}
+
+static inline float3 square_to_cosine_hemisphere(const float2 &s) 
+{
+    // Low-distortion warping technique based on concentric disk mapping
+    float2 p = square_to_uniform_disk_concentric(s);
+
+    // Guard against numerical imprecisions
+    float z = std::sqrt(1.f - (p.x * p.x + p.y * p.y));
+
+    return { p.x, p.y, z };
+}
+
+/**
+   * \brief Smith's shadowing-masking function for a single direction
+   *
+   * \param v
+   *     An arbitrary direction
+   * \param m
+   *     The microfacet normal
+*/
+static inline float smith_g1(const float3 &v, const float3 &m, float2 alpha) 
+{
+  float xy_alpha_2 = alpha.x * v.x * alpha.x * v.x + alpha.y * v.y * alpha.y * v.y,
+        tan_theta_alpha_2 = xy_alpha_2 / (v.z * v.z),
+        result;
+
+
+  result = 2.f / (1.f + std::sqrt(1.f + tan_theta_alpha_2));
+
+  // Perpendicular incidence -- no shadowing/masking
+  if(xy_alpha_2 == 0.f)
+    result = 1.f;
+
+  /* Ensure consistent orientation (can't see the back
+      of the microfacet from the front and vice versa) */
+
+  if(v.z * dot(v, m) <= 0.f)
+    result = 0.f;
+
+  return result;
+}
+
+static inline float sqr(float val)
+{
+  return val * val;
+}
+
+static inline float eval_microfacet(const float3 &m, float2 alpha, int type = 1) 
+{
+  float alpha_uv = alpha.x * alpha.y;
+  float cos_theta = m.z;
+  float cos_theta_2 = cos_theta * cos_theta;
+
+  float result = 0.0f;
+  if (type == 0) // Beckmann distribution function for Gaussian random surfaces 
+  {
+      result = std::exp(-(sqr(m.x / alpha.x) + sqr(m.y / alpha.y)) / cos_theta_2) / (M_PI * alpha_uv * sqr(cos_theta_2));
+  } 
+  else // GGX / Trowbridge-Reitz distribution function 
+  {
+      result = 1.f / (M_PI * alpha_uv * sqr(sqr(m.x / alpha.x) + sqr(m.y / alpha.y) + sqr(m.z)));
+  }
+
+  return result * cos_theta > 1e-20f ? result : 0.f;
+}
+
+static inline float2 sample_visible_11(float cos_theta_i, float2 samp)
+{
+  float2 p = square_to_uniform_disk_concentric(samp);
+
+  float s = 0.5f * (1.f + cos_theta_i);
+  p.y = lerp(std::sqrt(1.f - p.x * p.x), p.y, s);
+
+  // Project onto chosen side of the hemisphere
+  float x = p.x, y = p.y,
+        z = std::sqrt(1.f - dot(p, p));
+
+  // Convert to slope
+  float sin_theta_i = std::sqrt(std::max(1.f - cos_theta_i * cos_theta_i, 0.0f));
+  float norm = 1.f / (sin_theta_i * y + cos_theta_i * z);
+  return float2(cos_theta_i * y - sin_theta_i * z, x) * norm;
+}
+
+static inline float4 sample_visible_normal(float3 wi, float2 rands, float2 alpha)
+{
+  // Step 1: stretch wi
+  float3 wi_p = normalize(float3(alpha.x * wi.x, alpha.y * wi.y, wi.z));
+
+  const float2 sincos = sincos_phi(wi_p);
+  const float sin_phi = sincos.x;
+  const float cos_phi = sincos.y;
+
+  const float cos_theta = wi_p.z;
+
+  // Step 2: simulate P22_{wi}(slope.x, slope.y, 1, 1)
+  float2 slope = sample_visible_11(cos_theta, rands);
+
+  // Step 3: rotate & unstretch
+  slope = float2((cos_phi * slope.x - sin_phi * slope.y) * alpha.x,
+                  (sin_phi * slope.x + cos_phi * slope.y) * alpha.y);
+
+  // Step 4: compute normal
+  float3 m = normalize(float3(-slope.x, -slope.y, 1));
+
+  float pdf = eval_microfacet(m, alpha, 1) * smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
+
+  return {m.x, m.y, m.z, pdf};
+}
+
+// Smith's separable shadowing-masking approximation
+static inline float microfacet_G(const float3 &wi, const float3 &wo, const float3 &m, float2 alpha) 
+{
+  return smith_g1(wi, m, alpha) * smith_g1(wo, m, alpha);
+}
+
+static inline float microfacet_pdf(const float3 &wi, const float3 &m, float2 alpha) 
+{
+  float result = eval_microfacet(m, alpha, 1);
+
+  result *= smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
+
+  return result;
 }
 
 ////////////////// blends

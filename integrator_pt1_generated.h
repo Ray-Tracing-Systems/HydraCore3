@@ -105,36 +105,34 @@ public:
     UpdateTextureMembers(a_pCopyEngine);
   }
   
-  virtual void CommitDeviceData(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper) // you have to define this virtual function in the original imput class
+  virtual void CommitDeviceData(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper) 
   {
     InitMemberBuffers();
     UpdateAll(a_pCopyHelper);
-  }  
-  void CommitDeviceData() override { CommitDeviceData(m_ctx.pCopyHelper); }  
+  }
+  virtual void CommitDeviceData() override { CommitDeviceData(m_ctx.pCopyHelper); }  
   void GetExecutionTime(const char* a_funcName, float a_out[4]) override; 
   void UpdateMembersPlainData() override { UpdatePlainMembers(m_ctx.pCopyHelper); } 
   
-
-  virtual void ReserveEmptyVectors();
   virtual void UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateVectorMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void UpdateTextureMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   virtual void ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine);
   static VkPhysicalDeviceFeatures2 ListRequiredDeviceFeatures(std::vector<const char*>& deviceExtensions);
   
-  virtual void RayTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
+  virtual void RayTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, uint channels, float* out_color);
   virtual void CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uint tid, uint* out_color);
   virtual void PackXYCmd(VkCommandBuffer a_commandBuffer, uint tidX, uint tidY);
-  virtual void PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color);
-  virtual void PathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
-  virtual void NaivePathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, float4* out_color);
+  virtual void PathTraceFromInputRaysCmd(VkCommandBuffer a_commandBuffer, uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color);
+  virtual void PathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, uint channels, float* out_color);
+  virtual void NaivePathTraceCmd(VkCommandBuffer a_commandBuffer, uint tid, uint channels, float* out_color);
 
-  void RayTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
+  void RayTraceBlock(uint tid, uint channels, float* out_color, uint32_t a_numPasses) override;
   void CastSingleRayBlock(uint tid, uint* out_color, uint32_t a_numPasses) override;
   void PackXYBlock(uint tidX, uint tidY, uint32_t a_numPasses) override;
-  void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color, uint32_t a_numPasses) override;
-  void PathTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
-  void NaivePathTraceBlock(uint tid, float4* out_color, uint32_t a_numPasses) override;
+  void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color, uint32_t a_numPasses) override;
+  void PathTraceBlock(uint tid, uint channels, float* out_color, uint32_t a_numPasses) override;
+  void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint32_t a_numPasses) override;
 
   inline vk_utils::ExecTime GetRayTraceExecutionTime() const { return m_exTimeRayTrace; }
   inline vk_utils::ExecTime GetCastSingleRayExecutionTime() const { return m_exTimeCastSingleRay; }
@@ -152,12 +150,12 @@ public:
 
   virtual void copyKernelFloatCmd(uint32_t length);
   
-  virtual void RayTraceMegaCmd(uint tid, float4* out_color);
+  virtual void RayTraceMegaCmd(uint tid, uint channels, float* out_color);
   virtual void CastSingleRayMegaCmd(uint tid, uint* out_color);
   virtual void PackXYMegaCmd(uint tidX, uint tidY);
-  virtual void PathTraceFromInputRaysMegaCmd(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float4* out_color);
-  virtual void PathTraceMegaCmd(uint tid, float4* out_color);
-  virtual void NaivePathTraceMegaCmd(uint tid, float4* out_color);
+  virtual void PathTraceFromInputRaysMegaCmd(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color);
+  virtual void PathTraceMegaCmd(uint tid, uint channels, float* out_color);
+  virtual void NaivePathTraceMegaCmd(uint tid, uint channels, float* out_color);
   
   struct MemLoc
   {
@@ -276,6 +274,8 @@ protected:
     size_t   m_normMatricesOffset = 0;
     VkBuffer m_packedXYBuffer = VK_NULL_HANDLE;
     size_t   m_packedXYOffset = 0;
+    VkBuffer m_precomp_coat_transmittanceBuffer = VK_NULL_HANDLE;
+    size_t   m_precomp_coat_transmittanceOffset = 0;
     VkBuffer m_randomGensBuffer = VK_NULL_HANDLE;
     size_t   m_randomGensOffset = 0;
     VkBuffer m_remapInstBuffer = VK_NULL_HANDLE;

@@ -6,6 +6,7 @@
 #include "include/cmat_conductor.h"
 #include "include/cmat_glass.h"
 #include "include/cmat_diffuse.h"
+#include "include/cmat_plastic.h"
 
 #include <chrono>
 #include <string>
@@ -177,7 +178,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
   uint32_t currMatId = a_materialId;
   uint     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
-  while(mtype == MAT_TYPE_BLEND)
+  while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
     currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = as_uint(m_materials[currMatId].data[UINT_MTYPE]);
@@ -239,6 +240,23 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
+    }
+    break;
+    case MAT_TYPE_PLASTIC:
+    if(KSPEC_MAT_TYPE_PLASTIC != 0)
+    {
+      const uint   texId       = as_uint(m_materials[currMatId].data[PLASTIC_COLOR_TEXID]);
+      const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+      const float4 color       = texColor;
+
+      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
+      if(m_spectral_mode == 0)
+        reflSpec *= color;
+
+      const uint precomp_id = as_uint(m_materials[currMatId].data[PLASTIC_PRECOMP_ID]);
+
+      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
+                           m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
     }
     break;
     default:
@@ -372,6 +390,25 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
+        break;
+      }
+      case MAT_TYPE_PLASTIC:
+      if(KSPEC_MAT_TYPE_PLASTIC != 0)
+      {
+        const uint   texId       = as_uint(m_materials[currMat.id].data[PLASTIC_COLOR_TEXID]);
+        const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+        const float4 color       = texColor;
+
+        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
+        if(m_spectral_mode == 0)
+          reflSpec *= color;
+        const uint precomp_id = as_uint(m_materials[currMat.id].data[PLASTIC_PRECOMP_ID]);
+        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
+                    m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+        break;
         break;
       }
       case MAT_TYPE_BLEND:

@@ -63,21 +63,22 @@ public:
   void PackXY         (uint tidX, uint tidY);
 
   void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
-  void RayTrace       (uint tid, float4* out_color [[size("tid")]]); ///<! whitted ray tracing
-  void NaivePathTrace (uint tid, float4* out_color [[size("tid")]]); ///<! NaivePT
-  void PathTrace      (uint tid, float4* out_color [[size("tid")]]); ///<! MISPT and ShadowPT
+  void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
+  void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
+  void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
 
-  void PathTraceFromInputRays(uint tid, const RayPosAndW* in_rayPosAndNear [[size("tid")]], 
-                                        const RayDirAndT* in_rayDirAndFar  [[size("tid")]],
-                                        float4*           out_color        [[size("tid")]]);
+  void PathTraceFromInputRays(uint tid, uint channels, 
+                              const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
+                              const RayDirAndT* in_rayDirAndFar  [[size("tid*channels")]],
+                              float*            out_color        [[size("tid*channels")]]);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
-  virtual void NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceBlock(uint tid, float4* out_color, uint a_passNum);
-  virtual void PathTraceFromInputRaysBlock(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
-                                           float4* out_color, uint a_passNum);
-  virtual void RayTraceBlock(uint tid, float4* out_color, uint a_passNum);
+  virtual void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+  virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+  virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
+                                           float* out_color, uint a_passNum);
+  virtual void RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
   virtual void GetExecutionTime(const char* a_funcName, float a_out[4]); // will be overriden in generated class
@@ -125,13 +126,13 @@ public:
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
-  void kernel_ContributeToImage(uint tid, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                const float4* wavelengths, float4* out_color);
+  void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
+                                const float4* wavelengths, float* out_color);
 
-  void kernel_CopyColorToOutput(uint tid, const float4* a_accumColor, const RandomGen* gen, 
-                                float4* out_color);
+  void kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, 
+                                float* out_color);
 
-  void kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color);                               
+  void kernel_ContributeToImage3(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, float* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,9 +259,16 @@ protected:
   std::vector<LightSource> m_lights;
   float4 m_envColor = float4{0.0f};
 
-  uint m_intergatorType = INTEGRATOR_STUPID_PT;
-  int  m_spectral_mode  = 0;
-  float m_exposureMult = 1.0f;
+  uint  m_intergatorType = INTEGRATOR_STUPID_PT;
+  int   m_spectral_mode  = 0;
+  float m_exposureMult   = 1.0f;
+  
+  /// @brief ////////////////////////////////////////////////////// cam variables
+  static constexpr int CAM_RESPONCE_XYZ = 0;
+  static constexpr int CAM_RESPONCE_RGB = 1;
+  int   m_camResponseSpectrumId[3] = {-1, -1, -1};
+  int   m_camResponseType = CAM_RESPONCE_XYZ; // 0 -- XYZ, 1 -- RGB
+  /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;
@@ -279,6 +287,8 @@ protected:
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;
 
+  std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
+
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
 
@@ -286,7 +296,7 @@ protected:
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS     = 2;
   static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR = 3;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 4;
-  static constexpr uint32_t KSPEC_SOME_FEATURE_DUMMY = 5;
+  static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC   = 5;
 
   static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
