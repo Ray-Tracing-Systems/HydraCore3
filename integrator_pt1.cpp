@@ -440,7 +440,7 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   
   float4 specSamples = *a_accumColor; 
   float3 rgb         = to_float3(specSamples);
-  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) // TODO: spectral framebuffer
+  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
     float4 waves = *wavelengths;
     
@@ -487,21 +487,17 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
           responceZ = responceY;
       }
 
-      if(m_camResponseType == CAM_RESPONCE_XYZ)
-      {
-        const float3 xyz = SpectrumToXYZ2(specSamples, waves, responceX, responceY, responceZ, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
-        rgb = XYZToRGB(xyz);
-      }
-      else
-      {
-        rgb = float3(0,0,0);
-        for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
-          rgb.x += specSamples[i]*responceX[i];
-          rgb.y += specSamples[i]*responceY[i];
-          rgb.z += specSamples[i]*responceZ[i]; 
-        } 
-      }
+      float3 xyz = float3(0,0,0);
+      for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
+        xyz.x += specSamples[i]*responceX[i];
+        xyz.y += specSamples[i]*responceY[i];
+        xyz.z += specSamples[i]*responceZ[i]; 
+      } 
 
+      if(m_camResponseType == CAM_RESPONCE_XYZ)
+        rgb = XYZToRGB(xyz);
+      else
+        rgb = xyz;
     }
   }
 

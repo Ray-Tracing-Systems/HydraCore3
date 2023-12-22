@@ -156,56 +156,6 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   return float3{x ,y, z};
 }
 
-static inline float3 SpectrumToXYZ2(float4 spec, float4 lambda, float4 responceX, float4 responceY, float4 responceZ, float lambda_min, float lambda_max,
-                                   const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z) 
-{
-  const float pdf = 1.0f / (lambda_max - lambda_min);
-  const float CIE_Y_integral = 106.856895f;
-  const uint32_t nCIESamples = 471;
-
-  //TODO: fix
-  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
-    spec[i] = (pdf != 0) ? spec[i] / pdf : 0.0f;
-
-  //float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
-  //float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
-  //float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);
-  float4 X,Y,Z; 
-  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
-  {
-    uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - lambda_min);
-  
-    if (offset >= nCIESamples)
-      X[i] = 0;
-    else
-      X[i] = a_CIE_X[offset]*responceX[i];
-  
-    if (offset >= nCIESamples)
-      Y[i] = 0;
-    else
-      Y[i] = a_CIE_Y[offset]*responceY[i];
-  
-    if (offset >= nCIESamples)
-      Z[i] = 0;
-    else
-      Z[i] = a_CIE_Z[offset]*responceZ[i];
-  }
-
-  for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
-  {
-    X[i] *= spec[i];
-    Y[i] *= spec[i];
-    Z[i] *= spec[i];
-  }
-
-  float x = SpectrumAverage(X) / CIE_Y_integral;
-  float y = SpectrumAverage(Y) / CIE_Y_integral;
-  float z = SpectrumAverage(Z) / CIE_Y_integral;
-
-  return float3{x ,y, z};
-}
-
-
 // 2° standard colorimetric observer
 inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
 {
