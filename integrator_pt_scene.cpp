@@ -1201,6 +1201,29 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_worldView    = worldView;
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
+
+    auto sensorNode = cam.node.child(L"sensor");
+    if(sensorNode != nullptr)
+    {
+      auto responceNode = sensorNode.child(L"response");
+      if(responceNode != nullptr)
+      {
+        std::wstring responceType = responceNode.attribute(L"type").as_string();
+        if(responceType == L"xyz" || responceType == L"XYZ")
+          m_camResponseType = CAM_RESPONCE_XYZ;
+        else
+          m_camResponseType = CAM_RESPONCE_RGB;
+        
+        int id = 0;
+        for(auto spec : responceNode.children(L"spectrum")) {
+          m_camResponseSpectrumId[id] = spec.attribute(L"id").as_int();
+          id++;
+          if(id >= 3)
+            break;
+        }
+      }
+    }
+
     break; // take first cam
   }
 

@@ -156,7 +156,6 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   return float3{x ,y, z};
 }
 
-
 // 2° standard colorimetric observer
 inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
 {

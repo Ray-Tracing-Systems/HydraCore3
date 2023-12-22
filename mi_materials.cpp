@@ -52,6 +52,7 @@
 #include <cassert>
 #include <iostream>
 #include <tuple>
+#include <string>
 
 namespace dr
 {
