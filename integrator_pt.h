@@ -259,9 +259,16 @@ protected:
   std::vector<LightSource> m_lights;
   float4 m_envColor = float4{0.0f};
 
-  uint m_intergatorType = INTEGRATOR_STUPID_PT;
-  int  m_spectral_mode  = 0;
-  float m_exposureMult = 1.0f;
+  uint  m_intergatorType = INTEGRATOR_STUPID_PT;
+  int   m_spectral_mode  = 0;
+  float m_exposureMult   = 1.0f;
+  
+  /// @brief ////////////////////////////////////////////////////// cam variables
+  static constexpr int CAM_RESPONCE_XYZ = 0;
+  static constexpr int CAM_RESPONCE_RGB = 1;
+  int   m_camResponseSpectrumId[3] = {-1, -1, -1};
+  int   m_camResponseType = CAM_RESPONCE_XYZ; // 0 -- XYZ, 1 -- RGB
+  /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;
   float shadowPtTime = 0.0f;
