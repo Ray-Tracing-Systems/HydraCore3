@@ -521,8 +521,8 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   }
   else
   {
-    auto waves = *wavelengths;
-    auto color = *a_accumColor;
+    auto waves = (*wavelengths);
+    auto color = (*a_accumColor)*m_exposureMult;
     for(int i=0;i<4;i++) {
       const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
       const int channelId   = std::min(int(float(channels)*t), int(channels)-1);

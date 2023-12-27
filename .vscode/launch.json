@@ -143,12 +143,13 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral",
-                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_spectral_hydra3.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_measured_chromaxion_spectral_hydra3_v1.xml",
                  "-integrator", "mispt", 
                  "-spp", "4096",
-                 "-channels", "47",
+                 //"-channels", "47",
                  "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
-                 "-out", "z_checker.image3d1f"],
+                 //"-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/Images/render1.image3d1f",
+                 "-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/Images/render2.exr"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -162,6 +163,35 @@
             }
         ]
     },
+
+    {
+        "name": "Checker(LED/8496)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/8496_measured_chromaxion_spectral_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"-spp", "4096",
+                 "-channels", "47",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/Images/render1.image3d1f"],
+                 //"-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/Images/render1.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    ///home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496
 
     {
         "name": "House_01",
