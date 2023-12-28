@@ -172,7 +172,7 @@ void SaveFrameBufferToEXR(float* data, int width, int height, int channels, cons
   else
   {
     for(int c=0;c<channels;c++)
-      FlipYAndNormalizeImage2D1f(data + width*height*c, width, height, a_normConst);  
+      FlipYAndNormalizeImage2D1f(data + width*height*c, width, height, a_normConst*float(channels));  
 
     if(std::string(outfilename).find(".image3d1f") != std::string::npos) 
       SaveImage3DToImage3D1f(data, width, height, channels, outfilename);

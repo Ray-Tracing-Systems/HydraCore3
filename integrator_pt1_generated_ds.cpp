@@ -248,28 +248,28 @@ VkDescriptorSetLayout Integrator_Generated::CreateCastSingleRayMegaDSLayout()
   dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[2].pImmutableSamplers = nullptr;
 
-  // binding for m_materials
+  // binding for m_allRemapLists
   dsBindings[3].binding            = 3;
   dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[3].descriptorCount    = 1;
   dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[3].pImmutableSamplers = nullptr;
 
-  // binding for m_allRemapLists
+  // binding for m_precomp_coat_transmittance
   dsBindings[4].binding            = 4;
   dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[4].descriptorCount    = 1;
   dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[4].pImmutableSamplers = nullptr;
 
-  // binding for m_precomp_coat_transmittance
+  // binding for m_wavelengths
   dsBindings[5].binding            = 5;
   dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[5].descriptorCount    = 1;
   dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[5].pImmutableSamplers = nullptr;
 
-  // binding for m_wavelengths
+  // binding for m_materials
   dsBindings[6].binding            = 6;
   dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[6].descriptorCount    = 1;
@@ -283,27 +283,27 @@ VkDescriptorSetLayout Integrator_Generated::CreateCastSingleRayMegaDSLayout()
   dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[7].pImmutableSamplers = nullptr;
 
-  // binding for m_packedXY
+  // binding for m_spec_values
   dsBindings[8].binding            = 8;
   dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[8].descriptorCount    = 1;
   dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[8].pImmutableSamplers = nullptr;
 
-  // binding for m_textures
+  // binding for m_packedXY
   dsBindings[9].binding            = 9;
-  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[9].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
+  dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  dsBindings[9].descriptorCount    = 1;
   dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[9].pImmutableSamplers = nullptr;
 
-  // binding for m_spec_values
+  // binding for m_textures
   dsBindings[10].binding            = 10;
-  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[10].descriptorCount    = 1;
+  dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  m_vdata.m_texturesArrayMaxSize = m_textures.size();
+  if(m_vdata.m_texturesArrayMaxSize == 0)
+    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
+  dsBindings[10].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
   dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[10].pImmutableSamplers = nullptr;
 
@@ -355,20 +355,20 @@ VkDescriptorSetLayout Integrator_Generated::CreatePackXYMegaDSLayout()
 {
   std::array<VkDescriptorSetLayoutBinding, 11+1> dsBindings;
 
-  // binding for m_spec_values
-  dsBindings[0].binding            = 0;
-  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
-  dsBindings[0].pImmutableSamplers = nullptr;
-
   // binding for m_textures
-  dsBindings[1].binding            = 1;
-  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  dsBindings[0].binding            = 0;
+  dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   m_vdata.m_texturesArrayMaxSize = m_textures.size();
   if(m_vdata.m_texturesArrayMaxSize == 0)
     m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[1].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
+  dsBindings[0].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
+  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[0].pImmutableSamplers = nullptr;
+
+  // binding for m_spec_values
+  dsBindings[1].binding            = 1;
+  dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  dsBindings[1].descriptorCount    = 1;
   dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[1].pImmutableSamplers = nullptr;
 
@@ -379,21 +379,21 @@ VkDescriptorSetLayout Integrator_Generated::CreatePackXYMegaDSLayout()
   dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[2].pImmutableSamplers = nullptr;
 
-  // binding for m_wavelengths
+  // binding for m_materials
   dsBindings[3].binding            = 3;
   dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[3].descriptorCount    = 1;
   dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[3].pImmutableSamplers = nullptr;
 
-  // binding for m_spec_offset_sz
+  // binding for m_wavelengths
   dsBindings[4].binding            = 4;
   dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[4].descriptorCount    = 1;
   dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[4].pImmutableSamplers = nullptr;
 
-  // binding for m_materials
+  // binding for m_spec_offset_sz
   dsBindings[5].binding            = 5;
   dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[5].descriptorCount    = 1;
@@ -709,35 +709,35 @@ VkDescriptorSetLayout Integrator_Generated::CreatePathTraceMegaDSLayout()
   dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[9].pImmutableSamplers = nullptr;
 
-  // binding for m_cie_z
+  // binding for m_allRemapLists
   dsBindings[10].binding            = 10;
   dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[10].descriptorCount    = 1;
   dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[10].pImmutableSamplers = nullptr;
 
-  // binding for m_materials
+  // binding for m_precomp_coat_transmittance
   dsBindings[11].binding            = 11;
   dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[11].descriptorCount    = 1;
   dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[11].pImmutableSamplers = nullptr;
 
-  // binding for m_allRemapLists
+  // binding for m_wavelengths
   dsBindings[12].binding            = 12;
   dsBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[12].descriptorCount    = 1;
   dsBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[12].pImmutableSamplers = nullptr;
 
-  // binding for m_precomp_coat_transmittance
+  // binding for m_cie_z
   dsBindings[13].binding            = 13;
   dsBindings[13].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[13].descriptorCount    = 1;
   dsBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[13].pImmutableSamplers = nullptr;
 
-  // binding for m_wavelengths
+  // binding for m_materials
   dsBindings[14].binding            = 14;
   dsBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[14].descriptorCount    = 1;
@@ -751,34 +751,34 @@ VkDescriptorSetLayout Integrator_Generated::CreatePathTraceMegaDSLayout()
   dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[15].pImmutableSamplers = nullptr;
 
-  // binding for m_packedXY
+  // binding for m_vertOffset
   dsBindings[16].binding            = 16;
   dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[16].descriptorCount    = 1;
   dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[16].pImmutableSamplers = nullptr;
 
-  // binding for m_textures
+  // binding for m_spec_values
   dsBindings[17].binding            = 17;
-  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  m_vdata.m_texturesArrayMaxSize = m_textures.size();
-  if(m_vdata.m_texturesArrayMaxSize == 0)
-    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
-  dsBindings[17].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
+  dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  dsBindings[17].descriptorCount    = 1;
   dsBindings[17].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[17].pImmutableSamplers = nullptr;
 
-  // binding for m_vertOffset
+  // binding for m_packedXY
   dsBindings[18].binding            = 18;
   dsBindings[18].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[18].descriptorCount    = 1;
   dsBindings[18].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[18].pImmutableSamplers = nullptr;
 
-  // binding for m_spec_values
+  // binding for m_textures
   dsBindings[19].binding            = 19;
-  dsBindings[19].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  dsBindings[19].descriptorCount    = 1;
+  dsBindings[19].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  m_vdata.m_texturesArrayMaxSize = m_textures.size();
+  if(m_vdata.m_texturesArrayMaxSize == 0)
+    m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
+  dsBindings[19].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
   dsBindings[19].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
   dsBindings[19].pImmutableSamplers = nullptr;
 
@@ -1389,7 +1389,7 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
 {
   // now create actual bindings
   //
-  // descriptor set #1: CastSingleRayMegaCmd (["out_color","m_allRemapListsOffsets","m_lights","m_materials","m_allRemapLists","m_precomp_coat_transmittance","m_wavelengths","m_remapInst","m_packedXY","m_textures","m_spec_values","m_spec_offset_sz","m_pAccelStruct","m_matIdOffsets","m_matIdByPrimId"])
+  // descriptor set #1: CastSingleRayMegaCmd (["out_color","m_allRemapListsOffsets","m_lights","m_allRemapLists","m_precomp_coat_transmittance","m_wavelengths","m_materials","m_remapInst","m_spec_values","m_packedXY","m_textures","m_spec_offset_sz","m_pAccelStruct","m_matIdOffsets","m_matIdByPrimId"])
   {
     constexpr uint additionalSize = 1;
 
@@ -1442,8 +1442,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[2].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[3]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[3].buffer = m_vdata.m_materialsBuffer;
-    descriptorBufferInfo[3].offset = m_vdata.m_materialsOffset;
+    descriptorBufferInfo[3].buffer = m_vdata.m_allRemapListsBuffer;
+    descriptorBufferInfo[3].offset = m_vdata.m_allRemapListsOffset;
     descriptorBufferInfo[3].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[3]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1456,8 +1456,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[3].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[4]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[4].buffer = m_vdata.m_allRemapListsBuffer;
-    descriptorBufferInfo[4].offset = m_vdata.m_allRemapListsOffset;
+    descriptorBufferInfo[4].buffer = m_vdata.m_precomp_coat_transmittanceBuffer;
+    descriptorBufferInfo[4].offset = m_vdata.m_precomp_coat_transmittanceOffset;
     descriptorBufferInfo[4].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[4]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[4].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1470,8 +1470,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[4].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[5]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[5].buffer = m_vdata.m_precomp_coat_transmittanceBuffer;
-    descriptorBufferInfo[5].offset = m_vdata.m_precomp_coat_transmittanceOffset;
+    descriptorBufferInfo[5].buffer = m_vdata.m_wavelengthsBuffer;
+    descriptorBufferInfo[5].offset = m_vdata.m_wavelengthsOffset;
     descriptorBufferInfo[5].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[5]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[5].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1484,8 +1484,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[5].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[6]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[6].buffer = m_vdata.m_wavelengthsBuffer;
-    descriptorBufferInfo[6].offset = m_vdata.m_wavelengthsOffset;
+    descriptorBufferInfo[6].buffer = m_vdata.m_materialsBuffer;
+    descriptorBufferInfo[6].offset = m_vdata.m_materialsOffset;
     descriptorBufferInfo[6].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[6]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[6].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1512,8 +1512,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[7].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[8]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[8].buffer = m_vdata.m_packedXYBuffer;
-    descriptorBufferInfo[8].offset = m_vdata.m_packedXYOffset;
+    descriptorBufferInfo[8].buffer = m_vdata.m_spec_valuesBuffer;
+    descriptorBufferInfo[8].offset = m_vdata.m_spec_valuesOffset;
     descriptorBufferInfo[8].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[8]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[8].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1524,6 +1524,20 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
     writeDescriptorSet[8].pBufferInfo      = &descriptorBufferInfo[8];
     writeDescriptorSet[8].pImageInfo       = nullptr;
     writeDescriptorSet[8].pTexelBufferView = nullptr; 
+
+    descriptorBufferInfo[9]        = VkDescriptorBufferInfo{};
+    descriptorBufferInfo[9].buffer = m_vdata.m_packedXYBuffer;
+    descriptorBufferInfo[9].offset = m_vdata.m_packedXYOffset;
+    descriptorBufferInfo[9].range  = VK_WHOLE_SIZE;  
+    writeDescriptorSet[9]                  = VkWriteDescriptorSet{};
+    writeDescriptorSet[9].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet[9].dstSet           = m_allGeneratedDS[1];
+    writeDescriptorSet[9].dstBinding       = 9;
+    writeDescriptorSet[9].descriptorCount  = 1;
+    writeDescriptorSet[9].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writeDescriptorSet[9].pBufferInfo      = &descriptorBufferInfo[9];
+    writeDescriptorSet[9].pImageInfo       = nullptr;
+    writeDescriptorSet[9].pTexelBufferView = nullptr; 
 
     std::vector<VkDescriptorImageInfo> m_texturesInfo(m_vdata.m_texturesArrayMaxSize);
     for(size_t i=0; i<m_vdata.m_texturesArrayMaxSize; i++)
@@ -1541,29 +1555,15 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_CastSingleRay()
         m_texturesInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       }
     }
-    writeDescriptorSet[9]                  = VkWriteDescriptorSet{};
-    writeDescriptorSet[9].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[9].dstSet           = m_allGeneratedDS[1];
-    writeDescriptorSet[9].dstBinding       = 9;
-    writeDescriptorSet[9].descriptorCount  = 1;
-    writeDescriptorSet[9].descriptorCount  = m_texturesInfo.size();
-    writeDescriptorSet[9].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescriptorSet[9].pBufferInfo      = nullptr;
-    writeDescriptorSet[9].pImageInfo       = m_texturesInfo.data();
-    writeDescriptorSet[9].pTexelBufferView = nullptr; 
-
-    descriptorBufferInfo[10]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[10].buffer = m_vdata.m_spec_valuesBuffer;
-    descriptorBufferInfo[10].offset = m_vdata.m_spec_valuesOffset;
-    descriptorBufferInfo[10].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[10]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[10].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writeDescriptorSet[10].dstSet           = m_allGeneratedDS[1];
     writeDescriptorSet[10].dstBinding       = 10;
     writeDescriptorSet[10].descriptorCount  = 1;
-    writeDescriptorSet[10].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet[10].pBufferInfo      = &descriptorBufferInfo[10];
-    writeDescriptorSet[10].pImageInfo       = nullptr;
+    writeDescriptorSet[10].descriptorCount  = m_texturesInfo.size();
+    writeDescriptorSet[10].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writeDescriptorSet[10].pBufferInfo      = nullptr;
+    writeDescriptorSet[10].pImageInfo       = m_texturesInfo.data();
     writeDescriptorSet[10].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[11]        = VkDescriptorBufferInfo{};
@@ -1646,7 +1646,7 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
 {
   // now create actual bindings
   //
-  // descriptor set #2: PackXYMegaCmd (["m_spec_values","m_textures","m_remapInst","m_wavelengths","m_spec_offset_sz","m_materials","m_packedXY","m_lights","m_precomp_coat_transmittance","m_allRemapLists","m_allRemapListsOffsets"])
+  // descriptor set #2: PackXYMegaCmd (["m_textures","m_spec_values","m_remapInst","m_materials","m_wavelengths","m_spec_offset_sz","m_packedXY","m_lights","m_precomp_coat_transmittance","m_allRemapLists","m_allRemapListsOffsets"])
   {
     constexpr uint additionalSize = 1;
 
@@ -1655,20 +1655,6 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
     std::array<VkAccelerationStructureKHR,  11 + additionalSize> accelStructs;
     std::array<VkWriteDescriptorSetAccelerationStructureKHR,  11 + additionalSize> descriptorAccelInfo;
     std::array<VkWriteDescriptorSet,   11 + additionalSize> writeDescriptorSet;
-
-    descriptorBufferInfo[0]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[0].buffer = m_vdata.m_spec_valuesBuffer;
-    descriptorBufferInfo[0].offset = m_vdata.m_spec_valuesOffset;
-    descriptorBufferInfo[0].range  = VK_WHOLE_SIZE;  
-    writeDescriptorSet[0]                  = VkWriteDescriptorSet{};
-    writeDescriptorSet[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[0].dstSet           = m_allGeneratedDS[2];
-    writeDescriptorSet[0].dstBinding       = 0;
-    writeDescriptorSet[0].descriptorCount  = 1;
-    writeDescriptorSet[0].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet[0].pBufferInfo      = &descriptorBufferInfo[0];
-    writeDescriptorSet[0].pImageInfo       = nullptr;
-    writeDescriptorSet[0].pTexelBufferView = nullptr; 
 
     std::vector<VkDescriptorImageInfo> m_texturesInfo(m_vdata.m_texturesArrayMaxSize);
     for(size_t i=0; i<m_vdata.m_texturesArrayMaxSize; i++)
@@ -1686,15 +1672,29 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
         m_texturesInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       }
     }
+    writeDescriptorSet[0]                  = VkWriteDescriptorSet{};
+    writeDescriptorSet[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet[0].dstSet           = m_allGeneratedDS[2];
+    writeDescriptorSet[0].dstBinding       = 0;
+    writeDescriptorSet[0].descriptorCount  = 1;
+    writeDescriptorSet[0].descriptorCount  = m_texturesInfo.size();
+    writeDescriptorSet[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writeDescriptorSet[0].pBufferInfo      = nullptr;
+    writeDescriptorSet[0].pImageInfo       = m_texturesInfo.data();
+    writeDescriptorSet[0].pTexelBufferView = nullptr; 
+
+    descriptorBufferInfo[1]        = VkDescriptorBufferInfo{};
+    descriptorBufferInfo[1].buffer = m_vdata.m_spec_valuesBuffer;
+    descriptorBufferInfo[1].offset = m_vdata.m_spec_valuesOffset;
+    descriptorBufferInfo[1].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[1]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writeDescriptorSet[1].dstSet           = m_allGeneratedDS[2];
     writeDescriptorSet[1].dstBinding       = 1;
     writeDescriptorSet[1].descriptorCount  = 1;
-    writeDescriptorSet[1].descriptorCount  = m_texturesInfo.size();
-    writeDescriptorSet[1].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescriptorSet[1].pBufferInfo      = nullptr;
-    writeDescriptorSet[1].pImageInfo       = m_texturesInfo.data();
+    writeDescriptorSet[1].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writeDescriptorSet[1].pBufferInfo      = &descriptorBufferInfo[1];
+    writeDescriptorSet[1].pImageInfo       = nullptr;
     writeDescriptorSet[1].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[2]        = VkDescriptorBufferInfo{};
@@ -1712,8 +1712,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
     writeDescriptorSet[2].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[3]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[3].buffer = m_vdata.m_wavelengthsBuffer;
-    descriptorBufferInfo[3].offset = m_vdata.m_wavelengthsOffset;
+    descriptorBufferInfo[3].buffer = m_vdata.m_materialsBuffer;
+    descriptorBufferInfo[3].offset = m_vdata.m_materialsOffset;
     descriptorBufferInfo[3].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[3]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[3].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1726,8 +1726,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
     writeDescriptorSet[3].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[4]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[4].buffer = m_vdata.m_spec_offset_szBuffer;
-    descriptorBufferInfo[4].offset = m_vdata.m_spec_offset_szOffset;
+    descriptorBufferInfo[4].buffer = m_vdata.m_wavelengthsBuffer;
+    descriptorBufferInfo[4].offset = m_vdata.m_wavelengthsOffset;
     descriptorBufferInfo[4].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[4]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[4].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1740,8 +1740,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PackXY()
     writeDescriptorSet[4].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[5]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[5].buffer = m_vdata.m_materialsBuffer;
-    descriptorBufferInfo[5].offset = m_vdata.m_materialsOffset;
+    descriptorBufferInfo[5].buffer = m_vdata.m_spec_offset_szBuffer;
+    descriptorBufferInfo[5].offset = m_vdata.m_spec_offset_szOffset;
     descriptorBufferInfo[5].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[5]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[5].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2215,7 +2215,7 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
 {
   // now create actual bindings
   //
-  // descriptor set #4: PathTraceMegaCmd (["out_color","m_cie_x","m_matIdByPrimId","m_randomGens","m_vNorm4f","m_vTang4f","m_triIndices","m_cie_y","m_normMatrices","m_allRemapListsOffsets","m_cie_z","m_materials","m_allRemapLists","m_precomp_coat_transmittance","m_wavelengths","m_remapInst","m_packedXY","m_textures","m_vertOffset","m_spec_values","m_instIdToLightInstId","m_spec_offset_sz","m_pAccelStruct","m_lights","m_matIdOffsets"])
+  // descriptor set #4: PathTraceMegaCmd (["out_color","m_cie_x","m_matIdByPrimId","m_randomGens","m_vNorm4f","m_vTang4f","m_triIndices","m_cie_y","m_normMatrices","m_allRemapListsOffsets","m_allRemapLists","m_precomp_coat_transmittance","m_wavelengths","m_cie_z","m_materials","m_remapInst","m_vertOffset","m_spec_values","m_packedXY","m_textures","m_instIdToLightInstId","m_spec_offset_sz","m_pAccelStruct","m_lights","m_matIdOffsets"])
   {
     constexpr uint additionalSize = 1;
 
@@ -2366,8 +2366,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[9].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[10]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[10].buffer = m_vdata.m_cie_zBuffer;
-    descriptorBufferInfo[10].offset = m_vdata.m_cie_zOffset;
+    descriptorBufferInfo[10].buffer = m_vdata.m_allRemapListsBuffer;
+    descriptorBufferInfo[10].offset = m_vdata.m_allRemapListsOffset;
     descriptorBufferInfo[10].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[10]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[10].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2380,8 +2380,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[10].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[11]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[11].buffer = m_vdata.m_materialsBuffer;
-    descriptorBufferInfo[11].offset = m_vdata.m_materialsOffset;
+    descriptorBufferInfo[11].buffer = m_vdata.m_precomp_coat_transmittanceBuffer;
+    descriptorBufferInfo[11].offset = m_vdata.m_precomp_coat_transmittanceOffset;
     descriptorBufferInfo[11].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[11]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[11].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2394,8 +2394,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[11].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[12]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[12].buffer = m_vdata.m_allRemapListsBuffer;
-    descriptorBufferInfo[12].offset = m_vdata.m_allRemapListsOffset;
+    descriptorBufferInfo[12].buffer = m_vdata.m_wavelengthsBuffer;
+    descriptorBufferInfo[12].offset = m_vdata.m_wavelengthsOffset;
     descriptorBufferInfo[12].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[12]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[12].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2408,8 +2408,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[12].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[13]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[13].buffer = m_vdata.m_precomp_coat_transmittanceBuffer;
-    descriptorBufferInfo[13].offset = m_vdata.m_precomp_coat_transmittanceOffset;
+    descriptorBufferInfo[13].buffer = m_vdata.m_cie_zBuffer;
+    descriptorBufferInfo[13].offset = m_vdata.m_cie_zOffset;
     descriptorBufferInfo[13].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[13]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[13].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2422,8 +2422,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[13].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[14]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[14].buffer = m_vdata.m_wavelengthsBuffer;
-    descriptorBufferInfo[14].offset = m_vdata.m_wavelengthsOffset;
+    descriptorBufferInfo[14].buffer = m_vdata.m_materialsBuffer;
+    descriptorBufferInfo[14].offset = m_vdata.m_materialsOffset;
     descriptorBufferInfo[14].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[14]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[14].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2450,8 +2450,8 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[15].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[16]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[16].buffer = m_vdata.m_packedXYBuffer;
-    descriptorBufferInfo[16].offset = m_vdata.m_packedXYOffset;
+    descriptorBufferInfo[16].buffer = m_vdata.m_vertOffsetBuffer;
+    descriptorBufferInfo[16].offset = m_vdata.m_vertOffsetOffset;
     descriptorBufferInfo[16].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[16]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[16].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2462,6 +2462,34 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
     writeDescriptorSet[16].pBufferInfo      = &descriptorBufferInfo[16];
     writeDescriptorSet[16].pImageInfo       = nullptr;
     writeDescriptorSet[16].pTexelBufferView = nullptr; 
+
+    descriptorBufferInfo[17]        = VkDescriptorBufferInfo{};
+    descriptorBufferInfo[17].buffer = m_vdata.m_spec_valuesBuffer;
+    descriptorBufferInfo[17].offset = m_vdata.m_spec_valuesOffset;
+    descriptorBufferInfo[17].range  = VK_WHOLE_SIZE;  
+    writeDescriptorSet[17]                  = VkWriteDescriptorSet{};
+    writeDescriptorSet[17].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet[17].dstSet           = m_allGeneratedDS[4];
+    writeDescriptorSet[17].dstBinding       = 17;
+    writeDescriptorSet[17].descriptorCount  = 1;
+    writeDescriptorSet[17].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writeDescriptorSet[17].pBufferInfo      = &descriptorBufferInfo[17];
+    writeDescriptorSet[17].pImageInfo       = nullptr;
+    writeDescriptorSet[17].pTexelBufferView = nullptr; 
+
+    descriptorBufferInfo[18]        = VkDescriptorBufferInfo{};
+    descriptorBufferInfo[18].buffer = m_vdata.m_packedXYBuffer;
+    descriptorBufferInfo[18].offset = m_vdata.m_packedXYOffset;
+    descriptorBufferInfo[18].range  = VK_WHOLE_SIZE;  
+    writeDescriptorSet[18]                  = VkWriteDescriptorSet{};
+    writeDescriptorSet[18].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet[18].dstSet           = m_allGeneratedDS[4];
+    writeDescriptorSet[18].dstBinding       = 18;
+    writeDescriptorSet[18].descriptorCount  = 1;
+    writeDescriptorSet[18].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    writeDescriptorSet[18].pBufferInfo      = &descriptorBufferInfo[18];
+    writeDescriptorSet[18].pImageInfo       = nullptr;
+    writeDescriptorSet[18].pTexelBufferView = nullptr; 
 
     std::vector<VkDescriptorImageInfo> m_texturesInfo(m_vdata.m_texturesArrayMaxSize);
     for(size_t i=0; i<m_vdata.m_texturesArrayMaxSize; i++)
@@ -2479,43 +2507,15 @@ void Integrator_Generated::InitAllGeneratedDescriptorSets_PathTrace()
         m_texturesInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       }
     }
-    writeDescriptorSet[17]                  = VkWriteDescriptorSet{};
-    writeDescriptorSet[17].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[17].dstSet           = m_allGeneratedDS[4];
-    writeDescriptorSet[17].dstBinding       = 17;
-    writeDescriptorSet[17].descriptorCount  = 1;
-    writeDescriptorSet[17].descriptorCount  = m_texturesInfo.size();
-    writeDescriptorSet[17].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeDescriptorSet[17].pBufferInfo      = nullptr;
-    writeDescriptorSet[17].pImageInfo       = m_texturesInfo.data();
-    writeDescriptorSet[17].pTexelBufferView = nullptr; 
-
-    descriptorBufferInfo[18]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[18].buffer = m_vdata.m_vertOffsetBuffer;
-    descriptorBufferInfo[18].offset = m_vdata.m_vertOffsetOffset;
-    descriptorBufferInfo[18].range  = VK_WHOLE_SIZE;  
-    writeDescriptorSet[18]                  = VkWriteDescriptorSet{};
-    writeDescriptorSet[18].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeDescriptorSet[18].dstSet           = m_allGeneratedDS[4];
-    writeDescriptorSet[18].dstBinding       = 18;
-    writeDescriptorSet[18].descriptorCount  = 1;
-    writeDescriptorSet[18].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet[18].pBufferInfo      = &descriptorBufferInfo[18];
-    writeDescriptorSet[18].pImageInfo       = nullptr;
-    writeDescriptorSet[18].pTexelBufferView = nullptr; 
-
-    descriptorBufferInfo[19]        = VkDescriptorBufferInfo{};
-    descriptorBufferInfo[19].buffer = m_vdata.m_spec_valuesBuffer;
-    descriptorBufferInfo[19].offset = m_vdata.m_spec_valuesOffset;
-    descriptorBufferInfo[19].range  = VK_WHOLE_SIZE;  
     writeDescriptorSet[19]                  = VkWriteDescriptorSet{};
     writeDescriptorSet[19].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writeDescriptorSet[19].dstSet           = m_allGeneratedDS[4];
     writeDescriptorSet[19].dstBinding       = 19;
     writeDescriptorSet[19].descriptorCount  = 1;
-    writeDescriptorSet[19].descriptorType   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeDescriptorSet[19].pBufferInfo      = &descriptorBufferInfo[19];
-    writeDescriptorSet[19].pImageInfo       = nullptr;
+    writeDescriptorSet[19].descriptorCount  = m_texturesInfo.size();
+    writeDescriptorSet[19].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writeDescriptorSet[19].pBufferInfo      = nullptr;
+    writeDescriptorSet[19].pImageInfo       = m_texturesInfo.data();
     writeDescriptorSet[19].pTexelBufferView = nullptr; 
 
     descriptorBufferInfo[20]        = VkDescriptorBufferInfo{};

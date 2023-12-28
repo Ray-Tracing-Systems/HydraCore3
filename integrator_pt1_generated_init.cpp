@@ -312,6 +312,8 @@ void Integrator_Generated::InitKernels(const char* a_filePath)
 
 void Integrator_Generated::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuffersOverlay)
 {
+  ReserveEmptyVectors();
+  
   m_maxThreadCount = a_maxThreadsCount;
   std::vector<VkBuffer> allBuffers;
   allBuffers.reserve(64);
@@ -362,6 +364,54 @@ void Integrator_Generated::InitBuffers(size_t a_maxThreadsCount, bool a_tempBuff
       if(i != largestIndex)
         AssignBuffersToMemory(groups[i].bufsClean, internalBuffersMem.memObject);
   }
+}
+
+void Integrator_Generated::ReserveEmptyVectors()
+{
+  if(m_allRemapLists.capacity() == 0)
+    m_allRemapLists.reserve(4);
+  if(m_allRemapListsOffsets.capacity() == 0)
+    m_allRemapListsOffsets.reserve(4);
+  if(m_cie_x.capacity() == 0)
+    m_cie_x.reserve(4);
+  if(m_cie_y.capacity() == 0)
+    m_cie_y.reserve(4);
+  if(m_cie_z.capacity() == 0)
+    m_cie_z.reserve(4);
+  if(m_instIdToLightInstId.capacity() == 0)
+    m_instIdToLightInstId.reserve(4);
+  if(m_lights.capacity() == 0)
+    m_lights.reserve(4);
+  if(m_matIdByPrimId.capacity() == 0)
+    m_matIdByPrimId.reserve(4);
+  if(m_matIdOffsets.capacity() == 0)
+    m_matIdOffsets.reserve(4);
+  if(m_materials.capacity() == 0)
+    m_materials.reserve(4);
+  if(m_normMatrices.capacity() == 0)
+    m_normMatrices.reserve(4);
+  if(m_packedXY.capacity() == 0)
+    m_packedXY.reserve(4);
+  if(m_precomp_coat_transmittance.capacity() == 0)
+    m_precomp_coat_transmittance.reserve(4);
+  if(m_randomGens.capacity() == 0)
+    m_randomGens.reserve(4);
+  if(m_remapInst.capacity() == 0)
+    m_remapInst.reserve(4);
+  if(m_spec_offset_sz.capacity() == 0)
+    m_spec_offset_sz.reserve(4);
+  if(m_spec_values.capacity() == 0)
+    m_spec_values.reserve(4);
+  if(m_triIndices.capacity() == 0)
+    m_triIndices.reserve(4);
+  if(m_vNorm4f.capacity() == 0)
+    m_vNorm4f.reserve(4);
+  if(m_vTang4f.capacity() == 0)
+    m_vTang4f.reserve(4);
+  if(m_vertOffset.capacity() == 0)
+    m_vertOffset.reserve(4);
+  if(m_wavelengths.capacity() == 0)
+    m_wavelengths.reserve(4);
 }
 
 void Integrator_Generated::InitMemberBuffers()

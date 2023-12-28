@@ -439,7 +439,8 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   const uint y  = (XY & 0xFFFF0000) >> 16;
   
   float4 specSamples = *a_accumColor; 
-  float3 rgb         = to_float3(specSamples);
+  float4 tmpVal      = specSamples*m_camRespoceRGB;
+  float3 rgb         = to_float3(tmpVal);
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
     float4 waves = *wavelengths;
@@ -521,8 +522,8 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   }
   else
   {
-    auto waves = *wavelengths;
-    auto color = *a_accumColor;
+    auto waves = (*wavelengths);
+    auto color = (*a_accumColor)*m_exposureMult;
     for(int i=0;i<4;i++) {
       const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
       const int channelId   = std::min(int(float(channels)*t), int(channels)-1);

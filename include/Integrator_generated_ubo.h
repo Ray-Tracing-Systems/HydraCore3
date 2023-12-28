@@ -26,6 +26,7 @@ struct Integrator_Generated_UBO_Data
 {
   mat4 m_projInv; 
   mat4 m_worldViewInv; 
+  vec4 m_camRespoceRGB; 
   vec4 m_envColor; 
   int m_camResponseSpectrumId[3]; 
   int m_camResponseType; 
