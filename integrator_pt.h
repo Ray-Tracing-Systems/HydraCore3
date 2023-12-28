@@ -257,8 +257,8 @@ protected:
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
   std::vector<LightSource> m_lights;
-  float4 m_envColor      = float4{0.0f};
-  float4 m_camRespoceRGB = float4(1,1,1,1);
+  float4 m_envColor         = float4{0.0f};
+  float4 m_camRespoceRGB[3] = {float4(1,1,1,1), float4(1,1,1,1), float4(1,1,1,1)};
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;

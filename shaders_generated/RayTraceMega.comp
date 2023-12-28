@@ -633,23 +633,16 @@ void plasticSampleAndEval_m_materials_m_precomp_coat_transmittance(uint a_materi
   pRes.flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
-MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec2 tc) {
-  const vec2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
-  const uint   texId     = floatBitsToUint(m_materials[a_mat.id].data[BLEND_TEXID0]);
-  const vec4 weightDat = texture(m_textures[texId], texCoordT);
-  const float  weightTex = weightDat.x;
-  const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
+vec3 BumpMapping(uint normalMapId, uint currMatId, vec3 n, vec3 tan, vec2 tc) {
+  const uint   mflags    = floatBitsToUint(m_materials[currMatId].data[UINT_CFLAGS]);
+  const vec2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
+  const vec4 normalTex = texture(m_textures[normalMapId], texCoordT);
+  const vec3 normalTS = NormalMapTransform(mflags, normalTex.xyz);
+  
+  const vec3 bitan = cross(n, tan);
+  const mat3 tangentTransform = make_float3x3(tan, bitan, n);
 
-  const uint matId1      = floatBitsToUint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
-  const uint matId2      = floatBitsToUint(m_materials[a_mat.id].data[BLEND_MAT_ID_2]);
-
-  MatIdWeight p1, p2;
-  p1.id     = matId1;
-  p1.weight = a_mat.weight * (1.0f - weight);
-  p2.id     = matId2;
-  p2.weight = a_mat.weight * weight;
-
-  return make_weight_pair(p1, p2);
+  return normalize(inverse(tangentTransform)*normalTS);
 }
 
 uint MaterialBlendSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec2 tc, inout MisData a_misPrev, inout BsdfSample a_pRes) {
@@ -680,18 +673,6 @@ uint MaterialBlendSampleAndEval(uint a_materialId, vec4 wavelengths, inout Rando
   return selectedMatId;
 }
 
-vec3 BumpMapping(uint normalMapId, uint currMatId, vec3 n, vec3 tan, vec2 tc) {
-  const uint   mflags    = floatBitsToUint(m_materials[currMatId].data[UINT_CFLAGS]);
-  const vec2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
-  const vec4 normalTex = texture(m_textures[normalMapId], texCoordT);
-  const vec3 normalTS = NormalMapTransform(mflags, normalTex.xyz);
-  
-  const vec3 bitan = cross(n, tan);
-  const mat3 tangentTransform = make_float3x3(tan, bitan, n);
-
-  return normalize(inverse(tangentTransform)*normalTS);
-}
-
 vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
   vec4 res = vec4(m_materials[matId].data[paramId]);
   if(a_wavelengths[0] == 0.0f)
@@ -708,6 +689,25 @@ vec4 SampleMatParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint p
   }
 
   return res;
+}
+
+MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec2 tc) {
+  const vec2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
+  const uint   texId     = floatBitsToUint(m_materials[a_mat.id].data[BLEND_TEXID0]);
+  const vec4 weightDat = texture(m_textures[texId], texCoordT);
+  const float  weightTex = weightDat.x;
+  const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
+
+  const uint matId1      = floatBitsToUint(m_materials[a_mat.id].data[BLEND_MAT_ID_1]);
+  const uint matId2      = floatBitsToUint(m_materials[a_mat.id].data[BLEND_MAT_ID_2]);
+
+  MatIdWeight p1, p2;
+  p1.id     = matId1;
+  p1.weight = a_mat.weight * (1.0f - weight);
+  p2.id     = matId2;
+  p2.weight = a_mat.weight * weight;
+
+  return make_weight_pair(p1, p2);
 }
 
 vec4 SampleMatColorParamSpectrum(uint matId, vec4 a_wavelengths, uint paramId, uint paramSpecId) {  
@@ -769,12 +769,6 @@ vec4 GetEnvironmentColorAndPdf(vec3 a_dir) {
   return ubo.m_envColor;
 }
 
-float LightPdfSelectRev(int a_lightId) { 
-  return 1.0f/float(ubo.m_lights_size); // uniform select
-}
-
-uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
-
 LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
   const uint gtype = m_lights[a_lightId].geomType;
   switch(gtype)
@@ -785,6 +779,20 @@ LightSample LightSampleRev(int a_lightId, vec2 rands, vec3 illiminationPoint) {
     default:                return areaLightSampleRev_m_lights(a_lightId, rands);
   };
 }
+
+vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
+  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
+  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
+  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
+  return lambertEvalBSDF(l, v, n)*color;
+}
+
+float LightPdfSelectRev(int a_lightId) { 
+  return 1.0f/float(ubo.m_lights_size); // uniform select
+}
+
+uint extractMatId(uint a_flags) { return (a_flags & 0x00FFFFFF); }
 
 BsdfSample MaterialSampleAndEval(uint a_materialId, vec4 wavelengths, inout RandomGen a_gen, vec3 v, vec3 n, vec3 tan, vec2 tc, inout MisData a_misPrev, const uint a_currRayFlags) {
   BsdfSample res;
@@ -946,6 +954,25 @@ uint RemapMaterialId(uint a_mId, int a_instId) {
   return res;
 }
 
+vec4 GetLightSourceIntensity(uint a_lightId, in vec4 a_wavelengths) {
+  vec4 lightColor = m_lights[a_lightId].intensity;  
+  if(KSPEC_SPECTRAL_RENDERING !=0 && ubo.m_spectral_mode != 0)
+  {
+    const uint specId = m_lights[a_lightId].specId;
+  
+    if(specId < 0xFFFFFFFF)
+    {
+      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
+      const uvec2 data = m_spec_offset_sz[specId];
+      const uint offset = data.x;
+      const uint size   = data.y;
+      lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
+    }
+  }
+  lightColor *= m_lights[a_lightId].mult;
+  return lightColor;
+}
+
 BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 n, vec3 tan, vec2 tc) {
   BsdfEval res;
   {
@@ -1099,25 +1126,6 @@ BsdfEval MaterialEval(uint a_materialId, vec4 wavelengths, vec3 l, vec3 v, vec3 
   return res;
 }
 
-vec4 GetLightSourceIntensity(uint a_lightId, in vec4 a_wavelengths) {
-  vec4 lightColor = m_lights[a_lightId].intensity;  
-  if(KSPEC_SPECTRAL_RENDERING !=0 && ubo.m_spectral_mode != 0)
-  {
-    const uint specId = m_lights[a_lightId].specId;
-  
-    if(specId < 0xFFFFFFFF)
-    {
-      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-      const uvec2 data = m_spec_offset_sz[specId];
-      const uint offset = data.x;
-      const uint size   = data.y;
-      lightColor = SampleSpectrum_m_wavelengths_m_spec_values(offset, offset, a_wavelengths, size);
-    }
-  }
-  lightColor *= m_lights[a_lightId].mult;
-  return lightColor;
-}
-
 BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) { 
   // const uint  type       = as_uint(m_materials[a_materialId].data[UINT_MTYPE]);
   const vec4 specular = (m_materials[a_materialId].colors[GLTF_COLOR_METAL]);
@@ -1139,14 +1147,6 @@ BsdfSample MaterialSampleWhitted(uint a_materialId, vec3 v, vec3 n, vec2 tc) {
   res.pdf   = 1.0f;
   res.flags = RAY_EVENT_S;
   return res;
-}
-
-vec3 MaterialEvalWhitted(uint a_materialId, vec3 l, vec3 v, vec3 n, vec2 tc) {
-  const uint   texId     = floatBitsToUint(m_materials[a_materialId].data[GLTF_UINT_TEXID0]);
-  const vec2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  const vec3 texColor = (texture(m_textures[texId], texCoordT)).xyz;
-  const vec3 color = m_materials[a_materialId].colors[GLTF_COLOR_BASE].xyz*texColor;
-  return lambertEvalBSDF(l, v, n)*color;
 }
 
 // RayScene intersection with 'm_pAccelStruct'

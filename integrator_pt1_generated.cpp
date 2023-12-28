@@ -72,8 +72,8 @@ void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEng
   const size_t maxAllowedSize = std::numeric_limits<uint32_t>::max();
   m_uboData.m_projInv = m_projInv;
   m_uboData.m_worldViewInv = m_worldViewInv;
-  m_uboData.m_camRespoceRGB = m_camRespoceRGB;
   m_uboData.m_envColor = m_envColor;
+  memcpy(m_uboData.m_camRespoceRGB,m_camRespoceRGB,sizeof(m_camRespoceRGB));
   memcpy(m_uboData.m_camResponseSpectrumId,m_camResponseSpectrumId,sizeof(m_camResponseSpectrumId));
   m_uboData.m_camResponseType = m_camResponseType;
   m_uboData.m_exposureMult = m_exposureMult;
@@ -137,8 +137,8 @@ void Integrator_Generated::ReadPlainMembers(std::shared_ptr<vk_utils::ICopyEngin
   a_pCopyEngine->ReadBuffer(m_classDataBuffer, 0, &m_uboData, sizeof(m_uboData));
   m_projInv = m_uboData.m_projInv;
   m_worldViewInv = m_uboData.m_worldViewInv;
-  m_camRespoceRGB = m_uboData.m_camRespoceRGB;
   m_envColor = m_uboData.m_envColor;
+  memcpy(m_camRespoceRGB, m_uboData.m_camRespoceRGB, sizeof(m_camRespoceRGB));
   memcpy(m_camResponseSpectrumId, m_uboData.m_camResponseSpectrumId, sizeof(m_camResponseSpectrumId));
   m_camResponseType = m_uboData.m_camResponseType;
   m_exposureMult = m_uboData.m_exposureMult;

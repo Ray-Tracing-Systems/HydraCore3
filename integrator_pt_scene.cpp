@@ -1221,9 +1221,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
           if(id >= 3)
             break;
         }
-
-        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), false);
-        m_camRespoceRGB.w = 1.0f;
+        
+        auto colorNode = responceNode.child(L"color");
+        for(int i=0;i<3;i++) {
+          m_camRespoceRGB[i] = GetColorFromNode(colorNode, false);
+          m_camRespoceRGB[i].w = 1.0f;
+          colorNode = colorNode.next_sibling();
+        }
+        
       }
     }
 

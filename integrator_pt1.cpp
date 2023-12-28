@@ -439,8 +439,15 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
   const uint y  = (XY & 0xFFFF0000) >> 16;
   
   float4 specSamples = *a_accumColor; 
-  float4 tmpVal      = specSamples*m_camRespoceRGB;
-  float3 rgb         = to_float3(tmpVal);
+  
+  //////////////////////////////////////////// Max Trofimov RGB camera responce model
+  float3 tmpColor = to_float3(specSamples);
+  float3 rgbR     = to_float3(m_camRespoceRGB[0]);
+  float3 rgbG     = to_float3(m_camRespoceRGB[1]);
+  float3 rgbB     = to_float3(m_camRespoceRGB[2]);
+  float3 rgb      = float3(dot(tmpColor, rgbR), dot(tmpColor, rgbG), dot(tmpColor, rgbB));
+  //////////////////////////////////////////// Max Trofimov RGB camera responce model
+  
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
     float4 waves = *wavelengths;
