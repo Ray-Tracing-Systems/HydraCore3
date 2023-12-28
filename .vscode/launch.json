@@ -116,7 +116,7 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
         "args": ["--gpu", 
-                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3_v1.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
