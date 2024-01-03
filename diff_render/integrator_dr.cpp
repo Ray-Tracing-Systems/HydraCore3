@@ -10,25 +10,94 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
-                               const float* a_data, float* a_dataGrad)
+extern double __enzyme_autodiff(void*, ...);
+int enzyme_const, enzyme_dup, enzyme_out;
+
+float Loss(IntegratorDR* __restrict__ pIntegrator,
+           const float*  __restrict__ a_refImg,
+                 float*  __restrict__ out_color,
+           const float*  __restrict__ a_data, 
+           const uint* in_pakedXY, 
+           uint tid, uint channels, uint pitch)
 {
-  tex_data = a_data;
+  const uint XY = in_pakedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  pIntegrator->tex_data = a_data; // hack (should it work?)
+
+  float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color);
+
+  float4 colorRef  = float4(a_refImg[(y*pitch+x)*channels + 0], 
+                            a_refImg[(y*pitch+x)*channels + 1], 
+                            a_refImg[(y*pitch+x)*channels + 2], 0.0f);
+
+  float4 diff = colorRend - colorRef;
+
+  return LiteMath::dot3(diff, diff);
+}                     
+
+
+void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
+                               const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
+{
+  memset(a_dataGrad, 0, sizeof(float)*a_gradSize);
+
+  // init separate gradient for each thread
+  //
+  //std::vector<float> grads[MAXTHREADS];
+  //for(int i=0;i<MAXTHREADS;i++)
+  //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
+
+  double avgLoss = 0.0;
 
   ConsoleProgressBar progress(tid);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
-  #endif
-  for (int i = 0; i < tid; ++i) {
-    for (int j = 0; j < a_passNum; ++j) {
-      PathTrace(uint(i), channels, out_color);
+  //#ifndef _DEBUG
+  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS)
+  //#endif
+  for (int i = 0; i < int(tid); ++i) {
+    float lossVal = 0.0f;
+    for (int j = 0; j < int(a_passNum); ++j) {
+      //PathTrace(uint(i), channels, out_color);
+      lossVal += Loss(this, 
+                      a_refImg, 
+                      out_color, 
+                      a_data,
+                      m_packedXY.data(), 
+                      uint(i), channels, m_winWidth);
+
+      __enzyme_autodiff((void*)Loss, 
+                         enzyme_const, this,
+                         enzyme_const, a_refImg,
+                         enzyme_const, out_color,
+                         enzyme_dup,   a_data, a_dataGrad,
+                         enzyme_const, m_packedXY.data(),
+                         enzyme_const, uint(i),
+                         enzyme_const, channels,
+                         enzyme_const, m_winWidth);
     }
+    avgLoss += double(lossVal)/double(a_passNum);
     progress.Update();
   }
   progress.Done();
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+
+  // accumulate gradient from different threads (parallel reduction/hist)
+  //
+
+  //for(int i=0;i<MAXTHREADS;i++) 
+  //  for(size_t j=0;j<a_gradSize; j++)
+  //    a_dataGrad[j] += grads[i][j];
+
+  avgLoss /= double(m_winWidth*m_winHeight);
+  std::cout << "avgLoss = " << avgLoss << std::endl;
+  
+  std::ofstream fout("grad.txt");
+  for(size_t i=0; i<a_gradSize; i++)
+    fout << a_dataGrad[i]/float(a_passNum) << std::endl;
+  fout.close();
 }
 
 static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w, const int h)

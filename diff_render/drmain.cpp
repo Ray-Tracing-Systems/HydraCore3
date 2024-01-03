@@ -9,6 +9,7 @@
 
 void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 
 float4x4 ReadMatrixFromString(const std::string& str);
 
@@ -110,9 +111,26 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
-  
   auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   
+  std::string refImgpath = "z_ref.exr";
+  std::cout << "[drmain]: Loading reference image ... " << refImgpath.c_str() << std::endl;
+
+  int refW = 0, refH = 0;
+  std::vector<float> refColor = LoadImage4fFromEXR(refImgpath.c_str(), &refW, &refH);
+  
+  if(refW  == 0 || refH == 0)
+  {
+    std::cout << "[drmain]: can't load reference image '" << refImgpath.c_str() << "'" << std::endl;
+    exit(0);
+  }
+  else if(refW != FB_WIDTH || refH != FB_HEIGHT)
+  {
+    std::cout << "[drmain]: bad resolution of reference image, must   be " << FB_WIDTH << ", " << FB_HEIGHT << std::endl;
+    std::cout << "[drmain]: bad resolution of reference image, actual is " << refW << ", " << refH << std::endl;
+    exit(0);
+  }
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -155,7 +173,7 @@ int main(int argc, const char** argv)
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
     pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
-                       imgData.data(), imgGrad.data());
+                       refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
     std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;

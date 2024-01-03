@@ -64,7 +64,7 @@ public:
   void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
-  void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
+  float4 PathTrace    (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
 
   void PathTraceFromInputRays(uint tid, uint channels, 
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 

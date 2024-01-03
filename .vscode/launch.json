@@ -201,7 +201,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "64",
+                 "-spp", "16",
                  "-out", "z_out.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

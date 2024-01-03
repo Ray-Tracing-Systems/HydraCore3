@@ -27,12 +27,10 @@ public:
   virtual ~IntegratorDR() {}
 
   void PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
-                   const float* a_data, float* a_dataGrad);
+                   const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize);
 
-protected:
-
-  const float* tex_data = nullptr;
-  
+//protected:
+  const float* tex_data = nullptr;  
   float4 HydraTex2DFetch(uint texId, float2 texCoord) override;
 
 };

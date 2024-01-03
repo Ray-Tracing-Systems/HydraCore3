@@ -590,7 +590,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
                            out_color);
 }
 
-void Integrator::PathTrace(uint tid, uint channels, float* out_color)
+float4 Integrator::PathTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -622,6 +622,8 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
                         &accumColor);
 
   kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+
+  return accumColor;
 }
 
 void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color)
