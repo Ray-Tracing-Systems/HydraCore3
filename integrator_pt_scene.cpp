@@ -181,7 +181,15 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   #endif
 
   fin.read((char*)wh, sizeof(int)*2);
-  if(a_texInfo.bpp == 16)
+  if(wh[0] == 0 || wh[1] == 0)
+  {
+    std::cout << "[LoadTextureAndMakeCombined]: can't read texture from file '" << fnameA.c_str() << "'; use white dummy;" << std::endl;
+    float4 data[1] = {float4(1.0f, 1.0f, 1.0f, 1.0f)};
+    auto pTexture = std::make_shared< Image2D<float4> >(1, 1, data);
+    pTexture->setSRGB(false);
+    pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+  }
+  else if(a_texInfo.bpp == 16)
   {
     std::vector<float> data(wh[0]*wh[1]*4);
     fin.read((char*)data.data(), sizeof(float)*4*data.size());

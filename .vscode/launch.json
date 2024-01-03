@@ -191,47 +191,18 @@
         ]
     },
 
-    ///home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496
-
     {
-        "name": "House_01",
+        "name": "CPU(test_35)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu",
-                 "-in", "/home/frol/Downloads/House_01/scenelib/statex_00001.xml",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/statex_00001.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "16384",
-                 "-out", "04_house_01_secondary.exr"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-    
-    {
-        "name": "CPU Debug",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--cpu", "--spectral",
-                 "-in", "../Hydra3Tests/Tests/Spectral/0002/Spectral-ior-model-hydra3.xml",
-                 "-integrator", "naivept", 
-                 "-width", "1024",
-                 "-height", "1024",
                  "-spp", "64",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "DEBUG.bmp"],
+                 "-out", "test.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

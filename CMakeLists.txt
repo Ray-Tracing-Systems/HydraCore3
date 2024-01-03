@@ -17,9 +17,8 @@ include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
 
 # sanitizer options
-include(cmake/Sanitizers.cmake)
-enable_sanitizers(project_options)
-
+#include(cmake/Sanitizers.cmake)
+#enable_sanitizers(project_options)
 
 set(GENERATOR_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root output directory for all artifacts")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
