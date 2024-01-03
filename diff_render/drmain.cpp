@@ -139,8 +139,11 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   const float normConst = 1.0f/float(PASS_NUMBER);
 
-  std::vector<float> imgData(1.0f, 256*256*4);
-  std::vector<float> imgGrad(1.0f, 256*256*4);
+  std::vector<float> imgData(256*256*4);
+  std::vector<float> imgGrad(256*256*4);
+
+  std::fill(imgData.begin(), imgData.end(), 1.0f);
+  std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
   // now test path tracing
   //

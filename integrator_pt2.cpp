@@ -205,7 +205,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const uint   texId    = as_uint(m_materials[currMatId].data[GLTF_UINT_TEXID0]);
-      const float4 texColor = m_textures[texId]->sample(texCoordT);
+      const float4 texColor = HydraTex2DFetch(texId, texCoordT); // m_textures[texId]->sample(texCoordT);
       const float4 color    = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
       gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, &res);
     }
@@ -235,7 +235,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
       const uint   texId       = as_uint(m_materials[currMatId].data[DIFFUSE_TEXID0]);
-      const float4 texColor    = m_textures[texId]->sample(texCoordT);
+      const float4 texColor    = HydraTex2DFetch(texId, texCoordT); //m_textures[texId]->sample(texCoordT);
       const float4 color       = texColor;
       const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
 
@@ -246,7 +246,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     if(KSPEC_MAT_TYPE_PLASTIC != 0)
     {
       const uint   texId       = as_uint(m_materials[currMatId].data[PLASTIC_COLOR_TEXID]);
-      const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+      const float4 texColor    = HydraTex2DFetch(texId, texCoordT); //m_textures[texId]->sample(texCoordT);
       const float4 color       = texColor;
 
       float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
@@ -386,7 +386,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
         const uint   texId       = as_uint(m_materials[currMat.id].data[DIFFUSE_TEXID0]);
-        const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+        const float4 texColor    = HydraTex2DFetch(texId, texCoordT); //m_textures[texId]->sample(texCoordT))
         const float4 color       = texColor;
 
         const float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, DIFFUSE_SPECID);
@@ -401,7 +401,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const uint   texId       = as_uint(m_materials[currMat.id].data[PLASTIC_COLOR_TEXID]);
-        const float4 texColor    = (m_textures[texId]->sample(texCoordT));
+        const float4 texColor    = HydraTex2DFetch(texId, texCoordT); // m_textures[texId]->sample(texCoordT);
         const float4 color       = texColor;
 
         float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, PLASTIC_COLOR_SPECID);
