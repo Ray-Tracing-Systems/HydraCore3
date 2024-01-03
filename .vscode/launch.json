@@ -202,7 +202,7 @@
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "64",
-                 "-out", "z_out.exr"],
+                 "-out", "z_out.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

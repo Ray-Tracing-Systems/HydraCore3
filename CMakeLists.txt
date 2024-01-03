@@ -138,7 +138,8 @@ if(CAM_PLUGIN)
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
 elseif(USE_ENZYME)
-  set(MAIN_FILES diff_render/drmain.cpp)
+  set(MAIN_FILES diff_render/drmain.cpp
+                 diff_render/integrator_dr.cpp)
 else()
   set(MAIN_FILES main.cpp)
 endif()
@@ -193,7 +194,7 @@ endif()
 
 if(USE_ENZYME)
   set(ENZYME_FLAGS "-fplugin=${ENZYME_PLUGIN_DLL}") # -fplugin=${ENZYME_PLUGIN_DLL}
-  set(OMP_FLAGS "-fopenmp=libomp") # -fplugin=${ENZYME_PLUGIN_DLL}
+  set(OMP_FLAGS "-fopenmp=libomp ") # -fplugin=${ENZYME_PLUGIN_DLL}
   target_compile_options(hydra PUBLIC ${OMP_FLAGS} ${ENZYME_FLAGS})
 else()
   set(CUSTOM_OMP "")

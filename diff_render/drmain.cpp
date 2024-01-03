@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "integrator_pt.h"
+#include "diff_render/integrator_dr.h"
 #include "ArgParser.h"
 #include "mi_materials.h"
 
@@ -28,7 +29,6 @@ int main(int argc, const char** argv)
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
-  std::shared_ptr<Integrator> pImpl = nullptr;
   ArgParser args(argc, argv);
   
   if(args.hasOption("-in"))
@@ -111,7 +111,7 @@ int main(int argc, const char** argv)
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
   
-  pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+  auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -139,6 +139,9 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   const float normConst = 1.0f/float(PASS_NUMBER);
 
+  std::vector<float> imgData(1.0f, 256*256*4);
+  std::vector<float> imgGrad(1.0f, 256*256*4);
+
   // now test path tracing
   //
   {
@@ -148,12 +151,11 @@ int main(int argc, const char** argv)
 
     pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
     pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+    pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
+                       imgData.data(), imgGrad.data());
     
     pImpl->GetExecutionTime("PathTraceBlock", timings);
-    std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-    std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
 
     if(saveHDR) 
     {

@@ -1,5 +1,4 @@
-#ifndef TEST_CLASS_H
-#define TEST_CLASS_H
+#pragma once
 
 #include "include/cglobals.h" // We assume that all code that should pe passed to kernels will be just included both for CPU and OpenCL
 #include "include/crandom.h"
@@ -317,5 +316,3 @@ protected:
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
 };
-
-#endif
