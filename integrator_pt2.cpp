@@ -278,6 +278,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   return res;
 }
 
+float4 Integrator::HydraTex2DFetch(uint texId, float2 texCoord)
+{
+  return m_textures[texId]->sample(texCoord);
+}
+
 BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc)
 {
   BsdfEval res;
@@ -341,7 +346,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const uint   texId     = as_uint(m_materials[currMat.id].data[GLTF_UINT_TEXID0]);
-        const float4 texColor  = m_textures[texId]->sample(texCoordT);
+        const float4 texColor  = HydraTex2DFetch(texId, texCoordT); //m_textures[texId]->sample(texCoordT);
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
         gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
 

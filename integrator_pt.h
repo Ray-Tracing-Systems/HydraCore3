@@ -225,6 +225,8 @@ protected:
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
+  virtual float4 HydraTex2DFetch(uint texId, float2 texCoord);
+
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
@@ -315,4 +317,5 @@ protected:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
+  
 };

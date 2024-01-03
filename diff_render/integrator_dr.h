@@ -30,6 +30,10 @@ public:
                    const float* a_data, float* a_dataGrad);
 
 protected:
+
+  const float* tex_data = nullptr;
   
+  float4 HydraTex2DFetch(uint texId, float2 texCoord) override;
+
 };
 

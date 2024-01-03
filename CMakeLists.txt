@@ -217,7 +217,7 @@ else()
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")   # add debug specific options here
-  target_link_libraries(hydra LINK_PUBLIC Threads::Threads)
+  target_link_libraries(hydra LINK_PUBLIC Threads::Threads OpenMP::OpenMP_CXX)
 else()
   target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
 endif()
