@@ -271,9 +271,6 @@ float4 IntegratorDR::HydraTex2DFetch(uint texId, float2 a_uv, const float* tex_d
     float ffx = a_uv.x * m_fw - 0.5f; // a_uv should not be very large, so that the float does not overflow later. 
     float ffy = a_uv.y * m_fh - 0.5f; // This is left to the responsibility of the top level.
     
-    if (ffx < 0) ffx = 0.0f;
-    if (ffy < 0) ffy = 0.0f;
-    
     // Calculate the weights for each pixel
     //
     const int   px = (int)(ffx);
@@ -303,9 +300,8 @@ float4 IntegratorDR::HydraTex2DFetch(uint texId, float2 a_uv, const float* tex_d
     const float outa = f1.w * w1 + f2.w * w2 + f3.w * w3 + f4.w * w4;
     
     return float4(outr, outg, outb, outa);
-
-    //return float4(1.0, 0.1, 0.1,1);
   }
   else
     return m_textures[texId]->sample(a_uv);
+    
 }

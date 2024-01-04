@@ -195,6 +195,7 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
   
+  if(false)
   {
     std::vector<uchar4> img;
     unsigned wh[2] = { 0,0};
@@ -241,8 +242,6 @@ int main(int argc, const char** argv)
     strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
     auto outName = strOut.str();
     SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
-
-    break;
   }
 
   return 0;
