@@ -156,50 +156,20 @@ float PixelLoss(IntegratorDR* __restrict__ pIntegrator,
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
+  const uint yRef = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
+
   //float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
   float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
 
-  float4 colorRef  = float4(a_refImg[(y*pitch+x)*channels + 0], 
-                            a_refImg[(y*pitch+x)*channels + 1], 
-                            a_refImg[(y*pitch+x)*channels + 2], 0.0f);
+  float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 
+                            a_refImg[(yRef*pitch+x)*channels + 1], 
+                            a_refImg[(yRef*pitch+x)*channels + 2], 0.0f);
 
   float4 diff = colorRend - colorRef;
   float loss = LiteMath::dot3(diff, diff);
   (*outLoss) = loss;
   return loss;
 }                     
-
-
-float ImageLoss(IntegratorDR* __restrict__ pIntegrator,
-                const float*  __restrict__ a_refImg,
-                      float*  __restrict__ out_color,
-                const float*  __restrict__ a_data, 
-                const uint*   __restrict__ in_pakedXY, 
-                uint a_size, uint channels, uint width,
-                float*  __restrict__  outLossRes)
-{
-  float loss = 0.0f;
-
-  for (uint tid = 0; tid < a_size; tid++) {
-    const uint XY = in_pakedXY[tid];
-    const uint x  = (XY & 0x0000FFFF);
-    const uint y  = (XY & 0xFFFF0000) >> 16;
-  
-    //float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
-    float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
-  
-    float4 colorRef  = float4(a_refImg[(y*width+x)*channels + 0], 
-                              a_refImg[(y*width+x)*channels + 1], 
-                              a_refImg[(y*width+x)*channels + 2], 0.0f);
-  
-    float4 diff = colorRend - colorRef;
-  
-    loss += LiteMath::dot3(diff, diff);
-  }
-  
-  (*outLossRes) = loss;
-  return loss;
-} 
 
 
 float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
@@ -237,17 +207,6 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
     }
     avgLoss += float(lossVal)/float(a_passNum);
   }
-  
-  //__enzyme_autodiff((void*)ImageLoss, 
-  //                   enzyme_const, this,
-  //                   enzyme_const, a_refImg,
-  //                   enzyme_const, out_color,
-  //                   enzyme_dup,   a_data, a_dataGrad,
-  //                   enzyme_const, m_packedXY.data(),
-  //                   enzyme_const, tid,
-  //                   enzyme_const, channels,
-  //                   enzyme_const, m_winWidth,
-  //                   enzyme_const, &avgLoss);
 
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 

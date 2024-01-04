@@ -195,11 +195,12 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
   
-  if(false)
+  bool testRefTexture = false;
+  if(testRefTexture)
   {
     std::vector<uchar4> img;
     unsigned wh[2] = { 0,0};
-    std::ifstream fin("/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/data/chunk_00001.image4ub", std::ios::binary);
+    std::ifstream fin("/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_035/data/chunk_00001.image4ub", std::ios::binary);
     if(!fin.is_open())
     {
       std::cout << "[LoadImage<uint>]: can't open file '" << "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/data/chunk_00001.image4ub" << "' " << std::endl;
@@ -246,6 +247,9 @@ int main(int argc, const char** argv)
     strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
     auto outName = strOut.str();
     SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
+
+    if(testRefTexture)
+      break;
   }
 
   return 0;
