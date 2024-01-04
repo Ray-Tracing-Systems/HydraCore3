@@ -26,7 +26,7 @@ void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
       PackXY(uint(x), (uint)(y));
 }
 
-void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
+void Integrator::CastSingleRayBlock(uint tid, float* out_color, uint a_passNum)
 { 
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)

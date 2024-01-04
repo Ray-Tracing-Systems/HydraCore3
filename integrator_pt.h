@@ -62,7 +62,7 @@ public:
 
   void PackXY         (uint tidX, uint tidY);
 
-  void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
+  void CastSingleRay  (uint tid, float* out_color                [[size("tid*4")]]);        ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
   void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
@@ -73,7 +73,7 @@ public:
                               float*            out_color        [[size("tid*channels")]]);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
-  virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
+  virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
@@ -107,7 +107,7 @@ public:
   void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
-  void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
+  void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,

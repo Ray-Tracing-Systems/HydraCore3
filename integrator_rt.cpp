@@ -108,28 +108,48 @@ void Integrator::kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* 
   out_color[tid] = RealColorToUint32(*a_accumColor);
 }
 
-void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, 
-                                    uint* out_color)
+void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color)
 { 
   if(tid >= m_maxThreadId)
     return;
 
-  const Lite_Hit lhit = *in_hit;
-  if(lhit.geomId == -1)
+  const Lite_Hit hit = *in_hit;
+  if(hit.geomId == -1)
   {
     out_color[tid] = 0;
     return;
   }
 
-  const uint32_t matId = m_matIdByPrimId[m_matIdOffsets[lhit.geomId] + lhit.primId];
-  const float4 mdata   = m_materials[matId].colors[GLTF_COLOR_BASE];
-  const float3 color   = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata);
+  const uint32_t matId  = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
+  const float4 mdata    = m_materials[matId].colors[GLTF_COLOR_BASE];
+  const float2 uv       = *bars;
+
+  const uint triOffset  = m_matIdOffsets[hit.geomId];
+  const uint vertOffset = m_vertOffset  [hit.geomId];
+
+  const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
+  const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
+  const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
+  const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
+  const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
+  float3 hitNorm     = to_float3(data1);
+  float3 hitTang     = to_float3(data2);
+  float2 hitTexCoord = float2(data1.w, data2.w);
+
+  const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+  const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
+  const float4 texColor  = m_textures[texId]->sample(texCoordT);
+
+  const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
 
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  out_color[y*m_winWidth+x] = RealColorToUint32_f3(color); 
+  out_color[(y*m_winWidth+x)*4 + 0] = color.x;
+  out_color[(y*m_winWidth+x)*4 + 1] = color.y;
+  out_color[(y*m_winWidth+x)*4 + 2] = color.z;
+  out_color[(y*m_winWidth+x)*4 + 3] = 0.0f;
 }
 
 
@@ -392,7 +412,7 @@ void Integrator::PackXY(uint tidX, uint tidY)
   kernel_PackXY(tidX, tidY, m_packedXY.data());
 }
 
-void Integrator::CastSingleRay(uint tid, uint* out_color)
+void Integrator::CastSingleRay(uint tid, float* out_color)
 {
   float4 rayPosAndNear, rayDirAndFar;
   kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
@@ -402,7 +422,7 @@ void Integrator::CastSingleRay(uint tid, uint* out_color)
   if(!kernel_RayTrace(tid, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics))
     return;
   
-  kernel_GetRayColor(tid, &hit, m_packedXY.data(), out_color);
+  kernel_GetRayColor(tid, &hit, &baricentrics, m_packedXY.data(), out_color);
 }
 
 void Integrator::RayTrace(uint tid, uint channels, float* out_color)
