@@ -522,6 +522,70 @@ float4 IntegratorDR::PathTrace(uint tid, uint channels, float* out_color, const 
   return accumColor;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, float4* finalColor, const uint* in_pakedXY, float* out_color, const float* a_data)
+{ 
+  if(tid >= m_maxThreadId)
+    return;
+
+  const Lite_Hit hit = *in_hit;
+  if(hit.geomId == -1)
+  {
+    out_color[tid] = 0;
+    return;
+  }
+
+  const uint32_t matId  = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
+  const float4 mdata    = m_materials[matId].colors[GLTF_COLOR_BASE];
+  const float2 uv       = *bars;
+
+  const uint triOffset  = m_matIdOffsets[hit.geomId];
+  const uint vertOffset = m_vertOffset  [hit.geomId];
+
+  const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
+  const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
+  const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
+  const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
+  const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
+  float3 hitNorm     = to_float3(data1);
+  float3 hitTang     = to_float3(data2);
+  float2 hitTexCoord = float2(data1.w, data2.w);
+
+  const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+  const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
+  const float4 texColor  = HydraTex2DFetch(texId, texCoordT, a_data); 
+  const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
+
+  const uint XY = in_pakedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  (*finalColor) = to_float4(color, 0);
+
+  out_color[(y*m_winWidth+x)*4 + 0] = color.x;
+  out_color[(y*m_winWidth+x)*4 + 1] = color.y;
+  out_color[(y*m_winWidth+x)*4 + 2] = color.z;
+  out_color[(y*m_winWidth+x)*4 + 3] = 0.0f;
+}
+
+
+float4 IntegratorDR::CastRayDR(uint tid, uint channels, float* out_color, const float* a_data)
+{
+  float4 rayPosAndNear, rayDirAndFar;
+  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
+
+  Lite_Hit hit; 
+  float2   baricentrics; 
+  if(!kernel_RayTrace(tid, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics))
+    return float4(0,0,0,0);
+  
+  float4 finalColor;
+  kernel_CalcRayColor(tid, &hit, &baricentrics, &finalColor, m_packedXY.data(), out_color, a_data);
+  return finalColor;
+}
+
 
 extern double __enzyme_autodiff(void*, ...);
 int enzyme_const, enzyme_dup, enzyme_out;
@@ -537,7 +601,8 @@ float Loss(IntegratorDR* __restrict__ pIntegrator,
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
+  //float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
+  float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
 
   float4 colorRef  = float4(a_refImg[(y*pitch+x)*channels + 0], 
                             a_refImg[(y*pitch+x)*channels + 1], 

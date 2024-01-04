@@ -184,7 +184,7 @@ public:
 
   uint GetSPP() const { return m_spp; } 
 
-protected:
+//protected:
   int m_winStartX   = 0;
   int m_winStartY   = 0;
   int m_winWidth    = 512;

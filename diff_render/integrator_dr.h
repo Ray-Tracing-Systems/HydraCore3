@@ -26,6 +26,11 @@ public:
   IntegratorDR(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) : Integrator(a_maxThreads, a_spectral_mode, a_features){}
   virtual ~IntegratorDR() {}
 
+  float4 CastRayDR(uint tid, uint channels, float* out_color, const float* a_data);
+
+  void kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, float4* finalColor, const uint* in_pakedXY, float* out_color, const float* a_data);
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
                    const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize);
 
@@ -43,8 +48,9 @@ public:
   BsdfEval MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* a_data);
   BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags, const float* a_data);
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-protected:
+//protected:
   float4 HydraTex2DFetch(uint texId, float2 texCoord, const float* tex_data);
 
 };
