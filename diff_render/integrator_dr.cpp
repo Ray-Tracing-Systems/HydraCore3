@@ -220,6 +220,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
   //#endif
 
   float avgLoss = 0.0f;
+  
   for (int i = 0; i < int(tid); ++i) {
     float lossVal = 0.0f;
     for (int j = 0; j < int(a_passNum); ++j) {
