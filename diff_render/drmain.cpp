@@ -16,6 +16,32 @@ std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 
 float4x4 ReadMatrixFromString(const std::string& str);
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// // https://www.shadertoy.com/view/WlG3zG
+// inline float4 exp2m1(float4 v) { return float4(std::exp2(v.x), std::exp2(v.y), std::exp2(v.z), std::exp2(v.w)) - float4(1.0f); }
+// inline float4 pow_22(float4 x) { return (exp2m1(0.718151f*x)-0.503456f*x)*7.07342f; }
+// //inline float4 pow_22(float4 x) { x*x*(float4(0.75f) + 0.25f*x); }
+                                          // not so fast as pow_22, but more correct implementation
+static inline float sRGBToLinear(float s) // https://entropymine.com/imageworsener/srgbformula/
+{
+  if(s <= 0.0404482362771082f)
+    return s*0.077399381f;
+  else 
+    return std::pow((s+0.055f)*0.947867299f, 2.4f);
+}
+
+static inline float4 read_array_uchar4(const uchar4* a_data, int offset)
+{
+  const float mult = 0.003921568f; // (1.0f/255.0f);
+  const uchar4 c0  = a_data[offset];
+  return mult*float4((float)c0.x, (float)c0.y, (float)c0.z, (float)c0.w);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, const char** argv)
 {
   int FB_WIDTH        = 1024;
@@ -168,6 +194,30 @@ int main(int argc, const char** argv)
 
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
+  
+  {
+    std::vector<uchar4> img;
+    unsigned wh[2] = { 0,0};
+    std::ifstream fin("/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/data/chunk_00001.image4ub", std::ios::binary);
+    if(!fin.is_open())
+    {
+      std::cout << "[LoadImage<uint>]: can't open file '" << "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/data/chunk_00001.image4ub" << "' " << std::endl;
+      exit(0);
+    }
+    fin.read((char*)wh, sizeof(unsigned)* 2);
+    img.resize(wh[0]*wh[1]);
+    fin.read((char*)img.data(), size_t(wh[0]*wh[1])*sizeof(uint32_t));
+    fin.close();
+    
+    for(size_t i=0;i<imgData.size()/4;i++)
+    {
+      float4 color = read_array_uchar4(img.data(), i);
+      imgData[i*4+0] = sRGBToLinear(color.x);
+      imgData[i*4+1] = sRGBToLinear(color.y);
+      imgData[i*4+2] = sRGBToLinear(color.z);
+      imgData[i*4+3] = sRGBToLinear(color.w);
+    }
+  }
 
   std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer2<float> >(imgGrad.size());
 
@@ -191,6 +241,8 @@ int main(int argc, const char** argv)
     strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
     auto outName = strOut.str();
     SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
+
+    break;
   }
 
   return 0;
