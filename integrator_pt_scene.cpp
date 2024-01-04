@@ -876,6 +876,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
+  LoadSceneBegin();
+
   std::string scenePathStr(a_scenePath);
   std::string sceneDirStr(a_sncDir);  
   hydra_xml::HydraScene sceneLocal;
@@ -1359,16 +1361,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
+  
+  // kslicer should do this work ... 
+  // // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
+  // //
+  // if(m_spec_offset_sz.capacity() == 0)
+  //   m_spec_offset_sz.reserve(16);
+  // if(m_spec_values.capacity() == 0)
+  //   m_spec_values.reserve(16);
+  // if(m_wavelengths.capacity() == 0)
+  //   m_wavelengths.reserve(16);
+  // if(m_precomp_coat_transmittance.capacity() == 0)
+  //   m_precomp_coat_transmittance.reserve(16);
 
-  // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
-  //
-  if(m_spec_offset_sz.capacity() == 0)
-    m_spec_offset_sz.reserve(16);
-  if(m_spec_values.capacity() == 0)
-    m_spec_values.reserve(16);
-  if(m_wavelengths.capacity() == 0)
-    m_wavelengths.reserve(16);
-  if(m_precomp_coat_transmittance.capacity() == 0)
-    m_precomp_coat_transmittance.reserve(16);
+  LoadSceneEnd();
   return true;
 }

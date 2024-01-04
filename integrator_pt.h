@@ -59,6 +59,8 @@ public:
 
   void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
+  virtual void LoadSceneBegin(){} ///<! override it in derived class
+  virtual void LoadSceneEnd(){}   ///<! override it in derived class
 
   void PackXY         (uint tidX, uint tidY);
 

@@ -17,6 +17,8 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
+/*
+
 BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* a_data)
 {
   BsdfEval res;
@@ -522,7 +524,66 @@ float4 IntegratorDR::PathTrace(uint tid, uint channels, float* out_color, const 
   return accumColor;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+*/
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void IntegratorDR::LoadSceneEnd()
+{
+  m_matNonDiff.resize(m_materials.size());
+  //m_matDiff.resize(m_materials.size());
+
+  for(size_t matId=0;matId<m_materials.size();matId++) 
+  {
+    m_matNonDiff[matId].lambertTexId = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+    //m_matDiff[matId].color           = m_materials[matId].colors[GLTF_COLOR_BASE];
+  }
+}
+
+void IntegratorDR::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
+{
+  if(tid >= m_maxThreadId)
+    return;
+  const uint XY = packedXY[tid];
+
+  const uint x = (XY & 0x0000FFFF);
+  const uint y = (XY & 0xFFFF0000) >> 16;
+
+  float3 rayDir = EyeRayDirNormalized((float(x)+0.5f)/float(m_winWidth), (float(y)+0.5f)/float(m_winHeight), m_projInv);
+  float3 rayPos = float3(0,0,0);
+
+  transform_ray3f(m_worldViewInv, 
+                  &rayPos, &rayDir);
+  
+  *rayPosAndNear = to_float4(rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+}
+
+bool IntegratorDR::kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
+                                   Lite_Hit* out_hit, float2* out_bars, const float* a_data)
+{
+  if(tid >= m_maxThreadId)
+    return false;
+  const float4 rayPos = *rayPosAndNear;
+  const float4 rayDir = *rayDirAndFar ;
+
+  CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
+  
+  Lite_Hit res;
+  res.primId = hit.primId;
+  res.instId = hit.instId;
+  res.geomId = hit.geomId;
+  res.t      = hit.t;
+
+  float2 baricentrics = float2(hit.coords[0], hit.coords[1]);
+ 
+  *out_hit  = res;
+  *out_bars = baricentrics;
+  return (res.primId != -1);
+}
 
 
 void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, float4* finalColor, const uint* in_pakedXY, float* out_color, const float* a_data)
@@ -553,7 +614,9 @@ void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const f
   float3 hitTang     = to_float3(data2);
   float2 hitTexCoord = float2(data1.w, data2.w);
 
-  const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+  //const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
+  const uint   texId     = m_matNonDiff[matId].lambertTexId;
+
   const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
   const float4 texColor  = HydraTex2DFetch(texId, texCoordT, a_data); 
   const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
@@ -574,11 +637,11 @@ void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const f
 float4 IntegratorDR::CastRayDR(uint tid, uint channels, float* out_color, const float* a_data)
 {
   float4 rayPosAndNear, rayDirAndFar;
-  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
+  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, a_data);
 
   Lite_Hit hit; 
   float2   baricentrics; 
-  if(!kernel_RayTrace(tid, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics))
+  if(!kernel_RayTrace(tid, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics, a_data))
     return float4(0,0,0,0);
   
   float4 finalColor;
@@ -636,7 +699,6 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
   for (int i = 0; i < int(tid); ++i) {
     float lossVal = 0.0f;
     for (int j = 0; j < int(a_passNum); ++j) {
-      //PathTrace(uint(i), channels, out_color);
       lossVal += Loss(this, 
                       a_refImg, 
                       out_color, 
@@ -644,15 +706,15 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
                       m_packedXY.data(), 
                       uint(i), channels, m_winWidth);
 
-      //__enzyme_autodiff((void*)Loss, 
-      //                   enzyme_const, this,
-      //                   enzyme_const, a_refImg,
-      //                   enzyme_const, out_color,
-      //                   enzyme_dup,   a_data, a_dataGrad,
-      //                   enzyme_const, m_packedXY.data(),
-      //                   enzyme_const, uint(i),
-      //                   enzyme_const, channels,
-      //                   enzyme_const, m_winWidth);
+      __enzyme_autodiff((void*)Loss, 
+                         enzyme_const, this,
+                         enzyme_const, a_refImg,
+                         enzyme_const, out_color,
+                         enzyme_dup,   a_data, a_dataGrad,
+                         enzyme_const, m_packedXY.data(),
+                         enzyme_const, uint(i),
+                         enzyme_const, channels,
+                         enzyme_const, m_winWidth);
     }
     avgLoss += double(lossVal)/double(a_passNum);
     progress.Update();
@@ -670,10 +732,10 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
   avgLoss /= double(m_winWidth*m_winHeight);
   std::cout << "avgLoss = " << avgLoss << std::endl;
   
-  //std::ofstream fout("z_grad.txt");
-  //for(size_t i=0; i<a_gradSize; i++)
-  //  fout << a_dataGrad[i]/float(a_passNum) << std::endl;
-  //fout.close();
+  std::ofstream fout("z_grad.txt");
+  for(size_t i=0; i<a_gradSize; i++)
+    fout << a_dataGrad[i]/float(a_passNum) << std::endl;
+  fout.close();
 }
 
 static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w, const int h)
