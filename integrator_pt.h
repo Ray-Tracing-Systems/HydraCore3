@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TEST_CLASS_H
+#define TEST_CLASS_H
 
 #include "include/cglobals.h" // We assume that all code that should pe passed to kernels will be just included both for CPU and OpenCL
 #include "include/crandom.h"
@@ -64,7 +65,7 @@ public:
   void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
-  float4 PathTrace    (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
+  void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
 
   void PathTraceFromInputRays(uint tid, uint channels, 
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
@@ -225,8 +226,6 @@ protected:
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
-  virtual float4 HydraTex2DFetch(uint texId, float2 texCoord);
-
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
@@ -317,5 +316,6 @@ protected:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
-  
 };
+
+#endif
