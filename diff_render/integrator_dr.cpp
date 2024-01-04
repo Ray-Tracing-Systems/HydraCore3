@@ -144,12 +144,13 @@ float4 IntegratorDR::CastRayDR(uint tid, uint channels, float* out_color, const 
 extern double __enzyme_autodiff(void*, ...);
 int enzyme_const, enzyme_dup, enzyme_out;
 
-float Loss(IntegratorDR* __restrict__ pIntegrator,
-           const float*  __restrict__ a_refImg,
-                 float*  __restrict__ out_color,
-           const float*  __restrict__ a_data, 
-           const uint* in_pakedXY, 
-           uint tid, uint channels, uint pitch)
+float PixelLoss(IntegratorDR* __restrict__ pIntegrator,
+                const float*  __restrict__ a_refImg,
+                      float*  __restrict__ out_color,
+                const float*  __restrict__ a_data, 
+                const uint*   __restrict__ in_pakedXY, 
+                uint tid, uint channels, uint pitch,
+                float*  __restrict__       outLoss)
 {
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
@@ -163,13 +164,46 @@ float Loss(IntegratorDR* __restrict__ pIntegrator,
                             a_refImg[(y*pitch+x)*channels + 2], 0.0f);
 
   float4 diff = colorRend - colorRef;
-
-  return LiteMath::dot3(diff, diff);
+  float loss = LiteMath::dot3(diff, diff);
+  (*outLoss) = loss;
+  return loss;
 }                     
 
 
-void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
-                               const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
+float ImageLoss(IntegratorDR* __restrict__ pIntegrator,
+                const float*  __restrict__ a_refImg,
+                      float*  __restrict__ out_color,
+                const float*  __restrict__ a_data, 
+                const uint*   __restrict__ in_pakedXY, 
+                uint a_size, uint channels, uint width,
+                float*  __restrict__  outLossRes)
+{
+  float loss = 0.0f;
+
+  for (uint tid = 0; tid < a_size; tid++) {
+    const uint XY = in_pakedXY[tid];
+    const uint x  = (XY & 0x0000FFFF);
+    const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+    //float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
+    float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
+  
+    float4 colorRef  = float4(a_refImg[(y*width+x)*channels + 0], 
+                              a_refImg[(y*width+x)*channels + 1], 
+                              a_refImg[(y*width+x)*channels + 2], 0.0f);
+  
+    float4 diff = colorRend - colorRef;
+  
+    loss += LiteMath::dot3(diff, diff);
+  }
+  
+  (*outLossRes) = loss;
+  return loss;
+} 
+
+
+float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
+                                const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
 {
   memset(a_dataGrad, 0, sizeof(float)*a_gradSize);
 
@@ -179,22 +213,17 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
   //for(int i=0;i<MAXTHREADS;i++)
   //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
 
-  double avgLoss = 0.0;
+  //double avgLoss = 0.0;
   auto start = std::chrono::high_resolution_clock::now();
   //#ifndef _DEBUG
   //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS)
   //#endif
-  for (int i = 0; i < int(tid); ++i) {
-    //float lossVal = 0.0f;
-    for (int j = 0; j < int(a_passNum); ++j) {
-      //lossVal += Loss(this, 
-      //                a_refImg, 
-      //                out_color, 
-      //                a_data,
-      //                m_packedXY.data(), 
-      //                uint(i), channels, m_winWidth);
 
-      __enzyme_autodiff((void*)Loss, 
+  float avgLoss = 0.0f;
+  for (int i = 0; i < int(tid); ++i) {
+    float lossVal = 0.0f;
+    for (int j = 0; j < int(a_passNum); ++j) {
+      __enzyme_autodiff((void*)PixelLoss, 
                          enzyme_const, this,
                          enzyme_const, a_refImg,
                          enzyme_const, out_color,
@@ -202,10 +231,23 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
                          enzyme_const, m_packedXY.data(),
                          enzyme_const, uint(i),
                          enzyme_const, channels,
-                         enzyme_const, m_winWidth);
+                         enzyme_const, m_winWidth,
+                         enzyme_const, &lossVal);
     }
-    //avgLoss += double(lossVal)/double(a_passNum);
+    avgLoss += float(lossVal)/float(a_passNum);
   }
+  
+  //__enzyme_autodiff((void*)ImageLoss, 
+  //                   enzyme_const, this,
+  //                   enzyme_const, a_refImg,
+  //                   enzyme_const, out_color,
+  //                   enzyme_dup,   a_data, a_dataGrad,
+  //                   enzyme_const, m_packedXY.data(),
+  //                   enzyme_const, tid,
+  //                   enzyme_const, channels,
+  //                   enzyme_const, m_winWidth,
+  //                   enzyme_const, &avgLoss);
+
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 
   // accumulate gradient from different threads (parallel reduction/hist)
@@ -215,13 +257,15 @@ void IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a
   //  for(size_t j=0;j<a_gradSize; j++)
   //    a_dataGrad[j] += grads[i][j];
 
-  //avgLoss /= double(m_winWidth*m_winHeight);
+  //avgLoss /= float(m_winWidth*m_winHeight);
   //std::cout << "avgLoss = " << avgLoss << std::endl;
   
   //std::ofstream fout("z_grad.txt");
   //for(size_t i=0; i<a_gradSize; i++)
   //  fout << a_dataGrad[i]/float(a_passNum) << std::endl;
   //fout.close();
+
+  return avgLoss;
 }
 
 static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w, const int h)

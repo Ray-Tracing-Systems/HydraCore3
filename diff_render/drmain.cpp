@@ -226,12 +226,16 @@ int main(int argc, const char** argv)
   //
   for(int iter = 0; iter < 50; iter++) 
   {
-    std::cout << "[drmain]: Render(" << iter << ")" << std::endl;
+    std::cout << "[drmain]: Render(" << std::setfill('0') << std::setw(2) << iter << ").., ";
+    std::cout.flush();
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
 
-    pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
-                       refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
+    float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
+                                    refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
+    
+    std::cout << "loss = " << loss << std::endl;
+    std::cout.flush();
     
     //pImpl->GetExecutionTime("PathTraceBlock", timings);
     //std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
