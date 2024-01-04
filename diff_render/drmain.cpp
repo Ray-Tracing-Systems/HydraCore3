@@ -1,11 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <memory>
+#include <iomanip>
 
 #include "integrator_pt.h"
 #include "diff_render/integrator_dr.h"
 #include "ArgParser.h"
-#include "mi_materials.h"
+
+#include "adam.h"
 
 void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
@@ -113,7 +116,7 @@ int main(int argc, const char** argv)
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
   auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   
-  std::string refImgpath = "z_ref.exr";
+  std::string refImgpath = "z_ref_rt.exr";
   std::cout << "[drmain]: Loading reference image ... " << refImgpath.c_str() << std::endl;
 
   int refW = 0, refH = 0;
@@ -154,6 +157,9 @@ int main(int argc, const char** argv)
   std::cout << "[drmain]: PackXYBlock() ... " << std::endl; 
   pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
 
+  pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+  pImpl->UpdateMembersPlainData();
+
   float timings[4] = {0,0,0,0};
   const float normConst = 1.0f/float(PASS_NUMBER);
 
@@ -163,31 +169,28 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  // now test path tracing
+  std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer2<float> >(imgGrad.size());
+
+  // now run opt loop
   //
+  for(int iter = 0; iter < 50; iter++) 
   {
-    std::cout << "[drmain]: PathTraceBlock(MIS-PT) ... " << std::endl;
+    std::cout << "[drmain]: Render(" << iter << ")" << std::endl;
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
 
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
-    pImpl->UpdateMembersPlainData();
     pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
                        refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
     
-    pImpl->GetExecutionTime("PathTraceBlock", timings);
-    std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
-
-    if(saveHDR) 
-    {
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-    }
-    else
-    {  
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp"; 
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
-    }
+    //pImpl->GetExecutionTime("PathTraceBlock", timings);
+    //std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
+    
+    pOpt->step(imgData.data(), imgGrad.data(), iter);
+    
+    std::stringstream strOut;
+    strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
+    auto outName = strOut.str();
+    SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
   }
 
   return 0;
