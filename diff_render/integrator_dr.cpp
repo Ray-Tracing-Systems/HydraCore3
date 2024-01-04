@@ -191,9 +191,10 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
 
   float avgLoss = 0.0f;
   
-  for (int i = 0; i < int(tid); ++i) {
-    float lossVal = 0.0f;
-    for (int j = 0; j < int(a_passNum); ++j) {
+  if(m_gradMode != 0)
+  {
+    for (int i = 0; i < int(tid); ++i) {
+      float lossVal = 0.0f;
       __enzyme_autodiff((void*)PixelLoss, 
                          enzyme_const, this,
                          enzyme_const, a_refImg,
@@ -204,8 +205,16 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
                          enzyme_const, channels,
                          enzyme_const, m_winWidth,
                          enzyme_const, &lossVal);
+      avgLoss += float(lossVal)/float(a_passNum);
     }
-    avgLoss += float(lossVal)/float(a_passNum);
+  }
+  else
+  {
+    for (int i = 0; i < int(tid); ++i) {
+      float lossVal = PixelLoss(this, a_refImg, out_color, a_data, m_packedXY.data(),
+                                uint(i), channels, m_winWidth, &lossVal);
+      avgLoss += float(lossVal)/float(a_passNum);
+    }
   }
 
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
@@ -265,7 +274,7 @@ static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w
 
 float4 IntegratorDR::HydraTex2DFetch(uint texId, float2 a_uv, const float* tex_data)
 {
-  if(texId == 1 && tex_data != nullptr) 
+  if(texId == 1 && tex_data != nullptr && m_gradMode != 0) 
   {
     const float m_fw = 256.0f;
     const float m_fh = 256.0f;

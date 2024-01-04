@@ -111,6 +111,10 @@ int main(int argc, const char** argv)
   const bool enableShadowPT = (integratorType == "shadowpt" || integratorType == "all");
   const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
   const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
+  
+  int gradMode = 1;
+  if(args.hasOption("-grad"))
+    gradMode = args.getOptionValue<int>("-grad");
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -140,9 +144,9 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
-  auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+  auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, gradMode, features);
   
-  std::string refImgpath = "z_ref_rt.exr";
+  std::string refImgpath = "z_ref.exr";
   std::cout << "[drmain]: Loading reference image ... " << refImgpath.c_str() << std::endl;
 
   int refW = 0, refH = 0;
@@ -194,40 +198,14 @@ int main(int argc, const char** argv)
 
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
-  
-  bool testRefTexture = false;
-  if(testRefTexture)
-  {
-    std::vector<uchar4> img;
-    unsigned wh[2] = { 0,0};
-    std::ifstream fin("/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_035/data/chunk_00001.image4ub", std::ios::binary);
-    if(!fin.is_open())
-    {
-      std::cout << "[LoadImage<uint>]: can't open file '" << "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_35/data/chunk_00001.image4ub" << "' " << std::endl;
-      exit(0);
-    }
-    fin.read((char*)wh, sizeof(unsigned)* 2);
-    img.resize(wh[0]*wh[1]);
-    fin.read((char*)img.data(), size_t(wh[0]*wh[1])*sizeof(uint32_t));
-    fin.close();
-    
-    for(size_t i=0;i<imgData.size()/4;i++)
-    {
-      float4 color = read_array_uchar4(img.data(), i);
-      imgData[i*4+0] = sRGBToLinear(color.x);
-      imgData[i*4+1] = sRGBToLinear(color.y);
-      imgData[i*4+2] = sRGBToLinear(color.z);
-      imgData[i*4+3] = sRGBToLinear(color.w);
-    }
-  }
 
-  std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer2<float> >(imgGrad.size());
+  std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
 
   // now run opt loop
   //
   for(int iter = 0; iter < 50; iter++) 
   {
-    std::cout << "[drmain]: Render(" << std::setfill('0') << std::setw(2) << iter << ").., ";
+    std::cout << "[drmain]: Render(" << std::setfill('0') << std::setw(2) << iter << ")..";
     std::cout.flush();
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
@@ -235,7 +213,7 @@ int main(int argc, const char** argv)
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
     
-    std::cout << "loss = " << loss << std::endl;
+    std::cout << ", loss = " << loss << std::endl;
     std::cout.flush();
     
     //pImpl->GetExecutionTime("PathTraceBlock", timings);
@@ -243,13 +221,19 @@ int main(int argc, const char** argv)
     
     pOpt->step(imgData.data(), imgGrad.data(), iter);
     
-    std::stringstream strOut;
-    strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
-    auto outName = strOut.str();
-    SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
-
-    if(testRefTexture)
+    if(gradMode == 1)
+    {
+      std::stringstream strOut;
+      strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
+      auto outName = strOut.str();
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
+    }
+    else if(gradMode == 0)
+    {
+      const std::string outName = imageOutClean + ".exr";
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       break;
+    }
   }
 
   return 0;

@@ -29,7 +29,7 @@ class IntegratorDR : public Integrator
 {
 public:
 
-  IntegratorDR(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) : Integrator(a_maxThreads, a_spectral_mode, a_features){}
+  IntegratorDR(int a_maxThreads = 1, int a_spectral_mode = 0, int a_gradMode = 1, std::vector<uint32_t> a_features = {}) : Integrator(a_maxThreads, a_spectral_mode, a_features), m_gradMode(a_gradMode) {}
   virtual ~IntegratorDR() {}
 
   void LoadSceneEnd() override;
@@ -49,5 +49,6 @@ public:
   float4 HydraTex2DFetch(uint texId, float2 texCoord, const float* tex_data);
   
   std::vector<MaterialNonDiff> m_matNonDiff;
+  int m_gradMode;
 };
 

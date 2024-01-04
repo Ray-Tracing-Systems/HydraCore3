@@ -57,7 +57,7 @@ struct AdamOptimizer : public IGradientOptimizer<T> // implementation according 
     }
 
     //xNext[i] = x[i] - gamma/(sqrt(GSquare[i] + epsilon)); 
-    for (int i=0;i<momentum.size();i++) 
+    for (size_t i=0;i<momentum.size();i++) 
       a_state[i] -= (gamma*momentum[i]/(std::sqrt(m_GSquare[i] + epsilon)));  
   }
 
