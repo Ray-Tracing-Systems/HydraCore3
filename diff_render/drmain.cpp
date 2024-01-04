@@ -142,7 +142,7 @@ int main(int argc, const char** argv)
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
   auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   
-  std::string refImgpath = "z_ref.exr";
+  std::string refImgpath = "z_ref_rt.exr";
   std::cout << "[drmain]: Loading reference image ... " << refImgpath.c_str() << std::endl;
 
   int refW = 0, refH = 0;

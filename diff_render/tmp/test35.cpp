@@ -96,7 +96,9 @@ bool test_035_cornell_with_light()
     hrMeshVertexAttribPointer4f(cubeRef, L"norm", &cube.vNorm[0]);
     hrMeshVertexAttribPointer2f(cubeRef, L"texcoord", &cube.vTexCoord[0]);
 
-    hrMeshMaterialId(cubeRef, mat0.id);
+    //hrMeshMaterialId(cubeRef, mat0.id);
+    int cubeMatIndices[12] = { mat8.id, mat8.id, mat8.id, mat8.id, mat8.id, mat8.id, mat0.id, mat0.id, mat8.id, mat8.id, mat8.id, mat8.id };
+    hrMeshPrimitiveAttribPointer1i(cubeRef, L"mind", cubeMatIndices);
     hrMeshAppendTriangles3(cubeRef, int(cube.triIndices.size()), &cube.triIndices[0]);
   }
   hrMeshClose(cubeRef);
