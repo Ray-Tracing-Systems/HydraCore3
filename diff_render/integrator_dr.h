@@ -45,10 +45,21 @@ public:
   float PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
                     const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize); ///<! return loss for printing
 
-//protected:
-  float4 HydraTex2DFetch(uint texId, float2 texCoord, const float* tex_data);
+protected:
+  float4 Diff_Tex2D(uint texId, float2 texCoord, const float* tex_data);
   
   std::vector<MaterialNonDiff> m_matNonDiff;
+
+  struct TexInfo
+  {
+    uint32_t offset;
+    int32_t  width;
+    int32_t  height;
+    float    fwidth;
+    float    fheight;
+  };
+
+  std::vector<TexInfo> m_texAddressTable;
   int m_gradMode;
 };
 

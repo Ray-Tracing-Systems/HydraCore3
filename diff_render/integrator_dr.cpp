@@ -32,6 +32,16 @@ void IntegratorDR::LoadSceneEnd()
     m_matNonDiff[matId].lambertTexId = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
     //m_matDiff[matId].color           = m_materials[matId].colors[GLTF_COLOR_BASE];
   }
+
+  m_texAddressTable.resize(m_textures.size());
+  for(auto& texInfo : m_texAddressTable)
+    texInfo = {uint32_t(-1),0,0,0,0};
+
+  m_texAddressTable[1].offset  = 0;
+  m_texAddressTable[1].width   = 256;
+  m_texAddressTable[1].height  = 256;
+  m_texAddressTable[1].fwidth  = 256.0f;
+  m_texAddressTable[1].fheight = 256.0f;
 }
 
 void IntegratorDR::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
@@ -109,7 +119,7 @@ void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const f
   const uint   texId     = m_matNonDiff[matId].lambertTexId;
 
   const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
-  const float4 texColor  = HydraTex2DFetch(texId, texCoordT, a_data); 
+  const float4 texColor  = Diff_Tex2D(texId, texCoordT, a_data); 
   const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
 
   const uint XY = in_pakedXY[tid];
@@ -272,17 +282,25 @@ static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w
 	return int4(offset0, offset1, offset2, offset3);
 }
 
-float4 IntegratorDR::HydraTex2DFetch(uint texId, float2 a_uv, const float* tex_data)
+float4 IntegratorDR::Diff_Tex2D(uint texId, float2 a_uv, const float* tex_data)
 {
-  if(texId == 1 && tex_data != nullptr && m_gradMode != 0) 
+  const auto info = m_texAddressTable[texId];
+
+  if(info.offset != uint32_t(-1) && tex_data != nullptr && m_gradMode != 0) 
   {
-    const float m_fw = 256.0f;
-    const float m_fh = 256.0f;
-    const int tex_width  = 256;
-    const int tex_height = 256;
+    tex_data += info.offset;
+    const float m_fw     = info.fwidth;
+    const float m_fh     = info.fheight;
+    const int tex_width  = info.width;
+    const int tex_height = info.height;
     
-    float ffx = a_uv.x * m_fw - 0.5f; // a_uv should not be very large, so that the float does not overflow later. 
+    float ffx = a_uv.x * m_fw - 0.5f; // a_texCoord should not be very large, so that the float does not overflow later. 
     float ffy = a_uv.y * m_fh - 0.5f; // This is left to the responsibility of the top level.
+    
+    auto sampler = m_textures[texId]->sampler();
+
+    if ((sampler.addressU == Sampler::AddressMode::CLAMP) != 0 && ffx < 0) ffx = 0.0f;
+    if ((sampler.addressV == Sampler::AddressMode::CLAMP) != 0 && ffy < 0) ffy = 0.0f;
     
     // Calculate the weights for each pixel
     //
@@ -300,11 +318,11 @@ float4 IntegratorDR::HydraTex2DFetch(uint texId, float2 a_uv, const float* tex_d
     const float w4 = fx  * fy;
     
     const int4 offsets = bilinearOffsets(ffx, ffy, tex_width, tex_height);
-    
     const float4 f1    = float4(tex_data[offsets.x*4+0], tex_data[offsets.x*4+1], tex_data[offsets.x*4+2], tex_data[offsets.x*4+3]);
     const float4 f2    = float4(tex_data[offsets.y*4+0], tex_data[offsets.y*4+1], tex_data[offsets.y*4+2], tex_data[offsets.y*4+3]);
     const float4 f3    = float4(tex_data[offsets.z*4+0], tex_data[offsets.z*4+1], tex_data[offsets.z*4+2], tex_data[offsets.z*4+3]);
     const float4 f4    = float4(tex_data[offsets.w*4+0], tex_data[offsets.w*4+1], tex_data[offsets.w*4+2], tex_data[offsets.w*4+3]);
+
     // Calculate the weighted sum of pixels (for each color channel)
     //
     const float outr = f1.x * w1 + f2.x * w2 + f3.x * w3 + f4.x * w4;

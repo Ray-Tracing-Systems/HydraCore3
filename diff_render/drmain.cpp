@@ -19,29 +19,6 @@ float4x4 ReadMatrixFromString(const std::string& str);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// // https://www.shadertoy.com/view/WlG3zG
-// inline float4 exp2m1(float4 v) { return float4(std::exp2(v.x), std::exp2(v.y), std::exp2(v.z), std::exp2(v.w)) - float4(1.0f); }
-// inline float4 pow_22(float4 x) { return (exp2m1(0.718151f*x)-0.503456f*x)*7.07342f; }
-// //inline float4 pow_22(float4 x) { x*x*(float4(0.75f) + 0.25f*x); }
-                                          // not so fast as pow_22, but more correct implementation
-static inline float sRGBToLinear(float s) // https://entropymine.com/imageworsener/srgbformula/
-{
-  if(s <= 0.0404482362771082f)
-    return s*0.077399381f;
-  else 
-    return std::pow((s+0.055f)*0.947867299f, 2.4f);
-}
-
-static inline float4 read_array_uchar4(const uchar4* a_data, int offset)
-{
-  const float mult = 0.003921568f; // (1.0f/255.0f);
-  const uchar4 c0  = a_data[offset];
-  return mult*float4((float)c0.x, (float)c0.y, (float)c0.z, (float)c0.w);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int main(int argc, const char** argv)
 {
   int FB_WIDTH        = 1024;
@@ -49,7 +26,6 @@ int main(int argc, const char** argv)
   int FB_CHANNELS     = 4;
 
   int PASS_NUMBER     = 1024;
-  int NAIVE_PT_REPEAT = 1; // make more samples for naivept which is quite useful for testing cases to get less noise for 
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
@@ -84,9 +60,6 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-integrator"))
     integratorType = args.getOptionValue<std::string>("-integrator");
-
-  if(args.hasOption("-spp-naive-mul"))
-    NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive-mul"),1);
   
   if(args.hasOption("-gamma")) {
     std::string gammaText = args.getOptionValue<std::string>("-gamma");
