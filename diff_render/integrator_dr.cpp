@@ -40,11 +40,11 @@ void IntegratorDR::LoadSceneEnd()
   m_gradSize = 0;
 }
 
-size_t IntegratorDR::AddDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels)
+size_t IntegratorDR::PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels)
 {
   if(texId >= m_texAddressTable.size())
   {
-    std::cout << "[IntegratorDR::AddDiffTex2D]: bad tex id = " << texId << std::endl;
+    std::cout << "[IntegratorDR::PutDiffTex2D]: bad tex id = " << texId << std::endl;
     return size_t(-1);
   }
 
