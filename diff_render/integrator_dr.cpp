@@ -35,13 +35,28 @@ void IntegratorDR::LoadSceneEnd()
 
   m_texAddressTable.resize(m_textures.size());
   for(auto& texInfo : m_texAddressTable)
-    texInfo = {uint32_t(-1),0,0,0,0};
+    texInfo = {size_t(-1),0,0,0,0};
 
-  m_texAddressTable[1].offset  = 0;
-  m_texAddressTable[1].width   = 256;
-  m_texAddressTable[1].height  = 256;
-  m_texAddressTable[1].fwidth  = 256.0f;
-  m_texAddressTable[1].fheight = 256.0f;
+  m_gradSize = 0;
+}
+
+size_t IntegratorDR::AddDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels)
+{
+  if(texId >= m_texAddressTable.size())
+  {
+    std::cout << "[IntegratorDR::AddDiffTex2D]: bad tex id = " << texId << std::endl;
+    return size_t(-1);
+  }
+
+  m_texAddressTable[texId].offset  = m_gradSize;
+  m_texAddressTable[texId].width   = width;
+  m_texAddressTable[texId].height  = height;
+  m_texAddressTable[texId].fwidth  = float(width);
+  m_texAddressTable[texId].fheight = float(height);
+
+  size_t oldOffset = m_gradSize;
+  m_gradSize += size_t(width)*size_t(height)*size_t(channels);
+  return oldOffset;
 }
 
 void IntegratorDR::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
@@ -286,7 +301,7 @@ float4 IntegratorDR::Diff_Tex2D(uint texId, float2 a_uv, const float* tex_data)
 {
   const auto info = m_texAddressTable[texId];
 
-  if(info.offset != uint32_t(-1) && tex_data != nullptr && m_gradMode != 0) 
+  if(info.offset != size_t(-1) && tex_data != nullptr && m_gradMode != 0) 
   {
     tex_data += info.offset;
     const float m_fw     = info.fwidth;
