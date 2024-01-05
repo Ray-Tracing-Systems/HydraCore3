@@ -133,9 +133,7 @@ void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const f
   float3 hitTang     = to_float3(data2);
   float2 hitTexCoord = float2(data1.w, data2.w);
 
-  //const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
   const uint   texId     = m_matNonDiff[matId].lambertTexId;
-
   const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
   const float4 texColor  = Diff_Tex2D(texId, texCoordT, a_data); 
   const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);

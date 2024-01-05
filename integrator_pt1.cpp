@@ -327,7 +327,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       lightIntensity = lightColor * lightMult;
     }
 
-    const uint lightId = m_instIdToLightInstId[*in_instId]; //m_materials[matId].data[UINT_LIGHTID];
+    const uint lightId = m_instIdToLightInstId[*in_instId]; 
     
     float lightCos = 1.0f;
     float lightDirectionAtten = 1.0f;

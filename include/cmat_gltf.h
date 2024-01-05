@@ -8,7 +8,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
                                      float3 n, float2 tc, float4 color, BsdfSample* pRes)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-  const uint   cflags   = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const uint   cflags   = a_materials[0].cflags;
   const float4 specular = a_materials[0].colors[GLTF_COLOR_METAL]; 
   const float4 coat     = a_materials[0].colors[GLTF_COLOR_COAT];  
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
@@ -109,7 +109,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
                      float4 color, BsdfEval* res)
 {
-  const uint   cflags     = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const uint   cflags     = a_materials[0].cflags;
   const float4 specular   = a_materials[0].colors[GLTF_COLOR_METAL];
   const float4 coat       = a_materials[0].colors[GLTF_COLOR_COAT];
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
