@@ -172,7 +172,7 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  auto texOffsetAndSize = pImpl->PutDiffTex2D(1, 256, 256, 4);
+  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, 256, 256, 4);
 
   std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
 

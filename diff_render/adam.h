@@ -43,9 +43,9 @@ struct AdamOptimizer : public IGradientOptimizer<T> // implementation according 
   void step(T* a_state, const T* a_grad, int iter) override 
   {
     int factorGamma = iter/100 + 1;
-    const T alpha   = 0.5;
-    const T beta    = 0.25;
-    const T gamma   = 0.25/factorGamma;
+    const T alpha   = T(0.5);
+    const T beta    = T(0.25);
+    const T gamma   = T(0.25)/T(factorGamma);
     
     // Adam: m[i] = b*mPrev[i] + (1-b)*gradF[i], 
     // GSquare[i] = GSquarePrev[i]*a + (1.0f-a)*grad[i]*grad[i])

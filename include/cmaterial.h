@@ -157,23 +157,27 @@ static constexpr uint BLEND_MAT_ID_2        = UINT_MAIN_LAST_IND + 2;
 static constexpr uint BLEND_TEXID0          = UINT_MAIN_LAST_IND + 3;
 static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_TEXID0;
 
-
-
 // The size is taken according to the largest indexes
 static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
 static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
 {
-  float4 colors[COLOR_DATA_SIZE]; ///< colors data
+  uint mtype;
+  uint cflags;
+  uint lightId;
+  uint nonlinear;
+  
+  uint texid[4];
+  uint spdid[4];
+  uint datai[4];
 
+  float4 colors[COLOR_DATA_SIZE]; ///< colors data
   float4 row0[2];     ///< texture matrix
   float4 row1[2];     ///< texture matrix
       
-  float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
+  float  data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
-
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
