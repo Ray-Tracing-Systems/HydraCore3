@@ -50,9 +50,7 @@ public:
   std::pair<size_t, size_t> PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels);
 
 protected:
-  float4 Diff_Tex2D(uint texId, float2 texCoord, const float* tex_data);
-  
-  std::vector<MaterialNonDiff> m_matNonDiff;
+  float4 Diff_Tex2D_2(uint texId, float2 texCoord, const float* tex_data);
 
   struct TexInfo
   {

@@ -24,15 +24,6 @@ using namespace LiteMath;
 
 void IntegratorDR::LoadSceneEnd()
 {
-  m_matNonDiff.resize(m_materials.size());
-  //m_matDiff.resize(m_materials.size());
-
-  for(size_t matId=0;matId<m_materials.size();matId++) 
-  {
-    m_matNonDiff[matId].lambertTexId = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
-    //m_matDiff[matId].color           = m_materials[matId].colors[GLTF_COLOR_BASE];
-  }
-
   m_texAddressTable.resize(m_textures.size());
   for(auto& texInfo : m_texAddressTable)
     texInfo = {size_t(-1),0,0,0,0};
@@ -133,9 +124,9 @@ void IntegratorDR::kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const f
   float3 hitTang     = to_float3(data2);
   float2 hitTexCoord = float2(data1.w, data2.w);
 
-  const uint   texId     = m_matNonDiff[matId].lambertTexId;
+  const uint   texId     = m_materials[matId].texid[0];
   const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
-  const float4 texColor  = Diff_Tex2D(texId, texCoordT, a_data); 
+  const float4 texColor  = Diff_Tex2D_2(texId, texCoordT, a_data); 
   const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
 
   const uint XY = in_pakedXY[tid];
@@ -298,7 +289,7 @@ static inline int4 bilinearOffsets(const float ffx, const float ffy, const int w
 	return int4(offset0, offset1, offset2, offset3);
 }
 
-float4 IntegratorDR::Diff_Tex2D(uint texId, float2 a_uv, const float* tex_data)
+float4 IntegratorDR::Diff_Tex2D_2(uint texId, float2 a_uv, const float* tex_data)
 {
   const auto info = m_texAddressTable[texId];
 
