@@ -44,8 +44,10 @@ public:
 
   float PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
                     const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize); ///<! return loss for printing
-
-  size_t PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels);
+  
+  // interaction with diff rendering
+  //
+  std::pair<size_t, size_t> PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels);
 
 protected:
   float4 Diff_Tex2D(uint texId, float2 texCoord, const float* tex_data);
@@ -57,6 +59,7 @@ protected:
     size_t   offset;
     int32_t  width;
     int32_t  height;
+    int32_t  channels;
     float    fwidth;
     float    fheight;
   };

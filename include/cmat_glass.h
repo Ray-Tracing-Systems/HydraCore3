@@ -60,31 +60,31 @@ static inline float3 GgxVndf(float3 wo, float roughness, float u1, float u2)
   // -- Choose a point on a disk with each half of the disk weighted
   // -- proportionally to its projection onto direction v
   const float a = 1.0f / (1.0f + v.z);
-  const float r = sqrt(u1);
+  const float r = std::sqrt(u1);
   const float phi = (u2 < a) ? (u2 / a) * M_PI : M_PI + (u2 - a) / (1.0f - a) * M_PI;
-  const float p1 = r * cos(phi);
-  const float p2 = r * sin(phi) * ((u2 < a) ? 1.0f : v.z);
+  const float p1 = r * std::cos(phi);
+  const float p2 = r * std::sin(phi) * ((u2 < a) ? 1.0f : v.z);
 
   // -- Calculate the normal in this stretched tangent space
-  const float3 n = p1 * t1 + p2 * t2 + sqrt(fmax(0.0f, 1.0f - p1 * p1 - p2 * p2)) * v;
+  const float3 n = p1 * t1 + p2 * t2 + sqrt(std::max(0.0f, 1.0f - p1 * p1 - p2 * p2)) * v;
 
   // -- unstretch and normalize the normal
-  return normalize(make_float3(roughness * n.x, roughness * n.y, fmax(0.0f, n.z)));
+  return normalize(make_float3(roughness * n.x, roughness * n.y, std::max(0.0f, n.z)));
 }
 
 
 static inline float SmithGGXMasking(const float dotNV, float roughSqr)
 {
   const float denomC = sqrt(roughSqr + (1.0f - roughSqr) * dotNV * dotNV) + dotNV;
-  return 2.0f * dotNV / fmax(denomC, 1e-6f);
+  return 2.0f * dotNV / std::max(denomC, 1e-6f);
 }
 
 
 static inline float SmithGGXMaskingShadowing(const float dotNL, const float dotNV, float roughSqr)
 {
-  const float denomA = dotNV * sqrt(roughSqr + (1.0f - roughSqr) * dotNL * dotNL);
-  const float denomB = dotNL * sqrt(roughSqr + (1.0f - roughSqr) * dotNV * dotNV);
-  return 2.0f * dotNL * dotNV / fmax(denomA + denomB, 1e-6f);
+  const float denomA = dotNV * std::sqrt(roughSqr + (1.0f - roughSqr) * dotNL * dotNL);
+  const float denomB = dotNL * std::sqrt(roughSqr + (1.0f - roughSqr) * dotNV * dotNV);
+  return 2.0f * dotNL * dotNV / std::max(denomA + denomB, 1e-6f);
 }
 
 
@@ -122,7 +122,7 @@ static inline void refractionGlassSampleAndEval(const float4 a_colorTransp, cons
     const float radicand = 1.0f + eta * eta * (dotWoWh * dotWoWh - 1.0f);
     if (radicand > 0.0f)
     {
-      newDir           = (eta * dotWoWh - sqrt(radicand)) * wh - eta * wo;    // refract        
+      newDir           = (eta * dotWoWh - std::sqrt(radicand)) * wh - eta * wo;    // refract        
       refrData.success = true;
       refrData.eta     = eta;
     }
@@ -138,15 +138,15 @@ static inline void refractionGlassSampleAndEval(const float4 a_colorTransp, cons
     const float3 v    = (-1.0f) * a_rayDir;
     const float3 l    = refrData.rayDir;
     const float3 n    = a_normal;
-    const float dotNV = fabs(dot(n, v));
-    const float dotNL = fabs(dot(n, l));
+    const float dotNV = std::abs(dot(n, v));
+    const float dotNL = std::abs(dot(n, l));
 
     // Fresnel is not needed here, because it is used for the blend.    
     const float G1    = SmithGGXMasking(dotNV, roughSqr);
     const float G2    = SmithGGXMaskingShadowing(dotNL, dotNV, roughSqr);
 
     // Abbreviated formula without PDF.
-    Pss *= G2 / fmax(G1, 1e-6f);
+    Pss *= G2 / std::max(G1, 1e-6f);
 
     // Complete formulas with PDF, if we ever make an explicit strategy for glass.
     //const float3 h    = normalize(v + l); // half vector.
@@ -173,7 +173,7 @@ static inline void refractionGlassSampleAndEval(const float4 a_colorTransp, cons
   }
 
   const float cosThetaOut = dot(refrData.rayDir, a_normal);
-  const float cosMult     = 1.0f / fmax(fabs(cosThetaOut), 1e-6f);
+  const float cosMult     = 1.0f / std::max(std::abs(cosThetaOut), 1e-6f);
 
   a_pRes->dir             = refrData.rayDir;
   a_pRes->pdf             = 1.0f;
@@ -215,7 +215,7 @@ static inline float fresnel2(float3 v, float3 n, float ior)
   // Calculating the angle of incidence of light
   const float cosi = dot(v, n);
   // We calculate the angle of refraction of light according to the Snellius law
-  const float sint = sqrt(1.0f - cosi * cosi) / ior;
+  const float sint = std::sqrt(1.0f - cosi * cosi) / ior;
   // Check if there is a complete internal reflection
   if (sint > 1.0f) 
   {
@@ -225,7 +225,7 @@ static inline float fresnel2(float3 v, float3 n, float ior)
   else 
   {
     // Otherwise we calculate the angle of refraction of light
-    const float cost = sqrt(1.0f - sint * sint);
+    const float cost = std::sqrt(1.0f - sint * sint);
     // We calculate the reflection coefficients for parallel and perpendicular polarization using Fresnel formulas
     const float Rp   = (ior * cosi - cost) / (ior * cosi + cost);
     const float Rs   = (cosi - ior * cost) / (cosi + ior * cost);
@@ -270,7 +270,7 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
     a_pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
   }
 
-  const float cosThetaOut = fabs(dot(dir, a_normal));
+  const float cosThetaOut = std::abs(dot(dir, a_normal));
   
   a_pRes->val      /= std::max(cosThetaOut, 1e-6f);// BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
   a_pRes->dir       = dir;

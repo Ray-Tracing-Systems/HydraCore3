@@ -40,23 +40,26 @@ void IntegratorDR::LoadSceneEnd()
   m_gradSize = 0;
 }
 
-size_t IntegratorDR::PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels)
+std::pair<size_t, size_t> IntegratorDR::PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels)
 {
   if(texId >= m_texAddressTable.size())
   {
     std::cout << "[IntegratorDR::PutDiffTex2D]: bad tex id = " << texId << std::endl;
-    return size_t(-1);
+    return std::make_pair(size_t(-1), 0);
   }
 
-  m_texAddressTable[texId].offset  = m_gradSize;
-  m_texAddressTable[texId].width   = width;
-  m_texAddressTable[texId].height  = height;
-  m_texAddressTable[texId].fwidth  = float(width);
-  m_texAddressTable[texId].fheight = float(height);
+  m_texAddressTable[texId].offset   = m_gradSize;
+  m_texAddressTable[texId].width    = width;
+  m_texAddressTable[texId].height   = height;
+  m_texAddressTable[texId].channels = channels;
+  m_texAddressTable[texId].fwidth   = float(width);
+  m_texAddressTable[texId].fheight  = float(height);
 
   size_t oldOffset = m_gradSize;
-  m_gradSize += size_t(width)*size_t(height)*size_t(channels);
-  return oldOffset;
+  size_t currSize  = size_t(width)*size_t(height)*size_t(channels);
+  
+  m_gradSize += currSize;
+  return std::make_pair(oldOffset, currSize);
 }
 
 void IntegratorDR::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!

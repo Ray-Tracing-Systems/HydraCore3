@@ -580,8 +580,7 @@ static inline float FresnelMitsuba(float cos_theta_i, float eta)
   r = special_case ? r_sc : r;
 
   /* Adjust the sign of the transmitted direction */
-  float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
-
+  //float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
   return r;
 }
 

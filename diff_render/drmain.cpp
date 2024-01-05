@@ -172,7 +172,7 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f);
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  size_t texOffset = pImpl->PutDiffTex2D(1, 256, 256, 4);
+  auto texOffsetAndSize = pImpl->PutDiffTex2D(1, 256, 256, 4);
 
   std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
 
@@ -195,6 +195,8 @@ int main(int argc, const char** argv)
     //std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
     
     pOpt->step(imgData.data(), imgGrad.data(), iter);
+
+    // may apply some filters here (for example median filter)
     
     if(gradMode == 1)
     {
@@ -210,6 +212,8 @@ int main(int argc, const char** argv)
       break;
     }
   }
+
+  SaveImage4fToBMP(imgData.data(), 256, 256, "z_opt_tex.bmp", 1.0f, 2.4f);
 
   return 0;
 }

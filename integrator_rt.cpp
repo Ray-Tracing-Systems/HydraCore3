@@ -12,7 +12,7 @@ using namespace LiteMath;
 
 void Integrator::kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY)
 {
-  if(tidX >= m_winWidth || tidY >= m_winHeight)
+  if(int(tidX) >= m_winWidth || int(tidY) >= m_winHeight)
     return;
   uint offset = tidY*m_winWidth + tidX;
   if(m_tileSize != 1)
@@ -132,8 +132,8 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const floa
   const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
   const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
   const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
-  float3 hitNorm     = to_float3(data1);
-  float3 hitTang     = to_float3(data2);
+  //float3 hitNorm     = to_float3(data1);
+  //float3 hitTang     = to_float3(data2);
   float2 hitTexCoord = float2(data1.w, data2.w);
 
   const uint   texId     = as_uint(m_materials[matId].data[GLTF_UINT_TEXID0]);
@@ -300,15 +300,15 @@ static inline float2 clipSpaceToScreenSpace(float4 a_pos, const float fw, const 
   return make_float2(x * fw, y * fh);
 }
 
-static inline float4x4 make_float4x4(const float* a_data)
-{
-  float4x4 matrix;
-  matrix.m_col[0] = make_float4(a_data[0], a_data[1], a_data[2], a_data[3]);
-  matrix.m_col[1] = make_float4(a_data[4], a_data[5], a_data[6], a_data[7]);
-  matrix.m_col[2] = make_float4(a_data[8], a_data[9], a_data[10], a_data[11]);
-  matrix.m_col[3] = make_float4(a_data[12], a_data[13], a_data[14], a_data[15]);
-  return matrix;
-}
+//static inline float4x4 make_float4x4(const float* a_data)
+//{
+//  float4x4 matrix;
+//  matrix.m_col[0] = make_float4(a_data[0], a_data[1], a_data[2], a_data[3]);
+//  matrix.m_col[1] = make_float4(a_data[4], a_data[5], a_data[6], a_data[7]);
+//  matrix.m_col[2] = make_float4(a_data[8], a_data[9], a_data[10], a_data[11]);
+//  matrix.m_col[3] = make_float4(a_data[12], a_data[13], a_data[14], a_data[15]);
+//  return matrix;
+//}
 
 static inline float2 worldPosToScreenSpace(float3 a_wpos, const int width, const int height, 
                                            float4x4 worldView, float4x4 proj)
@@ -322,16 +322,16 @@ static inline float2 worldPosToScreenSpace(float3 a_wpos, const int width, const
 }
 
 void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, const int a_winWidth,
-  const int a_winHeight, const float4 a_rayColor1, const float4 a_rayColor2, const bool a_blendColor,
-  const bool a_multDepth, const int a_spp)
+              const int a_winHeight, const float4 a_rayColor1, const float4 a_rayColor2, const bool a_blendColor,
+              const bool a_multDepth, const int a_spp)
 {
-  const int dx   = std::abs(a_pos2.x - a_pos1.x);
-  const int dy   = std::abs(a_pos2.y - a_pos1.y);
+  const int dx   = int(std::abs(a_pos2.x - a_pos1.x));
+  const int dy   = int(std::abs(a_pos2.y - a_pos1.y));
 
   const int step = dx > dy ? dx : dy;
 
-  float x_inc    = dx / (float)step;
-  float y_inc    = dy / (float)step;
+  float x_inc    = float(dx) / (float)step;
+  float y_inc    = float(dy) / (float)step;
 
   if (a_pos1.x > a_pos2.x) x_inc *= -1.0f;
   if (a_pos1.y > a_pos2.y) y_inc *= -1.0f;
@@ -344,7 +344,7 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
 
   for (int i = 0; i <= step; ++i) 
   {
-    if (x >= 0 && x <= a_winWidth - 1 && y >= 0 && y <= a_winHeight - 1)
+    if (x >= float(0) && x <= float(a_winWidth - 1) && y >= 0 && y <= float(a_winHeight - 1))
     {
       float4 color;
       float weight    = (float)(i) / (float)(step);
@@ -359,14 +359,14 @@ void drawLine(const float3 a_pos1, const float3 a_pos2, float4 * a_outColor, con
 
       color = lerp(a_rayColor1, a_rayColor2, weight) * depthMult;
          
-      a_outColor[(int)(y)*a_winWidth + (int)(x)] += color * a_spp;
+      a_outColor[(int)(y)*a_winWidth + (int)(x)] += color * float(a_spp);
     }
  
     x += x_inc;
     y += y_inc;
   }
-  if (a_pos1.x >= 0 && a_pos1.x <= a_winWidth - 1 && a_pos1.y >= 0 && a_pos1.y <= a_winHeight - 1)
-    a_outColor[(int)(a_pos1.y)*a_winWidth + (int)(a_pos1.x)] = float4(0, a_spp, 0, 0);
+  if (a_pos1.x >= 0 && a_pos1.x <= float(a_winWidth - 1) && a_pos1.y >= 0 && a_pos1.y <= float(a_winHeight - 1))
+    a_outColor[(int)(a_pos1.y)*a_winWidth + (int)(a_pos1.x)] = float4(0, float(a_spp), 0, 0);
 }
 
 void Integrator::kernel_ContributePathRayToImage3(float4* out_color, 
