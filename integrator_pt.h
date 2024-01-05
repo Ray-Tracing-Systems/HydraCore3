@@ -218,20 +218,24 @@ public:
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
-  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
+  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc, const float* dparams);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
   BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags); 
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+                                   MisData* a_misPrev, const uint a_currRayFlags, const float* dparams);
+                                    
+  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);
 
-  uint32_t MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                                      MisData* a_misPrev, BsdfSample* a_pRes);
-  MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  uint32_t BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                              MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams);
+
+  MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
   
+  virtual float4 Diff_Tex2D(uint texId, float2 texCoord, const float* dparams);
+
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);

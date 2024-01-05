@@ -82,12 +82,17 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-uint32_t Integrator::MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                                                  MisData* a_misPrev, BsdfSample* a_pRes)
+float4 Integrator::Diff_Tex2D(uint texId, float2 texCoord, const float* dparams)
+{
+  return m_textures[texId]->sample(texCoord);
+}
+
+uint32_t Integrator::BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                                        MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = m_materials[a_materialId].texid[0];
-  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float4 weightDat = Diff_Tex2D(texId, texCoordT, dparams);
   const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_materialId].data[BLEND_WEIGHT] * weightTex;
 
@@ -112,11 +117,11 @@ uint32_t Integrator::MaterialBlendSampleAndEval(uint a_materialId, float4 wavele
   return selectedMatId;
 }
 
-MatIdWeightPair Integrator::MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc)
+MatIdWeightPair Integrator::BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
   const uint   texId     = m_materials[a_mat.id].texid[0];
-  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  const float4 weightDat = Diff_Tex2D(texId, texCoordT, dparams); 
   const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
 
@@ -152,11 +157,11 @@ static inline float3 NormalMapTransform(const uint materialFlags, float3 normalF
   return normalTS; // normalize(normalTS); // do we nedd this normalize here?
 }
 
-float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc)
+float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc, const float* dparams)
 {
   const uint   mflags    = m_materials[currMatId].cflags;
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
-  const float4 normalTex = m_textures[normalMapId]->sample(texCoordT);
+  const float4 normalTex = Diff_Tex2D(normalMapId, texCoordT, dparams);
   const float3 normalTS  = NormalMapTransform(mflags, to_float3(normalTex));
   
   const float3   bitan = cross(n, tan);
@@ -166,7 +171,7 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
 }
 
 BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                             MisData* a_misPrev, const uint a_currRayFlags)
+                                             MisData* a_misPrev, const uint a_currRayFlags, const float* dparams)
 {
   BsdfSample res;
   {
@@ -180,7 +185,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   uint     mtype     = m_materials[currMatId].mtype;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
-    currMatId = MaterialBlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
+    currMatId = BlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res, dparams);
     mtype     = m_materials[currMatId].mtype;
   }
   
@@ -194,11 +199,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
         float3 shadeNormal = n;
 
   if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF)
-    shadeNormal = BumpMapping(normalMapId, currMatId, geomNormal, tan, tc);
+    shadeNormal = BumpMapping(normalMapId, currMatId, geomNormal, tan, tc, dparams);
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
-  const float4 texColor  = m_textures[texId]->sample(texCoordT);
+  const float4 texColor  = Diff_Tex2D(texId, texCoordT, dparams);
   const float4 rands     = rndFloat4_Pseudo(a_gen);
 
   switch(mtype)
@@ -270,7 +275,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   return res;
 }
 
-BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc)
+BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams)
 {
   BsdfEval res;
   {
@@ -309,7 +314,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
     const uint normalMapId = m_materials[currMat.id].texid[1];
     if(KSPEC_BUMP_MAPPING != 0 && normalMapId != 0xFFFFFFFF) 
     {
-      shadeNormal = BumpMapping(normalMapId, currMat.id, geomNormal, tan, tc);
+      shadeNormal = BumpMapping(normalMapId, currMat.id, geomNormal, tan, tc, dparams);
       const float3 lDir     = l;     
       const float  clampVal = 1e-6f;  
       const float cosThetaOut1 = std::max(dot(lDir, geomNormal),  0.0f);
@@ -321,7 +326,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   texId     = m_materials[currMat.id].texid[0];
-    const float4 texColor  = m_textures[texId]->sample(texCoordT);
+    const float4 texColor  = Diff_Tex2D(texId, texCoordT, dparams); 
     const uint   mtype     = m_materials[currMat.id].mtype;
 
     BsdfEval currVal;
@@ -399,7 +404,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_BLEND:
       if(KSPEC_MAT_TYPE_BLEND != 0)
       {
-        auto childMats = MaterialBlendEval(currMat, wavelengths, l, v, geomNormal, tc);
+        auto childMats = BlendEval(currMat, wavelengths, l, v, geomNormal, tc, dparams);
         currMat = childMats.first;
         needPop = false;                        // we already put 'childMats.first' in 'currMat'
         if(top + 1 <= KSPEC_BLEND_STACK_SIZE)
