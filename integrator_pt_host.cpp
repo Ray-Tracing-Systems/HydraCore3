@@ -54,7 +54,7 @@ void Integrator::NaivePathTraceBlock(uint tid, uint channels, float* out_color, 
   naivePtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum)
+void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum, const float* dparams)
 {
   ConsoleProgressBar progress(tid);
   progress.Start();
@@ -64,7 +64,7 @@ void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint 
   #endif
   for (int i = 0; i < tid; ++i) {
     for (int j = 0; j < a_passNum; ++j) {
-      PathTrace(uint(i), channels, out_color);
+      PathTrace(uint(i), channels, out_color, dparams);
     }
     progress.Update();
   }
