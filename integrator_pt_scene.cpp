@@ -1161,7 +1161,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     if(mat_type == hydraOldMatTypeStr)
     {
       mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
-      if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
+      if(mat.mtype == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
         m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
@@ -1207,7 +1207,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
         mat.data[EMISSION_MULT] = m_lights[lightId].mult;
 
-        if(as_uint(mat.data[EMISSION_SPECID0]) != m_lights[lightId].specId)
+        if(mat.spdid[0] != m_lights[lightId].specId)
           std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
                     << "Using values from light intensity node. lightId = " << lightId << std::endl;
         

@@ -305,18 +305,18 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
 
   // process light hit case
   //
-  if(as_uint(m_materials[matId].data[UINT_MTYPE]) == MAT_TYPE_LIGHT_SOURCE)
+  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
-    const uint texId       = as_uint(m_materials[matId].data[EMISSION_TEXID0]);
+    const uint   texId     = m_materials[matId].texid[0];
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    float4 texColor   = m_textures[texId]->sample(texCoordT);
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
     float4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
     float  lightMult  = m_materials[matId].data[EMISSION_MULT];
 
     float4 lightIntensity = lightColor * texColor * lightMult;
     if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0)
     {
-      const uint specId = as_uint(m_materials[matId].data[EMISSION_SPECID0]);
+      const uint specId = m_materials[matId].spdid[0];
       if(specId < 0xFFFFFFFF)
       {
         const uint2 data  = m_spec_offset_sz[specId];
