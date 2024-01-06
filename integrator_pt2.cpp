@@ -82,17 +82,13 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-float4 Integrator::Diff_Tex2D(uint texId, float2 texCoord, const float* dparams)
-{
-  return m_textures[texId]->sample(texCoord);
-}
-
 uint32_t Integrator::BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = m_materials[a_materialId].texid[0];
-  const float4 weightDat = Diff_Tex2D(texId, texCoordT, dparams);
+  //const float4 weightDat = Tex2DFetchAD(texId, texCoordT, dparams);
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
   const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_materialId].data[BLEND_WEIGHT] * weightTex;
 
@@ -121,7 +117,9 @@ MatIdWeightPair Integrator::BlendEval(MatIdWeight a_mat, float4 wavelengths, flo
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_mat.id].row0[0], m_materials[a_mat.id].row1[0], tc);
   const uint   texId     = m_materials[a_mat.id].texid[0];
-  const float4 weightDat = Diff_Tex2D(texId, texCoordT, dparams); 
+  //const float4 weightDat = Tex2DFetchAD(texId, texCoordT, dparams); 
+  const float4 weightDat = m_textures[texId]->sample(texCoordT);
+  
   const float  weightTex = weightDat.x;
   const float  weight    = m_materials[a_mat.id].data[BLEND_WEIGHT] * weightTex;
 
@@ -161,7 +159,8 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
 {
   const uint   mflags    = m_materials[currMatId].cflags;
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[1], m_materials[currMatId].row1[1], tc);
-  const float4 normalTex = Diff_Tex2D(normalMapId, texCoordT, dparams);
+  //const float4 normalTex = Tex2DFetchAD(normalMapId, texCoordT, dparams);
+  const float4 normalTex = m_textures[normalMapId]->sample(texCoordT);
   const float3 normalTS  = NormalMapTransform(mflags, to_float3(normalTex));
   
   const float3   bitan = cross(n, tan);
@@ -203,7 +202,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
-  const float4 texColor  = Diff_Tex2D(texId, texCoordT, dparams);
+  //const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
+  const float4 texColor  = m_textures[texId]->sample(texCoordT);
   const float4 rands     = rndFloat4_Pseudo(a_gen);
 
   switch(mtype)
@@ -326,7 +326,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   texId     = m_materials[currMat.id].texid[0];
-    const float4 texColor  = Diff_Tex2D(texId, texCoordT, dparams); 
+    //const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
     const uint   mtype     = m_materials[currMat.id].mtype;
 
     BsdfEval currVal;

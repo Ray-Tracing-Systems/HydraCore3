@@ -11,6 +11,7 @@ if(USE_ENZYME)
   set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}") # $ export CXX=/usr/bin/clang++-17
   set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  add_definitions(-DUSE_ENZYME)
 endif()
 
 # get rid of annoying MSVC warnings.

@@ -233,8 +233,6 @@ public:
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
-  
-  virtual float4 Diff_Tex2D(uint texId, float2 texCoord, const float* dparams);
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 

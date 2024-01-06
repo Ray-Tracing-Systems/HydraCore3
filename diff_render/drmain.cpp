@@ -185,7 +185,7 @@ int main(int argc, const char** argv)
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
 
-    float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
+    float loss = pImpl->RayTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
     
     std::cout << ", loss = " << loss << std::endl;

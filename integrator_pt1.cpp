@@ -311,7 +311,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   {
     const uint   texId     = m_materials[matId].texid[0];
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
-    const float4 texColor  = Diff_Tex2D(texId, texCoordT, dparams);
+    //const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
     float4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
     float  lightMult  = m_materials[matId].data[EMISSION_MULT];
 
