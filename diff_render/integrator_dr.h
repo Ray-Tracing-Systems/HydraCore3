@@ -44,6 +44,9 @@ public:
 
   float RayTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
                    const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize); ///<! return loss for printing
+
+  float PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
+                    const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize); ///<! return loss for printing                   
   
   // interaction with diff rendering
   //
@@ -71,6 +74,8 @@ public:
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  float4 PathTrace(uint tid, uint channels, float* out_color, const float* dparams);
 
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData,
@@ -110,6 +115,12 @@ public:
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);
 
+  uint  RemapMaterialId(uint a_mId, int a_instId, const float* dparams);
+  float LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, const float* dparams);
+
+  float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, const float* dparams);
+  float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, const float* dparams);
+  LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint, const float* dparams);
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

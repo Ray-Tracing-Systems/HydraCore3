@@ -259,23 +259,20 @@ float4 IntegratorDR::CastRayDR(uint tid, uint channels, float* out_color, const 
 extern double __enzyme_autodiff(void*, ...);
 int enzyme_const, enzyme_dup, enzyme_out;
 
-float PixelLoss(IntegratorDR* __restrict__ pIntegrator,
-                const float*  __restrict__ a_refImg,
-                      float*  __restrict__ out_color,
-                const float*  __restrict__ a_data, 
-                const uint*   __restrict__ in_pakedXY, 
-                uint tid, uint channels, uint pitch,
-                float*  __restrict__       outLoss)
+float PixelLossRT(IntegratorDR* __restrict__ pIntegrator,
+                  const float*  __restrict__ a_refImg,
+                        float*  __restrict__ out_color,
+                  const float*  __restrict__ a_data, 
+                  const uint*   __restrict__ in_pakedXY, 
+                  uint tid, uint channels, uint pitch,
+                  float*  __restrict__       outLoss)
 {
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  const uint yRef = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
-
-  //float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
+  const uint yRef  = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
   float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
-
   float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 
                             a_refImg[(yRef*pitch+x)*channels + 1], 
                             a_refImg[(yRef*pitch+x)*channels + 2], 0.0f);
@@ -285,6 +282,32 @@ float PixelLoss(IntegratorDR* __restrict__ pIntegrator,
   (*outLoss) = loss;
   return loss;
 }                     
+
+
+float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
+                  const float*  __restrict__ a_refImg,
+                        float*  __restrict__ out_color,
+                  const float*  __restrict__ a_data, 
+                  const uint*   __restrict__ in_pakedXY, 
+                  uint tid, uint channels, uint pitch,
+                  float*  __restrict__       outLoss)
+{
+  const uint XY = in_pakedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  const uint yRef  = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
+  float4 colorRend = pIntegrator->PathTrace(tid, channels, out_color, a_data);
+  //float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
+  float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 
+                            a_refImg[(yRef*pitch+x)*channels + 1], 
+                            a_refImg[(yRef*pitch+x)*channels + 2], 0.0f);
+
+  float4 diff = colorRend - colorRef;
+  float loss = LiteMath::dot3(diff, diff);
+  (*outLoss) = loss;
+  return loss;
+}    
 
 
 float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
@@ -310,7 +333,7 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
   {
     for (int i = 0; i < int(tid); ++i) {
       float lossVal = 0.0f;
-      __enzyme_autodiff((void*)PixelLoss, 
+      __enzyme_autodiff((void*)PixelLossRT, 
                          enzyme_const, this,
                          enzyme_const, a_refImg,
                          enzyme_const, out_color,
@@ -326,7 +349,73 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
   else
   {
     for (int i = 0; i < int(tid); ++i) {
-      float lossVal = PixelLoss(this, a_refImg, out_color, a_data, m_packedXY.data(),
+      float lossVal = PixelLossRT(this, a_refImg, out_color, a_data, m_packedXY.data(),
+                                uint(i), channels, m_winWidth, &lossVal);
+      avgLoss += float(lossVal)/float(a_passNum);
+    }
+  }
+
+  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+
+  // accumulate gradient from different threads (parallel reduction/hist)
+  //
+
+  //for(int i=0;i<MAXTHREADS;i++) 
+  //  for(size_t j=0;j<a_gradSize; j++)
+  //    a_dataGrad[j] += grads[i][j];
+
+  //avgLoss /= float(m_winWidth*m_winHeight);
+  //std::cout << "avgLoss = " << avgLoss << std::endl;
+  
+  //std::ofstream fout("z_grad.txt");
+  //for(size_t i=0; i<a_gradSize; i++)
+  //  fout << a_dataGrad[i]/float(a_passNum) << std::endl;
+  //fout.close();
+
+  return avgLoss;
+}
+
+
+float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
+                                const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
+{
+  memset(a_dataGrad, 0, sizeof(float)*a_gradSize);
+
+  // init separate gradient for each thread
+  //
+  //std::vector<float> grads[MAXTHREADS];
+  //for(int i=0;i<MAXTHREADS;i++)
+  //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
+
+  //double avgLoss = 0.0;
+  auto start = std::chrono::high_resolution_clock::now();
+  //#ifndef _DEBUG
+  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS)
+  //#endif
+
+  float avgLoss = 0.0f;
+  
+  if(m_gradMode != 0)
+  {
+    for (int i = 0; i < int(tid); ++i) {
+      float lossVal = 0.0f;
+      __enzyme_autodiff((void*)PixelLossPT, 
+                         enzyme_const, this,
+                         enzyme_const, a_refImg,
+                         enzyme_const, out_color,
+                         enzyme_dup,   a_data, a_dataGrad,
+                         enzyme_const, m_packedXY.data(),
+                         enzyme_const, uint(i),
+                         enzyme_const, channels,
+                         enzyme_const, m_winWidth,
+                         enzyme_const, &lossVal);
+      avgLoss += float(lossVal)/float(a_passNum);
+    }
+  }
+  else
+  {
+    for (int i = 0; i < int(tid); ++i) {
+      float lossVal = PixelLossRT(this, a_refImg, out_color, a_data, m_packedXY.data(),
                                 uint(i), channels, m_winWidth, &lossVal);
       avgLoss += float(lossVal)/float(a_passNum);
     }
@@ -498,8 +587,8 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, float4 wavelen
     {
       const float3 alphaTex = to_float3(texColor);    
       const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
-      const float4 etaSpec  = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, 0);
-      const float4 kSpec    = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K,   1);
+      const float4 etaSpec  = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, 0, dparams);
+      const float4 kSpec    = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K,   1, dparams);
       if(trEffectivelySmooth(alpha))
         conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
@@ -510,7 +599,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, float4 wavelen
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
       const float4 color       = texColor;
-      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0);
+      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0, dparams);
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
     }
     break;
@@ -518,7 +607,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, float4 wavelen
     if(KSPEC_MAT_TYPE_PLASTIC != 0)
     {
       const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
+      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0, dparams);
       if(m_spectral_mode == 0)
         reflSpec *= color;
 
@@ -636,8 +725,8 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
 
         if(!trEffectivelySmooth(alpha))
         {
-          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
-          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
+          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0, dparams);
+          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1, dparams);
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
 
@@ -649,7 +738,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
         const float4 color    = texColor;
-        const float4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0);
+        const float4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0, dparams);
 
         diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, color, &currVal);
 
@@ -661,7 +750,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
+        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0, dparams);
         if(m_spectral_mode == 0)
           reflSpec *= color;
         const uint precomp_id = m_materials[currMat.id].datai[0];
@@ -700,7 +789,6 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
@@ -813,7 +901,7 @@ void IntegratorDR::kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
 
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
-    const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
+    const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId, dparams);
 
     *rayFlags              = packMatId(currRayFlags, midRemaped);
     *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
@@ -859,7 +947,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
     return;
   }
   
-  const LightSample lSam = LightSampleRev(lightId, rands, hit.pos);
+  const LightSample lSam = LightSampleRev(lightId, rands, hit.pos, dparams);
   const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
@@ -872,7 +960,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, dparams);
     const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     
-    float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
+    float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, dparams);
     float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
     const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
     
@@ -963,7 +1051,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
       {
         if(lightId != 0xFFFFFFFF)
         {
-          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm);
+          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, dparams);
           misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
           if (prevPdfW <= 0.0f) // specular bounce
             misWeight = 1.0f;
@@ -1153,5 +1241,177 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
   }
 
   m_randomGens[tid] = *gen;
+}
+
+float4 IntegratorDR::PathTrace(uint tid, uint channels, float* out_color, const float* dparams)
+{
+  float4 accumColor, accumThroughput;
+  float4 rayPosAndNear, rayDirAndFar;
+  float4 wavelengths;
+  RandomGen gen; 
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, dparams);
+
+  for(uint depth = 0; depth < m_traceDepth; depth++) 
+  {
+    float4   shadeColor, hitPart1, hitPart2, hitPart3;
+    uint instId;
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, dparams);
+    if(isDeadRay(rayFlags))
+      break;
+    
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
+                             &gen, &shadeColor, dparams);
+
+    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags, dparams);
+
+    if(isDeadRay(rayFlags))
+      break;
+  }
+
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+                        &accumColor, dparams);
+
+  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color, dparams);
+  
+  return accumColor;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint IntegratorDR::RemapMaterialId(uint a_mId, int a_instId, const float* dparams)
+{
+  const int remapListId  = m_remapInst[a_instId];
+  if(remapListId == -1)
+    return a_mId;
+
+  const int r_offset     = m_allRemapListsOffsets[remapListId];
+  const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
+  const int2 offsAndSize = int2(r_offset, r_size);
+  
+  uint res = a_mId;
+  
+  // for (int i = 0; i < offsAndSize.y; i++) // linear search version
+  // {
+  //   int idRemapFrom = m_allRemapLists[offsAndSize.x + i * 2 + 0];
+  //   int idRemapTo   = m_allRemapLists[offsAndSize.x + i * 2 + 1];
+  //   if (idRemapFrom == a_mId) {
+  //     res = idRemapTo;
+  //     break;
+  //   }
+  // }
+
+  int low  = 0;
+  int high = offsAndSize.y - 1;              // binary search version
+  
+  while (low <= high)
+  {
+    const int mid         = low + ((high - low) / 2);
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + mid * 2 + 0];
+    if (uint(idRemapFrom) >= a_mId)
+      high = mid - 1;
+    else //if(a[mid]<i)
+      low = mid + 1;
+  }
+
+  if (high+1 < offsAndSize.y)
+  {
+    const int idRemapFrom = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 0];
+    const int idRemapTo   = m_allRemapLists[offsAndSize.x + (high + 1) * 2 + 1];
+    res                   = (uint(idRemapFrom) == a_mId) ? uint(idRemapTo) : a_mId;
+  }
+
+  return res;
+} 
+
+float IntegratorDR::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, const float* dparams)
+{
+  const uint gtype    = m_lights[a_lightId].geomType;
+  const float hitDist = length(illuminationPoint - lpos);
+  
+  float cosVal = 1.0f;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      // const float  lradius = m_lights[a_lightId].size.x;
+      // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
+      const float3 dirToV  = normalize(lpos - illuminationPoint);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
+        cosVal = 1.0f;
+      else
+        cosVal = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    };
+    break;
+
+    default:
+    cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+    break;
+  };
+  
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+}
+
+float4 IntegratorDR::SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, const float* dparams)
+{  
+  float4 res = m_materials[matId].colors[paramId];
+  if(a_wavelengths[0] == 0.0f)
+    return res;
+
+  const uint specId = m_materials[matId].spdid[paramSpecId];
+
+  if(specId < 0xFFFFFFFF)
+  {
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+  }
+
+  return res;
+}
+
+float4 IntegratorDR::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, const float* dparams)
+{  
+  float4 res = float4(m_materials[matId].data[paramId]);
+  if(a_wavelengths[0] == 0.0f)
+    return res;
+
+  const uint specId = m_materials[matId].spdid[paramSpecId];
+
+  if(specId < 0xFFFFFFFF)
+  {
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+  }
+
+  return res;
+}
+
+LightSample IntegratorDR::LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint, const float* dparams)
+{
+  const uint gtype = m_lights[a_lightId].geomType;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
+  };
 }
 
