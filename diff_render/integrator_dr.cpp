@@ -952,10 +952,12 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
   
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-  //const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
-  const bool   inShadow     = false;
-  const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
 
+  //const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+  //const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(hit.pos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(float4(0,0,0,0), to_float4(shadowRayDir, hitDist*0.9995f));
+  //const bool   inShadow     = false;
+  const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
   
   if(!inShadow && inIllumArea) 
   {
