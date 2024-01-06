@@ -34,7 +34,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
  * Download latest release from https://github.com/EnzymeAD/Enzyme
  * cd /path/to/Enzyme/enzyme
  * mkdir build && cd build
- * cmake -G Ninja .. -DLLVM_DIR=usr/lib/llvm-17/lib/cmake/llvm DClang_DIR=/usr/lib/cmake/clang-17
+ * cmake -G Ninja .. -DLLVM_DIR=usr/lib/llvm-17/lib/cmake/llvm -DClang_DIR=/usr/lib/cmake/clang-17
  * ninja
  * you should have 'ClangEnzyme-17.so' in 'enzyme/build/Enzyme'. You have to pass this DLL to clang via '-fplugin=...' when compile the project!
 
