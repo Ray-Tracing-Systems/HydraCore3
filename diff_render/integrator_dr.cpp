@@ -559,9 +559,10 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, float4 wavelen
   const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
   const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
 
-  res.val = lambertVal*color;
-  res.dir = lambertDir;
-  res.pdf = lambertPdf;
+  res.val   = lambertVal*color;
+  res.dir   = lambertDir;
+  res.pdf   = lambertPdf;
+  res.flags = RAY_FLAG_HAS_NON_SPEC;
 
   return res;
 }
