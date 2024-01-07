@@ -41,7 +41,6 @@ public:
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
-    m_dummy.resize(1);
   }
 
   virtual ~Integrator() { m_pAccelStruct = nullptr; }
@@ -68,7 +67,7 @@ public:
   void CastSingleRay  (uint tid, float* out_color                [[size("tid*4")]]);        ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
-  void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]], const float* dparams [[size("1")]]); ///<! MISPT and ShadowPT
+  void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
 
   void PathTraceFromInputRays(uint tid, uint channels, 
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
@@ -78,7 +77,7 @@ public:
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
-  virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum, const float* dparams = nullptr);
+  virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
@@ -96,8 +95,7 @@ public:
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
-                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData,
-                          const float* dparams);
+                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
 
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
@@ -110,14 +108,13 @@ public:
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags,
-                        const float* dparams);
+                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                         float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags, const float* dparams);
+                         float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, 
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
@@ -125,15 +122,15 @@ public:
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
                                 const uint* rayFlags, uint bounce,
-                                RandomGen* a_gen, float4* out_shadeColor, const float* dparams);
+                                RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
-                             float4* accumColor, const float* dparams);
+                             float4* accumColor);
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
   void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                const float4* wavelengths, float* out_color, const float* dparams);
+                                const float4* wavelengths, float* out_color);
 
   void kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, 
                                 float* out_color);
@@ -218,19 +215,19 @@ public:
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
   float4 GetEnvironmentColorAndPdf(float3 a_dir);
-  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc, const float* dparams);
+  float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
   BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags, const float* dparams);
+                                   MisData* a_misPrev, const uint a_currRayFlags);
                                     
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);
+  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                              MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams);
+                              MisData* a_misPrev, BsdfSample* a_pRes);
 
-  MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);
+  MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
 
@@ -298,7 +295,6 @@ public:
   std::vector<float> m_cie_z;
 
   std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
-  std::vector<float> m_dummy;
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

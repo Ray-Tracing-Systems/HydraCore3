@@ -1095,9 +1095,9 @@ float4 IntegratorDR::PathTrace(uint tid, uint channels, float* out_color, const 
         const float3 shadowRayDir = normalize(lSam.pos - hit.pos);                             // explicitSam.direction;
         const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; //
        
-        //const CRT_Hit hit2 = m_pAccelStruct->RayQuery_NearestHit(rayPosAndNear, rayDirAndFar);
+        //const CRT_Hit hit2   = m_pAccelStruct->RayQuery_NearestHit(rayPosAndNear, rayDirAndFar);
         //const float3 hitPos2 = ray_pos + hit2.t*0.999999f*ray_dir;
-        //const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(hitPos2, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+        //const bool inShadow  = m_pAccelStruct->RayQuery_AnyHit(to_float4(hitPos2, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
         
         const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
         const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
