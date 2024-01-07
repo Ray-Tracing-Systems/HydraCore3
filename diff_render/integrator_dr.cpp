@@ -317,14 +317,14 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
 
   // init separate gradient for each thread
   //
-  //std::vector<float> grads[MAXTHREADS];
-  //for(int i=0;i<MAXTHREADS;i++)
+  //std::vector<float> grads[MAXTHREADS_CPU];
+  //for(int i=0;i<MAXTHREADS_CPU;i++)
   //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
 
   //double avgLoss = 0.0;
   auto start = std::chrono::high_resolution_clock::now();
   //#ifndef _DEBUG
-  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS)
+  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS_CPU)
   //#endif
 
   float avgLoss = 0.0f;
@@ -360,7 +360,7 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
   // accumulate gradient from different threads (parallel reduction/hist)
   //
 
-  //for(int i=0;i<MAXTHREADS;i++) 
+  //for(int i=0;i<MAXTHREADS_CPU;i++) 
   //  for(size_t j=0;j<a_gradSize; j++)
   //    a_dataGrad[j] += grads[i][j];
 
@@ -383,14 +383,14 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
 
   // init separate gradient for each thread
   //
-  //std::vector<float> grads[MAXTHREADS];
-  //for(int i=0;i<MAXTHREADS;i++)
+  //std::vector<float> grads[MAXTHREADS_CPU];
+  //for(int i=0;i<MAXTHREADS_CPU;i++)
   //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
 
   //double avgLoss = 0.0;
   auto start = std::chrono::high_resolution_clock::now();
   //#ifndef _DEBUG
-  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS)
+  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS_CPU)
   //#endif
 
   float avgLoss = 0.0f;
@@ -430,7 +430,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
   // accumulate gradient from different threads (parallel reduction/hist)
   //
 
-  //for(int i=0;i<MAXTHREADS;i++) 
+  //for(int i=0;i<MAXTHREADS_CPU;i++) 
   //  for(size_t j=0;j<a_gradSize; j++)
   //    a_dataGrad[j] += grads[i][j];
 

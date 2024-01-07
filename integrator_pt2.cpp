@@ -82,7 +82,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-uint32_t Integrator::BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSample* a_pRes)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -96,6 +96,8 @@ uint32_t Integrator::BlendSampleAndEval(uint a_materialId, float4 wavelengths, R
 
   uint32_t selectedMatId = matId1;
   const float select = rndFloat1_Pseudo(a_gen);
+  RecordBlendRndNeeded(bounce, layer, select);
+
   if(select < weight)
   {
     a_pRes->pdf *= weight;
@@ -166,7 +168,7 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
   return normalize(inverse3x3(tangentTransform)*normalTS);
 }
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   BsdfSample res;
@@ -179,10 +181,12 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
   uint32_t currMatId = a_materialId;
   uint     mtype     = m_materials[currMatId].mtype;
+  uint     layer     = 0;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
-    currMatId = BlendSampleAndEval(currMatId, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
+    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = m_materials[currMatId].mtype;
+    layer++;
   }
   
   // BSDF is multiplied (outside) by cosThetaOut1.
@@ -201,6 +205,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
   const float4 rands     = rndFloat4_Pseudo(a_gen);
+
+  RecordMatRndNeeded(bounce, rands);
 
   switch(mtype)
   {

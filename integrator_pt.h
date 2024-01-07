@@ -107,7 +107,7 @@ public:
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
 
-  void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
+  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
@@ -219,12 +219,12 @@ public:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
-  uint32_t BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
@@ -322,6 +322,15 @@ public:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
+
+  // for recording path "constant" parameters, override in dereved class
+  virtual void RecordPixelRndIfNeeded(float2 offsets, float u){}
+  virtual void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit){}
+  virtual void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow){}
+  virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
+  virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
+  virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
+  
 };
 
 #endif
