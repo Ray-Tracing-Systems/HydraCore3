@@ -75,7 +75,8 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  float4 PathTraceReplay(uint tid, uint channels, float* out_color, const float* dparams);
+  float4 PathTraceReplay(uint tid, uint channels, uint cpuThreadId, float* out_color, 
+                         const float* drands, const float* dparams);
 
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, uint* rayFlags, MisData* misData,

@@ -68,7 +68,6 @@ uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint l
   const uint matId2 = m_materials[a_materialId].datai[1];
 
   uint32_t selectedMatId = matId1;
-  //const float select = rndFloat1_Pseudo(a_gen);
   auto cpuThreadId   = omp_get_thread_num();
   const float select = m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_BLD_ID + layer];
   
@@ -198,9 +197,8 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
-  //const float4 rands     = rndFloat4_Pseudo(a_gen);
+  
   auto cpuThreadId   = omp_get_thread_num();
-  //const float4 rands = m_recorded[cpuThreadId].perBounce[bounce].matRands; 
   const float4 rands = float4(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0],
                               m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
                               m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2],
@@ -583,12 +581,8 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
 
-  //const float2 rands = rndFloat2_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  //const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  //const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
   
   auto cpuThreadId   = omp_get_thread_num();
-  //const float2 rands = m_recorded[cpuThreadId].perBounce[bounce].lgtRands;
   const float2 rands = float2(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 0],
                               m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 1]);
 
@@ -1344,7 +1338,8 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
   return avgLoss;
 }
 
-float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, float* out_color, const float* dparams)
+float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, float* out_color, 
+                                     const float* drands, const float* dparams)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -1382,18 +1377,20 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, float* out_color, 
 float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
                   const float*  __restrict__ a_refImg,
                         float*  __restrict__ out_color,
+                  const float*  __restrict__ a_rands,
                   const float*  __restrict__ a_data, 
                   const uint*   __restrict__ in_pakedXY, 
-                  uint tid, uint channels, uint pitch,
+                  uint tid, uint channels, uint pitch, uint cpuThreadId,
                   float*  __restrict__       outLoss)
 {
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
+  float4 colorRend = pIntegrator->PathTraceReplay(tid, channels, cpuThreadId, out_color, 
+                                                  a_rands, a_data);
+
   const uint yRef  = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
-  float4 colorRend = pIntegrator->PathTraceReplay(tid, channels, out_color, a_data);
-  //float4 colorRend = pIntegrator->CastRayDR(tid, channels, out_color, a_data);
   float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 
                             a_refImg[(yRef*pitch+x)*channels + 1], 
                             a_refImg[(yRef*pitch+x)*channels + 2], 0.0f);
@@ -1431,7 +1428,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
     for (int i = 0; i < int(tid); ++i) {
       float lossVal = 0.0f;
       for(int passId = 0; passId < int(a_passNum); passId++) {
-        
+
         PathTrace(i, channels, out_color); // record non differentiable data during common PT 
 
         //__enzyme_autodiff((void*)PixelLossPT, 
@@ -1445,7 +1442,12 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
         //                   enzyme_const, m_winWidth,
         //                   enzyme_const, &lossVal);
   
-        lossVal = PixelLossPT(this, a_refImg, out_color, a_data, m_packedXY.data(), uint(i), channels, m_winWidth, &lossVal);
+        auto cpuThreadId = omp_get_thread_num();
+
+        lossVal = PixelLossPT(this, a_refImg, out_color, 
+                              this->m_recorded[cpuThreadId].perBounceRands.data(), a_data, 
+                              m_packedXY.data(), uint(i), channels, m_winWidth, cpuThreadId, &lossVal);
+
         avgLoss += float(lossVal)/float(a_passNum);
       }
     }
