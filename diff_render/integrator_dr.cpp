@@ -152,25 +152,25 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     res.ior   = 1.0f;
   }
 
-  // const uint32_t currMatId = a_materialId;
-  // const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
-  // const uint   texId     = m_materials[currMatId].texid[0];
-  // const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
-  // //const float4 rands     = rndFloat4_Pseudo(a_gen);
-  //const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
-  //                            drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
+  const uint32_t currMatId = a_materialId;
+  const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
+  const uint   texId     = m_materials[currMatId].texid[0];
+  const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
+  const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
+                              drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
 
-  //const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-  //
-  //const float3 lambertDir   = lambertSample(float2(rands.x, rands.y), v, n);
-  //const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
-  //const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
-  //
-  //res.val   = lambertVal*color;
-  //res.dir   = lambertDir;
-  //res.pdf   = lambertPdf;
-  //res.flags = RAY_FLAG_HAS_NON_SPEC;
-
+  const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
+  
+  const float3 lambertDir   = lambertSample(float2(rands.x, rands.y), v, n);
+  const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
+  const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
+  
+  res.val   = lambertVal*color;
+  res.dir   = lambertDir;
+  res.pdf   = lambertPdf;
+  res.flags = RAY_FLAG_HAS_NON_SPEC;
+  
+  /*
   uint32_t currMatId = a_materialId;
   uint     mtype     = m_materials[currMatId].mtype;
   uint     layer     = 0;
@@ -265,7 +265,8 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     const float cosThetaOut2 = std::abs(dot(res.dir, shadeNormal));
     res.val *= cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
   }
-
+  */
+ 
   return res;
 }
 
@@ -277,17 +278,18 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
     res.pdf = 0.0f;
   }
 
-  //const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
-  //const uint   texId     = m_materials[a_materialId].texid[0];
-  //const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
-  //const float4 color     = m_materials[a_materialId].colors[GLTF_COLOR_BASE] * texColor;
-  //
-  //float lambertVal       = lambertEvalBSDF(l, v, n);
-  //const float lambertPdf = lambertEvalPDF (l, v, n);    
-  //
-  //res.val = lambertVal*color;
-  //res.pdf = lambertPdf;
-
+  const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
+  const uint   texId     = m_materials[a_materialId].texid[0];
+  const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
+  const float4 color     = m_materials[a_materialId].colors[GLTF_COLOR_BASE] * texColor;
+  
+  float lambertVal       = lambertEvalBSDF(l, v, n);
+  const float lambertPdf = lambertEvalPDF (l, v, n);    
+  
+  res.val = lambertVal*color;
+  res.pdf = lambertPdf;
+  
+  /*
   MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
   MatIdWeight material_stack[KSPEC_BLEND_STACK_SIZE];
   if(KSPEC_MAT_TYPE_BLEND != 0)
@@ -424,6 +426,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
     }
 
   } while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
+  */
 
   return res;
 }
@@ -1364,13 +1367,13 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 }
 
 float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
+                  uint tid, uint channels, uint pitch, uint cpuThreadId,
                   const float*  __restrict__ a_refImg,
                         float*  __restrict__ out_color,
-                  const float*  __restrict__ a_drands,
-                  const float*  __restrict__ a_dparams, 
                   const uint*   __restrict__ in_pakedXY, 
-                  uint tid, uint channels, uint pitch, uint cpuThreadId,
-                  float*  __restrict__       outLoss)
+                  float*        __restrict__ outLoss,
+                  const float*  __restrict__ a_drands,
+                  const float*  __restrict__ a_dparams)
 {
   const uint XY = in_pakedXY[tid];
   const uint x  = (XY & 0x0000FFFF);
@@ -1418,24 +1421,26 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
       float lossVal = 0.0f;
       for(int passId = 0; passId < int(a_passNum); passId++) {
 
-        PathTrace(i, channels, out_color); // record non differentiable data during common PT 
-
-        //__enzyme_autodiff((void*)PixelLossPT, 
-        //                   enzyme_const, this,
-        //                   enzyme_const, a_refImg,
-        //                   enzyme_const, out_color,
-        //                   enzyme_dup,   a_data, a_dataGrad,
-        //                   enzyme_const, m_packedXY.data(),
-        //                   enzyme_const, uint(i),
-        //                   enzyme_const, channels,
-        //                   enzyme_const, m_winWidth,
-        //                   enzyme_const, &lossVal);
-  
+        this->PathTrace(i, channels, out_color); // record non differentiable data during common PT 
+        
         auto cpuThreadId = omp_get_thread_num();
 
-        lossVal = PixelLossPT(this, a_refImg, out_color, 
-                              this->m_recorded[cpuThreadId].perBounceRands.data(), a_data, 
-                              m_packedXY.data(), uint(i), channels, m_winWidth, cpuThreadId, &lossVal);
+        __enzyme_autodiff((void*)PixelLossPT, 
+                           enzyme_const, this,
+                           enzyme_const, uint(i),
+                           enzyme_const, channels,
+                           enzyme_const, m_winWidth,
+                           enzyme_const, cpuThreadId,
+                           enzyme_const, a_refImg,
+                           enzyme_const, out_color,
+                           enzyme_const, m_packedXY.data(),
+                           enzyme_const, &lossVal,
+                           enzyme_const, this->m_recorded[cpuThreadId].perBounceRands.data(),
+                           enzyme_dup,   a_data, a_dataGrad);
+
+        //lossVal = PixelLossPT(this, uint(i), channels, m_winWidth, cpuThreadId, 
+        //                      a_refImg, out_color, m_packedXY.data(), &lossVal,
+        //                      this->m_recorded[cpuThreadId].perBounceRands.data(), a_data);
 
         avgLoss += float(lossVal)/float(a_passNum);
       }
@@ -1445,7 +1450,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
   {
     //for (int i = 0; i < int(tid); ++i) {
     //  float lossVal = PixelLossPT(this, a_refImg, out_color, a_data, m_packedXY.data(),
-    //                            uint(i), channels, m_winWidth, &lossVal);
+    //                              uint(i), channels, m_winWidth, &lossVal);
     //  avgLoss += float(lossVal)/float(a_passNum);
     //}
   }
