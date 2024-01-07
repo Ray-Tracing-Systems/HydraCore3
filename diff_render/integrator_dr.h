@@ -75,13 +75,13 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  float4 PathTrace(uint tid, uint channels, float* out_color, const float* dparams);
+  float4 PathTraceReplay(uint tid, uint channels, float* out_color, const float* dparams);
 
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData,
                           const float* dparams);
 
-  void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
+  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags,
                         const float* dparams);
 
@@ -105,7 +105,7 @@ public:
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc, const float* dparams);
 
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags, const float* dparams);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);

@@ -21,6 +21,8 @@ using namespace LiteMath;
 
 void IntegratorDR::RecordPixelRndIfNeeded(float2 offsets, float u)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].pixelOffsets = offsets;
   m_recorded[cpuThreadId].waveSelector = u;
@@ -28,18 +30,24 @@ void IntegratorDR::RecordPixelRndIfNeeded(float2 offsets, float u)
 
 void IntegratorDR::RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].perBounce[bounceId].hit = hit;
 }
 
 void IntegratorDR::RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].perBounce[bounceId].inShadow = inShadow ? 1 : 0;
 }
 
 void IntegratorDR::RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].perBounce[bounceId].lightId  = lightId;
   m_recorded[cpuThreadId].perBounce[bounceId].lgtRands = rands;
@@ -47,12 +55,16 @@ void IntegratorDR::RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2
 
 void IntegratorDR::RecordMatRndNeeded(uint32_t bounceId, float4 rands)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].perBounce[bounceId].matRands = rands;
 }
 
 void IntegratorDR::RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand)
 {
+  if(m_recordMode != RECORD_ALL)
+    return;
   auto cpuThreadId = omp_get_thread_num();
   m_recorded[cpuThreadId].perBounce[bounceId].blendRnd[layer] = rand;
 }
