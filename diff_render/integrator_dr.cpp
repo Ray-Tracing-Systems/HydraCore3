@@ -56,7 +56,7 @@ std::pair<size_t, size_t> IntegratorDR::PutDiffTex2D(uint32_t texId, uint32_t wi
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, float3 v, float3 n, float2 tc, 
-                                          MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams)
+                                          MisData* a_misPrev, BsdfSample* a_pRes, const float* drands, const float* dparams)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = m_materials[a_materialId].texid[0];
@@ -68,8 +68,7 @@ uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint l
   const uint matId2 = m_materials[a_materialId].datai[1];
 
   uint32_t selectedMatId = matId1;
-  auto cpuThreadId   = omp_get_thread_num();
-  const float select = m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_BLD_ID + layer];
+  const float select     = drands[bounce*RND_PER_BOUNCE + RND_BLD_ID + layer];
   
   if(select < weight)
   {
@@ -142,7 +141,7 @@ float3 IntegratorDR::BumpMapping(uint normalMapId, uint currMatId, float3 n, flo
 }
 
 BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, float3 v, float3 n, float3 tan, float2 tc, 
-                                               MisData* a_misPrev, const uint a_currRayFlags, const float* dparams)
+                                               MisData* a_misPrev, const uint a_currRayFlags, const float* drands, const float* dparams)
 {
   BsdfSample res;
   {
@@ -158,8 +157,8 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   // const uint   texId     = m_materials[currMatId].texid[0];
   // const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
   // //const float4 rands     = rndFloat4_Pseudo(a_gen);
-  // auto cpuThreadId   = omp_get_thread_num();
-  // const float4 rands = m_recorded[cpuThreadId].perBounce[bounce].matRands; 
+  //const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
+  //                            drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
 
   //const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
   //
@@ -177,7 +176,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   uint     layer     = 0;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
-    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, v, n, tc, a_misPrev, &res, dparams);
+    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, v, n, tc, a_misPrev, &res, drands, dparams);
     mtype     = m_materials[currMatId].mtype;
     layer++;
   }
@@ -198,11 +197,8 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
   
-  auto cpuThreadId   = omp_get_thread_num();
-  const float4 rands = float4(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0],
-                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
-                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2],
-                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
+  const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
+                              drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
 
   switch(mtype)
   {
@@ -442,7 +438,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                       float4* accumColor,    float4* accumuThoroughput,
                                       uint* rayFlags, MisData* misData, 
-                                      const float* dparams) // 
+                                      const float* drands, const float* dparams) // 
 {
   if(tid >= m_maxThreadId)
     return;
@@ -456,10 +452,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  auto cpuThreadId = omp_get_thread_num();
-  int size = int(m_recorded[cpuThreadId].perBounceRands.size());
-  const float2 pixelOffsets = float2(m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 0],
-                                     m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 1]);
+  const float2 pixelOffsets = float2(drands[RANDS_ARRAY_SIZE - LENS_RANDS + 0], drands[RANDS_ARRAY_SIZE - LENS_RANDS + 1]);
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -469,7 +462,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    float u = m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 3];
+    float u = drands[RANDS_ARRAY_SIZE - LENS_RANDS + 3];
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
   }
   else
@@ -483,7 +476,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
 }
 
-void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
+void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar,
                                     float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags,
                                     const float* dparams)
 {
@@ -495,9 +488,7 @@ void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosA
 
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
-
-  auto cpuThreadId  = omp_get_thread_num();
-  const CRT_Hit hit = m_recorded[cpuThreadId].perBounce[bounce].hit;
+  const CRT_Hit hit   = m_recorded[cpuThreadId].perBounce[bounce].hit;
 
   if(hit.geomId != uint32_t(-1))
   {
@@ -558,9 +549,9 @@ void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosA
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
+void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                             const float4* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                            const uint* rayFlags, uint bounce, float4* out_shadeColor, const float* dparams)
+                                            const uint* rayFlags, uint bounce, float4* out_shadeColor, const float* drands, const float* dparams)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -581,11 +572,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
 
-  
-  auto cpuThreadId   = omp_get_thread_num();
-  const float2 rands = float2(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 0],
-                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 1]);
-
+  const float2 rands = float2(drands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 1]);
   const int lightId  = m_recorded[cpuThreadId].perBounceLightId[bounce];
 
   if(lightId < 0) // no lights or invalid light id
@@ -631,7 +618,8 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
 
 void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                                      const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                                     float4* accumColor, float4* accumThoroughput, MisData* misPrev, uint* rayFlags, const float* dparams)
+                                     float4* accumColor, float4* accumThoroughput, MisData* misPrev, uint* rayFlags, 
+                                     const float* drands, const float* dparams)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -724,7 +712,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     return;
   }
   
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounce, lambda, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags, dparams);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, bounce, lambda, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags, drands, dparams);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
@@ -1346,21 +1334,22 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
   float4 wavelengths; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &rayFlags, &mis, dparams);
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &rayFlags, &mis, drands, dparams);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4 hitPart1, hitPart2, hitPart3, shadeColor;
     uint   instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, dparams);
+    kernel_RayTrace2(tid, depth, cpuThreadId, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, dparams);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
-                             &shadeColor, dparams);
+    kernel_SampleLightSource(tid, cpuThreadId, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
+                             &shadeColor, drands, dparams);
     
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &mis, &rayFlags, dparams);
+                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &mis, &rayFlags, 
+                      drands, dparams);
     
 
     if(isDeadRay(rayFlags))
@@ -1377,8 +1366,8 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
                   const float*  __restrict__ a_refImg,
                         float*  __restrict__ out_color,
-                  const float*  __restrict__ a_rands,
-                  const float*  __restrict__ a_data, 
+                  const float*  __restrict__ a_drands,
+                  const float*  __restrict__ a_dparams, 
                   const uint*   __restrict__ in_pakedXY, 
                   uint tid, uint channels, uint pitch, uint cpuThreadId,
                   float*  __restrict__       outLoss)
@@ -1388,7 +1377,7 @@ float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
   float4 colorRend = pIntegrator->PathTraceReplay(tid, channels, cpuThreadId, out_color, 
-                                                  a_rands, a_data);
+                                                  a_drands, a_dparams);
 
   const uint yRef  = pIntegrator->m_winHeight - y - 1; // in input images and when load data from HDD y has different direction
   float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 

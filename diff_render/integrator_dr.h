@@ -80,19 +80,20 @@ public:
 
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, uint* rayFlags, MisData* misData,
-                          const float* dparams);
+                          const float* drands, const float* dparams);
 
-  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
+  void kernel_RayTrace2(uint tid, uint bounce, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags,
                         const float* dparams);
 
-  void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
+  void kernel_SampleLightSource(uint tid, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                const uint* rayFlags, uint bounce, float4* out_shadeColor, const float* dparams);
+                                const uint* rayFlags, uint bounce, float4* out_shadeColor, 
+                                const float* drands, const float* dparams);
   
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                         float4* accumColor, float4* accumThoroughput, MisData* a_prevMisData, uint* rayFlags, const float* dparams);
+                         float4* accumColor, float4* accumThoroughput, MisData* a_prevMisData, uint* rayFlags, const float* drands, const float* dparams);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                              float4* accumColor, const float* dparams);                              
@@ -106,12 +107,12 @@ public:
 
 
   BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags, const float* dparams);
+                                   MisData* a_misPrev, const uint a_currRayFlags, const float* drands, const float* dparams);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);
 
   uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, float3 v, float3 n, float2 tc, 
-                              MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams);
+                              MisData* a_misPrev, BsdfSample* a_pRes, const float* drands, const float* dparams);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);
 
@@ -134,7 +135,8 @@ public:
   static constexpr int RND_BLD_ID     = 6; // float   blendRnd[MAX_REC_BLEND];
   static constexpr int LENS_RANDS     = 4; // pixels offsets, wave selector, lens offset in future 
 
-  int MAXTHREADS_CPU = 1;
+  int MAXTHREADS_CPU   = 1;
+  int RANDS_ARRAY_SIZE = 0;
 
   virtual void SetMaxThreadsAndBounces(int a_maxThreads, int a_maxBounce)
   {
@@ -145,8 +147,9 @@ public:
       rec.perBounceRands.resize(RND_PER_BOUNCE*a_maxBounce + LENS_RANDS); // 4 for pixel offsets and waves selector
     }
 
-    MAXTHREADS_CPU = a_maxThreads;
-    m_traceDepth   = a_maxBounce;
+    MAXTHREADS_CPU   = a_maxThreads;
+    m_traceDepth     = a_maxBounce;
+    RANDS_ARRAY_SIZE = int(m_recorded[0].perBounceRands.size());
   }
  
   void RecordPixelRndIfNeeded(float2 offsets, float u) override;
