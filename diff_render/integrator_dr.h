@@ -110,7 +110,7 @@ public:
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);
 
-  uint32_t BlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);

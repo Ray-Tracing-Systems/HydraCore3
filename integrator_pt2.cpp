@@ -177,6 +177,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     res.pdf   = 1.0f;
     res.dir   = float3(0,1,0);
     res.flags = a_currRayFlags;
+    res.ior   = 1.0f;
   }
 
   uint32_t currMatId = a_materialId;
