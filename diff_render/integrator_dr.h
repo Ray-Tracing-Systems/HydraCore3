@@ -78,7 +78,7 @@ public:
   float4 PathTraceReplay(uint tid, uint channels, float* out_color, const float* dparams);
 
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
-                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData,
+                          float4* accumColor, float4* accumuThoroughput, uint* rayFlags, MisData* misData,
                           const float* dparams);
 
   void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
@@ -87,17 +87,16 @@ public:
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                const uint* rayFlags, uint bounce,
-                                RandomGen* a_gen, float4* out_shadeColor, const float* dparams);
+                                const uint* rayFlags, uint bounce, float4* out_shadeColor, const float* dparams);
   
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                         float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags, const float* dparams);
+                         float4* accumColor, float4* accumThoroughput, MisData* a_prevMisData, uint* rayFlags, const float* dparams);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                              float4* accumColor, const float* dparams);                              
 
-  void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
+  void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, 
                                 const float4* wavelengths, float* out_color, const float* dparams);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,12 +104,12 @@ public:
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc, const float* dparams);
 
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags, const float* dparams);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams);
 
-  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc, const float* dparams);

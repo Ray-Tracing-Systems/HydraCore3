@@ -55,7 +55,7 @@ std::pair<size_t, size_t> IntegratorDR::PutDiffTex2D(uint32_t texId, uint32_t wi
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, float3 v, float3 n, float2 tc, 
                                           MisData* a_misPrev, BsdfSample* a_pRes, const float* dparams)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -142,7 +142,7 @@ float3 IntegratorDR::BumpMapping(uint normalMapId, uint currMatId, float3 n, flo
   return normalize(inverse3x3(tangentTransform)*normalTS);
 }
 
-BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, float3 v, float3 n, float3 tan, float2 tc, 
                                                MisData* a_misPrev, const uint a_currRayFlags, const float* dparams)
 {
   BsdfSample res;
@@ -178,7 +178,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   uint     layer     = 0;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
-    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, a_gen, v, n, tc, a_misPrev, &res, dparams);
+    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, v, n, tc, a_misPrev, &res, dparams);
     mtype     = m_materials[currMatId].mtype;
     layer++;
   }
@@ -439,7 +439,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
 void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                       float4* accumColor,    float4* accumuThoroughput,
-                                      RandomGen* gen, uint* rayFlags, MisData* misData, 
+                                      uint* rayFlags, MisData* misData, 
                                       const float* dparams) // 
 {
   if(tid >= m_maxThreadId)
@@ -447,7 +447,6 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
@@ -466,13 +465,11 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
-  float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
     //float u = rndFloat1_Pseudo(&genLocal);
     float u = m_recorded[cpuThreadId].waveSelector;
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
   }
   else
   {
@@ -483,7 +480,6 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = genLocal;
 }
 
 void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
@@ -564,8 +560,7 @@ void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosA
 
 void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
                                             const float4* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                            const uint* rayFlags, uint bounce,
-                                            RandomGen* a_gen, float4* out_shadeColor, const float* dparams)
+                                            const uint* rayFlags, uint bounce, float4* out_shadeColor, const float* dparams)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -638,7 +633,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
 
 void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                                      const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                                     float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* misPrev, uint* rayFlags, const float* dparams)
+                                     float4* accumColor, float4* accumThoroughput, MisData* misPrev, uint* rayFlags, const float* dparams)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -731,7 +726,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     return;
   }
   
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounce, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags, dparams);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, bounce, lambda, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags, dparams);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
@@ -785,7 +780,7 @@ void IntegratorDR::kernel_HitEnvironment(uint tid, const uint* rayFlags, const f
 }
 
 
-void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
+void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY,
                                             const float4* wavelengths, float* out_color, const float* dparams)
 {
   if(tid >= m_maxThreadId)
@@ -891,7 +886,6 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
     }
   }
 
-  m_randomGens[tid] = *gen;
 }
 
 
@@ -1098,7 +1092,6 @@ float4 IntegratorDR::Tex2DFetchAD(uint texId, float2 a_uv, const float* tex_data
 
   if(info.offset != size_t(-1) && tex_data != nullptr && m_gradMode != 0) 
   {
-    tex_data += info.offset;
     const float m_fw     = info.fwidth;
     const float m_fh     = info.fheight;
     const int tex_width  = info.width;
@@ -1128,10 +1121,10 @@ float4 IntegratorDR::Tex2DFetchAD(uint texId, float2 a_uv, const float* tex_data
     const float w4 = fx  * fy;
     
     const int4 offsets = bilinearOffsets(ffx, ffy, tex_width, tex_height);
-    const float4 f1    = float4(tex_data[offsets.x*4+0], tex_data[offsets.x*4+1], tex_data[offsets.x*4+2], tex_data[offsets.x*4+3]);
-    const float4 f2    = float4(tex_data[offsets.y*4+0], tex_data[offsets.y*4+1], tex_data[offsets.y*4+2], tex_data[offsets.y*4+3]);
-    const float4 f3    = float4(tex_data[offsets.z*4+0], tex_data[offsets.z*4+1], tex_data[offsets.z*4+2], tex_data[offsets.z*4+3]);
-    const float4 f4    = float4(tex_data[offsets.w*4+0], tex_data[offsets.w*4+1], tex_data[offsets.w*4+2], tex_data[offsets.w*4+3]);
+    const float4 f1    = float4(tex_data[info.offset+offsets.x*4+0], tex_data[info.offset+offsets.x*4+1], tex_data[info.offset+offsets.x*4+2], tex_data[info.offset+offsets.x*4+3]);
+    const float4 f2    = float4(tex_data[info.offset+offsets.y*4+0], tex_data[info.offset+offsets.y*4+1], tex_data[info.offset+offsets.y*4+2], tex_data[info.offset+offsets.y*4+3]);
+    const float4 f3    = float4(tex_data[info.offset+offsets.z*4+0], tex_data[info.offset+offsets.z*4+1], tex_data[info.offset+offsets.z*4+2], tex_data[info.offset+offsets.z*4+3]);
+    const float4 f4    = float4(tex_data[info.offset+offsets.w*4+0], tex_data[info.offset+offsets.w*4+1], tex_data[info.offset+offsets.w*4+2], tex_data[info.offset+offsets.w*4+3]);
 
     // Calculate the weighted sum of pixels (for each color channel)
     //
@@ -1351,11 +1344,10 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, float* out_color, 
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
-  float4 wavelengths;
-  RandomGen gen; 
+  float4 wavelengths; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, dparams);
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &rayFlags, &mis, dparams);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -1366,10 +1358,10 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, float* out_color, 
       break;
     
     kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
-                             &gen, &shadeColor, dparams);
+                             &shadeColor, dparams);
     
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags, dparams);
+                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &mis, &rayFlags, dparams);
     
 
     if(isDeadRay(rayFlags))
@@ -1379,8 +1371,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, float* out_color, 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor, dparams);
 
-  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color, dparams);
-  
+  kernel_ContributeToImage(tid, channels, &accumColor, m_packedXY.data(), &wavelengths, out_color, dparams);
   return accumColor;
 }
 
