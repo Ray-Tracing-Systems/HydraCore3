@@ -400,18 +400,18 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
     for (int i = 0; i < int(tid); ++i) {
       float lossVal = 0.0f;
       for(int passId = 0; passId < int(a_passNum); passId++) {
-        __enzyme_autodiff((void*)PixelLossPT, 
-                           enzyme_const, this,
-                           enzyme_const, a_refImg,
-                           enzyme_const, out_color,
-                           enzyme_dup,   a_data, a_dataGrad,
-                           enzyme_const, m_packedXY.data(),
-                           enzyme_const, uint(i),
-                           enzyme_const, channels,
-                           enzyme_const, m_winWidth,
-                           enzyme_const, &lossVal);
+        //__enzyme_autodiff((void*)PixelLossPT, 
+        //                   enzyme_const, this,
+        //                   enzyme_const, a_refImg,
+        //                   enzyme_const, out_color,
+        //                   enzyme_dup,   a_data, a_dataGrad,
+        //                   enzyme_const, m_packedXY.data(),
+        //                   enzyme_const, uint(i),
+        //                   enzyme_const, channels,
+        //                   enzyme_const, m_winWidth,
+        //                   enzyme_const, &lossVal);
   
-        //lossVal = PixelLossPT(this, a_refImg, out_color, a_data, m_packedXY.data(), uint(i), channels, m_winWidth, &lossVal);
+        lossVal = PixelLossPT(this, a_refImg, out_color, a_data, m_packedXY.data(), uint(i), channels, m_winWidth, &lossVal);
         avgLoss += float(lossVal)/float(a_passNum);
       }
     }

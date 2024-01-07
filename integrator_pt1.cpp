@@ -439,7 +439,7 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
 void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
                                           const float4* wavelengths, float* out_color)
 {
-  if(tid >= m_maxThreadId)
+  if(tid >= m_maxThreadId || m_recordMode !=0) // don't contrubute to image in any "record" mode
     return;
 
   const uint XY = in_pakedXY[tid];

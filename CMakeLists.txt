@@ -140,7 +140,8 @@ if(CAM_PLUGIN)
                 cam_plugin/CamTableLens.cpp)
 elseif(USE_ENZYME)
   set(MAIN_FILES diff_render/drmain.cpp
-                 diff_render/integrator_dr.cpp)
+                 diff_render/integrator_dr.cpp
+                 diff_render/integrator_dr2.cpp)
 else()
   set(MAIN_FILES main.cpp)
 endif()

@@ -174,6 +174,8 @@ int main(int argc, const char** argv)
 
   auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, 256, 256, 4);
 
+  pImpl->SetMaxThreadsAndBounces(1, 6);
+
   std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
 
   // now run opt loop

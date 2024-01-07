@@ -127,5 +127,43 @@ public:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  static constexpr uint32_t MAX_REC_BLEND = 2;
+  int MAXTHREADS_CPU = 1;
+
+  virtual void SetMaxThreadsAndBounces(int a_maxThreads, int a_maxBounce)
+  {
+    m_recorded.resize(a_maxThreads);
+    for(auto& rec : m_recorded)
+      rec.perBounce.resize(a_maxBounce);
+
+    MAXTHREADS_CPU = a_maxThreads;
+    m_traceDepth   = a_maxBounce;
+  }
+ 
+  void RecordPixelRndIfNeeded(float2 offsets, float u) override;
+  void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit) override;
+  void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow) override;
+  void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) override;
+  void RecordMatRndNeeded(uint32_t bounceId, float4 rands) override;
+  void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand) override;
+
+  struct PerBounce
+  {
+    CRT_Hit hit;
+    int     inShadow;
+    int     lightId;
+    float2  lgtRands;
+    float4  matRands;
+    float   blendRnd[MAX_REC_BLEND];
+  };
+
+  struct PerThreadData
+  {
+    float2                 pixelOffsets;
+    float                  waveSelector;
+    std::vector<PerBounce> perBounce;
+  };
+
+  std::vector<PerThreadData>  m_recorded;
 };
 
