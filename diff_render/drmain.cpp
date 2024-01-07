@@ -164,7 +164,7 @@ int main(int argc, const char** argv)
   pImpl->UpdateMembersPlainData();
 
   float timings[4] = {0,0,0,0};
-  const float normConst = 1.0f/float(PASS_NUMBER);
+  float normConst = 1.0f/float(PASS_NUMBER);
 
   std::vector<float> imgData(256*256*4);
   std::vector<float> imgGrad(256*256*4);
@@ -174,23 +174,27 @@ int main(int argc, const char** argv)
 
   auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, 256, 256, 4);
 
-  pImpl->SetMaxThreadsAndBounces(1, 6);
+  pImpl->SetMaxThreadsAndBounces(32, 6);
 
   std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
 
   // now run opt loop
   //
-  for(int iter = 0; iter < 50; iter++) 
+  for(int iter = 0; iter < 60; iter++) 
   {
-    std::cout << "[drmain]: Render(" << std::setfill('0') << std::setw(2) << iter << ")..";
+    const int eachTen        = iter/20 + 1;
+    const int currPassNumber = PASS_NUMBER; //std::min(PASS_NUMBER*eachTen, 64);
+    normConst                = 1.0f/float(currPassNumber);
+
+    std::cout << "[drmain]: Render(" << std::setfill('0') << std::setw(2) << iter << ", spp = " << currPassNumber << ") ..";
     std::cout.flush();
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
 
-    //float loss = pImpl->RayTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
+    //float loss = pImpl->RayTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), 1,
     //                                refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());
 
-    float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER,
+    float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
     
     std::cout << ", loss = " << loss << std::endl;

@@ -266,7 +266,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     res.val *= cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
   }
   */
- 
+
   return res;
 }
 
@@ -1398,25 +1398,26 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
                                 const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
 {
   m_disableImageContrib = 1;
-
   memset(a_dataGrad, 0, sizeof(float)*a_gradSize);
 
   // init separate gradient for each thread
   //
-  //std::vector<float> grads[MAXTHREADS_CPU];
-  //for(int i=0;i<MAXTHREADS_CPU;i++)
-  //   std::fill(grads[i].begin(), grads[i].end(), 0.0f);
+  std::vector<float> grads[MAXTHREADS_CPU];
+  for(int i=0;i<MAXTHREADS_CPU;i++) {
+    grads[i].resize(a_gradSize);
+    std::fill(grads[i].begin(), grads[i].end(), 0.0f);
+  }
 
   //double avgLoss = 0.0;
   auto start = std::chrono::high_resolution_clock::now();
-  //#ifndef _DEBUG
-  //#pragma omp parallel for default(shared) // num_threads(MAXTHREADS_CPU)
-  //#endif
 
   float avgLoss = 0.0f;
   
   if(m_gradMode != 0)
   {
+    #ifndef _DEBUG
+    #pragma omp parallel for default(shared) num_threads(MAXTHREADS_CPU)
+    #endif
     for (int i = 0; i < int(tid); ++i) {
       float lossVal = 0.0f;
       for(int passId = 0; passId < int(a_passNum); passId++) {
@@ -1436,7 +1437,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
                            enzyme_const, m_packedXY.data(),
                            enzyme_const, &lossVal,
                            enzyme_const, this->m_recorded[cpuThreadId].perBounceRands.data(),
-                           enzyme_dup,   a_data, a_dataGrad);
+                           enzyme_dup,   a_data, grads[cpuThreadId].data());
 
         //lossVal = PixelLossPT(this, uint(i), channels, m_winWidth, cpuThreadId, 
         //                      a_refImg, out_color, m_packedXY.data(), &lossVal,
@@ -1459,19 +1460,18 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
 
   // accumulate gradient from different threads (parallel reduction/hist)
   //
+  for(int i=0;i<MAXTHREADS_CPU;i++) 
+    for(size_t j=0;j<a_gradSize; j++)
+      a_dataGrad[j] += grads[i][j];
 
-  //for(int i=0;i<MAXTHREADS_CPU;i++) 
-  //  for(size_t j=0;j<a_gradSize; j++)
-  //    a_dataGrad[j] += grads[i][j];
-
-  //avgLoss /= float(m_winWidth*m_winHeight);
+  avgLoss /= float(m_winWidth*m_winHeight);
   //std::cout << "avgLoss = " << avgLoss << std::endl;
+  //std::cout.flush();
   
   //std::ofstream fout("z_grad.txt");
   //for(size_t i=0; i<a_gradSize; i++)
   //  fout << a_dataGrad[i]/float(a_passNum) << std::endl;
   //fout.close();
-
 
   m_disableImageContrib = 0;
   return avgLoss;
