@@ -70,7 +70,7 @@ uint32_t IntegratorDR::BlendSampleAndEval(uint a_materialId, uint bounce, uint l
   uint32_t selectedMatId = matId1;
   //const float select = rndFloat1_Pseudo(a_gen);
   auto cpuThreadId   = omp_get_thread_num();
-  const float select = m_recorded[cpuThreadId].perBounce[bounce].blendRnd[layer]; 
+  const float select = m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_BLD_ID + layer];
   
   if(select < weight)
   {
@@ -200,7 +200,11 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
   //const float4 rands     = rndFloat4_Pseudo(a_gen);
   auto cpuThreadId   = omp_get_thread_num();
-  const float4 rands = m_recorded[cpuThreadId].perBounce[bounce].matRands; 
+  //const float4 rands = m_recorded[cpuThreadId].perBounce[bounce].matRands; 
+  const float4 rands = float4(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0],
+                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
+                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2],
+                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
 
   switch(mtype)
   {
@@ -450,14 +454,14 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
-
   const uint XY = packedXY[tid];
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  //const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
   auto cpuThreadId = omp_get_thread_num();
-  const float2 pixelOffsets = m_recorded[cpuThreadId].pixelOffsets;
+  int size = int(m_recorded[cpuThreadId].perBounceRands.size());
+  const float2 pixelOffsets = float2(m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 0],
+                                     m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 1]);
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -467,8 +471,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    //float u = rndFloat1_Pseudo(&genLocal);
-    float u = m_recorded[cpuThreadId].waveSelector;
+    float u = m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 3];
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
   }
   else
@@ -495,7 +498,6 @@ void IntegratorDR::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosA
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
-  //const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
   auto cpuThreadId  = omp_get_thread_num();
   const CRT_Hit hit = m_recorded[cpuThreadId].perBounce[bounce].hit;
 
@@ -586,8 +588,11 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
   //const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
   
   auto cpuThreadId   = omp_get_thread_num();
-  const float2 rands = m_recorded[cpuThreadId].perBounce[bounce].lgtRands;
-  const int lightId  = m_recorded[cpuThreadId].perBounce[bounce].lightId;
+  //const float2 rands = m_recorded[cpuThreadId].perBounce[bounce].lgtRands;
+  const float2 rands = float2(m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 0],
+                              m_recorded[cpuThreadId].perBounceRands[bounce*RND_PER_BOUNCE + RND_LTG_ID + 1]);
+
+  const int lightId  = m_recorded[cpuThreadId].perBounceLightId[bounce];
 
   if(lightId < 0) // no lights or invalid light id
   {
@@ -601,7 +606,6 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, const float4* rayPosAndNea
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos);                             //
   const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // 
  
-  //const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   const bool   inShadow     = (m_recorded[cpuThreadId].perBounce[bounce].inShadow == 1);
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
   

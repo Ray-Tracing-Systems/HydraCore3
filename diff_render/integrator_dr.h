@@ -125,15 +125,24 @@ public:
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  static constexpr int MAX_REC_BLEND  = 2;
+  static constexpr int RND_PER_BOUNCE = 2 + 4 + MAX_REC_BLEND;
+  static constexpr int RND_LTG_ID     = 0; // float2  lgtRands;
+  static constexpr int RND_MTL_ID     = 2; // float4  matRands;
+  static constexpr int RND_BLD_ID     = 6; // float   blendRnd[MAX_REC_BLEND];
+  static constexpr int LENS_RANDS     = 4; // pixels offsets, wave selector, lens offset in future 
 
-  static constexpr uint32_t MAX_REC_BLEND = 2;
   int MAXTHREADS_CPU = 1;
 
   virtual void SetMaxThreadsAndBounces(int a_maxThreads, int a_maxBounce)
   {
     m_recorded.resize(a_maxThreads);
-    for(auto& rec : m_recorded)
+    for(auto& rec : m_recorded) {
       rec.perBounce.resize(a_maxBounce);
+      rec.perBounceLightId.resize(a_maxBounce);
+      rec.perBounceRands.resize(RND_PER_BOUNCE*a_maxBounce + LENS_RANDS); // 4 for pixel offsets and waves selector
+    }
 
     MAXTHREADS_CPU = a_maxThreads;
     m_traceDepth   = a_maxBounce;
@@ -146,26 +155,17 @@ public:
   void RecordMatRndNeeded(uint32_t bounceId, float4 rands) override;
   void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand) override;
 
-  static constexpr uint32_t RECORD_ALL = 1;
-  static constexpr uint32_t REPLAY_RND = 2;
-  static constexpr uint32_t REPLAY_HIT = 4;
-  static constexpr uint32_t REPLAY_ALL = REPLAY_RND | REPLAY_HIT;
-
   struct PerBounce
   {
     CRT_Hit hit;
     int     inShadow;
-    int     lightId;
-    float2  lgtRands;
-    float4  matRands;
-    float   blendRnd[MAX_REC_BLEND];
   };
 
   struct PerThreadData
   {
-    float2                 pixelOffsets;
-    float                  waveSelector;
     std::vector<PerBounce> perBounce;
+    std::vector<int>       perBounceLightId;
+    std::vector<float>     perBounceRands;
   };
 
   std::vector<PerThreadData>  m_recorded;

@@ -22,8 +22,10 @@ using namespace LiteMath;
 void IntegratorDR::RecordPixelRndIfNeeded(float2 offsets, float u)
 {
   auto cpuThreadId = omp_get_thread_num();
-  m_recorded[cpuThreadId].pixelOffsets = offsets;
-  m_recorded[cpuThreadId].waveSelector = u;
+  int size = int(m_recorded[cpuThreadId].perBounceRands.size());
+  m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 0] = offsets.x;
+  m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 1] = offsets.y;
+  m_recorded[cpuThreadId].perBounceRands[size - LENS_RANDS + 2] = u;
 }
 
 void IntegratorDR::RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit)
@@ -41,19 +43,24 @@ void IntegratorDR::RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow)
 void IntegratorDR::RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands)
 {
   auto cpuThreadId = omp_get_thread_num();
-  m_recorded[cpuThreadId].perBounce[bounceId].lightId  = lightId;
-  m_recorded[cpuThreadId].perBounce[bounceId].lgtRands = rands;
+  m_recorded[cpuThreadId].perBounceLightId[bounceId] = lightId;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_LTG_ID + 0] = rands.x;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_LTG_ID + 1] = rands.y;
 }
 
 void IntegratorDR::RecordMatRndNeeded(uint32_t bounceId, float4 rands)
 {
   auto cpuThreadId = omp_get_thread_num();
-  m_recorded[cpuThreadId].perBounce[bounceId].matRands = rands;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_MTL_ID + 0] = rands.x;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_MTL_ID + 1] = rands.y;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_MTL_ID + 2] = rands.z;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_MTL_ID + 3] = rands.w;
 }
 
 void IntegratorDR::RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand)
 {
   auto cpuThreadId = omp_get_thread_num();
-  m_recorded[cpuThreadId].perBounce[bounceId].blendRnd[layer] = rand;
+  m_recorded[cpuThreadId].perBounceRands[bounceId*RND_PER_BOUNCE + RND_BLD_ID + layer] = rand;
+
 }
 
