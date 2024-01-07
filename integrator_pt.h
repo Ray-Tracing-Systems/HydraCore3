@@ -332,14 +332,9 @@ public:
   virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
-
-  static constexpr uint32_t RECORD_ALL = 1;
-  static constexpr uint32_t REPLAY_RND = 2;
-  static constexpr uint32_t REPLAY_HIT = 4;
-  static constexpr uint32_t REPLAY_ALL = REPLAY_RND | REPLAY_HIT;
-  
-  uint32_t m_recordMode = 0;
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  uint m_disableImageContrib = 0;
 };
 
 #endif

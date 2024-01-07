@@ -147,6 +147,11 @@ public:
   void RecordMatRndNeeded(uint32_t bounceId, float4 rands) override;
   void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand) override;
 
+  static constexpr uint32_t RECORD_ALL = 1;
+  static constexpr uint32_t REPLAY_RND = 2;
+  static constexpr uint32_t REPLAY_HIT = 4;
+  static constexpr uint32_t REPLAY_ALL = REPLAY_RND | REPLAY_HIT;
+
   struct PerBounce
   {
     CRT_Hit hit;
