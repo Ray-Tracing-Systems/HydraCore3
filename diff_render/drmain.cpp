@@ -169,13 +169,16 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   float normConst = 1.0f/float(PASS_NUMBER);
 
-  std::vector<float> imgData(256*256*4);
-  std::vector<float> imgGrad(256*256*4);
+  int channelsNum = 4;
+  int resolution  = 256;
 
-  std::fill(imgData.begin(), imgData.end(), 1.0f);
+  std::vector<float> imgData(resolution*resolution*channelsNum);
+  std::vector<float> imgGrad(resolution*resolution*channelsNum);
+
+  std::fill(imgData.begin(), imgData.end(), 1.0f); // 1.0f/0.00025f
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, 256, 256, 4);
+  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, resolution, resolution, channelsNum);
 
   pImpl->SetMaxThreadsAndBounces(32, 6);
 
