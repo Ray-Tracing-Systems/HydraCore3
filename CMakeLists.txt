@@ -27,8 +27,10 @@ include(cmake/CompilerWarnings.cmake)
 set_project_warnings(project_warnings)
 
 # sanitizer options
-#include(cmake/Sanitizers.cmake)
-#enable_sanitizers(project_options)
+include(cmake/Sanitizers.cmake)
+enable_sanitizers(project_options)
+
+add_subdirectory(ies_parser)
 
 set(GENERATOR_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root output directory for all artifacts")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -41,7 +43,6 @@ else()
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
 endif()
-
 
 find_package(OpenMP)
 
@@ -157,7 +158,8 @@ set(CORE_SRC
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp
-        utils.cpp)
+        utils.cpp
+        ies_parser/ies_render.cpp)
 
 
 if(USE_VULKAN)    
@@ -202,7 +204,7 @@ else()
   set(CUSTOM_OMP "")
 endif()
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})

@@ -878,6 +878,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   return features;
 }
 
+std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   LoadSceneBegin();
@@ -1011,6 +1013,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     lightSource.specId   = lightSpecId;
     lightSource.mult     = power;
     lightSource.distType = LIGHT_DIST_LAMBERT;
+    lightSource.iesId    = uint(-1);
+    lightSource.texId    = uint(-1);
     if(ltype == std::wstring(L"sky"))
     {
       m_envColor = color;
@@ -1087,6 +1091,28 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.pdfA      = 1.0f;
       lightSource.size      = float2(0,0);
       lightSource.matrix    = float4x4{};
+    }
+
+    auto iesNode = lightInst.lightNode.child(L"ies");
+    if(iesNode != nullptr)
+    {
+      const std::wstring iesFileW = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + iesNode.attribute(L"loc").as_string();\
+      const std::string  iesFileA = hydra_xml::ws2s(iesFileW);
+      
+      int w,h;
+      std::vector<float> texData = CreateSphericalTextureFromIES(iesFileA.c_str(), &w, &h);
+
+      auto pTexture = std::make_shared< Image2D<float> >(w, h, texData.data());
+      pTexture->setSRGB(false);
+      
+      Sampler sampler;
+      sampler.filter   = Sampler::Filter::LINEAR; 
+      sampler.addressU = Sampler::AddressMode::WRAP;
+      sampler.addressV = Sampler::AddressMode::WRAP;
+
+      m_textures.push_back(MakeCombinedTexture2D(pTexture, sampler));
+      lightSource.iesId = uint(m_textures.size()-1);
+      //std::cout << "lightSource.iesId = " << lightSource.iesId << std::endl;
     }
 
     m_lights.push_back(lightSource);
