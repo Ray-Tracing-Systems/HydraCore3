@@ -224,7 +224,7 @@ int main(int argc, const char** argv)
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
     
     for(size_t i=0;i<imgGrad.size();i++) {
-      imgGrad[i] *= 100.0f;
+      imgGrad[i] *= 50.0f;
       //std::cout << "imgGrad[" << i << "] = " << imgGrad[i] << std::endl;  
       //std::cout << "imgData[" << i << "] = " << imgData[i] << std::endl;  
     }
