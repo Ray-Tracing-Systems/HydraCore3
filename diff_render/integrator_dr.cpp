@@ -1123,7 +1123,6 @@ float4 IntegratorDR::Tex2DFetchAD(uint texId, float2 a_uv, const float* tex_data
 
     // Calculate the weighted sum of pixels (for each color channel)
     //
-
     if(info.channels == 4)
     {
       const float4 f1    = float4(tex_data[info.offset+offsets.x*4+0], tex_data[info.offset+offsets.x*4+1], tex_data[info.offset+offsets.x*4+2], tex_data[info.offset+offsets.x*4+3]);

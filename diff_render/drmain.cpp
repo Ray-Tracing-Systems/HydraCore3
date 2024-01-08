@@ -169,20 +169,40 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   float normConst = 1.0f/float(PASS_NUMBER);
 
-  int channelsNum = 4;
+  int channelsNum = 1;
   int resolution  = 256;
 
-  std::vector<float> imgData(resolution*resolution*channelsNum);
-  std::vector<float> imgGrad(resolution*resolution*channelsNum);
+  std::vector<float> imgData; //(resolution*resolution*channelsNum);
+  std::vector<float> imgGrad; //(resolution*resolution*channelsNum);
 
-  std::fill(imgData.begin(), imgData.end(), 1.0f); // 1.0f/0.00025f
+  /////////////////////////////////////////////////////////////////////////////////
+  int wh[2] = {1,74};
+  std::ifstream fin("iesdata.image1f", std::ios::binary);
+  fin.read((char*)wh, 2*sizeof(int));
+  
+  imgData.resize(wh[0]*wh[1]);
+  imgGrad.resize(wh[0]*wh[1]);
+  fin.read((char*)imgData.data(), imgData.size()*sizeof(float));
+  fin.close();
+  
+  std::cout << "(w,h) = " << wh[0] << ", " << wh[1] << std::endl;
+  /////////////////////////////////////////////////////////////////////////////////
+
+  //for(size_t i=0;i<imgData.size();i++)
+  //  std::cout << "imgData[" << i << "] = " << imgData[i] << std::endl;  
+
+  std::fill(imgData.begin(), imgData.end(), 1.0f/0.00025f); // 
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, resolution, resolution, channelsNum);
+  //for(size_t i=30;i<imgData.size();i++)
+  //  imgData[i] = 10.0f;
+
+  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, wh[0], wh[1], channelsNum);
 
   pImpl->SetMaxThreadsAndBounces(32, 6);
 
-  std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
+  //std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< AdamOptimizer<float> >(imgGrad.size());
+  std::shared_ptr< IGradientOptimizer<float> > pOpt = std::make_shared< OptimizerGD<float> >(imgGrad.size(), 1.0f);
 
   // now run opt loop
   //
@@ -203,6 +223,12 @@ int main(int argc, const char** argv)
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
     
+    for(size_t i=0;i<imgGrad.size();i++) {
+      imgGrad[i] *= 100.0f;
+      //std::cout << "imgGrad[" << i << "] = " << imgGrad[i] << std::endl;  
+      //std::cout << "imgData[" << i << "] = " << imgData[i] << std::endl;  
+    }
+
     std::cout << ", loss = " << loss << std::endl;
     std::cout.flush();
     

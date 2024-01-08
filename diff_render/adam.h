@@ -20,7 +20,7 @@ class OptimizerGD : public IGradientOptimizer<T>
 {
 public:
   OptimizerGD(int a_params_count, float _lr = 0.01f) : params_count(a_params_count) { lr = _lr; }
-  virtual void step(T *params_ptr, const T* grad_ptr) override {
+  virtual void step(T *params_ptr, const T* grad_ptr, int iter) override {
     for (size_t i = 0; i< params_count; i++)
       params_ptr[i] -= lr * grad_ptr[i];
   }

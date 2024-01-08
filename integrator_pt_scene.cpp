@@ -1101,6 +1101,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       
       int w,h;
       std::vector<float> texData = CreateSphericalTextureFromIES(iesFileA.c_str(), &w, &h);
+      
+      //int wh[2] = {w,h};
+      //std::ofstream fout("iesdata.image1f", std::ios::binary);
+      //fout.write((const char*)wh, 2*sizeof(int));
+      //fout.write((const char*)texData.data(), texData.size()*sizeof(float));
+      //fout.close();
 
       auto pTexture = std::make_shared< Image2D<float> >(w, h, texData.data());
       pTexture->setSRGB(false);
