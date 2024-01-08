@@ -1110,19 +1110,35 @@ float4 IntegratorDR::Tex2DFetchAD(uint texId, float2 a_uv, const float* tex_data
     const float w4 = fx  * fy;
     
     const int4 offsets = bilinearOffsets(ffx, ffy, tex_width, tex_height);
-    const float4 f1    = float4(tex_data[info.offset+offsets.x*4+0], tex_data[info.offset+offsets.x*4+1], tex_data[info.offset+offsets.x*4+2], tex_data[info.offset+offsets.x*4+3]);
-    const float4 f2    = float4(tex_data[info.offset+offsets.y*4+0], tex_data[info.offset+offsets.y*4+1], tex_data[info.offset+offsets.y*4+2], tex_data[info.offset+offsets.y*4+3]);
-    const float4 f3    = float4(tex_data[info.offset+offsets.z*4+0], tex_data[info.offset+offsets.z*4+1], tex_data[info.offset+offsets.z*4+2], tex_data[info.offset+offsets.z*4+3]);
-    const float4 f4    = float4(tex_data[info.offset+offsets.w*4+0], tex_data[info.offset+offsets.w*4+1], tex_data[info.offset+offsets.w*4+2], tex_data[info.offset+offsets.w*4+3]);
 
     // Calculate the weighted sum of pixels (for each color channel)
     //
-    const float outr = f1.x * w1 + f2.x * w2 + f3.x * w3 + f4.x * w4;
-    const float outg = f1.y * w1 + f2.y * w2 + f3.y * w3 + f4.y * w4;
-    const float outb = f1.z * w1 + f2.z * w2 + f3.z * w3 + f4.z * w4;
-    const float outa = f1.w * w1 + f2.w * w2 + f3.w * w3 + f4.w * w4;
-    
-    return float4(outr, outg, outb, outa);
+
+    if(info.channels == 4)
+    {
+      const float4 f1    = float4(tex_data[info.offset+offsets.x*4+0], tex_data[info.offset+offsets.x*4+1], tex_data[info.offset+offsets.x*4+2], tex_data[info.offset+offsets.x*4+3]);
+      const float4 f2    = float4(tex_data[info.offset+offsets.y*4+0], tex_data[info.offset+offsets.y*4+1], tex_data[info.offset+offsets.y*4+2], tex_data[info.offset+offsets.y*4+3]);
+      const float4 f3    = float4(tex_data[info.offset+offsets.z*4+0], tex_data[info.offset+offsets.z*4+1], tex_data[info.offset+offsets.z*4+2], tex_data[info.offset+offsets.z*4+3]);
+      const float4 f4    = float4(tex_data[info.offset+offsets.w*4+0], tex_data[info.offset+offsets.w*4+1], tex_data[info.offset+offsets.w*4+2], tex_data[info.offset+offsets.w*4+3]);
+  
+      const float outr = f1.x * w1 + f2.x * w2 + f3.x * w3 + f4.x * w4;
+      const float outg = f1.y * w1 + f2.y * w2 + f3.y * w3 + f4.y * w4;
+      const float outb = f1.z * w1 + f2.z * w2 + f3.z * w3 + f4.z * w4;
+      const float outa = f1.w * w1 + f2.w * w2 + f3.w * w3 + f4.w * w4;
+      
+      return float4(outr, outg, outb, outa);
+    }
+    else
+    {
+      const float f1 = tex_data[info.offset+offsets.x];
+      const float f2 = tex_data[info.offset+offsets.y];
+      const float f3 = tex_data[info.offset+offsets.z];
+      const float f4 = tex_data[info.offset+offsets.w];
+  
+      const float outVal = f1 * w1 + f2 * w2 + f3 * w3 + f4 * w4;
+      
+      return float4(outVal, outVal, outVal, outVal);
+    }
   }
   else
     return m_textures[texId]->sample(a_uv);
