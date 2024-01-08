@@ -31,6 +31,7 @@ int main(int argc, const char** argv)
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string refImgpath     = "z_ref.exr";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -42,6 +43,9 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-out"))
     imageOut = args.getOptionValue<std::string>("-out");
+
+  if(args.hasOption("-ref"))
+    refImgpath = args.getOptionValue<std::string>("-ref");
 
   std::filesystem::path out_path {imageOut};
   auto dir = out_path.parent_path();
@@ -119,7 +123,6 @@ int main(int argc, const char** argv)
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
   auto pImpl = std::make_shared<IntegratorDR>(FB_WIDTH*FB_HEIGHT, spectral_mode, gradMode, features);
   
-  std::string refImgpath = "z_ref.exr";
   std::cout << "[drmain]: Loading reference image ... " << refImgpath.c_str() << std::endl;
 
   int refW = 0, refH = 0;

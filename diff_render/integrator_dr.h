@@ -123,7 +123,7 @@ public:
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, const float* dparams);
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint, const float* dparams);
   float4 GetEnvironmentColorAndPdf(float3 a_dir, const float* dparams);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, const float* dparams);
+  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

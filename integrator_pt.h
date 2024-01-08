@@ -201,7 +201,7 @@ public:
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths);
+  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;

@@ -185,7 +185,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths)
+float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
@@ -202,6 +202,16 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
     }
   }
   lightColor *= m_lights[a_lightId].mult;
+  
+  uint iesId = m_lights[a_lightId].iesId;
+  if(iesId != uint(-1))
+  {
+    float sintheta        = 0.0f;
+    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*a_rayDir, &sintheta);
+    const float4 texColor = m_textures[iesId]->sample(texCoord)*0.00025f;
+    lightColor *= texColor;
+  }
+
   return lightColor;
 }
 
@@ -269,7 +279,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths);
+    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else

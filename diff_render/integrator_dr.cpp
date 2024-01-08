@@ -612,7 +612,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const fl
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, dparams);
+    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir, dparams);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -1014,7 +1014,7 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float2 rands, float3 ill
   };
 }
 
-float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, const float* dparams)
+float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
@@ -1031,6 +1031,16 @@ float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wav
     }
   }
   lightColor *= m_lights[a_lightId].mult;
+
+  uint iesId = m_lights[a_lightId].iesId;
+  if(iesId != uint(-1))
+  {
+    float sintheta        = 0.0f;
+    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*a_rayDir, &sintheta);
+    const float4 texColor = Tex2DFetchAD(iesId, texCoord, dparams)*0.00025f;
+    lightColor *= texColor;
+  }
+
   return lightColor;
 }
 
