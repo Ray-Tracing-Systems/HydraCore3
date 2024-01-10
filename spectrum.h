@@ -156,6 +156,7 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   return float3{x ,y, z};
 }
 
+// 2° standard colorimetric observer
 inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
 {
   LiteMath::float3 rgb;
@@ -166,7 +167,6 @@ inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
   return rgb;
 }
 
-Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 std::vector<float> Get_CIE_lambda();
 std::vector<float> Get_CIE_X();
 std::vector<float> Get_CIE_Y();

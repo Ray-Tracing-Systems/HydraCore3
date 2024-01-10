@@ -15,9 +15,11 @@ static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
-
+static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
 static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
+static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;
+
 
 using float4 = float4;
 static constexpr uint32_t SPECTRUM_SAMPLE_SZ = 4; //sizeof(float4) / sizeof(float); // srry, sizeof() evaluation not yet supported ... 
@@ -36,6 +38,7 @@ typedef struct SurfaceHitT
 {
   float3 pos;
   float3 norm;
+  float3 tang;
   float2 uv;
 }SurfaceHit;
 
@@ -92,6 +95,24 @@ static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
   (*v3) = cross(v1, (*v2));
 }
 
+/* Based on "Building an Orthonormal Basis, Revisited" by
+       Tom Duff, James Burgess, Per Christensen,
+       Christophe Hery, Andrew Kensler, Max Liani,
+       and Ryusuke Villemin (JCGT Vol 6, No 1, 2017) */
+static inline void CoordinateSystemV2(const float3 &n, float3* s, float3* t) 
+{
+  float sign = n.z >= 0 ? 1 : -1;
+  float a    = -(1.0f / (sign + n.z));
+  float b    = n.x * n.y * a;
+
+  float tmp = (n.z >= 0 ? n.x * n.x * a : -n.x * n.x * a);
+  (*s) = float3{tmp + 1,
+                n.z >= 0 ? b : -b,
+                n.z >= 0 ? -n.x : n.x};
+  
+  (*t) = float3{b, n.y * n.y * a + sign, -n.y};
+}
+
 //constexpr float M_PI     = 3.14159265358979323846f;
 //constexpr float M_TWOPI  = 6.28318530717958647692f;
 //constexpr float INV_PI   = 0.31830988618379067154f
@@ -120,7 +141,7 @@ static inline float3 MapSampleToCosineDistribution(float r1, float r2, float3 di
   deviation.z = cos_theta;
 
   float3 ny = direction, nx, nz;
-  CoordinateSystem(ny, &nx, &nz);
+  CoordinateSystemV2(ny, &nx, &nz);
 
   {
     float3 temp = ny;

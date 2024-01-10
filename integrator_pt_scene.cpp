@@ -166,7 +166,7 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
-std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler)
+std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma = false)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
   int wh[2] = {0,0};
@@ -200,7 +200,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     //#TODO: use gamma and invserse sRGB to get same results with sSRB   
 
     auto pTexture = std::make_shared< Image2D<uint32_t> >(wh[0], wh[1], data.data());
-    pTexture->setSRGB(true);
+    pTexture->setSRGB(!a_disableGamma);
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
   }
  
@@ -212,6 +212,8 @@ struct SpectrumInfo
   std::wstring path;   
   uint32_t id;
 };
+
+Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
 std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
 {
@@ -252,8 +254,14 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
   if(p == texCache.end())
   {
     texCache[sampler] = uint(textures.size());
-    texId  = node.child(L"texture").attribute(L"id").as_uint();
-    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler));
+    auto texNode = node.child(L"texture");
+    texId  = texNode.attribute(L"id").as_uint();
+
+    bool disableGamma = false;
+    if(texNode.attribute(L"input_gamma").as_int() == 1)
+      disableGamma = true;
+
+    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, disableGamma));
     p = texCache.find(sampler);
   }
 
@@ -630,7 +638,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   auto nodeWeight = materialNode.child(L"weight");
   if(nodeWeight != nullptr)
   {
-    mat.data[BLEND_WEIGHT] = (hydra_xml::readval1f(nodeWeight), 1.0f);
+    mat.data[BLEND_WEIGHT] = hydra_xml::readval1f(nodeWeight);
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeWeight, texturesInfo, texCache, textures);
     
@@ -638,6 +646,122 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
     mat.row1 [0]  = sampler.row1;
     mat.data[BLEND_TEXID0] = as_float(texID);
   }
+
+  return mat;
+}
+
+float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex)
+{
+  float* ptr = (float*)(tex->data());
+  float4 res{0.0f};
+  size_t tex_sz = tex->width() * tex->height();
+  uint32_t channels = tex->bpp() / sizeof(float);
+  for(size_t i = 0; i < tex_sz / channels; ++i)
+  {  
+    for(size_t j = 0; j < channels; ++i)
+    {
+      res.M[j] += ptr[i * channels + j];
+    }
+  }
+
+  if(channels == 1)
+  {
+    res.w = res.x;
+    res.z = res.x;
+    res.y = res.x;
+  }
+
+  res = res / (tex_sz);
+
+  return res;
+}
+
+Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                             std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
+                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             std::vector<float> &precomputed_transmittance,
+                             bool is_spectral_mode,
+                             const std::vector<float> &spectra,
+                             const std::vector<float> &wavelengths,
+                             const std::vector<uint2> &spec_offsets)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.data[UINT_MTYPE]        = as_float(MAT_TYPE_PLASTIC);
+  mat.data[UINT_LIGHTID]      = as_float(uint(-1));
+  mat.data[PLASTIC_NONLINEAR] = as_float(0);
+  mat.data[PLASTIC_COLOR_TEXID]  = as_float(0);
+  mat.data[PLASTIC_COLOR_SPECID] = as_float(uint(-1));
+
+
+  auto nodeColor = materialNode.child(L"reflectance");
+  uint32_t specId = 0xFFFFFFFF;
+  if(nodeColor != nullptr)
+  {
+    mat.colors[PLASTIC_COLOR] = GetColorFromNode(nodeColor, is_spectral_mode);
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, texturesInfo, texCache, textures);
+
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[PLASTIC_COLOR_TEXID] = as_float(texID);
+
+    specId = GetSpectrumIdFromNode(nodeColor);
+    mat.data[PLASTIC_COLOR_SPECID] = as_float(specId);
+  }
+
+  float internal_ior = hydra_xml::readval1f(materialNode.child(L"int_ior"), 1.49f);
+  float external_ior = hydra_xml::readval1f(materialNode.child(L"ext_ior"), 1.000277);
+
+  mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
+
+  mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+
+  // dirty hack 
+  if(mat.data[PLASTIC_ROUGHNESS] == 0.0f)
+  {
+    mat.data[PLASTIC_ROUGHNESS] = 1e-6f;
+  }
+
+  mat.data[PLASTIC_NONLINEAR] = as_float(hydra_xml::readval1u(materialNode.child(L"nonlinear"), 0));
+
+  std::vector<float> spectrum;
+
+  if(is_spectral_mode && specId != 0xFFFFFFFF)
+  {
+    const auto offsets = spec_offsets[specId];
+    spectrum.reserve(offsets.y);
+    for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
+    {
+      if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
+      {
+        spectrum.push_back(spectra[i]);
+      }
+    }
+
+    // std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+  }
+
+  float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];
+
+  if(!is_spectral_mode)
+  {
+    uint32_t colorTexId = as_uint(mat.data[PLASTIC_COLOR_TEXID]);
+    if(colorTexId > 0 && colorTexId != 0xFFFFFFFF)
+    {
+      diffuse_reflectance *= image2D_average(textures[colorTexId]);
+    }
+  }
+
+  auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, diffuse_reflectance,
+                                            {1.0f, 1.0f, 1.0f, 1.0f}, is_spectral_mode, spectrum);
+
+  mat.data[PLASTIC_PRECOMP_REFLECTANCE] = precomp.internal_reflectance;
+  mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT] = precomp.specular_sampling_weight;
+
+  std::copy(precomp.transmittance.begin(), precomp.transmittance.end(), std::back_inserter(precomputed_transmittance));
+
+  mat.data[PLASTIC_PRECOMP_ID] = as_float((precomputed_transmittance.size() / MI_ROUGH_TRANSMITTANCE_RES) - 1u);
 
   return mat;
 }
@@ -651,10 +775,11 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
     case KSPEC_MAT_TYPE_THIN_FILM : return "THIN_FILM";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
-    case KSPEC_SOME_FEATURE_DUMMY : return "DUMMY";
+    case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
     case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
-    case KSPEC_BLEND_STACK_SIZE   : 
+    case KSPEC_BUMP_MAPPING       : return "BUMP";
+    case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
       strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
@@ -669,15 +794,25 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
 hydra_xml::HydraScene   g_lastScene;
 std::string Integrator::g_lastScenePath;
 std::string Integrator::g_lastSceneDir;
+SceneInfo   Integrator::g_lastSceneInfo;
+
 static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring thinFilmMatTypeStr       {L"thin_film"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
+static const std::wstring plasticMatTypeStr        {L"plastic"};
 
-std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir,
-                                                           int& width, int& height, int& spectral_mode)
+std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
+  if(pSceneInfo == nullptr)
+  {
+    std::cout << "[Integrator::PreliminarySceneAnalysis]: nullptr pSceneInfo" << std::endl;
+    exit(0);
+  }
+
+  g_lastSceneInfo.spectral = pSceneInfo->spectral;
+
   std::vector<uint32_t> features;
   
   std::string scenePathStr(a_scenePath);
@@ -691,11 +826,11 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   //// initial feature map
   //
-  features.resize(TOTAL_FEATURES_NUM); // disable all features by default
-  for(auto& feature : features)              //
-    feature = 0;                             //
-  features[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends (i.e. blends are disabled!)
-  features[KSPEC_SPECTRAL_RENDERING] = (spectral_mode == 0) ? 0 : 1;
+  features.resize(TOTAL_FEATURES_NUM);  // disable all features by default
+  for(auto& feature : features)         //
+    feature = 0;                        //
+  features[KSPEC_BLEND_STACK_SIZE]   = 1; // set smallest possible stack size for blends (i.e. blends are disabled!)
+  features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
   //// list reauired material features
   //
@@ -707,7 +842,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       float4 transpColor = float4(0, 0, 0, 0);
       auto nodeTransp = materialNode.child(L"transparency");
       if (nodeTransp != nullptr)
-        transpColor = GetColorFromNode(nodeTransp.child(L"color"), spectral_mode);
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), pSceneInfo->spectral);
   
       if(LiteMath::length3f(transpColor) > 1e-5f)
         features[KSPEC_MAT_TYPE_GLASS] = 1;
@@ -731,18 +866,75 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       features[KSPEC_MAT_TYPE_BLEND]   = 1;
       features[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_PLASTIC] = 1;
+    }
+
+    if(materialNode.child(L"displacement") != nullptr)
+      features[KSPEC_BUMP_MAPPING] = 1;
   }
 
   for(auto settings : g_lastScene.Settings())
   {
-    width  = settings.width;
-    height = settings.height;
-    break; //take ferst render settings
+    g_lastSceneInfo.width  = settings.width;
+    g_lastSceneInfo.height = settings.height;
+    break; //take first render settings
   }
 
   g_lastScenePath = scenePathStr;
   g_lastSceneDir  = sceneDirStr;
+  g_lastSceneInfo.maxMeshes            = 1024;
+  g_lastSceneInfo.maxTotalVertices     = 4'000'000;
+  g_lastSceneInfo.maxTotalPrimitives   = 4'000'000;
+  g_lastSceneInfo.maxPrimitivesPerMesh = 1'000'000;
 
+  g_lastSceneInfo.memTextures = 0;
+  for(auto texNode : g_lastScene.TextureNodes())
+  {
+    uint32_t width  = texNode.attribute(L"width").as_uint();
+    uint32_t height = texNode.attribute(L"height").as_uint();
+    size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
+
+    if(width == 0 || height == 0)
+    {
+      width  = 256;
+      height = 256;
+      byteSize = 256*256*4;
+    }
+
+    //if(byteSize < width*height*4) // what if we have single channel 8 bit texture ...
+    //  byteSize = width*height*4;  //
+
+    g_lastSceneInfo.memTextures += uint64_t(byteSize);
+  }
+
+  g_lastSceneInfo.memGeom = 0;
+  uint32_t meshesNum = 0;
+  uint64_t maxTotalVertices = 0;
+  uint64_t maxTotalPrimitives = 0;
+
+  for(auto node : g_lastScene.GeomNodes())
+  {
+    const uint64_t byteSize = std::max<uint64_t>(node.attribute(L"bytesize").as_ullong(), 1024);
+    const uint32_t vertNum  = node.attribute(L"vertNum").as_uint();
+    const uint32_t trisNum  = node.attribute(L"triNum").as_uint();
+    //const uint64_t byteSize = sizeof(float)*8*vertNum + trisNum*4*sizeof(uint32_t) + 1024;
+    if(g_lastSceneInfo.maxPrimitivesPerMesh < trisNum)
+      g_lastSceneInfo.maxPrimitivesPerMesh = trisNum;
+    maxTotalVertices   += uint64_t(vertNum);
+    maxTotalPrimitives += uint64_t(trisNum);
+    meshesNum          += 1;
+    g_lastSceneInfo.memGeom += byteSize;
+  }
+
+  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024*256;
+  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024*256;
+
+  g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
+  g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
+
+  (*pSceneInfo) = g_lastSceneInfo;
   return features;
 }
 
@@ -860,6 +1052,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
     const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
+    const std::wstring ldist = lightInst.lightNode.attribute(L"distribution").as_string();
+
     const float sizeX        = lightInst.lightNode.child(L"size").attribute(L"half_width").as_float();
     const float sizeZ        = lightInst.lightNode.child(L"size").attribute(L"half_length").as_float();
     float power              = lightInst.lightNode.child(L"intensity").child(L"multiplier").text().as_float();
@@ -872,8 +1066,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
 
     LightSource lightSource{};
-    lightSource.ids.x = as_float(lightSpecId);
-    lightSource.mult  = power;
+    lightSource.specId   = lightSpecId;
+    lightSource.mult     = power;
+    lightSource.distType = LIGHT_DIST_LAMBERT;
     if(ltype == std::wstring(L"sky"))
     {
       m_envColor = color;
@@ -940,6 +1135,18 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.size      = float2(radius, radius);
       lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
     }
+    else if (shape == L"point")
+    {
+      lightSource.pos       = lightInst.matrix * float4(0.0f, 0.0f, 0.0f, 1.0f);
+      lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
+      lightSource.intensity = color;
+      lightSource.geomType  = LIGHT_GEOM_POINT;
+      lightSource.distType  = (ldist == L"uniform" || ldist == L"omni") ? LIGHT_DIST_OMNI : LIGHT_DIST_LAMBERT;
+      lightSource.pdfA      = 1.0f;
+      lightSource.size      = float2(0,0);
+      lightSource.matrix    = float4x4{};
+    }
+
     m_lights.push_back(lightSource);
   }
 
@@ -957,7 +1164,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       if(as_uint(mat.data[UINT_MTYPE]) == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
@@ -975,7 +1182,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode != 0);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
@@ -983,6 +1190,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
+    }
+    else if(mat_type == plasticMatTypeStr)
+    {
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+                                m_spec_values, m_wavelengths, m_spec_offset_sz);
+      m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
 
     if(materialNode.attribute(L"light_id") != nullptr)
@@ -1003,11 +1216,49 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
         mat.data[EMISSION_MULT] = m_lights[lightId].mult;
 
-        if(mat.data[EMISSION_SPECID0] != m_lights[lightId].ids.x)
+        if(as_uint(mat.data[EMISSION_SPECID0]) != m_lights[lightId].specId)
           std::cout << "Spectrum in material for light geom and in light intensity node are different! " 
                     << "Using values from light intensity node. lightId = " << lightId << std::endl;
 
-        mat.data[EMISSION_SPECID0] = m_lights[lightId].ids.x;
+        mat.data[EMISSION_SPECID0] = as_float(m_lights[lightId].specId);
+      }
+    }
+
+    // setup normal map
+    //
+    mat.data[UINT_NMAP_ID] = as_float(0xFFFFFFFF);
+    if(materialNode.child(L"displacement") != nullptr)
+    {
+      auto dispNode = materialNode.child(L"displacement");
+      if(dispNode.attribute(L"type").as_string() != std::wstring(L"normal_bump"))
+      {
+        std::string bumpType = hydra_xml::ws2s(dispNode.attribute(L"type").as_string());
+        std::cout << "[Integrator::LoadScene]: bump type '" << bumpType.c_str() << "' is not supported! only 'normal_bump' is allowed."  << std::endl;
+      }
+      else
+      {
+        auto normalNode  = dispNode.child(L"normal_map");
+        auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
+        auto textureNode = normalNode.child(L"texture");
+
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures);
+
+        mat.row0[1] = sampler.row0;
+        mat.row1[1] = sampler.row1;
+        mat.data[UINT_NMAP_ID] = as_float(texID);
+
+        const bool invertX = (invertNode.attribute(L"x").as_int() == 1);
+        const bool invertY = (invertNode.attribute(L"y").as_int() == 1);
+        const bool swapXY  = (invertNode.attribute(L"swap_xy").as_int() == 1);
+
+        if(invertX)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_X));
+        if(invertY)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_INVERT_Y));
+        if(swapXY)
+          mat.data[UINT_CFLAGS] = as_float( as_uint(mat.data[UINT_CFLAGS]) | uint(FLAG_NMAP_SWAP_XY));
+
+        m_actualFeatures[KSPEC_BUMP_MAPPING] = 1; // enable bump mapping feature
       }
     }
 
@@ -1027,6 +1278,32 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_worldView    = worldView;
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
+
+    auto sensorNode = cam.node.child(L"sensor");
+    if(sensorNode != nullptr)
+    {
+      auto responceNode = sensorNode.child(L"response");
+      if(responceNode != nullptr)
+      {
+        std::wstring responceType = responceNode.attribute(L"type").as_string();
+        if(responceType == L"xyz" || responceType == L"XYZ")
+          m_camResponseType = CAM_RESPONCE_XYZ;
+        else
+          m_camResponseType = CAM_RESPONCE_RGB;
+        
+        int id = 0;
+        for(auto spec : responceNode.children(L"spectrum")) {
+          m_camResponseSpectrumId[id] = spec.attribute(L"id").as_int();
+          id++;
+          if(id >= 3)
+            break;
+        }
+
+        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), false);
+        m_camRespoceRGB.w = 1.0f;
+      }
+    }
+
     break; // take first cam
   }
 
@@ -1039,12 +1316,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_triIndices.reserve(128000*3);
 
   m_vNorm4f.resize(0);
-  m_vTexc2f.resize(0);
+  m_vTang4f.resize(0);
+  //m_vTexc2f.resize(0);
 
   m_pAccelStruct->ClearGeom();
   for(auto meshPath : scene.MeshFiles())
   {
+    #ifdef _DEBUG
     std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
+    #endif
     auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
     auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
@@ -1052,18 +1332,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
     m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
+    const size_t lastVertex = m_vNorm4f.size();
 
     m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
     m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-    //for(size_t i=0;i<currMesh.vPos4f.size();i++) // pack texture coords to fourth components
-    //{
-    //  currMesh.vPos4f [i].w = currMesh.vTexCoord2f[i].x;
-    //  currMesh.vNorm4f[i].w = currMesh.vTexCoord2f[i].y;
-    //}
+    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
+    m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
 
-    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(),     currMesh.vNorm4f.end());     // #TODO: store compressed normal and tangent together
-    m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
+    for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
+      m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
+      m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+    }
+    //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
 
   //// (3) make instances of created meshes
@@ -1076,8 +1357,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     if(inst.instId != realInstId)
     {
+      #ifdef _DEBUG
       std::cout << "[Integrator::LoadScene]: WARNING, bad instance id: written in xml: inst.instId is '" <<  inst.instId << "', realInstId by node order is '" << realInstId << "'" << std::endl;
       std::cout << "[Integrator::LoadScene]: -->      instances must be written in a sequential order, perform 'inst.instId = realInstId'" << std::endl;
+      #endif
       inst.instId = realInstId;
     }
     m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
@@ -1145,7 +1428,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
-  
+
   // we should not leave empty vectors for data which are used on GPU, kernel slicer does not handle this yet
   //
   if(m_spec_offset_sz.capacity() == 0)
@@ -1154,5 +1437,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_spec_values.reserve(16);
   if(m_wavelengths.capacity() == 0)
     m_wavelengths.reserve(16);
+  if(m_precomp_coat_transmittance.capacity() == 0)
+    m_precomp_coat_transmittance.reserve(16);
   return true;
 }

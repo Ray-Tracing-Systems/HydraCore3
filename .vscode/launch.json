@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "CPU render (1)",
+        "name": "SpectralBlend(CPU)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
@@ -11,7 +11,89 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
+                 "-channels", "16",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_CPU.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SpectralBlend(GPU/Debug)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_BLEND_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "LambertRGB(CPU/Common)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
                  "-spp", "64",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_LAMBERT_RGB_CPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SpectralBlend(CPU/Common)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_CPU.bmp"],
         "stopAtEntry": false,
@@ -29,18 +111,127 @@
     },
 
     {
-        "name": "GPU render (1)",
+        "name": "LambertRGB(GPU/Debug)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", 
+                 "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3_v1.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "OUT_LAMBERT_RGB_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Checker(FalconEye)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral",
-                 "-in", "../Hydra3Tests/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/8459_measured_chromaxion_spectral_hydra3_v1.xml",
                  "-integrator", "mispt", 
-                 "-width", "1600",
+                 "-spp", "4096",
+                 //"-channels", "47",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 //"-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/Images/render1.image3d1f",
+                 "-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/FalconEyesStudioLEDCOB120BW/8459/Images/render2.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Checker(LED/8496)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/8496_measured_chromaxion_spectral_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"-spp", "4096",
+                 "-channels", "47",
+                 "-scn_dir", "/home/frol/PROG/HydraRepos/rendervsphoto",
+                 "-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/Images/render1.image3d1f"],
+                 //"-out", "/home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496/Images/render1.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    ///home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496
+
+    {
+        "name": "House_01",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "/home/frol/Downloads/House_01/scenelib/statex_00001.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
+                 "-spp", "16384",
+                 "-out", "04_house_01_secondary.exr"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    
+    {
+        "name": "CPU Debug",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--cpu", "--spectral",
+                 "-in", "../Hydra3Tests/Tests/Spectral/0002/Spectral-ior-model-hydra3.xml",
+                 "-integrator", "naivept", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "64",
                  "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_BLEND_GPU.bmp"],
+                 "-out", "DEBUG.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

@@ -35,7 +35,7 @@ void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
     CastSingleRay(uint(i), out_color);
 }
 
-void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum)
+void Integrator::NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum)
 {
   ConsoleProgressBar progress(tid);
   progress.Start();
@@ -46,7 +46,7 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
   #endif
   for(int i = 0; i < tid; ++i) {
     for(int j = 0; j < a_passNum; ++j) {
-      NaivePathTrace(uint(i), out_color);
+      NaivePathTrace(uint(i), channels, out_color);
     }
     progress.Update();
   }
@@ -54,7 +54,7 @@ void Integrator::NaivePathTraceBlock(uint tid, float4* out_color, uint a_passNum
   naivePtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
+void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum)
 {
   ConsoleProgressBar progress(tid);
   progress.Start();
@@ -64,7 +64,7 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #endif
   for (int i = 0; i < tid; ++i) {
     for (int j = 0; j < a_passNum; ++j) {
-      PathTrace(uint(i), out_color);
+      PathTrace(uint(i), channels, out_color);
     }
     progress.Update();
   }
@@ -72,7 +72,7 @@ void Integrator::PathTraceBlock(uint tid, float4* out_color, uint a_passNum)
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
+void Integrator::RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum)
 {
   ConsoleProgressBar progress(tid);
   progress.Start();
@@ -82,14 +82,14 @@ void Integrator::RayTraceBlock(uint tid, float4* out_color, uint a_passNum)
   #endif
   for(int i = 0; i < tid; ++i)
   {
-    RayTrace(uint(i), out_color);
+    RayTrace(uint(i), channels, out_color);
     progress.Update();
   }
   progress.Done();
   raytraceTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-void Integrator::PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPosAndNear, const RayPart2* in_rayDirAndFar, float4* out_color, uint a_passNum)
+void Integrator::PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color, uint a_passNum)
 {
   auto start = std::chrono::high_resolution_clock::now();
   #ifndef _DEBUG
@@ -97,7 +97,7 @@ void Integrator::PathTraceFromInputRaysBlock(uint tid, const RayPart1* in_rayPos
   #endif
   for (int i = 0; i < tid; ++i) {
     for (int j = 0; j < a_passNum; ++j)
-      PathTraceFromInputRays(uint(i), in_rayPosAndNear, in_rayDirAndFar, out_color);
+      PathTraceFromInputRays(uint(i), channels, in_rayPosAndNear, in_rayDirAndFar, out_color);
   }
   fromRaysPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }

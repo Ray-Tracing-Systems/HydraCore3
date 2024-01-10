@@ -255,7 +255,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
-void Integrator::kernel_ContributeToImage3(uint tid, const float4* a_accumColor, const uint* in_pakedXY, float4* out_color)
+void Integrator::kernel_ContributeToImage3(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, float* out_color)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -264,7 +264,13 @@ void Integrator::kernel_ContributeToImage3(uint tid, const float4* a_accumColor,
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
   float4 color = *a_accumColor;
-  out_color[y*m_winWidth+x] += color;
+  //out_color[y*m_winWidth+x] += color;
+  if(channels <= 4)
+  {
+    out_color[(y*m_winWidth+x)*channels + 0] += color.x;
+    out_color[(y*m_winWidth+x)*channels + 1] += color.y;
+    out_color[(y*m_winWidth+x)*channels + 2] += color.z;
+  }
 }
 
 static inline float2 clipSpaceToScreenSpace(float4 a_pos, const float fw, const float fh)
@@ -399,7 +405,7 @@ void Integrator::CastSingleRay(uint tid, uint* out_color)
   kernel_GetRayColor(tid, &hit, m_packedXY.data(), out_color);
 }
 
-void Integrator::RayTrace(uint tid, float4* out_color)
+void Integrator::RayTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -409,9 +415,9 @@ void Integrator::RayTrace(uint tid, float4* out_color)
 
   for(uint depth = 0; depth < m_traceDepth; depth++)
   {
-    float4 hitPart1, hitPart2;
+    float4 hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &instId, &rayFlags);
+    kernel_RayTrace2(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
 
@@ -425,5 +431,5 @@ void Integrator::RayTrace(uint tid, float4* out_color)
 //  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
 //                        &accumColor);
 
-  kernel_ContributeToImage3(tid, &accumColor, m_packedXY.data(), out_color);
+  kernel_ContributeToImage3(tid, channels, &accumColor, m_packedXY.data(), out_color);
 }

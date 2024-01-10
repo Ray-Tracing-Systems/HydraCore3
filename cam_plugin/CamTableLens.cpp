@@ -110,7 +110,7 @@ void CamTableLens::Init(int a_maxThreads)
 
 }
 
-void CamTableLens::MakeRaysBlock(RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
+void CamTableLens::MakeRaysBlock(RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
 {
   kernel1D_MakeEyeRay(int(in_blockSize), out_rayPosAndNear4f, out_rayDirAndFar4f, subPassId);
 }
@@ -213,18 +213,13 @@ bool CamTableLens::TraceLensesFromFilm(const float3 inRayPos, const float3 inRay
 
 
 
-void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAndNear4f, RayPart2* out_rayDirAndFar4f, int subPassId)
+void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, int subPassId)
 {
   #pragma omp parallel for default(shared)
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
-    
-    if(x == 511 && y == 511)
-    {
-      int a = 2;
-    }
     
     auto genLocal = m_randomGens[tid];
     const float4 rands = rndFloat4_Pseudo(&genLocal);
@@ -266,27 +261,22 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPart1* out_rayPosAnd
 
     m_randomGens[tid] = genLocal;
 
-    RayPart1 p1;
-    RayPart2 p2;
-
-    const uint32_t wavesX = uint32_t(65535.0f*((wavelengths.x - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint32_t wavesY = uint32_t(65535.0f*((wavelengths.y - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint32_t wavesZ = uint32_t(65535.0f*((wavelengths.z - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
-    const uint32_t wavesW = uint32_t(65535.0f*((wavelengths.w - CAM_LAMBDA_MIN) / (CAM_LAMBDA_MAX - CAM_LAMBDA_MIN)));
+    RayPosAndW p1;
+    RayDirAndT p2;
 
     p1.origin[0] = ray_pos[0];
     p1.origin[1] = ray_pos[1];
     p1.origin[2] = ray_pos[2];
-    p1.waves01  = packXY1616(wavesX,wavesY); // 
+    p1.wave      = wavelengths.x;
 
     p2.direction[0] = ray_dir[0];
     p2.direction[1] = ray_dir[1];
     p2.direction[2] = ray_dir[2];
-    p2.waves23     = packXY1616(wavesZ,wavesW); // 
+    p2.time         = 0.0f;
   
     out_rayPosAndNear4f[tid] = p1;
     out_rayDirAndFar4f [tid] = p2;
-    m_storedWaves      [tid] = uint2(p1.waves01,  p2.waves23); // just remember waves in our buffer for camera
+    m_storedWaves      [tid] = wavelengths.x; // just remember waves in our buffer for camera
     m_storedCos4       [tid] = cosTheta*cosTheta*cosTheta*cosTheta;
   }
 }
@@ -299,19 +289,18 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float* in_colo
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
 
     //float4 color = in_color[tid]*m_storedCos4[tid];
-    float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3])*m_storedCos4[tid]; // always float4
+    float4 color;   
+    if(m_spectral_mode != 0)
+    {
+      float data = in_color[tid]*m_storedCos4[tid];
+      color = float4(data,data,data,data);
+    }
+    else
+      color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3])*m_storedCos4[tid]; 
 
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
-      const float scale = (1.0f/65535.0f)*(CAM_LAMBDA_MAX - CAM_LAMBDA_MIN);
-      const uint2 wavesPacked = m_storedWaves[tid];
-      const uint2 wavesXY = unpackXY1616(wavesPacked.x);
-      const uint2 wavesZW = unpackXY1616(wavesPacked.y);
-      float4 wavelengths = float4(float(wavesXY[0])*scale + CAM_LAMBDA_MIN,
-                                  float(wavesXY[1])*scale + CAM_LAMBDA_MIN,
-                                  float(wavesZW[0])*scale + CAM_LAMBDA_MIN,
-                                  float(wavesZW[1])*scale + CAM_LAMBDA_MIN);
-                                  
+      float4 wavelengths = float4(m_storedWaves[tid]);                            
       const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
       color = to_float4(XYZToRGB(xyz), 1.0f);
     }

@@ -31,11 +31,13 @@ int main(int argc, const char** argv)
   int WIN_WIDTH  = 1024;
   int WIN_HEIGHT = 1024;
   int SPP_TOTAL  = 1024;
+  int CHANNELS   = 4;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string opticFile      = "optics.dat";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   ArgParser args(argc, argv);
@@ -63,6 +65,10 @@ int main(int argc, const char** argv)
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   if(args.hasOption("--spectral"))
     spectral_mode = 1;
+  if(spectral_mode == 1) /////////////////////////////////////////////////////////////// (!!!) single wave per ray in spectral mode (!!!)
+    CHANNELS = 1;
+  if(args.hasOption("-optics_file"))
+    opticFile = args.getOptionValue<std::string>("-optics_file");
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -96,8 +102,19 @@ int main(int argc, const char** argv)
   //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
   //
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-  auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
-    
+  SceneInfo sceneInfo = {};
+  sceneInfo.spectral  = spectral_mode;
+  auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo); 
+  WIN_WIDTH     = sceneInfo.width;
+  WIN_HEIGHT    = sceneInfo.height;
+  spectral_mode = sceneInfo.spectral;
+
+  if(args.hasOption("-width"))
+    WIN_WIDTH = args.getOptionValue<int>("-width");
+  if(args.hasOption("-height"))
+    WIN_HEIGHT = args.getOptionValue<int>("-height");
+  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  
   // (2) init device with apropriate features for both hydra and camera plugin
   //
   unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
@@ -112,8 +129,10 @@ int main(int argc, const char** argv)
   //
   if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
     devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
-    
-  auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
+
+  sceneInfo.memGeom += MEGA_TILE_SIZE*CHANNELS*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float); // memory for our image data 
+
+  auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra, sceneInfo.memGeom, sceneInfo.memTextures); 
 
   // (3) Explicitly disable all pipelines which you don't need.
   //     This will make application start-up faster.
@@ -131,17 +150,14 @@ int main(int argc, const char** argv)
   auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>();
   //auto pCamImpl = std::make_shared<CamPinHole_PINHOLE_GPU>();  
 
-  pRender->SetVulkanContext(ctx);
   pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-    
-  pCamImpl->SetVulkanContext(ctx);
   pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
 
   // alloc all reauired buffers on GPU
   // 
   VkBuffer rayPosGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   VkBuffer rayDirGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  VkBuffer rayColGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+  VkBuffer rayColGPU = vk_utils::createBuffer(ctx.device, MEGA_TILE_SIZE*CHANNELS*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 
   VkBuffer frameBuferGPU = vk_utils::createBuffer(ctx.device, WIN_WIDTH*WIN_HEIGHT*4*sizeof(float), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
@@ -152,14 +168,14 @@ int main(int argc, const char** argv)
   
   std::cout << "[main_cam_gpu]: Loading scene ... " << scenePath.c_str() << std::endl;
 
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode, opticFile});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
 
-  pRender->CommitDeviceData();                       // copy internal camera     data from CPU to GPU
-  pCamImpl->CommitDeviceData();                      // copy internal integrator data from CPU to GPU
+  pRender->CommitDeviceData(ctx.pCopyHelper);        // copy internal camera     data from CPU to GPU
+  pCamImpl->CommitDeviceData(ctx.pCopyHelper);       // copy internal integrator data from CPU to GPU
 
   SPP_TOTAL = pRender->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
@@ -232,7 +248,7 @@ int main(int argc, const char** argv)
     } 
 
     pCamImpl->MakeRaysBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, subPassId);
-    pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, nullptr, nullptr, nullptr);
+    pRender->PathTraceFromInputRaysCmd(commandBuffer, MEGA_TILE_SIZE, CHANNELS, nullptr, nullptr, nullptr);
     pCamImpl->AddSamplesContributionBlockCmd(commandBuffer, nullptr, nullptr, MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);      
   }
 

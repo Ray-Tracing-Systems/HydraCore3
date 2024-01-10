@@ -11,13 +11,6 @@
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
-#ifdef USE_VULKAN
-#include "vk_context.h"
-#include "integrator_pt1_generated.h"              // advanced way of woking with hydra
-#include "cam_plugin/CamPinHole_pinhole_gpu.h"     // same way for camera plugins
-#include "cam_plugin/CamTableLens_tablelens_gpu.h" // same way for camera plugins
-#endif
-
 int main(int argc, const char** argv)
 {
   #ifndef NDEBUG
@@ -29,15 +22,17 @@ int main(int argc, const char** argv)
   int WIN_WIDTH  = 1024;
   int WIN_HEIGHT = 1024;
   int SPP_TOTAL  = 1024;
+  int CHANNELS   = 4;
 
   std::string scenePath      = "../resources/HydraCore/hydra_app/tests/test_42/statex_00001.xml"; 
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string opticFile      = "optics.dat";
   float gamma                = 2.4f; // out gamma, special value, see save image functions
 
   std::shared_ptr<Integrator>  pRender  = nullptr;
-  std::shared_ptr<ICamRaysAPI> pCamImpl = nullptr;
+  std::shared_ptr<ICamRaysAPI2> pCamImpl = nullptr;
 
   ArgParser args(argc, argv);
   
@@ -49,6 +44,9 @@ int main(int argc, const char** argv)
 
   if(args.hasOption("-scn_dir"))
     sceneDir = args.getOptionValue<std::string>("-scn_dir");
+
+  if(args.hasOption("-optics_file"))
+    opticFile = args.getOptionValue<std::string>("-optics_file");
 
   int camType = 1;
 
@@ -64,6 +62,9 @@ int main(int argc, const char** argv)
     WIN_HEIGHT = args.getOptionValue<int>("-height");
   if(args.hasOption("--spectral"))
     spectral_mode = 1;
+  
+  if(spectral_mode == 1) /////////////////////////////////////////////////////////////// (!!!) single wave per ray in spectral mode (!!!)
+    CHANNELS = 1;
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -92,80 +93,15 @@ int main(int argc, const char** argv)
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
-  const int MEGA_TILE_SIZE = 512*512;           ///<! tile size
+  const int MEGA_TILE_SIZE = 512*512;                      ///<! tile size
 
-  std::vector<RayPart1> rayPos(MEGA_TILE_SIZE); ///<! per tile data, input 
-  std::vector<RayPart2> rayDir(MEGA_TILE_SIZE); ///<! per tile data, input
-  std::vector<float4>   rayCol(MEGA_TILE_SIZE); ///<! per tile data, output 
+  std::vector<RayPosAndW> rayPos(MEGA_TILE_SIZE);          ///<! per tile data, input 
+  std::vector<RayDirAndT> rayDir(MEGA_TILE_SIZE);          ///<! per tile data, input
+  std::vector<float>      rayCol(MEGA_TILE_SIZE*CHANNELS); ///<! per tile data, output 
 
-  std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer (TODO: monochrome FB need also)
+  std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer, always float4 in this demo
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
 
-  bool onGPU = args.hasOption("--gpu");
-  #ifdef USE_VULKAN
-  if(onGPU)
-  {
-    // (1) advanced way, you may disable unused features in shader code via spec constants.
-    //     To do this, you have to know what materials, lights and e.t.c. is actualle presented in scene 
-    //
-    std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-    auto hydraFeatures = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), WIN_WIDTH, WIN_HEIGHT, spectral_mode);
-    
-    // (2) init device with apropriate features for both hydra and camera plugin
-    //
-    unsigned int preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
-    std::vector<const char*> requiredExtensions;
-    
-    auto devFeaturesCam = (camType == 0) ? CamPinHole_PINHOLE_GPU::ListRequiredDeviceFeatures(requiredExtensions) :
-                                           CamTableLens_TABLELENS_GPU::ListRequiredDeviceFeatures(requiredExtensions);
-                                           
-    auto devFeaturesHydra = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions); 
-    
-    // TBD: you actually need to carefully join all required device features structures and Vulkan lists 
-    //
-    if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
-      devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
-    
-    auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra); 
-
-    // (3) Explicitly disable all pipelines which you don't need.
-    //     This will make application start-up faster.
-    //
-    Integrator_Generated::EnabledPipelines().enableRayTraceMega               = false;
-    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; 
-    Integrator_Generated::EnabledPipelines().enablePackXYMega                 = false; 
-    Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = true;  // you need only this pipeline!
-    Integrator_Generated::EnabledPipelines().enablePathTraceMega              = false;
-    Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = false;
-
-    // advanced way, init renderer
-    //
-    {
-      auto pObj = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pRender = pObj;
-    }
-
-    // init appropriate camera plugin and put it to 'pCamImpl'
-    //
-    if(camType == 0)
-    {
-      auto pObj = std::make_shared<CamPinHole_PINHOLE_GPU>(); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pCamImpl = pObj;
-    }
-    else if(camType == 1)
-    {
-      auto pObj = std::make_shared<CamTableLens_TABLELENS_GPU>(); 
-      pObj->SetVulkanContext(ctx);
-      pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
-      pCamImpl = pObj;
-    }
-  }
-  else
-  #endif
   {
     pRender = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
 
@@ -175,17 +111,13 @@ int main(int argc, const char** argv)
       pCamImpl = std::make_shared<CamTableLens>(); // (WIN_WIDTH*WIN_HEIGHT);
   }
 
-  //auto pCamDebug = std::make_shared<CamTableLens>();
-
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   
   std::cout << "[main_with_cam]: Loading scene ... " << scenePath.c_str() << std::endl;
 
-  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
+  pCamImpl->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode, opticFile});
   pCamImpl->SetBatchSize(MEGA_TILE_SIZE);
-  //pCamDebug->SetParameters(WIN_WIDTH, WIN_HEIGHT, {45.0f, 1.0f, 0.01f, 100.0f, spectral_mode});
-  //pCamDebug->SetBatchSize(MEGA_TILE_SIZE);
 
   pRender->LoadScene(scenePath.c_str(), sceneDir.c_str());
   pRender->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
@@ -207,7 +139,7 @@ int main(int argc, const char** argv)
   std::cout << "[main_with_cam]: spp     = " << SPP_TOTAL << std::endl;
   std::cout << "[main_with_cam]: passNum = " << CAM_PASSES_NUM << std::endl;
 
-  float timings   [4] = {0,0,0,0};
+  float timings  [4] = {0,0,0,0};
   float timingSum[4] = {0,0,0,0};
   const float normConst = 1.0f/float(SPP_TOTAL);
 
@@ -221,13 +153,11 @@ int main(int argc, const char** argv)
     const int passNum = (WIN_WIDTH*WIN_HEIGHT/MEGA_TILE_SIZE);
     for(int subPassId = 0; subPassId < passNum; subPassId++) 
     {
-      std::fill(rayCol.begin(), rayCol.end(), LiteMath::float4{}); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
+      std::fill(rayCol.begin(), rayCol.end(), 0.0f); // clear temp color buffer, gpu ver should do this automaticly, please check(!!!)
       
-      //pCamDebug->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
       pCamImpl->MakeRaysBlock(rayPos.data(), rayDir.data(), MEGA_TILE_SIZE, subPassId);
-      pRender->PathTraceFromInputRaysBlock(MEGA_TILE_SIZE, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
+      pRender->PathTraceFromInputRaysBlock(MEGA_TILE_SIZE, CHANNELS, rayPos.data(), rayDir.data(), rayCol.data(), SAMPLES_PER_RAY);
       pCamImpl->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
-      //pCamDebug->AddSamplesContributionBlock((float*)realColor.data(), (const float*)rayCol.data(), MEGA_TILE_SIZE, WIN_WIDTH, WIN_HEIGHT, subPassId);
 
       pRender->GetExecutionTime("PathTraceFromInputRaysBlock", timings);
       for(int i=0;i<4;i++)

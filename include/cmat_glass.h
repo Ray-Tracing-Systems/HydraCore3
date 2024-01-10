@@ -112,7 +112,7 @@ static inline void refractionGlassSampleAndEval(const float4 a_colorTransp, cons
       eta = 1.0f / eta;
 
     float3 nx, ny, nz = a_normal;
-    CoordinateSystem(nz, &nx, &ny);
+    CoordinateSystemV2(nz, &nx, &ny);
 
     const float3 wo      = make_float3(-dot(a_rayDir, nx), -dot(a_rayDir, ny), -dot(a_rayDir, nz));
     const float3 wh      = GgxVndf(wo, roughSqr, a_rands.x, a_rands.y);             // New sampling Heitz 2017
