@@ -705,21 +705,18 @@ static inline float FrFilmRefl2(float cosThetaI, const float4* eta, const float4
   Polarization polarization[2] = {S, P};
   for (int p = 0; p <= 1; ++p)
   {
-    std::vector<complex> FrRefl;
-    complex FrReflF = complex(1.f);
-    complex FrReflI = FrComplexRefl(cosTheta_v[layers], cosTheta_v[layers + 1], eta_v[layers], eta_v[layers + 1], polarization[p]);
+    complex FrRefl = FrComplexRefl(cosTheta_v[layers], cosTheta_v[layers + 1], eta_v[layers], eta_v[layers + 1], polarization[p]);
+    complex FrReflI = complex(1.f);
     for (int i = layers - 1; i >= 0; --i)
     {
-      FrReflF = FrReflI;
       FrReflI = FrComplexRefl(cosTheta_v[i], cosTheta_v[i + 1], eta_v[i], eta_v[i + 1], polarization[p]);
-      complex FrRefl = FrReflF * exp(-phaseDiff_v[i].im) * complex(cos(phaseDiff_v[i].re), sin(phaseDiff_v[i].re));
+      FrRefl  = FrRefl * exp(-phaseDiff_v[i].im) * complex(cos(phaseDiff_v[i].re), sin(phaseDiff_v[i].re));
       FrRefl  = (FrReflI + FrRefl) / (1 + FrReflI * FrRefl);
       FrReflI = FrRefl;
     }
     result += complex_norm(FrReflI);
   }
 
-  //std::cout << result / 2 << " " << lambda << " " << cosThetaI << std::endl;
   return result / 2;
 }
 

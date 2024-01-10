@@ -198,15 +198,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
       std::vector<float4> kSpec;
       std::vector<float> thickness;
       uint layerId = a_materialId;
-      while (as_uint(m_materials[layerId].data[FILM_NEXT_ID]) != 0xFFFFFFFF)
+      do
       {
         etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
         kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
         thickness.push_back(m_materials[layerId].data[FILM_THICKNESS]);
         layerId = as_uint(m_materials[layerId].data[FILM_NEXT_ID]);
-      } 
-      etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
-      kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+      } while (layerId != 0xFFFFFFFF);
 
       if(trEffectivelySmooth(alpha))
         filmSmoothSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), thickness.data(), etaSpec.size() - 1, wavelengths, rands, v, n, tc, &res);
@@ -328,15 +326,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           std::vector<float4> kSpec;
           std::vector<float> thickness;
           uint layerId = a_materialId;
-          while (as_uint(m_materials[layerId].data[FILM_NEXT_ID]) != 0xFFFFFFFF)
+          do
           {
             etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
             kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
             thickness.push_back(m_materials[layerId].data[FILM_THICKNESS]);
             layerId = as_uint(m_materials[layerId].data[FILM_NEXT_ID]);
-          } 
-          etaSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_ETA, FILM_ETA_SPECID));
-          kSpec.push_back(SampleMatParamSpectrum(layerId, wavelengths, FILM_K, FILM_K_SPECID));
+          } while (layerId != 0xFFFFFFFF);
           filmRoughEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), thickness.data(), etaSpec.size() - 1, wavelengths, l, v, n, tc, alphaTex, &currVal);
         }
 
