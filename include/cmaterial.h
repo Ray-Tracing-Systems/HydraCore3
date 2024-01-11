@@ -168,10 +168,10 @@ static constexpr uint FILM_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
 static constexpr uint FILM_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
 static constexpr uint FILM_ETA               = UINT_MAIN_LAST_IND + 2;
 static constexpr uint FILM_K                 = UINT_MAIN_LAST_IND + 3;
-static constexpr uint FILM_THICKNESS         = UINT_MAIN_LAST_IND + 4;
-static constexpr uint FILM_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
-static constexpr uint FILM_K_SPECID          = UINT_MAIN_LAST_IND + 6;
-static constexpr uint FILM_NEXT_ID           = UINT_MAIN_LAST_IND + 7;
+static constexpr uint FILM_THICKNESS_OFFSET  = UINT_MAIN_LAST_IND + 4;
+static constexpr uint FILM_ETA_SPECID_OFFSET = UINT_MAIN_LAST_IND + 5;
+static constexpr uint FILM_K_SPECID_OFFSET   = UINT_MAIN_LAST_IND + 6;
+static constexpr uint FILM_LAYERS_COUNT      = UINT_MAIN_LAST_IND + 7;
 static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 8;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
 
