@@ -170,21 +170,11 @@ int main(int argc, const char** argv)
   float normConst = 1.0f/float(PASS_NUMBER);
 
   int channelsNum = 1;
-  int resolution  = 256;
+  int wh[2] = {1,256};  
 
-  std::vector<float> imgData; //(resolution*resolution*channelsNum);
-  std::vector<float> imgGrad; //(resolution*resolution*channelsNum);
+  std::vector<float> imgData(wh[0]*wh[1]*channelsNum); 
+  std::vector<float> imgGrad(wh[0]*wh[1]*channelsNum); 
 
-  /////////////////////////////////////////////////////////////////////////////////
-  int wh[2] = {1,256};
-  std::ifstream fin("iesdata.image1f", std::ios::binary);
-  fin.read((char*)wh, 2*sizeof(int));
-  
-  imgData.resize(wh[0]*wh[1]);
-  imgGrad.resize(wh[0]*wh[1]);
-  fin.read((char*)imgData.data(), imgData.size()*sizeof(float));
-  fin.close();
-  
   std::cout << "(w,h) = " << wh[0] << ", " << wh[1] << std::endl;
   ///////////////////////////////////////////////////////////////////////////////// 
 
