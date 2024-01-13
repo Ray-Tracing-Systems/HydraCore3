@@ -5,6 +5,30 @@
 #include "../spectrum.h"
 #include <iostream>
 
+struct ThinFilmPrecomputed
+{
+  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> reflectivity;
+  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> transmittance;
+};
+
+static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
+        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes);
+
+ThinFilmPrecomputed precomputeThinFilm(const Material* a_materials, const float* a_eta, const float* a_k, const float* a_thickness, int layers, 
+        const float* a_spectrum, const float* a_cosTheta)
+{
+  ThinFilmPrecomputed res;
+  for (int w = 0; w < FILM_LENGTH_RES; ++w)
+  {
+    for (int a = 0; a < FILM_ANGLE_RES; ++a)
+    {
+      float wavelength = a_spectrum[w];
+      res.reflectivity[w * FILM_LENGTH_RES + a] = multFrFilmRefl(a_cosTheta[a], &a_eta[w * layers], &a_k[w * layers], a_thickness, layers, a_spectrum[w]);
+    }
+  }
+  return res;
+}
+
 static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
         uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes)
 {
@@ -26,7 +50,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
     }
     else if (layers > 1)
     {
-      val[i] = FrFilmRefl2(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
+      val[i] = multFrFilmRefl4(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
     }
     // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
     val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
@@ -77,7 +101,7 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
 
-  float F = FrFilmRefl2(std::abs(dot(wo, wm)), eta, k, thickness, layers, lambda, comp);
+  float F = multFrFilmRefl4(std::abs(dot(wo, wm)), eta, k, thickness, layers, lambda, comp);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
