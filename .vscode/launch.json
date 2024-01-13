@@ -230,7 +230,7 @@
                  //"-integrator", "prt", 
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "256",
+                 "-spp", "16",
                  "-grad", "1",
                  "-ref", "z_ref_ies.exr",
                  "-out", "z_render.bmp"],

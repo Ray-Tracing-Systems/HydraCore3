@@ -1262,8 +1262,88 @@ float4 IntegratorDR::CastRayDR(uint tid, uint channels, float* out_color, const 
   return finalColor;
 }
 
-extern double __enzyme_autodiff(void*, ...);
+extern float __enzyme_autodiff(void*, ...);
 int enzyme_const, enzyme_dup, enzyme_out;
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+double RegLossImage1D(size_t a_size, const float* data)
+{
+  double summ = 0.0f;
+
+  for(size_t i=1;i<a_size-1;i++) {
+    float diffLeft  = data[i] - data[i-1];
+    float diffRight = data[i] - data[i+1];
+    summ += double(diffLeft*diffLeft + diffRight*diffRight);
+  }
+
+  return summ/double(a_size);
+}
+
+double RegLossImage2D(int w, int h, const float* data)
+{
+  double summ = 0.0f;
+
+  for(int y=1;y<h-1;y++) {
+    for(int x=1;x<w-1;x++) {
+      float diffTop    = data[y*w+x] - data[(y+1)*w+x];
+      float diffBottom = data[y*w+x] - data[(y-1)*w+x];
+      float diffLeft   = data[y*w+x] - data[y*w+x-1];
+      float diffRight  = data[y*w+x] - data[y*w+x+1];
+      summ += double(diffLeft*diffLeft + diffRight*diffRight + diffTop*diffTop + diffBottom*diffBottom);
+    }
+  }
+ 
+  return summ/double(w*h);
+}
+
+using LiteMath::dot3;
+
+double RegLossImage2D4f(int w, int h, const float* data)
+{
+  double summ = 0.0f;
+
+  for(int y=1;y<h-1;y++) {
+    for(int x=1;x<w-1;x++) {
+
+      float4 p0 = float4(data[(y*w+x)*4+0],     data[(y*w+x)*4+1],     data[(y*w+x)*4+2],     data[(y*w+x)*4+3]);
+      float4 p1 = float4(data[((y+1)*w+x)*4+0], data[((y+1)*w+x)*4+1], data[((y+1)*w+x)*4+2], data[((y+1)*w+x)*4+3]);
+      float4 p2 = float4(data[((y-1)*w+x)*4+0], data[((y-1)*w+x)*4+1], data[((y-1)*w+x)*4+2], data[((y-1)*w+x)*4+3]); 
+      float4 p3 = float4(data[(y*w+x-1)*4+0], data[(y*w+x-1)*4+1], data[(y*w+x-1)*4+2], data[(y*w+x-1)*4+3]);
+      float4 p4 = float4(data[(y*w+x+1)*4+0], data[(y*w+x+1)*4+1], data[(y*w+x+1)*4+2], data[(y*w+x+1)*4+3]);
+
+      float4 diffTop    = p0 - p1;
+      float4 diffBottom = p0 - p2;
+      float4 diffLeft   = p0 - p3;
+      float4 diffRight  = p0 - p4;
+
+      summ += double(dot3(diffLeft,diffLeft) + dot3(diffRight,diffRight) + dot3(diffTop,diffTop) + dot3(diffBottom,diffBottom));
+    }
+  }
+ 
+  return summ; //double(w*h);
+}
+
+void Image1DRegularizer(size_t a_size, const float* data, float* grad)
+{
+  __enzyme_autodiff((void*)RegLossImage1D, 
+                           enzyme_const, a_size,
+                           enzyme_dup,   data, grad);
+
+}
+
+void Image2D4fRegularizer(int w, int h, const float* data, float* grad)
+{
+  __enzyme_autodiff((void*)RegLossImage2D4f, 
+                           enzyme_const, w,
+                           enzyme_const, h,
+                           enzyme_dup,   data, grad);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 float PixelLossRT(IntegratorDR* __restrict__ pIntegrator,
                   const float*  __restrict__ a_refImg,

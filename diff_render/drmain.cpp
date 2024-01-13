@@ -16,6 +16,8 @@ std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 
 float4x4 ReadMatrixFromString(const std::string& str);
 
+void Image2D4fRegularizer(int w, int h, const float* data, float* grad);
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -169,11 +171,10 @@ int main(int argc, const char** argv)
   float timings[4] = {0,0,0,0};
   float normConst = 1.0f/float(PASS_NUMBER);
 
-  int channelsNum = 1;
-  int wh[2] = {1,256};  
+  int wh[3] = {256,256,4};  
 
-  std::vector<float> imgData(wh[0]*wh[1]*channelsNum); 
-  std::vector<float> imgGrad(wh[0]*wh[1]*channelsNum); 
+  std::vector<float> imgData(wh[0]*wh[1]*wh[2]); 
+  std::vector<float> imgGrad(wh[0]*wh[1]*wh[2]); 
 
   std::cout << "(w,h) = " << wh[0] << ", " << wh[1] << std::endl;
   ///////////////////////////////////////////////////////////////////////////////// 
@@ -181,7 +182,7 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f); // 
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, wh[0], wh[1], channelsNum);
+  auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, wh[0], wh[1], wh[2]);
 
   pImpl->SetMaxThreadsAndBounces(32, 6);
 
@@ -205,6 +206,8 @@ int main(int argc, const char** argv)
 
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
+
+    //Image2D4fRegularizer(wh[0], wh[1], imgData.data(), imgGrad.data());
 
     pImpl->GetExecutionTime("PathTraceDR", timings);  
   
