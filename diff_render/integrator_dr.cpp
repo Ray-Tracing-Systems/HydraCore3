@@ -1481,7 +1481,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
     //}
   }
 
-  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+  diffPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 
   // accumulate gradient from different threads (parallel reduction/hist)
   //

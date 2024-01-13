@@ -35,12 +35,6 @@ public:
   void LoadSceneEnd() override;
 
   float4 CastRayDR(uint tid, uint channels, float* out_color, const float* a_data);
-  
-  bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
-                       Lite_Hit* out_hit, float2* out_bars, const float* a_data);
-  void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data);
-
-  void kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, float4* finalColor, const uint* in_pakedXY, float* out_color, const float* a_data);
 
   float RayTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
                    const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize); ///<! return loss for printing
@@ -51,6 +45,8 @@ public:
   // interaction with diff rendering
   //
   std::pair<size_t, size_t> PutDiffTex2D(uint32_t texId, uint32_t width, uint32_t height, uint32_t channels);
+  
+  void GetExecutionTime(const char* a_funcName, float a_out[4]) override;
 
 protected:
 
@@ -173,5 +169,12 @@ public:
   };
 
   std::vector<PerThreadData>  m_recorded;
+  float diffPtTime = 0.0f;
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+  bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
+                       Lite_Hit* out_hit, float2* out_bars, const float* a_data);
+  void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, const float* a_data);
+  void kernel_CalcRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, float4* finalColor, const uint* in_pakedXY, float* out_color, const float* a_data);
 };
 

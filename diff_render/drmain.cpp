@@ -181,7 +181,6 @@ int main(int argc, const char** argv)
   std::fill(imgData.begin(), imgData.end(), 1.0f); // 
   std::fill(imgGrad.begin(), imgGrad.end(), 0.0f);
 
-
   auto [texOffset, texSize] = pImpl->PutDiffTex2D(1, wh[0], wh[1], channelsNum);
 
   pImpl->SetMaxThreadsAndBounces(32, 6);
@@ -206,12 +205,12 @@ int main(int argc, const char** argv)
 
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
-    
 
-    std::cout << ", loss = " << loss << std::endl;
+    pImpl->GetExecutionTime("PathTraceDR", timings);  
+  
+    std::cout << ", loss = " << loss << ", time = " << timings[0] << " ms" << std::endl;
     std::cout.flush();
     
-    //pImpl->GetExecutionTime("PathTraceBlock", timings);
     //std::cout << "PathTraceBlock(exec) = " << timings[0] << " ms " << std::endl;
     
     pOpt->step(imgData.data(), imgGrad.data(), iter);

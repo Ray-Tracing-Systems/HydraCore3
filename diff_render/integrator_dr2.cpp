@@ -64,3 +64,11 @@ void IntegratorDR::RecordBlendRndNeeded(uint32_t bounceId, uint layer, float ran
 
 }
 
+void IntegratorDR::GetExecutionTime(const char* a_funcName, float a_out[4])
+{
+  if(std::string(a_funcName) == "PathTraceDR" || std::string(a_funcName) == "PathTraceDRBlock")
+    a_out[0] = diffPtTime;
+  else 
+    Integrator::GetExecutionTime(a_funcName, a_out);
+}
+
