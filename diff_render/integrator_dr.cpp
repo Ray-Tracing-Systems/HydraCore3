@@ -1037,7 +1037,7 @@ float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wav
   {
     float sintheta        = 0.0f;
     const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*a_rayDir, &sintheta);
-    const float4 texColor = Tex2DFetchAD(iesId, texCoord, dparams)*0.00025f;
+    const float4 texColor = Tex2DFetchAD(iesId, texCoord, dparams);
     lightColor *= texColor;
   }
 

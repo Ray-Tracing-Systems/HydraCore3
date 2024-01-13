@@ -1100,15 +1100,29 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       const std::string  iesFileA = hydra_xml::ws2s(iesFileW);
       
       int w,h;
-      std::vector<float> texData = CreateSphericalTextureFromIES(iesFileA.c_str(), &w, &h);
+      std::vector<float> sphericalTexture = CreateSphericalTextureFromIES(iesFileA.c_str(), &w, &h);
       
-      //int wh[2] = {w,h};
-      //std::ofstream fout("iesdata.image1f", std::ios::binary);
-      //fout.write((const char*)wh, 2*sizeof(int));
-      //fout.write((const char*)texData.data(), texData.size()*sizeof(float));
-      //fout.close();
+      // normalize ies texture
+      //
+      float maxVal = 0.0f;
+      for (auto i = 0; i < sphericalTexture.size(); i++)
+        maxVal = std::max(maxVal, sphericalTexture[i]);
+  
+      if(maxVal == 0.0f)
+      {
+        std::cerr << "[ERROR]: broken IES file (maxVal = 0.0): " << iesFileA.c_str() << std::endl;
+        maxVal = 1.0f;
+      }
+  
+      float invMax = 1.0f / maxVal;
+      for (auto i = 0; i < sphericalTexture.size(); i++)
+      {
+        float val = invMax*sphericalTexture[i];
+        sphericalTexture[i] = val;
+      }
+      ////
 
-      auto pTexture = std::make_shared< Image2D<float> >(w, h, texData.data());
+      auto pTexture = std::make_shared< Image2D<float> >(w, h, sphericalTexture.data());
       pTexture->setSRGB(false);
       
       Sampler sampler;

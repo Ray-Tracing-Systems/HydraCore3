@@ -208,7 +208,7 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
   {
     float sintheta        = 0.0f;
     const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*a_rayDir, &sintheta);
-    const float4 texColor = m_textures[iesId]->sample(texCoord)*0.00025f;
+    const float4 texColor = m_textures[iesId]->sample(texCoord);
     lightColor *= texColor;
   }
 
