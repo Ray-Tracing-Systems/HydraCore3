@@ -211,7 +211,7 @@ int main(int argc, const char** argv)
     //std::fill(gradTest.begin(), gradTest.end(), 0.0f);
     //Image2D4fRegularizer(wh[0], wh[1], imgData.data(), gradTest.data());
     //for(size_t i=0;i<imgGrad.size();i++)
-    //  imgGrad[i] += gradTest[i]*0.1f;
+    //  imgGrad[i] += gradTest[i]*0.5f;
 
     //if(iter == 30) 
     //{

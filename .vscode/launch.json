@@ -204,7 +204,7 @@
                  "-height", "512",
                  "-spp", "256",
                  "-grad", "1",
-                 "-out", "z_ref.exr"],
+                 "-out", "z_render.exr"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
