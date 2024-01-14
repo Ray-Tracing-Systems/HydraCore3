@@ -6,6 +6,7 @@ using cmesh4::SimpleMesh;
 
 #include "mi_materials.h"
 #include "spectrum.h"
+#include "include/cmat_film.h"
 
 //#define LAYOUT_STD140 // !!! PLEASE BE CAREFUL WITH THIS !!!
 #include "LiteScene/hydraxml.h"
@@ -506,11 +507,48 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   return mat;
 }
 
+ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const std::vector<float> &wavelengths, const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
+{
+  ThinFilmPrecomputed res;
+  for (int w = 0; w < FILM_LENGTH_RES; ++w)
+  {
+    float wavelength = (LAMBDA_MAX - LAMBDA_MIN) / (FILM_LENGTH_RES - 1) * w + LAMBDA_MIN;
+    std::vector<float> eta, k;
+    eta.reserve(layers);
+    k.reserve(layers);
+    uint2 data;
+    uint offset;
+    uint size;
+    for (int layer = 0; layer < layers; ++layer)
+    {
+      data  = spec_offsets[eta_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      eta[layer] = SampleSpectrum(wavelengths.data() + offset, spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+      data  = spec_offsets[k_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      k[layer] = SampleSpectrum(wavelengths.data() + offset, spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+    }
+    for (int a = 0; a < FILM_ANGLE_RES; ++a)
+    {
+      float cosTheta = 1.f / (FILM_ANGLE_RES - 1) * a;
+      res.reflectivity[w * FILM_ANGLE_RES + a] = multFrFilmRefl(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+    }
+  }
+  return res;
+}
+
 Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                     std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                     std::vector<float> &precomputed_frenel, std::vector<float> &thickness_vec,
-                                    std::vector<uint> &eta_id_vec, std::vector<uint> &k_id_vec)
+                                    std::vector<uint> &eta_id_vec, std::vector<uint> &k_id_vec,
+                                    const std::vector<float> &spec_values,
+                                    const std::vector<float> &wavelengths,
+                                    const std::vector<uint2> &spec_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -563,6 +601,9 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     k_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
   }
   mat.data[FILM_LAYERS_COUNT] = as_float(layers);
+
+  auto precomputed_film = precomputeThinFilm(eta_id_vec.data(), k_id_vec.data(), spec_values, wavelengths, 
+        spec_offsets, thickness_vec.data(), layers);
 
   //std::copy(precomp.transmittance.begin(), precomp.transmittance.end(), std::back_inserter(precomputed_transmittance));
 
@@ -1181,7 +1222,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if (mat_type == thinFilmMatTypeStr)
     {
-      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_eta_id_vec, m_films_k_id_vec);
+      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_eta_id_vec, m_films_k_id_vec,
+                                 m_spec_values, m_wavelengths, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
