@@ -1285,18 +1285,21 @@ double RegLossImage1D(size_t a_size, const float* data)
 double RegLossImage2D(int w, int h, const float* data)
 {
   double summ = 0.0f;
+  std::vector<double> lines(h);
 
   for(int y=1;y<h-1;y++) {
+    lines[y] = 0.0;
     for(int x=1;x<w-1;x++) {
       float diffTop    = data[y*w+x] - data[(y+1)*w+x];
       float diffBottom = data[y*w+x] - data[(y-1)*w+x];
       float diffLeft   = data[y*w+x] - data[y*w+x-1];
       float diffRight  = data[y*w+x] - data[y*w+x+1];
-      summ += double(diffLeft*diffLeft + diffRight*diffRight + diffTop*diffTop + diffBottom*diffBottom);
+      lines[y] += std::sqrt(double(diffLeft*diffLeft + diffRight*diffRight + diffTop*diffTop + diffBottom*diffBottom));
     }
+    summ += lines[y];
   }
  
-  return summ/double(w*h);
+  return summ;
 }
 
 using LiteMath::dot3;
@@ -1304,10 +1307,11 @@ using LiteMath::dot3;
 double RegLossImage2D4f(int w, int h, const float* data)
 {
   double summ = 0.0f;
+  std::vector<double> lines(h);
 
   for(int y=1;y<h-1;y++) {
+    lines[y] = 0.0;
     for(int x=1;x<w-1;x++) {
-
       float4 p0 = float4(data[(y*w+x)*4+0],     data[(y*w+x)*4+1],     data[(y*w+x)*4+2],     data[(y*w+x)*4+3]);
       float4 p1 = float4(data[((y+1)*w+x)*4+0], data[((y+1)*w+x)*4+1], data[((y+1)*w+x)*4+2], data[((y+1)*w+x)*4+3]);
       float4 p2 = float4(data[((y-1)*w+x)*4+0], data[((y-1)*w+x)*4+1], data[((y-1)*w+x)*4+2], data[((y-1)*w+x)*4+3]); 
@@ -1319,8 +1323,18 @@ double RegLossImage2D4f(int w, int h, const float* data)
       float4 diffLeft   = p0 - p3;
       float4 diffRight  = p0 - p4;
 
-      summ += double(dot3(diffLeft,diffLeft) + dot3(diffRight,diffRight) + dot3(diffTop,diffTop) + dot3(diffBottom,diffBottom));
+      lines[y] += std::sqrt(double(dot3(diffLeft,diffLeft) + dot3(diffRight,diffRight) + dot3(diffTop,diffTop) + dot3(diffBottom,diffBottom)));
     }
+  }
+  
+  summ = 0.0;
+  for(int sy=0; sy < h/2; sy++) {
+    int index1 = h/2 + sy;
+    int index2 = h/2 - sy;
+    if(index1 < h-1)
+      summ += lines[index1];
+    if(sy!=0 && index2 >= 1)
+      summ += lines[index2];
   }
  
   return summ; //double(w*h);
