@@ -16,8 +16,8 @@ static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
 static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
-static constexpr uint32_t FILM_ANGLE_RES = 64;
-static constexpr uint32_t FILM_LENGTH_RES = 64;
+static constexpr uint32_t FILM_ANGLE_RES = 90;
+static constexpr uint32_t FILM_LENGTH_RES = 500;
 static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;

@@ -12,7 +12,7 @@ struct ThinFilmPrecomputed
 };
 
 static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes)
+        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* reflectance)
 {
   //std::cout << eta_1[0] << k_1[0] << eta_2[0] << k_2[0] << std::endl;
   const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
@@ -24,18 +24,33 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   
   float4 val;
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-  for(int i = 0; i < spectralSamples; ++i)
+
+  uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
+  if (!precompFlag)
   {
-    if (layers == 1)
+    for(int i = 0; i < spectralSamples; ++i)
     {
-      val[i] = FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
+      if (layers == 1)
+      {
+        val[i] = FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
+      }
+      else if (layers > 1)
+      {
+        val[i] = multFrFilmRefl4(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
+      }
+      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
+      val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
     }
-    else if (layers > 1)
+  }
+  else
+  {
+    for(int i = 0; i < spectralSamples; ++i)
     {
-      val[i] = multFrFilmRefl4(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
+      float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
+      val[i] = lerp_gather_2d(reflectance, w, cosThetaOut, FILM_LENGTH_RES, FILM_ANGLE_RES);
+      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
+      val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
     }
-    // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
-    val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
   }
   
   pRes->val = val; 
@@ -52,6 +67,25 @@ static void filmSmoothEval(const Material* a_materials, const float4 eta_1, cons
   pRes->pdf = 0.0f;
 }
 
+static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float2 alpha, float lambda, const float* reflectance)
+{
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return 0.0f;
+  }
+
+  float cosTheta_o = AbsCosTheta(wo);
+  float cosTheta_i = AbsCosTheta(wi);
+  if (cosTheta_i == 0 || cosTheta_o == 0)
+    return 0.0f;
+  
+  float cosTheta = std::abs(dot(wo, wm));
+  float w = (lambda - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
+  float F = lerp_gather_2d(reflectance, w, cosTheta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+
+  return val;
+}
 
 static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior, complex ior2, float thickness, float lambda)
 {
@@ -91,7 +125,7 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
 
 
 static inline void filmRoughSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes)
+        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* reflectance)
 {
   //std::cout << a_wavelengths[0] << std::endl;
   if(v.z == 0)
@@ -127,17 +161,30 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
 
   float4 val;
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-  for(int i = 0; i < spectralSamples; ++i)
+
+  uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
+  if (!precompFlag)
   {
-    if (layers == 1)
+    for(int i = 0; i < spectralSamples; ++i)
     {
-      val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
-    }
-    else if (layers > 1)
-    {
-      val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+      if (layers == 1)
+      {
+        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
+      }
+      else if (layers > 1)
+      {
+        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+      }
     }
   }
+  else
+  {
+    for(int i = 0; i < spectralSamples; ++i)
+    {
+      val[i] = filmRoughEvalInternalPrecomp(wo, wi, wm, alpha, a_wavelengths[i], reflectance);
+    }
+  }
+  
 
   pRes->val   = val; 
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
@@ -147,7 +194,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
 
 
 static void filmRoughEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes)
+        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance)
 {
   const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
 
@@ -172,20 +219,31 @@ static void filmRoughEval(const Material* a_materials, const float4* eta, const 
   wm = normalize(wm);
   float4 val;
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-  for(int i = 0; i < spectralSamples; ++i)
+
+  uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
+  if (!precompFlag)
   {
-    if (layers == 1)
+    for(int i = 0; i < spectralSamples; ++i)
     {
-      val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
+      if (layers == 1)
+      {
+        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
+      }
+      else if (layers > 1)
+      {
+        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+      }
     }
-    else if (layers > 1)
+  }
+  else
+  {
+    for(int i = 0; i < spectralSamples; ++i)
     {
-      val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+      val[i] = filmRoughEvalInternalPrecomp(wo, wi, wm, alpha, a_wavelengths[i], reflectance);
     }
   }
 
   pRes->val = val;
-
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }

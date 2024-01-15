@@ -166,13 +166,15 @@ static constexpr uint FILM_COLOR_LAST_IND    = FILM_COLOR;
 // custom
 static constexpr uint FILM_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
 static constexpr uint FILM_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
-static constexpr uint FILM_ETA               = UINT_MAIN_LAST_IND + 2;
-static constexpr uint FILM_K                 = UINT_MAIN_LAST_IND + 3;
-static constexpr uint FILM_THICKNESS_OFFSET  = UINT_MAIN_LAST_IND + 4;
-static constexpr uint FILM_ETA_SPECID_OFFSET = UINT_MAIN_LAST_IND + 5;
-static constexpr uint FILM_K_SPECID_OFFSET   = UINT_MAIN_LAST_IND + 6;
-static constexpr uint FILM_LAYERS_COUNT      = UINT_MAIN_LAST_IND + 7;
-static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 8;
+static constexpr uint FILM_PRECOMP_FLAG      = UINT_MAIN_LAST_IND + 2;
+static constexpr uint FILM_PRECOMP_ID        = UINT_MAIN_LAST_IND + 3;
+static constexpr uint FILM_ETA               = UINT_MAIN_LAST_IND + 4;
+static constexpr uint FILM_K                 = UINT_MAIN_LAST_IND + 5;
+static constexpr uint FILM_THICKNESS_OFFSET  = UINT_MAIN_LAST_IND + 6;
+static constexpr uint FILM_ETA_SPECID_OFFSET = UINT_MAIN_LAST_IND + 7;
+static constexpr uint FILM_K_SPECID_OFFSET   = UINT_MAIN_LAST_IND + 8;
+static constexpr uint FILM_LAYERS_COUNT      = UINT_MAIN_LAST_IND + 9;
+static constexpr uint FILM_TEXID0            = UINT_MAIN_LAST_IND + 10;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
 
 
@@ -675,6 +677,21 @@ static inline float lerp_gather(const float *data, float x, size_t size)
   return lerp(v0, v1, x - float(index));
 }
 
+static inline float lerp_gather_2d(const float *data, float x, float y, size_t size1, size_t size2)
+{
+  x *= float(size1 - 1);
+  y *= float(size2 - 1);
+  uint32_t index1 = std::min(uint32_t(x), uint32_t(size1 - 2));
+  uint32_t index2 = std::min(uint32_t(y), uint32_t(size2 - 2));
+
+  float alpha = x - float(index1);
+  float beta = y - float(index2);
+  float v0 = lerp(data[index1 * size2 + index2], data[(index1 + 1) * size2 + index2], alpha);
+  float v1 = lerp(data[index1 * size2 + index2 + 1], data[(index1 + 1) * size2 + index2 + 1], alpha);
+
+  return lerp(v0, v1, beta);
+}
+
 
 //////////////////////
 // GGX from Mitsuba3
@@ -972,9 +989,9 @@ static inline float calculateMultFrFilmRefl(std::vector<complex>& a_cosTheta, st
   Polarization polarization[2] = {S, P};
   for (int p = 0; p <= 1; ++p)
   {
-    complex FrRefl = FrComplexRefl(a_cosTheta[layers], a_cosTheta[layers + 1], a_eta[layers], a_eta[layers + 1], polarization[p]);
+    complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_eta[layers - 1], a_eta[layers], polarization[p]);
     complex FrReflI = complex(1.f);
-    for (int i = layers - 1; i >= 0; --i)
+    for (int i = layers - 2; i >= 0; --i)
     {
       FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_eta[i], a_eta[i + 1], polarization[p]);
       FrRefl  = FrRefl * exp(-a_phaseDiff[i].im) * complex(cos(a_phaseDiff[i].re), sin(a_phaseDiff[i].re));
@@ -997,7 +1014,7 @@ static inline float multFrFilmRefl4(float cosThetaI, const float4* eta, const fl
   complex etaF = complex(1.0);
   complex sinTheta = 1.0f - cosThetaI * cosThetaI;
   complex cosTheta = complex(1.0);
-  for (int i = 0; i < layers + 1; ++i)
+  for (int i = 0; i < layers; ++i)
   {
     etaI = etaF;
     etaF = complex(eta[i][comp], k[i][comp]);
@@ -1005,7 +1022,7 @@ static inline float multFrFilmRefl4(float cosThetaI, const float4* eta, const fl
     cosTheta = complex_sqrt(1.0f - sinTheta);
     a_cosTheta.push_back(cosTheta);
     a_eta.push_back(etaF);
-    if (i < layers)
+    if (i < layers - 1)
       a_phaseDiff.push_back(filmPhaseDiff(cosTheta, etaF, thickness[i], lambda));
   }
 
@@ -1022,7 +1039,7 @@ static inline float multFrFilmRefl(float cosThetaI, const float* eta, const floa
   complex etaF = complex(1.0);
   complex sinTheta = 1.0f - cosThetaI * cosThetaI;
   complex cosTheta = complex(1.0);
-  for (int i = 0; i < layers + 1; ++i)
+  for (int i = 0; i < layers; ++i)
   {
     etaI = etaF;
     etaF = complex(eta[i], k[i]);
@@ -1030,8 +1047,12 @@ static inline float multFrFilmRefl(float cosThetaI, const float* eta, const floa
     cosTheta = complex_sqrt(1.0f - sinTheta);
     a_cosTheta.push_back(cosTheta);
     a_eta.push_back(etaF);
-    if (i < layers)
+    
+    if (i < layers - 1)
+    {
       a_phaseDiff.push_back(filmPhaseDiff(cosTheta, etaF, thickness[i], lambda));
+    }
+      
   }
 
   return calculateMultFrFilmRefl(a_cosTheta, a_eta, a_phaseDiff, layers);
