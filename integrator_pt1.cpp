@@ -323,24 +323,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     const uint   texId     = m_materials[matId].texid[0];
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
-    float4 lightColor = m_materials[matId].colors[EMISSION_COLOR];
-    float  lightMult  = m_materials[matId].data[EMISSION_MULT];
-
-    float4 lightIntensity = lightColor * texColor * lightMult;
-    if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0)
-    {
-      const uint specId = m_materials[matId].spdid[0];
-      if(specId < 0xFFFFFFFF)
-      {
-        const uint2 data  = m_spec_offset_sz[specId];
-        const uint offset = data.x;
-        const uint size   = data.y;
-        lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *wavelengths, size);
-      }
-      lightIntensity = lightColor * lightMult;
-    }
-
-    const uint lightId = m_instIdToLightInstId[*in_instId]; 
+    const uint   lightId   = m_instIdToLightInstId[*in_instId]; 
     
     float lightCos = 1.0f;
     float lightDirectionAtten = 1.0f;
@@ -349,6 +332,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
       lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
     }
+   
+    const float4 lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar))*lightCos*texColor*lightDirectionAtten;
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
@@ -373,12 +358,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     float4 currAccumColor      = *accumColor;
     float4 currAccumThroughput = *accumThoroughput;
     
-    currAccumColor += currAccumThroughput * lightIntensity * misWeight * lightDirectionAtten;
-    // currAccumColor.x += currAccumThroughput.x * lightIntensity.x * misWeight * lightDirectionAtten;
-    // currAccumColor.y += currAccumThroughput.y * lightIntensity.y * misWeight * lightDirectionAtten;
-    // currAccumColor.z += currAccumThroughput.z * lightIntensity.z * misWeight * lightDirectionAtten;
-    // if(bounce > 0)
-    //   currAccumColor.w *= prevPdfA;
+    currAccumColor += currAccumThroughput * lightIntensity * misWeight;
     
     *accumColor = currAccumColor;
     *rayFlags   = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_HIT_LIGHT);
