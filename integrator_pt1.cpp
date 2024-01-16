@@ -264,7 +264,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   if(!inShadow && inIllumArea) 
   {
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
-    const float cosThetaOut = std::max(dot(shadowRayDir, hit.norm), 0.0f);
+    float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     
     float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
     float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;

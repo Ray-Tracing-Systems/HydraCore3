@@ -602,12 +602,15 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const fl
     float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, dparams);
     float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
     const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
+    const bool isPoint      = (m_lights[lightId].geomType == LIGHT_GEOM_POINT); 
     
     if(isDirect)
     {
       misWeight = 1.0f;
       lgtPdfW   = 1.0f;
     }
+    else if(isPoint)
+      misWeight = 1.0f;
 
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;

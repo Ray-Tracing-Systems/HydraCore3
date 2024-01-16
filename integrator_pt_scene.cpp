@@ -1087,7 +1087,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.norm      = normalize(lightInst.matrix * float4(0.0f, -1.0f, 0.0f, 0.0f));
       lightSource.intensity = color;
       lightSource.geomType  = LIGHT_GEOM_POINT;
-      lightSource.distType  = (ldist == L"uniform" || ldist == L"omni") ? LIGHT_DIST_OMNI : LIGHT_DIST_LAMBERT;
+      lightSource.distType  = (ldist == L"uniform" || ldist == L"omni" || ldist == L"ies") ? LIGHT_DIST_OMNI : LIGHT_DIST_LAMBERT;
       lightSource.pdfA      = 1.0f;
       lightSource.size      = float2(0,0);
       lightSource.matrix    = float4x4{};
