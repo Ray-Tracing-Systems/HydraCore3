@@ -293,18 +293,19 @@ protected:
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
 
-  static constexpr uint32_t KSPEC_MAT_TYPE_GLTF      = 1;
-  static constexpr uint32_t KSPEC_MAT_TYPE_GLASS     = 2;
-  static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR = 3;
-  static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE   = 4;
-  static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC   = 5;
-
-  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING = 6;
-  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND     = 7;
-  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE   = 8;
-  static constexpr uint32_t KSPEC_BUMP_MAPPING       = 9;
+  static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
+  static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;
+  static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR  = 3;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE    = 4;
+  static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC    = 5;
+ 
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 6;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 7;
+  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE    = 8;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 9;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 10;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM       = 10; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 11; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

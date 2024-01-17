@@ -555,6 +555,51 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
 }
 
 
+Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                                std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                                bool is_spectral_mode)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.colors[DIELECTRIC_COLOR_REFLECT]  = float4(1, 1, 1, 1);
+  mat.colors[DIELECTRIC_COLOR_TRANSMIT] = float4(1, 1, 1, 1);
+  mat.data[UINT_MTYPE]                  = as_float(MAT_TYPE_DIELECTRIC);  
+  mat.data[UINT_LIGHTID]                = as_float(uint(-1));
+  mat.data[DIELECTRIC_ETA_EXT]          = 1.00028f; // air
+  mat.data[DIELECTRIC_ETA_INT]          = 1.5046f;  // bk7 glass
+  mat.data[DIELECTRIC_ETA_INT_SPECID]   = as_float(uint(-1));
+
+  auto nodeIntIOR = materialNode.child(L"int_ior");
+  if(nodeIntIOR != nullptr)
+  {
+    auto specId = GetSpectrumIdFromNode(nodeIntIOR);
+    mat.data[DIELECTRIC_ETA_INT_SPECID] = as_float(specId);
+    mat.data[DIELECTRIC_ETA_INT] = nodeIntIOR.attribute(L"val").as_float();
+  }
+
+  auto nodeExtIOR = materialNode.child(L"ext_ior");
+  if(nodeExtIOR != nullptr)
+  {
+    mat.data[DIELECTRIC_ETA_EXT] = nodeExtIOR.attribute(L"val").as_float();
+  }
+
+  auto nodeReflColor = materialNode.child(L"reflectance");
+  if(nodeReflColor != nullptr)
+  {
+    mat.colors[DIELECTRIC_COLOR_REFLECT] = GetColorFromNode(nodeReflColor, is_spectral_mode);
+  }
+
+  auto nodeTransColor = materialNode.child(L"transmittance");
+  if(nodeTransColor != nullptr)
+  {
+    mat.colors[DIELECTRIC_COLOR_TRANSMIT] = GetColorFromNode(nodeTransColor, is_spectral_mode);
+  }
+
+  return mat;
+}
+
+
 Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                            std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                            std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
@@ -734,6 +779,7 @@ static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
 static const std::wstring plasticMatTypeStr        {L"plastic"};
+static const std::wstring dielectricMatTypeStr     {L"dielectric"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
@@ -797,6 +843,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     else if(mat_type == plasticMatTypeStr)
     {
       features[KSPEC_MAT_TYPE_PLASTIC] = 1;
+    }
+    else if(mat_type == dielectricMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
 
     if(materialNode.child(L"displacement") != nullptr)
@@ -1119,6 +1169,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
                                 m_spec_values, m_wavelengths, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
+    }
+    else if(mat_type == dielectricMatTypeStr)
+    {
+      mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
 
     if(materialNode.attribute(L"light_id") != nullptr)

@@ -30,21 +30,22 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       FLAG_NMAP_INVERT_Y       = 64,
                       FLAG_NMAP_SWAP_XY        = 128 }; // bit fields
 
-enum MATERIAL_TYPES { MAT_TYPE_GLTF      = 1,
-                      MAT_TYPE_GLASS     = 2,
-                      MAT_TYPE_CONDUCTOR = 3,
-                      MAT_TYPE_DIFFUSE   = 4,
-                      MAT_TYPE_PLASTIC   = 5,
-                      MAT_TYPE_BLEND     = 6,
+enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
+                      MAT_TYPE_GLASS         = 2,
+                      MAT_TYPE_CONDUCTOR     = 3,
+                      MAT_TYPE_DIFFUSE       = 4,
+                      MAT_TYPE_PLASTIC       = 5,
+                      MAT_TYPE_BLEND         = 6,
+                      MAT_TYPE_DIELECTRIC    = 7,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
   RAY_EVENT_S         = 1,  ///< Indicates Specular reflection or refraction  (additionally check for RAY_EVENT_T)
   RAY_EVENT_D         = 2,  ///< Indicates Diffuse  reflection or translucent (additionally check for RAY_EVENT_T)
   RAY_EVENT_G         = 4,  ///< Indicates Glossy   reflection or refraction  (additionally check for RAY_EVENT_T)
-  RAY_EVENT_T         = 8,  ///< Indicates Transparensy or reftacrion. 
+  RAY_EVENT_T         = 8,  ///< Indicates Transparency or refraction. 
   RAY_EVENT_V         = 16, ///< Indicates Volume scattering, not used for a while
-  RAY_EVENT_TOUT      = 32, ///< Indicates Transparensy Outside of water or glass or e.t.c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
+  RAY_EVENT_TOUT      = 32, ///< Indicates Transparency Outside of water or glass et c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
   RAY_EVENT_TNINGLASS = 64,
 };
 
@@ -89,6 +90,18 @@ static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = UINT_MAIN_LAST_IND + 0;
 static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = UINT_MAIN_LAST_IND + 1;
 static constexpr uint GLASS_FLOAT_IOR             = UINT_MAIN_LAST_IND + 2;
 static constexpr uint GLASS_CUSTOM_LAST_IND       = GLASS_FLOAT_IOR;
+
+// DIELECTRIC
+// colors, for physical realism, color parameters should never be touched
+static constexpr uint DIELECTRIC_COLOR_REFLECT    = 0;    
+static constexpr uint DIELECTRIC_COLOR_TRANSMIT   = 1;  
+static constexpr uint DIELECTRIC_COLOR_LAST_IND   = DIELECTRIC_COLOR_TRANSMIT;
+
+// custom 
+static constexpr uint DIELECTRIC_ETA_EXT          = UINT_MAIN_LAST_IND + 0;
+static constexpr uint DIELECTRIC_ETA_INT          = UINT_MAIN_LAST_IND + 1;
+static constexpr uint DIELECTRIC_ETA_INT_SPECID   = UINT_MAIN_LAST_IND + 2;
+static constexpr uint DIELECTRIC_CUSTOM_LAST_IND  = DIELECTRIC_ETA_INT_SPECID;
 
 // EMISSION
 // colors
@@ -826,6 +839,11 @@ static inline float microfacet_pdf(const float3 &wi, const float3 &m, float2 alp
   result *= smith_g1(wi, m, alpha) * std::abs(dot(wi, m)) / wi.z;
 
   return result;
+}
+
+static inline float3 refract(const float3 &wi, float cos_theta_t, float eta_ti) 
+{
+    return float3(-eta_ti * wi.x, -eta_ti * wi.y, cos_theta_t);
 }
 
 ////////////////// blends

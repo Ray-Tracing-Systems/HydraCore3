@@ -7,6 +7,7 @@
 #include "include/cmat_glass.h"
 #include "include/cmat_diffuse.h"
 #include "include/cmat_plastic.h"
+#include "include/cmat_dielectric.h"
 
 #include <chrono>
 #include <string>
@@ -173,6 +174,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
     res.val   = float4(0, 0, 0, 0);
     res.pdf   = 1.0f;
     res.dir   = float3(0,1,0);
+    res.ior   = 1.0f;
     res.flags = a_currRayFlags;
   }
 
@@ -257,6 +259,15 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, float4 wavelengt
 
       plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
                            m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+    }
+    break;
+    case MAT_TYPE_DIELECTRIC:
+    if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
+    {
+      const float4 intIORSpec = SampleMatParamSpectrum(currMatId, wavelengths, DIELECTRIC_ETA_INT, DIELECTRIC_ETA_INT_SPECID);
+      dielectricSmoothSampleAndEval(m_materials.data() + currMatId, intIORSpec, a_misPrev->ior, rands, v, shadeNormal, tc, &res);
+
+      a_misPrev->ior = res.ior;
     }
     break;
     default:
@@ -409,8 +420,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
         break;
-        break;
       }
+      case MAT_TYPE_DIELECTRIC:
+      if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
+      {
+        dielectricSmoothEval(&res); // val and pdf are always zero
+      }
+      break;
       case MAT_TYPE_BLEND:
       if(KSPEC_MAT_TYPE_BLEND != 0)
       {
