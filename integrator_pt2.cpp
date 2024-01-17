@@ -355,21 +355,18 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
         gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
-
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
-
-        break;
       }
+      break;
       case MAT_TYPE_GLASS:
       if(KSPEC_MAT_TYPE_GLASS != 0)
       {
         glassEval(m_materials.data() + currMat.id, l, v, geomNormal, tc, float3(0,0,0), &currVal);
-
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
-        break;
       }
+      break;
       case MAT_TYPE_CONDUCTOR: 
       if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
       {
@@ -385,8 +382,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
-        break;
       }
+      break;
       case MAT_TYPE_DIFFUSE:
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
@@ -397,8 +394,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
-        break;
       }
+      break;
       case MAT_TYPE_PLASTIC:
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
@@ -412,8 +409,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
-        break;
       }
+      break;
       case MAT_TYPE_DIELECTRIC:
       if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
       {
@@ -431,8 +428,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           material_stack[top] = childMats.second; // remember second mat in stack
           top++;
         }
-        break;
       }
+      break;
       default:
         break;
     }
