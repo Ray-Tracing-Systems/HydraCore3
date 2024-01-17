@@ -663,14 +663,15 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
     const uint   lightId   = m_instIdToLightInstId[*in_instId]; 
     
-    float lightDirectionAtten = 1.0f;
+    const float4 emissColor = m_materials[matId].colors[EMISSION_COLOR];
+    float4 lightIntensity   = emissColor * texColor;
+
     if(lightId != 0xFFFFFFFF)
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
-      lightDirectionAtten  = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
+      const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
+      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
     }
-   
-    const float4 lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
