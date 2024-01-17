@@ -15,8 +15,6 @@ static inline void conductorRoughSampleAndEval_V2(const Material* a_materials, c
   if(v.z == 0)
     return;
 
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
@@ -56,8 +54,6 @@ static void conductorRoughEval_V2(const Material* a_materials, const float4 etaS
                                float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                BsdfEval* pRes)
 {
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 

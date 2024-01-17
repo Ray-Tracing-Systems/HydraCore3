@@ -11,7 +11,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-channels", "16",
+                 //"-channels", "16",
                  "-spp", "256",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_CPU.exr"],
@@ -61,7 +61,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu", 
+        "args": ["--cpu", 
                  "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
@@ -191,21 +191,20 @@
         ]
     },
 
-    ///home/frol/PROG/HydraRepos/rendervsphoto/Tests/LED_panel/8496
-
     {
-        "name": "GPU (Release)",
+        "name": "CPU(test_35)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu", //"--spectral",
-                 "-in", "../Hydra3Tests/Tests/Glass/0001/Glass-sphere_rough-0_cornell_hydra3.xml",
-                 "-integrator", "mispt", 
-                 "-width", "1024",
-                 "-height", "1024",
-                 "-spp", "4096",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_GPU.bmp"],
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_035/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"-integrator", "prt", 
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "256",
+                 "-grad", "1",
+                 "-out", "z_render.exr"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -221,18 +220,108 @@
     },
     
     {
-        "name": "CPU Debug",
+        "name": "CPU(test_213)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_213/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"-integrator", "prt", 
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-ref", "z_ref_ies.exr",
+                 "-out", "z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CPU(test_228)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_228/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"-integrator", "prt", 
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-ref", "z_ref_ies.exr",
+                 "-out", "z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CPU(test_246)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_246/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"-integrator", "prt", 
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-ref", "z_ref_ies.exr",
+                 "-out", "z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    
+
+    {
+        "name": "CPU(test_228_local)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--cpu",
-                "-in", "../Hydra3Tests/Tests/Glass/0001/Glass-sphere_rough-0_cornell_hydra3.xml",
-                 "-integrator", "mispt", 
-                 "-width", "1024",
-                 "-height", "1024",
-                 "-spp", "64",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "DEBUG.bmp"],
+        "args": ["--gpu", 
+                 "-in", "scenes/test_228/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"-integrator", "prt", 
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-ref", "z_ref_ies.exr",
+                 "-out", "z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

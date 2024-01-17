@@ -53,11 +53,6 @@ enum MATERIAL_EVENT {
 // Indexes for materials
 // 
 // Custom for all materials
-static constexpr uint UINT_MTYPE                  = 0;  ///< one of 'MATERIAL_TYPES'
-static constexpr uint UINT_CFLAGS                 = 1;  ///< combination of some matertial flags, for GLTF is a combination of 'GLTF_COMPOMENT' bits
-static constexpr uint UINT_LIGHTID                = 2;  ///< identifier of light if this material is light 
-static constexpr uint UINT_NMAP_ID                = 3;  ///< identifier of normal map id or 0xFFFFFFFF
-static constexpr uint UINT_MAIN_LAST_IND          = 4;  ///< the last general index
 
 // GLTF
 // The BRDF of the metallic-roughness material is a linear interpolation of a metallic BRDF and a dielectric BRDF. 
@@ -69,15 +64,14 @@ static constexpr uint GLTF_COLOR_METAL            = 2;  ///< in our implementati
 static constexpr uint GLTF_COLOR_LAST_IND         = GLTF_COLOR_METAL;
 
 // custom                                               
-static constexpr uint GLTF_FLOAT_MI_FDR_INT       = UINT_MAIN_LAST_IND + 0; ///< ScalarFloat m_fdr_int;
-static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = UINT_MAIN_LAST_IND + 1; ///< ScalarFloat m_fdr_ext;
-static constexpr uint GLTF_FLOAT_MI_SSW           = UINT_MAIN_LAST_IND + 2; ///< Float m_specular_sampling_weight;
-static constexpr uint GLTF_FLOAT_ALPHA            = UINT_MAIN_LAST_IND + 3; ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
-static constexpr uint GLTF_FLOAT_GLOSINESS        = UINT_MAIN_LAST_IND + 4; ///< material glosiness or intensity for lights, take color from baseColor
-static constexpr uint GLTF_FLOAT_IOR              = UINT_MAIN_LAST_IND + 5; ///< index of refraction for reflection Fresnel
-static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = UINT_MAIN_LAST_IND + 6; ///< roughness for Oren-Nayar
-static constexpr uint GLTF_UINT_TEXID0            = UINT_MAIN_LAST_IND + 7; ///< texture id
-static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_UINT_TEXID0;
+static constexpr uint GLTF_FLOAT_MI_FDR_INT       = 0; ///< ScalarFloat m_fdr_int;
+static constexpr uint GLTF_FLOAT_MI_FDR_EXT       = 1; ///< ScalarFloat m_fdr_ext;
+static constexpr uint GLTF_FLOAT_MI_SSW           = 2; ///< Float m_specular_sampling_weight;
+static constexpr uint GLTF_FLOAT_ALPHA            = 3; ///< blend factor between dielectric and metal reflection : alpha*baseColor + (1.0f-alpha)*baseColor
+static constexpr uint GLTF_FLOAT_GLOSINESS        = 4; ///< material glosiness or intensity for lights, take color from baseColor
+static constexpr uint GLTF_FLOAT_IOR              = 5; ///< index of refraction for reflection Fresnel
+static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = 6; ///< roughness for Oren-Nayar
+static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_FLOAT_ROUGH_ORENNAYAR;
 
 // GLASS
 // colors
@@ -86,9 +80,9 @@ static constexpr uint GLASS_COLOR_TRANSP          = 1;
 static constexpr uint GLASS_COLOR_LAST_IND        = GLASS_COLOR_TRANSP;
 
 // custom 
-static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = UINT_MAIN_LAST_IND + 0;
-static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = UINT_MAIN_LAST_IND + 1;
-static constexpr uint GLASS_FLOAT_IOR             = UINT_MAIN_LAST_IND + 2;
+static constexpr uint GLASS_FLOAT_GLOSS_REFLECT   = 0;
+static constexpr uint GLASS_FLOAT_GLOSS_TRANSP    = 1;
+static constexpr uint GLASS_FLOAT_IOR             = 2;
 static constexpr uint GLASS_CUSTOM_LAST_IND       = GLASS_FLOAT_IOR;
 
 // DIELECTRIC
@@ -98,9 +92,9 @@ static constexpr uint DIELECTRIC_COLOR_TRANSMIT   = 1;
 static constexpr uint DIELECTRIC_COLOR_LAST_IND   = DIELECTRIC_COLOR_TRANSMIT;
 
 // custom 
-static constexpr uint DIELECTRIC_ETA_EXT          = UINT_MAIN_LAST_IND + 0;
-static constexpr uint DIELECTRIC_ETA_INT          = UINT_MAIN_LAST_IND + 1;
-static constexpr uint DIELECTRIC_ETA_INT_SPECID   = UINT_MAIN_LAST_IND + 2;
+static constexpr uint DIELECTRIC_ETA_EXT          = 0;
+static constexpr uint DIELECTRIC_ETA_INT          = 1;
+static constexpr uint DIELECTRIC_ETA_INT_SPECID   = 2;
 static constexpr uint DIELECTRIC_CUSTOM_LAST_IND  = DIELECTRIC_ETA_INT_SPECID;
 
 // EMISSION
@@ -109,11 +103,7 @@ static constexpr uint EMISSION_COLOR              = 0;
 static constexpr uint EMISSION_COLOR_LAST_IND     = EMISSION_COLOR;
 
 // custom 
-static constexpr uint EMISSION_MULT               = UINT_MAIN_LAST_IND + 0;
-static constexpr uint EMISSION_TEXID0             = UINT_MAIN_LAST_IND + 1;
-static constexpr uint EMISSION_SPECID0            = UINT_MAIN_LAST_IND + 2;
-static constexpr uint EMISSION_CUSTOM_LAST_IND    = EMISSION_SPECID0;
-
+static constexpr uint EMISSION_MULT               = 0;
 
 // Conductor
 // colors
@@ -121,14 +111,11 @@ static constexpr uint CONDUCTOR_COLOR             = 0;
 static constexpr uint CONDUCTOR_COLOR_LAST_IND    = CONDUCTOR_COLOR;
 
 // custom
-static constexpr uint CONDUCTOR_ROUGH_U           = UINT_MAIN_LAST_IND + 0;
-static constexpr uint CONDUCTOR_ROUGH_V           = UINT_MAIN_LAST_IND + 1;
-static constexpr uint CONDUCTOR_ETA               = UINT_MAIN_LAST_IND + 2;
-static constexpr uint CONDUCTOR_K                 = UINT_MAIN_LAST_IND + 3;
-static constexpr uint CONDUCTOR_TEXID0            = UINT_MAIN_LAST_IND + 4;
-static constexpr uint CONDUCTOR_ETA_SPECID        = UINT_MAIN_LAST_IND + 5;
-static constexpr uint CONDUCTOR_K_SPECID          = UINT_MAIN_LAST_IND + 6;
-static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K_SPECID;
+static constexpr uint CONDUCTOR_ROUGH_U           = 0;
+static constexpr uint CONDUCTOR_ROUGH_V           = 1;
+static constexpr uint CONDUCTOR_ETA               = 2;
+static constexpr uint CONDUCTOR_K                 = 3;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
 
 // Plastic (mitsuba)
 // colors
@@ -136,15 +123,11 @@ static constexpr uint PLASTIC_COLOR             = 0;
 static constexpr uint PLASTIC_COLOR_LAST_IND    = PLASTIC_COLOR;
 
 // custom
-static constexpr uint PLASTIC_ROUGHNESS           = UINT_MAIN_LAST_IND + 0;
-static constexpr uint PLASTIC_IOR_RATIO           = UINT_MAIN_LAST_IND + 1;
-static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = UINT_MAIN_LAST_IND + 2;
-static constexpr uint PLASTIC_PRECOMP_ID          = UINT_MAIN_LAST_IND + 3;
-static constexpr uint PLASTIC_PRECOMP_REFLECTANCE = UINT_MAIN_LAST_IND + 4;
-static constexpr uint PLASTIC_NONLINEAR           = UINT_MAIN_LAST_IND + 5;
-static constexpr uint PLASTIC_COLOR_SPECID        = UINT_MAIN_LAST_IND + 6;
-static constexpr uint PLASTIC_COLOR_TEXID         = UINT_MAIN_LAST_IND + 7;
-static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_COLOR_TEXID;
+static constexpr uint PLASTIC_ROUGHNESS           = 0;
+static constexpr uint PLASTIC_IOR_RATIO           = 1;
+static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = 2;
+static constexpr uint PLASTIC_PRECOMP_REFLECTANCE = 3;
+static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_PRECOMP_REFLECTANCE;
 
 
 // Simple diffuse
@@ -153,10 +136,8 @@ static constexpr uint DIFFUSE_COLOR             = 0;
 static constexpr uint DIFFUSE_COLOR_LAST_IND    = DIFFUSE_COLOR;
 
 // custom
-static constexpr uint DIFFUSE_ROUGHNESS         = UINT_MAIN_LAST_IND + 0;
-static constexpr uint DIFFUSE_TEXID0            = UINT_MAIN_LAST_IND + 1;
-static constexpr uint DIFFUSE_SPECID            = UINT_MAIN_LAST_IND + 2;
-static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_SPECID;
+static constexpr uint DIFFUSE_ROUGHNESS         = 0;
+static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_ROUGHNESS;
 
 
 // Blend material
@@ -164,13 +145,8 @@ static constexpr uint DIFFUSE_CUSTOM_LAST_IND   = DIFFUSE_SPECID;
 static constexpr uint BLEND_COLOR_LAST_IND = 0;
 
 // custom
-static constexpr uint BLEND_WEIGHT          = UINT_MAIN_LAST_IND + 0;
-static constexpr uint BLEND_MAT_ID_1        = UINT_MAIN_LAST_IND + 1;
-static constexpr uint BLEND_MAT_ID_2        = UINT_MAIN_LAST_IND + 2;
-static constexpr uint BLEND_TEXID0          = UINT_MAIN_LAST_IND + 3;
-static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_TEXID0;
-
-
+static constexpr uint BLEND_WEIGHT          = 0;
+static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_WEIGHT;
 
 // The size is taken according to the largest indexes
 static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
@@ -178,15 +154,21 @@ static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LA
 
 struct Material
 {
-  float4 colors[COLOR_DATA_SIZE]; ///< colors data
+  uint mtype;
+  uint cflags;
+  uint lightId;
+  uint nonlinear;
+  
+  uint texid[4];
+  uint spdid[4];
+  uint datai[4];
 
+  float4 colors[COLOR_DATA_SIZE]; ///< colors data
   float4 row0[2];     ///< texture matrix
   float4 row1[2];     ///< texture matrix
       
-  float data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
+  float  data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
-
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -593,8 +575,7 @@ static inline float FresnelMitsuba(float cos_theta_i, float eta)
   r = special_case ? r_sc : r;
 
   /* Adjust the sign of the transmitted direction */
-  float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
-
+  //float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs: cos_theta_t_abs;
   return r;
 }
 

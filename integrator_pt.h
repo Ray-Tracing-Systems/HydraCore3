@@ -59,10 +59,12 @@ public:
 
   void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
+  virtual void LoadSceneBegin(){} ///<! override it in derived class
+  virtual void LoadSceneEnd(){}   ///<! override it in derived class
 
   void PackXY         (uint tidX, uint tidY);
 
-  void CastSingleRay  (uint tid, uint* out_color   [[size("tid")]]); ///<! ray casting, draw diffuse or emisive color
+  void CastSingleRay  (uint tid, float* out_color                [[size("tid*4")]]);        ///<! ray casting, draw diffuse or emisive color
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
   void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
@@ -73,7 +75,7 @@ public:
                               float*            out_color        [[size("tid*channels")]]);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
-  virtual void CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum);
+  virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
@@ -94,6 +96,7 @@ public:
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
   void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                           float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
+
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
@@ -104,10 +107,10 @@ public:
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
 
-  void kernel_RayTrace2(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar,
+  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
-  void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const uint* in_pakedXY, uint* out_color);
+  void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
@@ -184,7 +187,7 @@ public:
 
   uint GetSPP() const { return m_spp; } 
 
-protected:
+//protected:
   int m_winStartX   = 0;
   int m_winStartY   = 0;
   int m_winWidth    = 512;
@@ -198,7 +201,7 @@ protected:
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths);
+  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -216,22 +219,25 @@ protected:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags); 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+                                   MisData* a_misPrev, const uint a_currRayFlags);
+                                    
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
-  uint32_t MaterialBlendSampleAndEval(uint a_materialId, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                                      MisData* a_misPrev, BsdfSample* a_pRes);
-  MatIdWeightPair MaterialBlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
+  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                              MisData* a_misPrev, BsdfSample* a_pRes);
+
+  MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
-  
+
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
   float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
-  std::vector<Material>         m_materials;
+  std::vector<Material>         m_materials;  
+
   std::vector<uint32_t>         m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
   std::vector<uint32_t>         m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
   std::vector<uint32_t>         m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
@@ -317,6 +323,19 @@ protected:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
+
+  // for recording path "constant" parameters, override in dereved class
+  //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  virtual void RecordPixelRndIfNeeded(float2 offsets, float u){}
+  virtual void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit){}
+  virtual void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow){}
+  virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
+  virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
+  virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  uint m_disableImageContrib = 0;
 };
 
 #endif
