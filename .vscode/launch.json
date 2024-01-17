@@ -192,105 +192,18 @@
     },
 
     {
-        "name": "CPU(test_35)",
+        "name": "CPU(test_35_local)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_035/statex_00001.xml",
+                 "-in", "scenes/test_035/statex_00001.xml",
                  "-integrator", "mispt",
                  //"-integrator", "prt", 
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "256",
+                 "-spp", "16",
                  "-grad", "1",
-                 "-out", "z_render.exr"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-    
-    {
-        "name": "CPU(test_213)",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_213/statex_00001.xml",
-                 "-integrator", "mispt",
-                 //"-integrator", "prt", 
-                 "-width", "512",
-                 "-height", "512",
-                 "-spp", "1024",
-                 "-grad", "1",
-                 "-ref", "z_ref_ies.exr",
-                 "-out", "z_render.bmp"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-
-    {
-        "name": "CPU(test_228)",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_228/statex_00001.xml",
-                 "-integrator", "mispt",
-                 //"-integrator", "prt", 
-                 "-width", "512",
-                 "-height", "512",
-                 "-spp", "1024",
-                 "-grad", "1",
-                 "-ref", "z_ref_ies.exr",
-                 "-out", "z_render.bmp"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-
-    {
-        "name": "CPU(test_246)",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_246/statex_00001.xml",
-                 "-integrator", "mispt",
-                 //"-integrator", "prt", 
-                 "-width", "512",
-                 "-height", "512",
-                 "-spp", "1024",
-                 "-grad", "1",
-                 "-ref", "z_ref_ies.exr",
                  "-out", "z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -306,7 +219,6 @@
         ]
     },
     
-
     {
         "name": "CPU(test_228_local)",
         "type": "cppdbg",
@@ -318,7 +230,7 @@
                  //"-integrator", "prt", 
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "256",
+                 "-spp", "16",
                  "-grad", "1",
                  "-ref", "z_ref_ies.exr",
                  "-out", "z_render.bmp"],

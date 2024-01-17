@@ -190,7 +190,7 @@ int main(int argc, const char** argv)
 
   // now run opt loop
   //
-  for(int iter = 0; iter < 50; iter++) 
+  for(int iter = 0; iter < 60; iter++) 
   {
     const int eachTen        = iter/20 + 1;
     const int currPassNumber = PASS_NUMBER; //std::min(PASS_NUMBER*eachTen, 64);
