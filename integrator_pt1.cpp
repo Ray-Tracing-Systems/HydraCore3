@@ -326,16 +326,17 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     const uint   texId     = m_materials[matId].texid[0];
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
-    const uint lightId     = m_instIdToLightInstId[*in_instId]; 
+    const uint   lightId   = m_instIdToLightInstId[*in_instId]; 
     
-    float lightDirectionAtten = 1.0f;
+    const float4 emissColor = m_materials[matId].colors[EMISSION_COLOR];
+    float4 lightIntensity   = emissColor * texColor;
+
     if(lightId != 0xFFFFFFFF)
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
-      lightDirectionAtten  = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
+      const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
+      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
-
-    const float4 lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar))*texColor*lightDirectionAtten;
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
