@@ -41,6 +41,9 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
+
+  // if(x == 510 && y == m_winHeight - 1 - 491)
+  //   int a = 1;
   
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -129,7 +132,8 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   if(hit.geomId != uint32_t(-1))
   {
     const float2 uv     = float2(hit.coords[0], hit.coords[1]);
-    const float3 hitPos = to_float3(rayPos) + (hit.t*0.999999f)*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
+    // const float3 hitPos = to_float3(rayPos) + (hit.t*0.999999f)*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
+    const float3 hitPos = to_float3(rayPos) + hit.t*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
     
     // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
     /////////////////////////////////////////////////////////////////////////////////

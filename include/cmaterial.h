@@ -606,6 +606,45 @@ static inline float4 FrDielectricDetailed(float cosTheta_i, float eta)
   return {r, cosTheta_t, eta, 1.f / eta};
 }
 
+static inline float4 FrDielectricDetailedV2(float cos_theta_i, float eta) 
+{
+  // cos_theta_i = clamp(cos_theta_i, -1.0f, 1.0f);
+  
+  float eta_it = eta;
+  float eta_ti = 1.f / eta;
+  if (cos_theta_i < 0.0f) 
+  {
+      eta_it = eta_ti;
+      eta_ti = eta;
+  }
+
+  float cos_theta_t_sqr = -(-cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
+  float cos_theta_i_abs = std::abs(cos_theta_i);
+  float cos_theta_t_abs = std::sqrt(cos_theta_t_sqr);
+
+
+  float r = 0.0f;
+  if((eta == 1.f) || (cos_theta_i_abs == 0.f))
+  {
+    r = (eta == 1.f) ? 0.f : 1.f;
+  }
+  else
+  {
+    float a_s = (-eta_it * cos_theta_t_abs + cos_theta_i_abs) /
+              (eta_it * cos_theta_t_abs + cos_theta_i_abs);
+
+    float a_p = (-eta_it * cos_theta_i_abs + cos_theta_t_abs) /
+              (eta_it * cos_theta_i_abs + cos_theta_t_abs);
+
+    r = 0.5f * (a_s * a_s + a_p * a_p);
+  }
+  
+  float cos_theta_t = cos_theta_i >= 0 ? -cos_theta_t_abs : cos_theta_t_abs;
+
+  return float4(r, cos_theta_t, eta_it, eta_ti);
+
+}
+
 static inline float FrComplexConductor(float cosThetaI, complex eta)
 {
   float sinThetaI = 1.0f - cosThetaI * cosThetaI;
