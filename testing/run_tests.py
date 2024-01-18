@@ -181,6 +181,7 @@ class REQ_HP(REQ):
 
 
 reqs = []
+
 '''
 reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
                                   "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/01_sponza/statex_00001.xml",
@@ -191,6 +192,7 @@ reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/stat
                                   [(1024,1024), (1024,1024), (1024,1024)]))
 
 '''
+
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml",
@@ -286,12 +288,12 @@ reqs.append( REQ_H2("mat_emission_texture", ["test_124"], integrators = ["naivep
 reqs.append( REQ_H2("mat_normal_bump",      ["test_127"], naivemul = 4, imsize = (1024,768)) )
 
 reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
+reqs.append( REQ_H2("lgt_point_omni",      ["test_213"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
+reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
-
-reqs.append( REQ_H2("lgt_point_omni", ["test_213"], integrators = ["mispt"]) )
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
