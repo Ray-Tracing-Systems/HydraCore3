@@ -273,10 +273,10 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
 BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, const float* dparams)
 {
   BsdfEval res;
-  {
-    res.val = float4(0,0,0,0);
-    res.pdf = 0.0f;
-  }
+  //{
+  //  res.val = float4(0,0,0,0);
+  //  res.pdf = 0.0f;
+  //}
 
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
   const uint   texId     = m_materials[a_materialId].texid[0];
@@ -285,9 +285,18 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
   
   float lambertVal       = lambertEvalBSDF(l, v, n);
   const float lambertPdf = lambertEvalPDF (l, v, n);    
+
+  const float roughness = 1.0f - m_materials[a_materialId].data[GLTF_FLOAT_GLOSINESS]; // may be from texture
+  const float metalness = m_materials[a_materialId].data[GLTF_FLOAT_ALPHA];            // may be from texture
   
-  res.val = lambertVal*color;
-  res.pdf = lambertPdf;
+  const float ggxVal = ggxEvalBSDF(l, v, n, roughness);
+  const float ggxPdf = ggxEvalPDF (l, v, n, roughness);
+
+  //res.val = lambertVal*color;
+  //res.pdf = lambertPdf;
+
+  res.val = lambertVal*color*(1.0f-metalness) + ggxVal*(metalness*color + (1.0f-metalness)*float4(1));
+  res.pdf = lambertPdf*(1.0f-metalness) + ggxPdf*metalness;
   
   /*
   MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
