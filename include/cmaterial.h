@@ -608,7 +608,7 @@ static inline float4 FrDielectricDetailed(float cosTheta_i, float eta)
 
 static inline float4 FrDielectricDetailedV2(float cos_theta_i, float eta) 
 {
-  // cos_theta_i = clamp(cos_theta_i, -1.0f, 1.0f);
+  cos_theta_i = clamp(cos_theta_i, -1.0f, 1.0f);
   
   float eta_it = eta;
   float eta_ti = 1.f / eta;
@@ -618,9 +618,9 @@ static inline float4 FrDielectricDetailedV2(float cos_theta_i, float eta)
       eta_ti = eta;
   }
 
-  float cos_theta_t_sqr = -(-cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
+  float cos_theta_t_sqr = -1.f * (-1.f * cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
   float cos_theta_i_abs = std::abs(cos_theta_i);
-  float cos_theta_t_abs = std::sqrt(cos_theta_t_sqr);
+  float cos_theta_t_abs = std::sqrt(std::max(cos_theta_t_sqr, 0.0f));
 
 
   float r = 0.0f;
@@ -630,11 +630,11 @@ static inline float4 FrDielectricDetailedV2(float cos_theta_i, float eta)
   }
   else
   {
-    float a_s = (-eta_it * cos_theta_t_abs + cos_theta_i_abs) /
-              (eta_it * cos_theta_t_abs + cos_theta_i_abs);
+    float a_s = (-1.f * eta_it * cos_theta_t_abs + cos_theta_i_abs) /
+                (eta_it * cos_theta_t_abs + cos_theta_i_abs);
 
-    float a_p = (-eta_it * cos_theta_i_abs + cos_theta_t_abs) /
-              (eta_it * cos_theta_i_abs + cos_theta_t_abs);
+    float a_p = (-1.f * eta_it * cos_theta_i_abs + cos_theta_t_abs) /
+                (eta_it * cos_theta_i_abs + cos_theta_t_abs);
 
     r = 0.5f * (a_s * a_s + a_p * a_p);
   }

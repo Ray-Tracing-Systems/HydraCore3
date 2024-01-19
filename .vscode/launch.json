@@ -254,13 +254,13 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu",
-                 "-in", "../Hydra3Tests/Tests/Glass/0001/Glass-sphere_rough-0_cornell_hydra3.xml",
-                 "-integrator", "mispt", 
+                 "-in", "../Hydra3Tests/Tests/Glass/0003/quartz-prism-rough-0-cornell-hydra3.xml",
+                 "-integrator", "naivept", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "512",
+                 "-spp", "1024",
                  "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_CPU_MIS.bmp"],
+                 "-out", "OUT_CPU.exr"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -275,6 +275,32 @@
         ]
     },
 
+    {
+        "name": "CPU Debug",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--cpu",
+                 "-in", "../Hydra3Tests/Tests/Glass/0003/quartz-prism-rough-0-cornell-hydra3.xml",
+                 "-integrator", "naivept", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "4",
+                 "-scn_dir", "../Hydra3Tests",
+                 "-out", "DEBUG.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
 
     ]
 }
