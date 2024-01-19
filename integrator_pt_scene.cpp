@@ -1200,9 +1200,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       if(matrixAttrib != nullptr)
       {
         float4x4 matrixFromNode = hydra_xml::float4x4FromString(matrixAttrib.as_string());
-        float4x4 instMatrix     = matrix;
+        float4x4 instMatrix     = lightSource.matrix;
         instMatrix.set_col(3, float4(0,0,0,1));
-        lightSource.iesMatrix   = instMatrix*matrixFromNode*transpose(instMatrix);
+
+        lightSource.iesMatrix.set_col(0, matrixFromNode.get_col(2)); // why this matrix has swapped (x,z) ?
+        lightSource.iesMatrix.set_col(1, matrixFromNode.get_col(1)); // why this matrix has swapped (x,z) ?
+        lightSource.iesMatrix.set_col(2, matrixFromNode.get_col(0)); // why this matrix has swapped (x,z) ?
+        lightSource.iesMatrix.set_col(3, float4(0,0,0,1));
+        //lightSource.iesMatrix = instMatrix*lightSource.iesMatrix*transpose(instMatrix);
+        lightSource.iesMatrix = transpose(instMatrix) * lightSource.iesMatrix * instMatrix;
       }
     }
 
