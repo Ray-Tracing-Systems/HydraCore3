@@ -1190,8 +1190,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       Sampler sampler;
       sampler.filter   = Sampler::Filter::LINEAR; 
-      sampler.addressU = Sampler::AddressMode::WRAP;
-      sampler.addressV = Sampler::AddressMode::WRAP;
+      sampler.addressU = Sampler::AddressMode::CLAMP;
+      sampler.addressV = Sampler::AddressMode::CLAMP;
 
       m_textures.push_back(MakeCombinedTexture2D(pTexture, sampler));
       lightSource.iesId = uint(m_textures.size()-1);
