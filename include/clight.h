@@ -14,6 +14,7 @@ static constexpr uint LIGHT_DIST_OMNI    = 1;
 struct LightSource
 {
   float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
+  float4x4 iesMatrix; ///<! translation in matrix is always (0,0,0,1)
   float4   pos;       ///<! translation aclually stored here
   float4   intensity; ///<! brightress, i.e. screen value if light is visable directly
   float4   norm;

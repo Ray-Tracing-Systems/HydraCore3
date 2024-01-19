@@ -1142,7 +1142,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.size      = float2(0,0);
       lightSource.matrix    = float4x4{};
     }
-
+    
     auto iesNode = lightInst.lightNode.child(L"ies");
     if(iesNode != nullptr)
     {
@@ -1182,7 +1182,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       m_textures.push_back(MakeCombinedTexture2D(pTexture, sampler));
       lightSource.iesId = uint(m_textures.size()-1);
-      //std::cout << "lightSource.iesId = " << lightSource.iesId << std::endl;
+      
+      auto matrixAttrib = iesNode.attribute(L"matrix");
+      if(matrixAttrib != nullptr)
+      {
+        float4x4 matrixFromNode = hydra_xml::float4x4FromString(matrixAttrib.as_string());
+        float4x4 instMatrix     = matrix;
+        instMatrix.set_col(3, float4(0,0,0,1));
+        lightSource.iesMatrix   = instMatrix*matrixFromNode*transpose(instMatrix);
+      }
     }
 
     m_lights.push_back(lightSource);
