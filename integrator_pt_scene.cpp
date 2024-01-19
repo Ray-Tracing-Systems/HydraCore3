@@ -929,6 +929,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 }
 
 std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
+//bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
 
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
@@ -1175,6 +1176,18 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       auto pTexture = std::make_shared< Image2D<float> >(w, h, sphericalTexture.data());
       pTexture->setSRGB(false);
       
+      //{
+      //  std::vector<float> data4(w*h*4);
+      //  for(size_t i=0;i<w*h;i++) {
+      //    float val = pTexture->data()[i];
+      //    data4[i*4+0] = val;
+      //    data4[i*4+1] = val;
+      //    data4[i*4+2] = val;
+      //    data4[i*4+3] = val;
+      //  }
+      //  SaveImage4fToEXR(data4.data(), w, h, "ies.exr", 1.0f);
+      //}
+
       Sampler sampler;
       sampler.filter   = Sampler::Filter::LINEAR; 
       sampler.addressU = Sampler::AddressMode::WRAP;

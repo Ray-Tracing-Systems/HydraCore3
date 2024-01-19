@@ -43,9 +43,9 @@ float Integrator::LightPdfSelectRev(int a_lightId)
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
 {
-  const uint gtype    = m_lights[a_lightId].geomType;
-  const float hitDist = length(illuminationPoint - lpos);
-  
+  const uint gtype      = m_lights[a_lightId].geomType;
+  const float hitDist   = length(illuminationPoint - lpos);
+  const float cosValTmp = dot(ray_dir, -1.0f*lnorm);
   float cosVal = 1.0f;
   switch(gtype)
   {
@@ -55,7 +55,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
       // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
       //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
       //  return 1.0f;
-      const float3 dirToV  = normalize(lpos - illuminationPoint);
+      const float3 dirToV = normalize(lpos - illuminationPoint);
       cosVal = std::abs(dot(dirToV, lnorm));
     }
     break;
@@ -65,13 +65,14 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
       if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
         cosVal = 1.0f;
       else
-        cosVal = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
+        cosVal = std::max(cosValTmp, 0.0f);
     };
     break;
 
-    default:
-    cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
-    break;
+    default: // any type of area light
+    //cosVal = std::max(cosValTmp, 0.0f);                                                               ///< Note(!): actual correct way for area lights
+    cosVal = (m_lights[a_lightId].iesId == uint(-1)) ? std::max(cosValTmp, 0.0f) : std::abs(cosValTmp); ///< Note(!): this is not physically correct for area lights, see test_206;
+    break;                                                                                              ///< Note(!): dark line on top of image for pink light appears because area light don't shine to the side. 
   };
   
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);

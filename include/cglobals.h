@@ -317,11 +317,11 @@ static inline float2 sphereMapToPhiTheta(float3 ray_dir)
   const float x = ray_dir.z;
   const float y = ray_dir.x;
   const float z = -ray_dir.y;
-                             // r == 1.0f
-  float theta = acos(z);     // [0,pi] 
-  float phi   = atan2(y, x); // [-pi,pi]
+                                  // r == 1.0f
+  float theta = std::acos(z);     // [0,pi] 
+  float phi   = std::atan2(y, x); // [-pi,pi]
   if (phi < 0.0f)
-    phi += 2.0f*M_PI;        // [-pi,pi] --> [0, 2*pi];  see PBRT.
+    phi += 2.0f*M_PI;             // [-pi,pi] --> [0, 2*pi];  see PBRT.
 
   return make_float2(phi, theta);
 }
