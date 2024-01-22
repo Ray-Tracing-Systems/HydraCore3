@@ -1199,10 +1199,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       auto matrixAttrib = iesNode.attribute(L"matrix");
       if(matrixAttrib != nullptr)
       {
+        float4x4 mrot           = LiteMath::rotate4x4Y(DEG_TO_RAD*90.0f);
         float4x4 matrixFromNode = hydra_xml::float4x4FromString(matrixAttrib.as_string());
-        float4x4 instMatrix     = lightSource.matrix;
+        float4x4 instMatrix     = matrix;
         instMatrix.set_col(3, float4(0,0,0,1));
-        lightSource.iesMatrix = instMatrix*matrixFromNode;
+        lightSource.iesMatrix = mrot*instMatrix*matrixFromNode;
         lightSource.iesMatrix.set_col(3, float4(0,0,0,1));
       }
     }
