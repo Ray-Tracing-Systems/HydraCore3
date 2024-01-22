@@ -295,7 +295,7 @@ reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
-reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216"], integrators = ["mispt"]) )
+reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
 
 Log().set_workdir(".")

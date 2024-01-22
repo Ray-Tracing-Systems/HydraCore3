@@ -195,7 +195,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir)
+float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   const uint specId = m_lights[a_lightId].specId;
@@ -211,6 +211,8 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
   uint iesId = m_lights[a_lightId].iesId;
   if(iesId != uint(-1))
   {
+    if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
+      a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
     const float3 dirTrans = to_float3(m_lights[a_lightId].iesMatrix*to_float4(a_rayDir, 0.0f));
     float sintheta        = 0.0f;
     const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*dirTrans, &sintheta);
@@ -288,7 +290,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir);
+    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -341,7 +343,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;

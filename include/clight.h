@@ -11,6 +11,8 @@ static constexpr uint LIGHT_GEOM_POINT  = 5;
 static constexpr uint LIGHT_DIST_LAMBERT = 0;
 static constexpr uint LIGHT_DIST_OMNI    = 1;
 
+static constexpr uint LIGHT_FLAG_POINT_AREA = 1;
+
 struct LightSource
 {
   float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
@@ -24,7 +26,7 @@ struct LightSource
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE, ...
   
   uint     distType;  ///<! LIGHT_DIST_LAMBERT, LIGHT_DIST_OMNI, ...
-  uint     dummy1;
+  uint     flags;     ///<! 
   uint     dummy2;
   uint     dummy3;
 

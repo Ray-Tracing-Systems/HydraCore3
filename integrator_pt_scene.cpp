@@ -1066,6 +1066,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     lightSource.distType = LIGHT_DIST_LAMBERT;
     lightSource.iesId    = uint(-1);
     lightSource.texId    = uint(-1);
+    lightSource.flags    = 0;
     if(ltype == std::wstring(L"sky"))
     {
       m_envColor = color;
@@ -1173,18 +1174,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       auto pTexture = std::make_shared< Image2D<float> >(w, h, sphericalTexture.data());
       pTexture->setSRGB(false);
-      
-      //{
-      //  std::vector<float> data4(w*h*4);
-      //  for(size_t i=0;i<w*h;i++) {
-      //    float val = pTexture->data()[i];
-      //    data4[i*4+0] = val;
-      //    data4[i*4+1] = val;
-      //    data4[i*4+2] = val;
-      //    data4[i*4+3] = val;
-      //  }
-      //  SaveImage4fToEXR(data4.data(), w, h, "ies.exr", 1.0f);
-      //}
 
       Sampler sampler;
       sampler.filter   = Sampler::Filter::LINEAR; 
@@ -1204,6 +1193,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         lightSource.iesMatrix = mrot*transpose(transpose(matrixFromNode)*instMatrix);
         lightSource.iesMatrix.set_col(3, float4(0,0,0,1));
       }
+      
+      int pointArea = iesNode.attribute(L"point_area").as_int();
+      if(pointArea != 0)
+        lightSource.flags |= LIGHT_FLAG_POINT_AREA;
     }
 
     m_lights.push_back(lightSource);
