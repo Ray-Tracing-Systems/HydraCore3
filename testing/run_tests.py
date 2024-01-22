@@ -193,6 +193,7 @@ reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/stat
 
 '''
 
+'''
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_079/statex_00001.xml",
@@ -281,6 +282,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Images/Glass_rough-0_cornell_mitsuba.png"],
                                          imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
+'''
 
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
@@ -293,7 +295,9 @@ reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
+reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
+
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
