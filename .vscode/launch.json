@@ -332,6 +332,34 @@
     },
 
     {
+        "name": "GPU(test_224)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_224/statex_00001.xml",
+                 "-integrator", "naivept",
+                 "-spp-naive-mul", "4", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "4096",
+                 "-grad", "1",
+                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_224/z_naive.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "GPU(test_232)",
         "type": "cppdbg",
         "request": "launch",
@@ -358,6 +386,8 @@
             }
         ]
     },
+
+    
 
     {
         "name": "CPU(test_228_local)",
@@ -401,6 +431,33 @@
                  "-spp", "512",
                  "-scn_dir", "../Hydra3Tests",
                  "-out", "OUT_CPU_MIS.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "test_42(GPU)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraCore/hydra_app/tests/test_42_ggx/statex_00001.xml",
+                 "-integrator", "shadowpt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 //"-channels", "16",
+                 "-spp", "4096",
+                 "-out", "z_test42_shadow.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

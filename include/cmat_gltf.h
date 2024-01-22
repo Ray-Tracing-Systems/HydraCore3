@@ -91,8 +91,8 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
       pRes->pdf       = lambertPdf;
       pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
             
-      if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-        pRes->val *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+      //if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+      //  pRes->val *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
             
       if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
       {
@@ -136,12 +136,10 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   float lambertVal       = lambertEvalBSDF(l, v, n);
   const float lambertPdf = lambertEvalPDF (l, v, n);
   float f_i              = 1.0f;
-  float prob_diffuse     = 1.0f;
-  float prob_specular    = 0.0f;
   float coeffLambertPdf  = 1.0f;
 
-  if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-    lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+  //if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
+  //  lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
       
   if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
   {
@@ -151,17 +149,6 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
     const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
     lambertVal                            *= coeff;
     coeffLambertPdf                        = coeff; 
-    const float m_specular_sampling_weight = a_materials[0].data[GLTF_FLOAT_MI_SSW];
-    prob_specular                          = f_i * m_specular_sampling_weight;
-    prob_diffuse                           = (1.f - f_i) * (1.f - m_specular_sampling_weight);
-    
-    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
-      prob_diffuse = prob_diffuse / (prob_specular + prob_diffuse);
-    else
-    {
-      prob_diffuse  = 1.0f;
-      prob_specular = 0.0f;
-    }
   }
 
   const float4 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
