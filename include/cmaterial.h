@@ -46,7 +46,7 @@ enum MATERIAL_EVENT {
   RAY_EVENT_T         = 8,  ///< Indicates Transparency or refraction. 
   RAY_EVENT_V         = 16, ///< Indicates Volume scattering, not used for a while
   RAY_EVENT_TOUT      = 32, ///< Indicates Transparency Outside of water or glass et c. (old RAY_IS_INSIDE_TRANSPARENT_OBJECT = 128)
-  RAY_EVENT_TNINGLASS = 64,
+  RAY_EVENT_TNINGLASS = 64
 };
 
 ////////////////////////////////

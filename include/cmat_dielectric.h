@@ -5,8 +5,8 @@
 #include "../spectrum.h"
 
 
-static inline void dielectricSmoothSampleAndEval(const Material* a_materials, const float4 etaSpec, const float _extIOR,
-                                                 float4 rands, float3 v, float3 n, float2 tc, 
+static inline void dielectricSmoothSampleAndEval(const Material* a_materials, const float4 etaSpec,
+                                                 const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, 
                                                  BsdfSample* pRes)
 {
   const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];

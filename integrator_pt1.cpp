@@ -430,8 +430,8 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
 }
 
 
-void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY,
-                                          const float4* wavelengths, float* out_color)
+void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen,
+                                          const uint* in_pakedXY, const float4* wavelengths, float* out_color)
 {
   
   if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
@@ -454,7 +454,8 @@ void Integrator::kernel_ContributeToImage(uint tid, uint channels, const float4*
     
     if(m_camResponseSpectrumId[0] < 0)
     {
-      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(),
+                                       terminateWavelngths(*rayFlags));
       rgb = XYZToRGB(xyz);
     }
     else
@@ -592,7 +593,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                        &accumColor);
 
-  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
+  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
                            out_color);
 }
 
@@ -627,7 +628,7 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor);
 
-  kernel_ContributeToImage(tid, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
 void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color)

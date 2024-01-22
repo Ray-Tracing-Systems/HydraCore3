@@ -264,8 +264,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     case MAT_TYPE_DIELECTRIC:
     if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
     {
-      const float4 intIORSpec = SampleMatParamSpectrum(currMatId, wavelengths, DIELECTRIC_ETA_INT, DIELECTRIC_ETA_INT_SPECID);
+      const float4 intIORSpec = SampleMatParamSpectrum(currMatId, wavelengths, DIELECTRIC_ETA_INT, 0);
+      const uint specId = m_materials[currMatId].spdid[0];
       dielectricSmoothSampleAndEval(m_materials.data() + currMatId, intIORSpec, a_misPrev->ior, rands, v, shadeNormal, tc, &res);
+
+      res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
 
       a_misPrev->ior = res.ior;
     }
