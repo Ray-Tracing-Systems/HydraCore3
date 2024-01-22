@@ -1092,11 +1092,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         scale[i] = length3f(vec);
       }
 
-      lightSource.matrix.set_col(0, matrix.get_col(2)); // why this matrix has swapped (x,z) ?
-      lightSource.matrix.set_col(1, matrix.get_col(1)); // why this matrix has swapped (x,z) ?
-      lightSource.matrix.set_col(2, matrix.get_col(0)); // why this matrix has swapped (x,z) ?
+      lightSource.matrix = matrix;
       lightSource.matrix.set_col(3, float4(0,0,0,1));
-      lightSource.size = float2(sizeX, sizeZ);
+      lightSource.size = float2(sizeZ, sizeX);       ///<! Please note tha we HAVE MISTAKEN with ZX order in Hydra2 implementation
 
       if(shape == L"disk")
       {
