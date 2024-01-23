@@ -507,6 +507,70 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   return mat;
 }
 
+void save_to_file(const char* name, std::vector<float> &arr, int x_samples, int y_samples)
+{
+  std::ofstream precomp_file;
+  precomp_file.open(name);
+  for (int i = 0; i < x_samples; ++i)
+  {
+    for (int j = 0; j < y_samples; ++j)
+    {
+      precomp_file << arr[i * y_samples + j] << " ";
+    }
+  }
+  precomp_file.close();
+}
+void save_to_file_(const char* name, std::array<float, FILM_LENGTH_RES * FILM_ANGLE_RES> &arr, int x_samples, int y_samples)
+{
+  std::ofstream precomp_file;
+  precomp_file.open(name);
+  for (int i = 0; i < x_samples; ++i)
+  {
+    for (int j = 0; j < y_samples; ++j)
+    {
+      precomp_file << arr[i * y_samples + j] << " ";
+    }
+  }
+  precomp_file.close();
+}
+
+void testFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const std::vector<float> &wavelengths, const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
+{
+  float N_samples = 100.f;
+  float K_samples = 100.f;
+  std::vector<float> res;
+  res.reserve(N_samples * K_samples);
+  for (int i = 0; i < N_samples; ++i)
+  {
+    float wavelength = 532.f;
+    std::vector<float> eta, k;
+    eta.reserve(layers);
+    k.reserve(layers);
+    uint2 data;
+    uint offset;
+    uint size;
+    int layer = 1;
+    data  = spec_offsets[eta_id[layer]];
+    offset = data.x;
+    size   = data.y;
+    eta[layer] = SampleSpectrum(wavelengths.data() + offset, spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+    data  = spec_offsets[k_id[layer]];
+    offset = data.x;
+    size   = data.y;
+    k[layer] = SampleSpectrum(wavelengths.data() + offset, spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+    for (int j = 0; j < K_samples; ++j)
+    {
+      float cosTheta = 1.f;
+      eta[0] = 5.f / (N_samples - 1) * i;
+      k[0] = 5.f / (K_samples - 1) * j;
+      res[i * K_samples + j] = multFrFilmRefl(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+    }
+  }
+  save_to_file("../test_film.txt", res, N_samples, K_samples);
+}
+
 ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
         const std::vector<float> &wavelengths, const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
 {
@@ -534,21 +598,24 @@ ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, con
     }
     for (int a = 0; a < FILM_ANGLE_RES; ++a)
     {
-      float cosTheta = 1 / float(FILM_ANGLE_RES - 1) * a;
+      float angle = M_PI_2 / float(FILM_ANGLE_RES - 1) * a;
+      //float cosTheta = 1 / float(FILM_ANGLE_RES - 1) * a;
+      float cosTheta = cosf(angle);
       res.reflectivity[w * FILM_ANGLE_RES + a] = multFrFilmRefl(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
     }
   }
+  save_to_file_("../precomputed_film.txt", res.reflectivity, FILM_LENGTH_RES, FILM_ANGLE_RES);
   return res;
 }
 
 Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
-                                    std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
-                                    std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
-                                    std::vector<uint> &eta_id_vec, std::vector<uint> &k_id_vec,
-                                    const std::vector<float> &spec_values,
-                                    const std::vector<float> &wavelengths,
-                                    const std::vector<uint2> &spec_offsets)
+                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                              std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
+                              std::vector<uint> &eta_id_vec, std::vector<uint> &k_id_vec,
+                              const std::vector<float> &spec_values,
+                              const std::vector<float> &wavelengths,
+                              const std::vector<uint2> &spec_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -610,6 +677,8 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     auto precomp = precomputeThinFilm(eta_id_vec.data(), k_id_vec.data(), spec_values, wavelengths, 
           spec_offsets, thickness_vec.data(), layers);
     std::copy(precomp.reflectivity.begin(), precomp.reflectivity.end(), std::back_inserter(precomputed_film));
+    testFilm(eta_id_vec.data(), k_id_vec.data(), spec_values, wavelengths, 
+          spec_offsets, thickness_vec.data(), layers);
   }
   else
   {

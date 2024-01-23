@@ -46,8 +46,9 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
+      float angleVal = acosf(cosThetaOut) / M_PI_2;
       float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      val[i] = lerp_gather_2d(reflectance, w, cosThetaOut, FILM_LENGTH_RES, FILM_ANGLE_RES);
+      val[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
       // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
       val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
     }
