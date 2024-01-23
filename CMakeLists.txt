@@ -3,6 +3,16 @@ project (HydraCore3)
 
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
+option(USE_ENZYME "Enable Enzyme AD" OFF)
+
+if(USE_ENZYME)
+  set(CLANG_VERSION "17" CACHE STRING "clang and LLVM version to use")
+  set(CMAKE_C_COMPILER   "/usr/bin/clang-${CLANG_VERSION}")   # $ export CC=/usr/bin/clang-17
+  set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}") # $ export CXX=/usr/bin/clang++-17
+  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_098/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  add_definitions(-DUSE_ENZYME)
+endif()
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -20,6 +30,7 @@ set_project_warnings(project_warnings)
 include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
+add_subdirectory(ies_parser)
 
 set(GENERATOR_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root output directory for all artifacts")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -32,7 +43,6 @@ else()
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin-release)
 endif()
-
 
 find_package(OpenMP)
 
@@ -53,7 +63,6 @@ if(USE_VULKAN)
   
   include_directories(${Vulkan_INCLUDE_DIR})
 endif()
-
 
 # try to silence warnings for include files from these dirs
 include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
@@ -130,6 +139,10 @@ if(CAM_PLUGIN)
   set(MAIN_FILES ${CAM_MAIN}
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
+elseif(USE_ENZYME)
+  set(MAIN_FILES diff_render/drmain.cpp
+                 diff_render/integrator_dr.cpp
+                 diff_render/integrator_dr2.cpp)
 else()
   set(MAIN_FILES main.cpp)
 endif()
@@ -145,7 +158,8 @@ set(CORE_SRC
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp
-        utils.cpp)
+        utils.cpp
+        ies_parser/ies_render.cpp)
 
 
 if(USE_VULKAN)    
@@ -182,8 +196,15 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
 endif()
 
 
+if(USE_ENZYME)
+  set(ENZYME_FLAGS "-fplugin=${ENZYME_PLUGIN_DLL}") # -fplugin=${ENZYME_PLUGIN_DLL}
+  set(OMP_FLAGS "-fopenmp=libomp ") # -fplugin=${ENZYME_PLUGIN_DLL}
+  target_compile_options(hydra PUBLIC ${OMP_FLAGS} ${ENZYME_FLAGS})
+else()
+  set(CUSTOM_OMP "")
+endif()
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})
@@ -199,9 +220,8 @@ else()
   target_link_libraries(hydra LINK_PUBLIC dl)
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # add debug specific options here
-  target_link_libraries(hydra LINK_PUBLIC Threads::Threads)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")   # add debug specific options here
+  target_link_libraries(hydra LINK_PUBLIC Threads::Threads OpenMP::OpenMP_CXX)
 else()
   target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
 endif()

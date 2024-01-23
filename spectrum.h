@@ -108,16 +108,26 @@ static inline float SpectrumAverage(float4 spec)
 }
 
 static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min, float lambda_max,
-                                   const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z) 
+                                   const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z, bool terminate_waves) 
 {
-  const float pdf = 1.0f / (lambda_max - lambda_min);
+  float4 pdf = float4(1.0f / (lambda_max - lambda_min));
   const float CIE_Y_integral = 106.856895f;
   const uint32_t nCIESamples = 471;
 
-  //TODO: fix
+  if(terminate_waves)
+  {
+    pdf[0] /= SPECTRUM_SAMPLE_SZ;
+    for(int i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
+    {
+      pdf[i] = 0.0f;
+    }
+  }
+  
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
-    spec[i] = (pdf != 0) ? spec[i] / pdf : 0.0f;
-
+  {
+    spec[i] = (pdf[i] != 0) ? spec[i] / pdf[i] : 0.0f;
+  }
+  
   //float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
   //float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
   //float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);

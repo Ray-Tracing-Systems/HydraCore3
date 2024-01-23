@@ -104,6 +104,7 @@ int main(int argc, const char** argv)
   const bool enableShadowPT = (integratorType == "shadowpt" || integratorType == "all");
   const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
   const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
+  const bool enablePRT      = (integratorType == "primary" || integratorType == "prt");
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -281,21 +282,30 @@ int main(int argc, const char** argv)
     }
   }
   
-  if(enableRT)
+  if(enableRT || enablePRT)
   {
-    PASS_NUMBER = 1;               // must be always one for RT currently
     const float normConstRT = 1.0f;  // must be always one for RT currently
     std::cout << "[main]: RayBlock ... " << std::endl;
 
     std::fill(realColor.begin(), realColor.end(), 0.0f);
    
     pImpl->UpdateMembersPlainData();
-    pImpl->RayTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
-
-    pImpl->GetExecutionTime("RayTraceBlock", timings);
-    std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-    std::cout << "RayTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "RayTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    if(enablePRT)
+    {
+      pImpl->CastSingleRayBlock(FB_WIDTH*FB_HEIGHT, realColor.data(), 1);
+      pImpl->GetExecutionTime("CastSingleRayBlock", timings);
+      std::cout << "CastSingleRayBlock(exec) = " << timings[0]              << " ms " << std::endl;
+      std::cout << "CastSingleRayBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "CastSingleRayBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    }
+    else
+    {
+      pImpl->RayTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), 1);
+      pImpl->GetExecutionTime("RayTraceBlock", timings);
+      std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+      std::cout << "RayTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "RayTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    }
 
     if(saveHDR)
     {

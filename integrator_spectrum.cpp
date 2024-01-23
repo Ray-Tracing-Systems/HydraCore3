@@ -7,7 +7,7 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
   if(a_wavelengths[0] == 0.0f)
     return res;
 
-  const uint specId = as_uint(m_materials[matId].data[paramSpecId]);
+  const uint specId = m_materials[matId].spdid[paramSpecId];
 
   if(specId < 0xFFFFFFFF)
   {
@@ -26,7 +26,7 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
   if(a_wavelengths[0] == 0.0f)
     return res;
 
-  const uint specId = as_uint(m_materials[matId].data[paramSpecId]);
+  const uint specId = m_materials[matId].spdid[paramSpecId];
 
   if(specId < 0xFFFFFFFF)
   {
