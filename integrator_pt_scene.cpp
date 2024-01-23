@@ -297,6 +297,49 @@ float4 GetColorFromNode(const pugi::xml_node& a_node, bool is_spectral_mode)
   }
 }
 
+Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                             std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                             std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             bool is_spectral_mode)
+{
+  std::wstring name              = materialNode.attribute(L"name").as_string();
+  Material mat                   = {};
+  mat.mtype                      = MAT_TYPE_GLTF;
+  mat.cflags                     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
+  mat.data[GLTF_FLOAT_ALPHA]     = 0.0f;
+  //mat.data[GLTF_FLOAT_REFL_COAT] = 1.0f;
+  mat.colors[GLTF_COLOR_COAT]    = float4(1,1,1,1); 
+  mat.colors[GLTF_COLOR_METAL]   = float4(1,1,1,1); 
+
+  float fresnelIOR     = 1.5f;
+  float reflGlossiness = 1.0f;
+  float metalness      = 0.0f;
+  float4 baseColor(1,1,1,1);
+  if(materialNode != nullptr)
+  {
+    if(materialNode.child(L"color") != nullptr)
+      baseColor = GetColorFromNode(materialNode.child(L"color"), is_spectral_mode);
+    if(materialNode.child(L"glossiness") != nullptr)
+      reflGlossiness = hydra_xml::readval1f(materialNode.child(L"glossiness"));  
+    if(materialNode.child(L"fresnel_ior") != nullptr)  
+      fresnelIOR     = hydra_xml::readval1f(materialNode.child(L"fresnel_ior"));
+    if(materialNode.child(L"metalness") != nullptr)  
+      metalness      = hydra_xml::readval1f(materialNode.child(L"metalness"));
+    //if(materialNode.child(L"coat") != nullptr)  
+    //  mat.data[GLTF_FLOAT_REFL_COAT] = hydra_xml::readval1f(materialNode.child(L"coat"));
+  }
+
+  mat.colors[GLTF_COLOR_BASE]  = baseColor; 
+  mat.colors[GLTF_COLOR_METAL] = baseColor; 
+  mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,1); 
+  mat.data  [GLTF_FLOAT_ALPHA] = metalness;
+  mat.data  [GLTF_FLOAT_GLOSINESS] = reflGlossiness;
+  mat.data  [GLTF_FLOAT_IOR]       = fresnelIOR;
+  SetMiPlastic(&mat, fresnelIOR, 1.0f, baseColor, float4(1,1,1,1));
+
+  return mat;
+}
+
 Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
@@ -787,6 +830,7 @@ std::string Integrator::g_lastSceneDir;
 SceneInfo   Integrator::g_lastSceneInfo;
 
 static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
+static const std::wstring hydraGLTFTypeStr         {L"gltf"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
@@ -838,6 +882,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
         features[KSPEC_MAT_TYPE_GLASS] = 1;
       else
         features[KSPEC_MAT_TYPE_GLTF] = 1;
+    }
+    else if(mat_type == hydraGLTFTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
@@ -1221,6 +1269,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
         m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
+    }
+    else if(mat_type == hydraGLTFTypeStr)
+    {
+      mat = ConvertGLTFMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {

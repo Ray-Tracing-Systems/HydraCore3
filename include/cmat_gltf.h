@@ -60,24 +60,18 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
     // (2) now select between specular and diffise via rands.w
     //
     const float f_i = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR); 
-    const float m_specular_sampling_weight = a_materials[0].data[GLTF_FLOAT_MI_SSW];
+   
+    float prob_specular = 0.0f;
+    float prob_diffuse  = 1.0f;
+    if((cflags & GLTF_COMPONENT_COAT) != 0)
+    {
+      prob_specular = 0.5f;
+      prob_diffuse  = 0.5f;
+    }
     
-    float prob_specular = f_i * m_specular_sampling_weight;
-    float prob_diffuse  = (1.0f - f_i) * (1.0f - m_specular_sampling_weight);
-    if(prob_diffuse != 0.0f && prob_specular != 0.0f)
-    {
-      prob_specular = prob_specular / (prob_specular + prob_diffuse);
-      prob_diffuse  = 1.f - prob_specular;
-    }
-    else
-    {
-      prob_diffuse  = 1.0f;
-      prob_specular = 0.0f;
-    }
-    float choicePdf = ((cflags & GLTF_COMPONENT_COAT) == 0) ? 0.0f : prob_specular; // if don't have coal layer, never select it
     if(rands.w < prob_specular) // specular
     {
-      pdfSelect      *= choicePdf;
+      pdfSelect      *= prob_specular;
       pRes->dir       = ggxDir;
       pRes->val       = ggxVal*coat*(1.0f - alpha)*f_i;
       pRes->pdf       = ggxPdf;
@@ -85,7 +79,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
     } 
     else
     {
-      pdfSelect      *= (1.0f-choicePdf); // lambert
+      pdfSelect      *= prob_diffuse; // lambert
       pRes->dir       = lambertDir;
       pRes->val       = lambertVal * color * (1.0f - alpha);
       pRes->pdf       = lambertPdf;
@@ -137,28 +131,26 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const float lambertPdf = lambertEvalPDF (l, v, n);
   float f_i              = 1.0f;
   float coeffLambertPdf  = 1.0f;
-
-  //if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
-  //  lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[GLTF_FLOAT_ROUGH_ORENNAYAR]);
+  float prob_specular = 0.0f;
+  float prob_diffuse  = 1.0f;
       
   if((cflags & GLTF_COMPONENT_COAT) != 0 && (cflags & GLTF_COMPONENT_LAMBERT) != 0) // Plastic, account for retroreflection between surface and coating layer
   {
-    f_i                                    = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
-    const float f_o                        = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
-    const float m_fdr_int                  = a_materials[0].data[GLTF_FLOAT_MI_FDR_INT];
-    const float coeff                      = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
-    lambertVal                            *= coeff;
-    coeffLambertPdf                        = coeff; 
+    f_i                   = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
+    const float f_o       = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
+    const float m_fdr_int = a_materials[0].data[GLTF_FLOAT_MI_FDR_INT];
+    const float coeff     = (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int));
+    lambertVal           *= coeff;
+    coeffLambertPdf       = coeff; 
+    prob_specular = 0.5f;
+    prob_diffuse  = 0.5f;
   }
 
   const float4 fConductor    = hydraFresnelCond(specular, VdotH, fresnelIOR, roughness); // (1) eval metal component      
   const float4 specularColor = ggxVal*fConductor;                                        // eval metal specular component
-      
-  float  dielectricPdf = lambertPdf * coeffLambertPdf; 
-  if((cflags & GLTF_COMPONENT_COAT) != 0)
-    dielectricPdf += 2.0f * ggxPdf * f_i; 
                                 
   const float4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
+  const float  dielectricPdf = lambertPdf * prob_diffuse + ggxPdf*prob_specular; 
 
   res->val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
   res->pdf = alpha * ggxPdf        + (1.0f - alpha) * dielectricPdf; // (3) accumulate final color and pdf
