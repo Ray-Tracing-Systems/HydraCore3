@@ -581,13 +581,13 @@ Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const std::v
   mat.lightId                           = uint(-1);
   mat.data[DIELECTRIC_ETA_EXT]          = 1.00028f; // air
   mat.data[DIELECTRIC_ETA_INT]          = 1.5046f;  // bk7 glass
-  mat.data[DIELECTRIC_ETA_INT_SPECID]   = as_float(uint(-1));
+  mat.spdid[0]                          = uint(-1);
 
   auto nodeIntIOR = materialNode.child(L"int_ior");
   if(nodeIntIOR != nullptr)
   {
     auto specId = GetSpectrumIdFromNode(nodeIntIOR);
-    mat.data[DIELECTRIC_ETA_INT_SPECID] = as_float(specId);
+    mat.spdid[0] = specId;
     mat.data[DIELECTRIC_ETA_INT] = nodeIntIOR.attribute(L"val").as_float();
   }
 

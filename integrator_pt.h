@@ -112,15 +112,15 @@ public:
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
-  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
-                         const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
+  void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
+                         const uint* in_instId, const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
                          float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, 
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
                                 const uint* rayFlags, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
@@ -129,7 +129,7 @@ public:
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
-  void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
+  void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
                                 const float4* wavelengths, float* out_color);
 
   void kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, 
@@ -148,6 +148,7 @@ public:
   static inline bool hasNonSpecular(uint a_flags)  { return (a_flags & RAY_FLAG_HAS_NON_SPEC)   != 0; }
   static inline bool hasInvNormal  (uint a_flags)  { return (a_flags & RAY_FLAG_HAS_INV_NORMAL) != 0; }
   static inline bool isOutOfScene  (uint a_flags)  { return (a_flags & RAY_FLAG_OUT_OF_SCENE)   != 0; }
+  static inline bool terminateWavelngths(uint a_flags)  { return (a_flags & RAY_FLAG_WAVES_DIVERGED)   != 0; }
 
   static inline uint extractMatId(uint a_flags)    { return (a_flags & 0x00FFFFFF); }       
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
