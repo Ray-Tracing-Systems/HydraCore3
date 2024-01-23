@@ -68,7 +68,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
     {
       pdfSelect      *= prob_specular;
       pRes->dir       = ggxDir;
-      pRes->val       = ggxVal*coat*(1.0f - alpha)*f_i;
+      pRes->val       = ggxVal*coat*(1.0f - alpha)*f_i*beta;
       pRes->pdf       = ggxPdf;
       pRes->flags     = (roughness == 0.0f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
     } 
@@ -141,7 +141,7 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const float prob_specular = 0.5f*beta;
   const float prob_diffuse  = 1.0f-prob_specular;
 
-  const float4 dielectricVal = lambertVal * color + ggxVal * coat * f_i;
+  const float4 dielectricVal = lambertVal * color + ggxVal * coat * f_i * beta;
   const float  dielectricPdf = lambertPdf * prob_diffuse + ggxPdf*prob_specular; 
 
   res->val = alpha * specularColor + (1.0f - alpha) * dielectricVal; // (3) accumulate final color and pdf
