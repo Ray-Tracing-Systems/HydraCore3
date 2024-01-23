@@ -307,7 +307,7 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.mtype                      = MAT_TYPE_GLTF;
   mat.cflags                     = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
   mat.data[GLTF_FLOAT_ALPHA]     = 0.0f;
-  //mat.data[GLTF_FLOAT_REFL_COAT] = 1.0f;
+  mat.data[GLTF_FLOAT_REFL_COAT] = 1.0f;
   mat.colors[GLTF_COLOR_COAT]    = float4(1,1,1,1); 
   mat.colors[GLTF_COLOR_METAL]   = float4(1,1,1,1); 
 
@@ -325,8 +325,8 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vect
       fresnelIOR     = hydra_xml::readval1f(materialNode.child(L"fresnel_ior"));
     if(materialNode.child(L"metalness") != nullptr)  
       metalness      = hydra_xml::readval1f(materialNode.child(L"metalness"));
-    //if(materialNode.child(L"coat") != nullptr)  
-    //  mat.data[GLTF_FLOAT_REFL_COAT] = hydra_xml::readval1f(materialNode.child(L"coat"));
+    if(materialNode.child(L"coat") != nullptr)  
+      mat.data[GLTF_FLOAT_REFL_COAT] = hydra_xml::readval1f(materialNode.child(L"coat"));
   }
 
   mat.colors[GLTF_COLOR_BASE]  = baseColor; 
@@ -345,14 +345,14 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                  bool is_spectral_mode)
 {
-  std::wstring name            = materialNode.attribute(L"name").as_string();
-  Material mat                 = {};
-  mat.mtype                    = MAT_TYPE_GLTF;
-  mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
-  mat.colors[GLTF_COLOR_COAT]  = float4(1,1,1,1); 
-  mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);  
-  
-  mat.lightId                  = uint(-1);
+  std::wstring name              = materialNode.attribute(L"name").as_string();
+  Material mat                   = {};
+  mat.mtype                      = MAT_TYPE_GLTF;
+  mat.data[GLTF_FLOAT_ALPHA]     = 0.0f;
+  mat.data[GLTF_FLOAT_REFL_COAT] = 1.0f;
+  mat.colors[GLTF_COLOR_COAT]    = float4(1,1,1,1); 
+  mat.colors[GLTF_COLOR_METAL]   = float4(0,0,0,0);  
+  mat.lightId                    = uint(-1);
   
   auto nodeEmiss = materialNode.child(L"emission");
 
@@ -442,7 +442,8 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 
     if(hasFresnel)
     {
-      mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
+      mat.data[GLTF_FLOAT_ALPHA]     = 0.0f;
+      mat.data[GLTF_FLOAT_REFL_COAT] = 1.0f;
       mat.colors[GLTF_COLOR_COAT]  = reflColor;
       mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0); 
       mat.cflags                   = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_COAT;
@@ -450,7 +451,8 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
     }
     else
     {
-      mat.data[GLTF_FLOAT_ALPHA]   = length(reflColor)/( length(reflColor) + length3f(color) );
+      mat.data[GLTF_FLOAT_ALPHA]     = length(reflColor)/( length(reflColor) + length3f(color) );
+      mat.data[GLTF_FLOAT_REFL_COAT] = 0.0f;
       mat.colors[GLTF_COLOR_COAT]  = float4(0,0,0,0); 
       mat.colors[GLTF_COLOR_METAL] = reflColor;   // disable coating for such blend type
       mat.cflags                   = GLTF_COMPONENT_LAMBERT | GLTF_COMPONENT_METAL;
@@ -468,10 +470,11 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   {
     mat.mtype  = MAT_TYPE_GLTF;
     mat.cflags = GLTF_COMPONENT_LAMBERT;
-    mat.colors[GLTF_COLOR_BASE]  = color;
-    mat.colors[GLTF_COLOR_COAT]  = float4(0,0,0,0); 
-    mat.colors[GLTF_COLOR_METAL] = float4(0,0,0,0);    
-    mat.data[GLTF_FLOAT_ALPHA]   = 0.0f;
+    mat.colors[GLTF_COLOR_BASE]    = color;
+    mat.colors[GLTF_COLOR_COAT]    = float4(0,0,0,0); 
+    mat.colors[GLTF_COLOR_METAL]   = float4(0,0,0,0);    
+    mat.data[GLTF_FLOAT_ALPHA]     = 0.0f;
+    mat.data[GLTF_FLOAT_REFL_COAT] = 0.0f;
   }
     
   // Glass

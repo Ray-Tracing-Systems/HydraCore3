@@ -71,7 +71,8 @@ static constexpr uint GLTF_FLOAT_ALPHA            = 3; ///< blend factor between
 static constexpr uint GLTF_FLOAT_GLOSINESS        = 4; ///< material glosiness or intensity for lights, take color from baseColor
 static constexpr uint GLTF_FLOAT_IOR              = 5; ///< index of refraction for reflection Fresnel
 static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = 6; ///< roughness for Oren-Nayar
-static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_FLOAT_ROUGH_ORENNAYAR;
+static constexpr uint GLTF_FLOAT_REFL_COAT        = 7; ///< reflection magnitude for coat
+static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_FLOAT_REFL_COAT;
 
 // GLASS
 // colors
