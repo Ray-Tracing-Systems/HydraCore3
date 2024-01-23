@@ -11,7 +11,9 @@ static inline void dielectricSmoothSampleAndEval(const Material* a_materials, co
 {
   const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];
 
-  if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
+  // if we hit the reverse side of the polygon, reverse the normal back (it was reversed in the RayTrace func.)
+  // for correct computations in FrDielectricDetailed
+  if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) 
   {
     n = -1 * n;
   }
@@ -20,21 +22,10 @@ static inline void dielectricSmoothSampleAndEval(const Material* a_materials, co
   CoordinateSystemV2(n, &s, &t);
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
 
-  float eta = etaSpec.x / extIOR; // TODO: spectral eta - kill all other wavelengths
+  float eta = etaSpec.x / extIOR; // take IOR from the first wavelength
 
-  // if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // hit the reverse side of the polygon from the volume
-  // {
-  //   if (_extIOR == etaSpec.x) // TODO: spectral eta
-  //     eta = 1.0f / etaSpec.x;
-  // }
 
-// 0.745328009  0.666666687
   float4 fr = FrDielectricDetailedV2(wi.z, eta); 
-  // float4 fr1 = FrDielectricDetailed(wi.z, eta); 
-  // float4 fr2 = FrDielectricDetailedV2(wi.z, eta); 
-  // if(std::abs(fr1.x - fr2.x) > 1e6f || std::abs(fr1.y - fr2.y) > 1e6f || std::abs(fr1.z - fr2.z) > 1e6f || std::abs(fr1.w - fr2.w) > 1e6f)
-  //   int a = 1;
-
 
   const float R = fr.x;
   const float cos_theta_t = fr.y;

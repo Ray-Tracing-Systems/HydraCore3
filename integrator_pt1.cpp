@@ -115,7 +115,7 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
 
 void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                 float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
+                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -132,9 +132,11 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   if(hit.geomId != uint32_t(-1))
   {
     const float2 uv     = float2(hit.coords[0], hit.coords[1]);
-    // const float3 hitPos = to_float3(rayPos) + (hit.t*0.999999f)*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
-    const float3 hitPos = to_float3(rayPos) + hit.t*to_float3(rayDir); // set hit slightlyt closer to old ray origin to prevent self-interseaction and e.t.c bugs
     
+    // slightly undershoot the intersection to prevent self-intersection and other bugs
+    const float3 hitPos = to_float3(rayPos) + hit.t * (1.f - 1e-6f) * to_float3(rayDir);
+    // const float3 overHit  = to_float3(rayPos) + hit.t * (1.f + 1e-6f) * to_float3(rayDir);
+
     // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
     /////////////////////////////////////////////////////////////////////////////////
     // // get distance vectors from triangle vertices
@@ -182,7 +184,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *rayFlags              = packMatId(currRayFlags, midRemaped);
     *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
     *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
-    *out_hit3              = to_float4(hitTang, 0.0f);
+    *out_hit3              = to_float4(hitTang, hit.t);
     *out_instId            = hit.instId;
   }
   else
@@ -220,10 +222,9 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
 }
 
 
-void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
-                                          const float4* wavelengths, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                          const uint* rayFlags, uint bounce,
-                                          RandomGen* a_gen, float4* out_shadeColor)
+void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
+                                          const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                          const uint* rayFlags, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -259,9 +260,8 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
-  const float3 shadowRayPos = hit.pos + hit.norm*std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-  // const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
-  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist));
+  const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
+  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist * (1.f - 1e-6f)));
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
 
   RecordShadowHitIfNeeded(bounce, inShadow);
@@ -294,9 +294,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     *out_shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
-                                   const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
-                                   float4* accumColor, float4* accumThoroughput, RandomGen* a_gen, MisData* misPrev, uint* rayFlags)
+void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                   const uint* in_instId, const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                                   const float4* wavelengths, float4* accumColor, float4* accumThoroughput,
+                                   RandomGen* a_gen, MisData* misPrev, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -320,6 +321,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   hit.norm = to_float3(data2);
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
+
+  const float hitDist = in_hitPart3->w;
   
   const MisData prevBounce = *misPrev;
   const float   prevPdfW   = prevBounce.matSamplePdf;
@@ -394,14 +397,14 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     float4 currAccumColor        = *accumColor;
 
     currAccumColor += currThoroughput * shadeColor;
-    // currAccumColor.x += currThoroughput.x * shadeColor.x;
-    // currAccumColor.y += currThoroughput.y * shadeColor.y;
-    // currAccumColor.z += currThoroughput.z * shadeColor.z;
-    // if(bounce > 0)
-    //   currAccumColor.w *= prevPdfA;
-
     *accumColor       = currAccumColor;
     *accumThoroughput = currThoroughput*cosTheta*bxdfVal; 
+  }
+
+  // compute point on the other side of the surface in case of transmission
+  if((matSam.flags & RAY_EVENT_T) != 0)
+  {
+    hit.pos = hit.pos + hitDist * ray_dir * 2 * 1e-6f;
   }
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
@@ -615,8 +618,8 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
-                             &gen, &shadeColor);
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+                             depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
@@ -644,17 +647,17 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
-    float4   shadeColor, hitPart1, hitPart2, hitPart3;
+    float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
     kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, depth,
-                             &gen, &shadeColor);
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, 
+                             depth, &gen, &shadeColor);
 
-    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor, &rayPosAndNear, &rayDirAndFar,
+                      &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
     if(isDeadRay(rayFlags))
       break;
