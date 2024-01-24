@@ -66,15 +66,19 @@ namespace hydra_xml
     m_libraryRootDir = path.substr(0, pos);
     if(scnDir != "")
       m_libraryRootDir = scnDir;
+    
+    pugi::xml_node root = xmlDoc;
+    if(xmlDoc.child(L"root") != nullptr)
+      root = xmlDoc.child(L"root");
+    
+    auto texturesLib  = root.child(L"textures_lib");
+    auto materialsLib = root.child(L"materials_lib");
+    auto geometryLib  = root.child(L"geometry_lib");
+    auto lightsLib    = root.child(L"lights_lib");
 
-    auto texturesLib  = xmlDoc.child(L"textures_lib");
-    auto materialsLib = xmlDoc.child(L"materials_lib");
-    auto geometryLib  = xmlDoc.child(L"geometry_lib");
-    auto lightsLib    = xmlDoc.child(L"lights_lib");
-
-    auto cameraLib    = xmlDoc.child(L"cam_lib");
-    auto settingsNode = xmlDoc.child(L"render_lib");
-    auto sceneNode    = xmlDoc.child(L"scenes");
+    auto cameraLib    = root.child(L"cam_lib");
+    auto settingsNode = root.child(L"render_lib");
+    auto sceneNode    = root.child(L"scenes");
 
     if (texturesLib == nullptr || materialsLib == nullptr || lightsLib == nullptr || cameraLib == nullptr ||
         geometryLib == nullptr || settingsNode == nullptr || sceneNode == nullptr)
