@@ -116,15 +116,19 @@ namespace hydra_xml
     if(scnDir != "")
       m_libraryRootDir = scnDir;
 
-    m_texturesLib  = m_xmlDoc.child(L"textures_lib");
-    m_materialsLib = m_xmlDoc.child(L"materials_lib");
-    m_geometryLib  = m_xmlDoc.child(L"geometry_lib");
-    m_lightsLib    = m_xmlDoc.child(L"lights_lib");
-    m_spectraLib    = m_xmlDoc.child(L"spectra_lib");
+    pugi::xml_node root = m_xmlDoc;
+    if(m_xmlDoc.child(L"root") != nullptr)
+      root = m_xmlDoc.child(L"root");
 
-    m_cameraLib    = m_xmlDoc.child(L"cam_lib");
-    m_settingsNode = m_xmlDoc.child(L"render_lib");
-    m_scenesNode   = m_xmlDoc.child(L"scenes");
+    m_texturesLib  = root.child(L"textures_lib");
+    m_materialsLib = root.child(L"materials_lib");
+    m_geometryLib  = root.child(L"geometry_lib");
+    m_lightsLib    = root.child(L"lights_lib");
+    m_spectraLib   = root.child(L"spectra_lib");
+
+    m_cameraLib    = root.child(L"cam_lib");
+    m_settingsNode = root.child(L"render_lib");
+    m_scenesNode   = root.child(L"scenes");
 
     if (m_texturesLib == nullptr || m_materialsLib == nullptr || m_lightsLib == nullptr || m_cameraLib == nullptr || m_geometryLib == nullptr || m_settingsNode == nullptr || m_scenesNode == nullptr)
     {
