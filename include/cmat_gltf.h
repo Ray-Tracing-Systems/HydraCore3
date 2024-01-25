@@ -4,11 +4,11 @@
 #include "cmaterial.h"
 
 static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
-                                     float3 n, float2 tc, float4 color, BsdfSample* pRes)
+                                     float3 n, float2 tc, float4 baseColor, BsdfSample* pRes)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const uint   cflags     = a_materials[0].cflags;
-  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]; 
+  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor; 
   const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];  
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
   float        metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA];
@@ -75,7 +75,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
     {
       pdfSelect      *= prob_diffuse; // lambert
       pRes->dir       = lambertDir;
-      pRes->val       = lambertVal * color * (1.0f - metalness);
+      pRes->val       = lambertVal * baseColor * (1.0f - metalness);
       pRes->pdf       = lambertPdf;
       pRes->flags     = RAY_FLAG_HAS_NON_SPEC;
             
@@ -92,10 +92,10 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 
 
 static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
-                     float4 color, BsdfEval* res)
+                     float4 baseColor, BsdfEval* res)
 {
   const uint   cflags     = a_materials[0].cflags;
-  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL];
+  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor;
   const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];
   const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
         float  metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA];
@@ -140,7 +140,7 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   const float prob_specular = 0.5f*coatValue;
   const float prob_diffuse  = 1.0f-prob_specular;
 
-  const float4 dielectricVal = lambertVal * color + ggxVal * coatCol * f_i * coatValue;
+  const float4 dielectricVal = lambertVal * baseColor + ggxVal * coatCol * f_i * coatValue;
   const float  dielectricPdf = lambertPdf * prob_diffuse + ggxPdf*prob_specular; 
 
   res->val = metalness * specularColor + (1.0f - metalness) * dielectricVal; // (3) accumulate final color and pdf
