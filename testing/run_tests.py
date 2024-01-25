@@ -236,12 +236,11 @@ reqs.append( REQ_HX("mat_emission", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_123/s
                                      imsize = [(512,512), (512,512), (512,512)],
                                      naivemul = 16, integrators = ["naivept","mispt"]))
 
-
-#reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/PlasticSmooth_sphere_hydra2.xml",
-#                                           PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/PlasticSmooth_cornell_hydra2.xml"],
-#                                          [PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0001/Images/PlasticSmooth_sphere_mitsuba.png",
-#                                           PATH_TO_HYDRA3_SCENS + "/Tests/Plastic_smooth/0002/Images/PlasticSmooth_cornell_mitsuba.png"],
-#                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
+reqs.append( REQ_HX("mat_smooth_plastic", [PATH_TO_HYDRA3_SCENS + "/Tests/GLTF/0005/PlasticSmooth_sphere_hydra2.xml",
+                                           PATH_TO_HYDRA3_SCENS + "/Tests/GLTF/0006/PlasticSmooth_cornell_hydra2.xml"],
+                                          [PATH_TO_HYDRA3_SCENS + "/Tests/GLTF/0005/Images/PlasticSmooth_sphere_mitsuba.png",
+                                           PATH_TO_HYDRA3_SCENS + "/Tests/GLTF/0006/Images/PlasticSmooth_cornell_mitsuba.png"],
+                                           imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
 
 reqs.append( REQ_HX("mat_conductor",
                     [
