@@ -2,3 +2,6 @@
 /home/roman/Desktop/hydra3spectr/HydraCore3/build/CMakeFiles/hydra.dir
 /home/roman/Desktop/hydra3spectr/HydraCore3/build/CMakeFiles/edit_cache.dir
 /home/roman/Desktop/hydra3spectr/HydraCore3/build/CMakeFiles/rebuild_cache.dir
+/home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser/CMakeFiles/ies_parser.dir
+/home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser/CMakeFiles/edit_cache.dir
+/home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser/CMakeFiles/rebuild_cache.dir

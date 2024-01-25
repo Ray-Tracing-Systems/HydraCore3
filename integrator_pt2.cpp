@@ -270,11 +270,16 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
       const uint precomp_id = as_uint(m_materials[currMatId].data[FILM_PRECOMP_ID]);
 
       if(trEffectivelySmooth(alpha))
-        filmSmoothSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, rands, v, n, tc, &res,
+        filmSmoothSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, a_misPrev->ior, rands, v, n, tc, &res,
                            m_precomp_thin_films.data() + precomp_id * FILM_LENGTH_RES * FILM_ANGLE_RES);
       else
         filmRoughSampleAndEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, rands, v, n, tc, alphaTex, &res,
                            m_precomp_thin_films.data() + precomp_id * FILM_LENGTH_RES * FILM_ANGLE_RES);
+      
+      //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
+      res.flags |= RAY_FLAG_WAVES_DIVERGED;
+
+      a_misPrev->ior = res.ior;
     }
     break;
     case MAT_TYPE_DIFFUSE:
@@ -439,21 +444,21 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           std::vector<float4> kSpec;
           std::vector<float> thickness;
 
-          uint eta_offset = m_materials[a_materialId].data[FILM_ETA_SPECID_OFFSET];
-          uint k_offset = m_materials[a_materialId].data[FILM_K_SPECID_OFFSET];
-          uint t_offset = m_materials[a_materialId].data[FILM_THICKNESS_OFFSET];
+          uint eta_offset = m_materials[currMat.id].data[FILM_ETA_SPECID_OFFSET];
+          uint k_offset = m_materials[currMat.id].data[FILM_K_SPECID_OFFSET];
+          uint t_offset = m_materials[currMat.id].data[FILM_THICKNESS_OFFSET];
 
-          uint layers = as_uint(m_materials[a_materialId].data[FILM_LAYERS_COUNT]);
+          uint layers = as_uint(m_materials[currMat.id].data[FILM_LAYERS_COUNT]);
           
           for (uint layer = 0; layer < layers; layer++)
           {
-            etaSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
-            kSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
+            etaSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
+            kSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
           }
 
           const uint precomp_id = as_uint(m_materials[currMat.id].data[FILM_PRECOMP_ID]);
 
-          filmRoughEval(m_materials.data() + a_materialId, etaSpec.data(), kSpec.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, l, v, n, tc, alphaTex, &currVal,
+          filmRoughEval(m_materials.data() + currMat.id, etaSpec.data(), kSpec.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, l, v, n, tc, alphaTex, &currVal,
                            m_precomp_thin_films.data() + precomp_id * FILM_LENGTH_RES * FILM_ANGLE_RES);
         }
 

@@ -424,6 +424,34 @@
         "args": ["--gpu",
                  "-in", "../Spectral/0001/Spectral-ior-sphere-hydra3.xml",
                  "-integrator", "mispt", 
+                 "-width", "300",
+                 "-height", "300",
+                 "-spp", "20000", 
+                 //"-out", "out_gpu_224.bmp"
+                 "-out", "../out/pic.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SphereCornell",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_hydra2_films.xml",
+                 "-integrator", "mispt", 
                  "-width", "256",
                  "-height", "256",
                  "-spp", "2048", 

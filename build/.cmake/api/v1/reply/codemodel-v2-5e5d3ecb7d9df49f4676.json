@@ -1,0 +1,97 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						2
+					]
+				},
+				{
+					"build" : "ies_parser",
+					"jsonFile" : "directory-ies_parser-Release-04f96c829c32ae43cefb.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "ies_parser",
+					"targetIndexes" : 
+					[
+						1
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1
+					],
+					"name" : "HydraCore3",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "hydra::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-hydra-Release-ace34dce7c5c9c3b56ae.json",
+					"name" : "hydra",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ies_parser::@f7d11d44d8b36eadb81d",
+					"jsonFile" : "target-ies_parser-Release-1ed868db6346ef808c30.json",
+					"name" : "ies_parser",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "miniz::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-miniz-Release-146ee3ae9b91bdffcfc2.json",
+					"name" : "miniz",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/roman/Desktop/hydra3spectr/HydraCore3/build",
+		"source" : "/home/roman/Desktop/hydra3spectr/HydraCore3"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}

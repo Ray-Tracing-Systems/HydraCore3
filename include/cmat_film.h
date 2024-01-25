@@ -12,18 +12,39 @@ struct ThinFilmPrecomputed
 };
 
 static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* reflectance)
+        uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* reflectance)
 {
-  //std::cout << eta_1[0] << k_1[0] << eta_2[0] << k_2[0] << std::endl;
-  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
+  const float extIOR = 1.f;
+  bool reversed = false;
+  bool opaque = false;
+  if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) 
+  {
+    n = -1 * n;
+    reversed = true;
+  }
+  else
+  {
+    if (length(k[layers - 1]) > 1e-3f)
+    {
+      opaque = true;
+    }
+  }
 
-  const float3 pefReflDir = reflect((-1.0f)*v, n);
-  const float cosThetaOut = dot(pefReflDir, n);
-  float3 dir              = pefReflDir;
-  float  pdf              = 1.0f;
+  float3 s, t = n;
+  CoordinateSystemV2(n, &s, &t);
+  float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+  float cosThetaI = fabs(wi.z);
+
+  float ior = eta[layers - 1].x;
+
+  float4 fr = FrDielectricDetailedV2(wi.z, ior);
+
+  const float cosThetaT = fr.y;
+  const float eta_it = fr.z;
+  const float eta_ti = fr.w;  
   
-  float4 val;
-  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+  float4 R = {0.f, 0.f, 0.f, 0.f};
+  const uint spectralSamples = opaque ? sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]) : 1; 
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
@@ -32,32 +53,51 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
     {
       if (layers == 1)
       {
-        val[i] = FrFilmRefl(cosThetaOut, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
+        if (!reversed)
+          R[i] = FrFilmRefl(cosThetaI, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
+        else
+          R[i] = FrFilmRefl(cosThetaI, complex(eta[1][i], k[1][i]), complex(eta[0][i], k[0][i]), complex(1.0f), thickness[0], a_wavelengths[i]); 
       }
       else if (layers > 1)
       {
-        val[i] = multFrFilmRefl4(cosThetaOut, eta, k, thickness, layers, a_wavelengths[i], i);
-      }
-      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
-      val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+        if (!reversed)
+          R[i] = multFrFilmRefl4(cosThetaI, eta, k, thickness, layers, a_wavelengths[i], i);
+        else
+          R[i] = multFrFilmRefl4_r(cosThetaI, eta, k, thickness, layers, a_wavelengths[i], i);
+      } 
     }
   }
   else
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
-      float angleVal = acosf(cosThetaOut) / M_PI_2;
+      float angleVal = acosf(cosThetaI) / M_PI_2;
       float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      val[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
-      // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead
-      val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+      R[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
   }
-  
-  pRes->val = val; 
-  pRes->dir = dir;
-  pRes->pdf = pdf;
-  pRes->flags = RAY_EVENT_S;
+
+  if (opaque || rands.x < R.x)
+  {
+    float3 wo = float3(-wi.x, -wi.y, wi.z);
+    pRes->val = R;
+    pRes->pdf = opaque ? 1.f : R.x;
+    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->flags |= RAY_EVENT_S;
+    pRes->ior = _extIOR;
+  }
+  else // perfect specular transmission
+  {
+    float3 wo = refract(wi, cosThetaT, eta_ti);
+    pRes->val = float4((eta_ti * eta_ti) * (1.f - R.x));
+    pRes->pdf = 1.f - R.x;
+    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
+    pRes->ior = (_extIOR == ior) ? extIOR : ior;
+  }
+
+  pRes->val /= std::max(std::abs(dot(pRes->dir, n)), 1e-6f);
+
 }
 
 
@@ -132,7 +172,6 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
   if(v.z == 0)
     return;
 
-  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
   // const uint  texId = as_uint(a_materials[0].data[FILM_TEXID0]);
 
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
@@ -197,7 +236,6 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
 static void filmRoughEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
         uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance)
 {
-  const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
 
   // const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 

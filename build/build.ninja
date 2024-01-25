@@ -80,12 +80,12 @@ build /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a: C_STAT
 #############################################
 # Order-only phony target for hydra
 
-build cmake_object_order_depends_target_hydra: phony || cmake_object_order_depends_target_miniz
+build cmake_object_order_depends_target_hydra: phony || cmake_object_order_depends_target_ies_parser cmake_object_order_depends_target_miniz
 
 build CMakeFiles/hydra.dir/main.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/main.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/main.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -93,7 +93,7 @@ build CMakeFiles/hydra.dir/main.cpp.o: CXX_COMPILER__hydra_unscanned_Release /ho
 build CMakeFiles/hydra.dir/integrator_rt.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_rt.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_rt.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -101,7 +101,7 @@ build CMakeFiles/hydra.dir/integrator_rt.cpp.o: CXX_COMPILER__hydra_unscanned_Re
 build CMakeFiles/hydra.dir/integrator_pt1.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_pt1.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_pt1.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -109,7 +109,7 @@ build CMakeFiles/hydra.dir/integrator_pt1.cpp.o: CXX_COMPILER__hydra_unscanned_R
 build CMakeFiles/hydra.dir/integrator_pt2.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_pt2.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_pt2.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -117,7 +117,7 @@ build CMakeFiles/hydra.dir/integrator_pt2.cpp.o: CXX_COMPILER__hydra_unscanned_R
 build CMakeFiles/hydra.dir/integrator_pt_host.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_pt_host.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_pt_host.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -125,7 +125,7 @@ build CMakeFiles/hydra.dir/integrator_pt_host.cpp.o: CXX_COMPILER__hydra_unscann
 build CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_pt_scene.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -133,7 +133,7 @@ build CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o: CXX_COMPILER__hydra_unscan
 build CMakeFiles/hydra.dir/integrator_spectrum.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/integrator_spectrum.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/integrator_spectrum.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -141,7 +141,7 @@ build CMakeFiles/hydra.dir/integrator_spectrum.cpp.o: CXX_COMPILER__hydra_unscan
 build CMakeFiles/hydra.dir/mi_materials.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/mi_materials.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/mi_materials.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -149,7 +149,7 @@ build CMakeFiles/hydra.dir/mi_materials.cpp.o: CXX_COMPILER__hydra_unscanned_Rel
 build CMakeFiles/hydra.dir/spectrum.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/spectrum.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/spectrum.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -157,7 +157,7 @@ build CMakeFiles/hydra.dir/spectrum.cpp.o: CXX_COMPILER__hydra_unscanned_Release
 build CMakeFiles/hydra.dir/imageutils.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/imageutils.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/imageutils.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
@@ -165,15 +165,23 @@ build CMakeFiles/hydra.dir/imageutils.cpp.o: CXX_COMPILER__hydra_unscanned_Relea
 build CMakeFiles/hydra.dir/utils.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/utils.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/utils.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir
 
+build CMakeFiles/hydra.dir/ies_parser/ies_render.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/ies_parser/ies_render.cpp || cmake_object_order_depends_target_hydra
+  DEFINES = -D_CRT_SECURE_NO_WARNINGS
+  DEP_FILE = CMakeFiles/hydra.dir/ies_parser/ies_render.cpp.o.d
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
+  OBJECT_DIR = CMakeFiles/hydra.dir
+  OBJECT_FILE_DIR = CMakeFiles/hydra.dir/ies_parser
+
 build CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteScene/pugixml.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir/external/LiteScene
@@ -181,7 +189,7 @@ build CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o: CXX_COMPILER__hydra
 build CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteScene/hydraxml.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir/external/LiteScene
@@ -189,7 +197,7 @@ build CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o: CXX_COMPILER__hydr
 build CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteScene/cmesh4.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir/external/LiteScene
@@ -197,7 +205,7 @@ build CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o: CXX_COMPILER__hydra_
 build CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath/Image2d.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir/external/LiteMath
@@ -205,7 +213,7 @@ build CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o: CXX_COMPILER__hydra_
 build CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o: CXX_COMPILER__hydra_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT/EmbreeRT.cpp || cmake_object_order_depends_target_hydra
   DEFINES = -D_CRT_SECURE_NO_WARNINGS
   DEP_FILE = CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o.d
-  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
+  FLAGS = -O3 -DNDEBUG -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wcast-align -Wunused -Woverloaded-virtual -Wconversion -Wno-sign-conversion -Wno-useless-cast -Wno-unused-parameter -Wno-unknown-attributes -Wnull-dereference -Wdouble-promotion -Wformat=2 -Wmisleading-indentation -Wduplicated-cond -Wduplicated-branches -fopenmp
   INCLUDES = -I/home/roman/Desktop/hydra3spectr/HydraCore3/external -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/vkutils -I/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/tinyexr -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/volk -isystem /home/roman/Desktop/hydra3spectr/HydraCore3/external/LiteMath
   OBJECT_DIR = CMakeFiles/hydra.dir
   OBJECT_FILE_DIR = CMakeFiles/hydra.dir/external/CrossRT
@@ -218,9 +226,9 @@ build CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o: CXX_COMPILER__hydra_
 #############################################
 # Link the executable /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra
 
-build /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra: CXX_EXECUTABLE_LINKER__hydra_Release CMakeFiles/hydra.dir/main.cpp.o CMakeFiles/hydra.dir/integrator_rt.cpp.o CMakeFiles/hydra.dir/integrator_pt1.cpp.o CMakeFiles/hydra.dir/integrator_pt2.cpp.o CMakeFiles/hydra.dir/integrator_pt_host.cpp.o CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o CMakeFiles/hydra.dir/integrator_spectrum.cpp.o CMakeFiles/hydra.dir/mi_materials.cpp.o CMakeFiles/hydra.dir/spectrum.cpp.o CMakeFiles/hydra.dir/imageutils.cpp.o CMakeFiles/hydra.dir/utils.cpp.o CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o | /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a
+build /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra: CXX_EXECUTABLE_LINKER__hydra_Release CMakeFiles/hydra.dir/main.cpp.o CMakeFiles/hydra.dir/integrator_rt.cpp.o CMakeFiles/hydra.dir/integrator_pt1.cpp.o CMakeFiles/hydra.dir/integrator_pt2.cpp.o CMakeFiles/hydra.dir/integrator_pt_host.cpp.o CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o CMakeFiles/hydra.dir/integrator_spectrum.cpp.o CMakeFiles/hydra.dir/mi_materials.cpp.o CMakeFiles/hydra.dir/spectrum.cpp.o CMakeFiles/hydra.dir/imageutils.cpp.o CMakeFiles/hydra.dir/utils.cpp.o CMakeFiles/hydra.dir/ies_parser/ies_render.cpp.o CMakeFiles/hydra.dir/external/LiteScene/pugixml.cpp.o CMakeFiles/hydra.dir/external/LiteScene/hydraxml.cpp.o CMakeFiles/hydra.dir/external/LiteScene/cmesh4.cpp.o CMakeFiles/hydra.dir/external/LiteMath/Image2d.cpp.o CMakeFiles/hydra.dir/external/CrossRT/EmbreeRT.cpp.o | /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a ies_parser/libies_parser.a /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a || /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a ies_parser/libies_parser.a
   FLAGS = -O3 -DNDEBUG
-  LINK_LIBRARIES = -Wl,-rpath,/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT/lib  /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a  -lembree3  -lembree_sse42  -lembree_avx  -lembree_avx2  -llexers  -lsimd  -lsys  -ltasking  -ldl  /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
+  LINK_LIBRARIES = -Wl,-rpath,/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT/lib  /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a  ies_parser/libies_parser.a  -lembree3  -lembree_sse42  -lembree_avx  -lembree_avx2  -llexers  -lsimd  -lsys  -ltasking  -ldl  /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so  /usr/lib/x86_64-linux-gnu/libpthread.a
   LINK_PATH = -L/home/roman/Desktop/hydra3spectr/HydraCore3/external/CrossRT/lib
   OBJECT_DIR = CMakeFiles/hydra.dir
   POST_BUILD = :
@@ -252,9 +260,80 @@ build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
 build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 
 # =============================================================================
+# Write statements declared in CMakeLists.txt:
+# /home/roman/Desktop/hydra3spectr/HydraCore3/CMakeLists.txt
+# =============================================================================
+
+# =============================================================================
+# Object build statements for STATIC_LIBRARY target ies_parser
+
+
+#############################################
+# Order-only phony target for ies_parser
+
+build cmake_object_order_depends_target_ies_parser: phony || ies_parser/CMakeFiles/ies_parser.dir
+
+build ies_parser/CMakeFiles/ies_parser.dir/IESNA.C.o: CXX_COMPILER__ies_parser_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/ies_parser/IESNA.C || cmake_object_order_depends_target_ies_parser
+  DEFINES = -D_CRT_SECURE_NO_WARNINGS
+  DEP_FILE = ies_parser/CMakeFiles/ies_parser.dir/IESNA.C.o.d
+  FLAGS = -O3 -DNDEBUG -std=gnu++14 -fPIC
+  OBJECT_DIR = ies_parser/CMakeFiles/ies_parser.dir
+  OBJECT_FILE_DIR = ies_parser/CMakeFiles/ies_parser.dir
+
+build ies_parser/CMakeFiles/ies_parser.dir/IES_READ.C.o: CXX_COMPILER__ies_parser_unscanned_Release /home/roman/Desktop/hydra3spectr/HydraCore3/ies_parser/IES_READ.C || cmake_object_order_depends_target_ies_parser
+  DEFINES = -D_CRT_SECURE_NO_WARNINGS
+  DEP_FILE = ies_parser/CMakeFiles/ies_parser.dir/IES_READ.C.o.d
+  FLAGS = -O3 -DNDEBUG -std=gnu++14 -fPIC
+  OBJECT_DIR = ies_parser/CMakeFiles/ies_parser.dir
+  OBJECT_FILE_DIR = ies_parser/CMakeFiles/ies_parser.dir
+
+
+# =============================================================================
+# Link build statements for STATIC_LIBRARY target ies_parser
+
+
+#############################################
+# Link the static library ies_parser/libies_parser.a
+
+build ies_parser/libies_parser.a: CXX_STATIC_LIBRARY_LINKER__ies_parser_Release ies_parser/CMakeFiles/ies_parser.dir/IESNA.C.o ies_parser/CMakeFiles/ies_parser.dir/IES_READ.C.o
+  LANGUAGE_COMPILE_FLAGS = -O3 -DNDEBUG
+  OBJECT_DIR = ies_parser/CMakeFiles/ies_parser.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = ies_parser/libies_parser.a
+  TARGET_PDB = ies_parser.a.dbg
+
+
+#############################################
+# Utility command for edit_cache
+
+build ies_parser/CMakeFiles/edit_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser && /home/roman/.local/lib/python3.10/site-packages/cmake/data/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  DESC = No interactive CMake dialog available...
+  restat = 1
+
+build ies_parser/edit_cache: phony ies_parser/CMakeFiles/edit_cache.util
+
+
+#############################################
+# Utility command for rebuild_cache
+
+build ies_parser/CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
+  COMMAND = cd /home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser && /home/roman/.local/lib/python3.10/site-packages/cmake/data/bin/cmake --regenerate-during-build -S/home/roman/Desktop/hydra3spectr/HydraCore3 -B/home/roman/Desktop/hydra3spectr/HydraCore3/build
+  DESC = Running CMake to regenerate build system...
+  pool = console
+  restat = 1
+
+build ies_parser/rebuild_cache: phony ies_parser/CMakeFiles/rebuild_cache.util
+
+# =============================================================================
 # Target aliases.
 
 build hydra: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra
+
+build ies_parser: phony ies_parser/libies_parser.a
+
+build libies_parser.a: phony ies_parser/libies_parser.a
 
 build libminiz.a: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a
 
@@ -268,7 +347,14 @@ build miniz: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libmi
 #############################################
 # Folder: /home/roman/Desktop/hydra3spectr/HydraCore3/build
 
-build all: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra
+build all: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libminiz.a /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra ies_parser/all
+
+# =============================================================================
+
+#############################################
+# Folder: /home/roman/Desktop/hydra3spectr/HydraCore3/build/ies_parser
+
+build ies_parser/all: phony ies_parser/libies_parser.a
 
 # =============================================================================
 # Built-in targets
@@ -277,14 +363,14 @@ build all: phony /home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/libmini
 #############################################
 # Re-run CMake if any of its inputs changed.
 
-build build.ninja: RERUN_CMAKE | /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCXXInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCommonLanguageInclude.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeGenericSystem.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeInitializeConfigs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeLanguageInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeParseImplicitLinkInfo.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInitialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckCSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckIncludeFile.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckLibraryExists.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindOpenMP.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageHandleStandardArgs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageMessage.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindThreads.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-Initialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/UnixPaths.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/CMakeLists.txt /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/CompilerWarnings.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/Sanitizers.cmake CMakeCache.txt CMakeFiles/3.27.4/CMakeCCompiler.cmake CMakeFiles/3.27.4/CMakeCXXCompiler.cmake CMakeFiles/3.27.4/CMakeSystem.cmake
+build build.ninja: RERUN_CMAKE | /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCXXInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCommonLanguageInclude.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeGenericSystem.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeInitializeConfigs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeLanguageInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeParseImplicitLinkInfo.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInitialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckCSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckIncludeFile.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckLibraryExists.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindOpenMP.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageHandleStandardArgs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageMessage.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindThreads.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-Initialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/UnixPaths.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/CMakeLists.txt /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/CompilerWarnings.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/Sanitizers.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/ies_parser/CMakeLists.txt CMakeCache.txt CMakeFiles/3.27.4/CMakeCCompiler.cmake CMakeFiles/3.27.4/CMakeCXXCompiler.cmake CMakeFiles/3.27.4/CMakeSystem.cmake
   pool = console
 
 
 #############################################
 # A missing CMake input file is not an error.
 
-build /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCXXInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCommonLanguageInclude.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeGenericSystem.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeInitializeConfigs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeLanguageInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeParseImplicitLinkInfo.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInitialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckCSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckIncludeFile.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckLibraryExists.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindOpenMP.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageHandleStandardArgs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageMessage.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindThreads.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-Initialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/UnixPaths.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/CMakeLists.txt /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/CompilerWarnings.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/Sanitizers.cmake CMakeCache.txt CMakeFiles/3.27.4/CMakeCCompiler.cmake CMakeFiles/3.27.4/CMakeCXXCompiler.cmake CMakeFiles/3.27.4/CMakeSystem.cmake: phony
+build /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCXXInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeCommonLanguageInclude.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeGenericSystem.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeInitializeConfigs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeLanguageInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeParseImplicitLinkInfo.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInformation.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CMakeSystemSpecificInitialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckCSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckIncludeFile.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/CheckLibraryExists.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/CMakeCommonCompilerMacros.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Compiler/GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindOpenMP.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageHandleStandardArgs.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindPackageMessage.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/FindThreads.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-C.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU-CXX.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-GNU.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux-Initialize.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/Linux.cmake /home/roman/.local/lib/python3.10/site-packages/cmake/data/share/cmake-3.27/Modules/Platform/UnixPaths.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/CMakeLists.txt /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/CompilerWarnings.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/cmake/Sanitizers.cmake /home/roman/Desktop/hydra3spectr/HydraCore3/ies_parser/CMakeLists.txt CMakeCache.txt CMakeFiles/3.27.4/CMakeCCompiler.cmake CMakeFiles/3.27.4/CMakeCXXCompiler.cmake CMakeFiles/3.27.4/CMakeSystem.cmake: phony
 
 
 #############################################
