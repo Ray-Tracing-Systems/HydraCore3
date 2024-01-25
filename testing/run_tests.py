@@ -291,12 +291,15 @@ reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
 reqs.append( REQ_H2("mat_emission_texture", ["test_124"], integrators = ["naivept","mispt"]) )
 reqs.append( REQ_H2("mat_normal_bump",      ["test_127"], naivemul = 4, imsize = (1024,768)) )
 
+
 reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
 reqs.append( REQ_H2("lgt_point_omni",      ["test_213"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
+
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
+reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
 
 Log().set_workdir(".")
