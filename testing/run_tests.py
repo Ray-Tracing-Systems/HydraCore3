@@ -252,16 +252,18 @@ reqs.append( REQ_HX("spectral",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0002/Spectral-ior-model-hydra3.xml",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0003/Spectral-diffuse-sphere-hydra3.xml",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0004/spectral_cornell_hydra3.xml",
-                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/spectral_cornell_hydra3.xml"
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/spectral_cornell_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml"
                     ],
                     [
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0001/Images/Spectral-ior-sphere-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0002/Images/Spectral-ior-model-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0003/Images/Spectral-diffuse-sphere-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0004/Images/spectral_cornell_mitsuba.png",
-                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/Images/spectral_cornell_mitsuba.png"
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/Images/spectral_cornell_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0007/Images/PlasticRough-025_sphere_mitsuba.png"
                     ],
-                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
                     naivemul = 16, integrators = ["mispt"], is_spectral = True))
 
 reqs.append( REQ_HX("blend",
@@ -276,11 +278,13 @@ reqs.append( REQ_HX("blend",
                     imsize = [(1024, 1024), (1024, 1024)],
                     naivemul = 16, integrators = ["mispt"], is_spectral = True))
 
-reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Glass-sphere_gloss-1_cornell_hydra3.xml",
-                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Glass_gloss-1_cornell_hydra3.xml"],
+reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Glass-sphere_rough-0_cornell_hydra3.xml",
+                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0002/Glass_rough-0_cornell_hydra3.xml",
+                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/quartz-prism-rough-0-cornell-hydra3.xml"],
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
-                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0004/Images/Glass_rough-0_cornell_mitsuba.png"],
-                                         imsize = [(1024, 1024), (1024, 1024)], naivemul = 4))
+                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0002/Images/Glass_rough-0_cornell_mitsuba.png",
+                                         PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/Images/quartz-prism-rough-0-cornell-mitsuba.png"],
+                                         imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 8))
 
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
