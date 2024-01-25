@@ -38,3 +38,15 @@
 1	1826	1706138998249916711	CMakeFiles/hydra.dir/integrator_pt2.cpp.o	e56b44a1ca1ffa6b
 1	3469	1706138999893922618	CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o	e466bba2158f6c94
 3469	3903	1706139000321924155	/home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra	710e0ce12d5fbc62
+6	727	1706142424069720067	CMakeFiles/hydra.dir/mi_materials.cpp.o	4421e52b9f14b7cc
+2	829	1706142424169719945	CMakeFiles/hydra.dir/integrator_pt_host.cpp.o	825b1e73499910b0
+5	1145	1706142424485719563	CMakeFiles/hydra.dir/integrator_spectrum.cpp.o	495eb16673ec6f5
+1	1227	1706142424569719460	CMakeFiles/hydra.dir/integrator_rt.cpp.o	71a737bcd9cf1940
+2	1405	1706142424745719247	CMakeFiles/hydra.dir/integrator_pt1.cpp.o	e7bb5367d4ba79fb
+1	1606	1706142424949719002	CMakeFiles/hydra.dir/main.cpp.o	e17e7a8093be567d
+2	2035	1706142425377718486	CMakeFiles/hydra.dir/integrator_pt2.cpp.o	e56b44a1ca1ffa6b
+3	3711	1706142427053716477	CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o	e466bba2158f6c94
+3711	4141	1706142427477715974	/home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra	710e0ce12d5fbc62
+2	1840	1706142446509694735	CMakeFiles/hydra.dir/integrator_pt2.cpp.o	e56b44a1ca1ffa6b
+2	3493	1706142448161693021	CMakeFiles/hydra.dir/integrator_pt_scene.cpp.o	e466bba2158f6c94
+3493	3941	1706142448605692565	/home/roman/Desktop/hydra3spectr/HydraCore3/bin-release/hydra	710e0ce12d5fbc62

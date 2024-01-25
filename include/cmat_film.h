@@ -7,8 +7,8 @@
 
 struct ThinFilmPrecomputed
 {
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> reflectivity;
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> transmittance;
+  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES * 2> reflectivity;
+  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES * 2> transmittivity;
 };
 
 static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
@@ -21,6 +21,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   {
     n = -1 * n;
     reversed = true;
+    reflectance += FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
   else
   {

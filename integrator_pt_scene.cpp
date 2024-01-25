@@ -519,20 +519,7 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   return mat;
 }
 
-void save_to_file(const char* name, std::vector<float> &arr, int x_samples, int y_samples)
-{
-  std::ofstream precomp_file;
-  precomp_file.open(name);
-  for (int i = 0; i < x_samples; ++i)
-  {
-    for (int j = 0; j < y_samples; ++j)
-    {
-      precomp_file << arr[i * y_samples + j] << " ";
-    }
-  }
-  precomp_file.close();
-}
-void save_to_file_(const char* name, std::array<float, FILM_LENGTH_RES * FILM_ANGLE_RES> &arr, int x_samples, int y_samples)
+void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
 {
   std::ofstream precomp_file;
   precomp_file.open(name);
@@ -580,7 +567,7 @@ void testFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &sp
       res[i * K_samples + j] = multFrFilmRefl(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
     }
   }
-  save_to_file("../test_film.txt", res, N_samples, K_samples);
+  save_to_file("../test_film.txt", res.data(), N_samples, K_samples);
 }
 
 ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
@@ -614,9 +601,10 @@ ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, con
       float angle = M_PI_2 / float(FILM_ANGLE_RES - 1) * a;
       float cosTheta = cosf(angle);
       res.reflectivity[w * FILM_ANGLE_RES + a] = multFrFilmRefl(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+      res.reflectivity[w * FILM_ANGLE_RES + a + FILM_ANGLE_RES * FILM_LENGTH_RES] = multFrFilmRefl_r(cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
     }
   }
-  save_to_file_("../precomputed_film.txt", res.reflectivity, FILM_LENGTH_RES, FILM_ANGLE_RES);
+  save_to_file("../precomputed_film.txt", res.reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
   return res;
 }
 

@@ -1135,4 +1135,39 @@ static inline float multFrFilmRefl(float cosThetaI, const float* m_eta, const fl
   return result / 2;
 }
 
+static inline float multFrFilmRefl_r(float cosThetaI, const float* eta, const float* k, const float* thickness, uint layers, float lambda)
+{
+  std::vector<complex> a_cosTheta = {complex(cosThetaI)};
+  std::vector<complex> a_eta = {complex(eta[layers - 1], k[layers - 1])};
+  std::vector<complex> a_phaseDiff;
+
+  complex ior = complex(1.0);
+
+  float sinThetaI = sqrt(1.0f - cosThetaI * cosThetaI);
+  complex sinTheta = complex(1.0);
+  complex cosTheta = complex(1.0);
+  for (int i = layers - 2; i >= 0; --i)
+  {
+    ior = complex(eta[i], k[i]);
+    sinTheta = sinThetaI * eta[layers - 1] / ior;
+    cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
+    a_cosTheta.push_back(cosTheta);
+    a_eta.push_back(ior);
+    a_phaseDiff.push_back(filmPhaseDiff(cosTheta, ior, thickness[i], lambda));
+  }
+  ior = complex(1.f);
+  sinTheta = sinThetaI * eta[layers - 1] / ior;
+  cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
+  a_cosTheta.push_back(cosTheta);
+  a_eta.push_back(ior);
+
+  float result = 0;
+  Polarization polarization[2] = {S, P};
+  for (int p = 0; p < 2; ++p)
+  {
+    result += calculateMultFrFilmRefl(a_cosTheta, a_eta, a_phaseDiff, layers, polarization[p]);
+  }
+  return result / 2;
+}
+
 #endif
