@@ -785,12 +785,12 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
   float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];
 
-  if(!is_spectral_mode)
-  {
-    uint32_t colorTexId = mat.texid[0];
-    if(colorTexId > 0 && colorTexId != 0xFFFFFFFF)
-      diffuse_reflectance *= image2D_average(textures[colorTexId]);
-  }
+  // if(!is_spectral_mode)
+  // {
+  //   uint32_t colorTexId = mat.texid[0];
+  //   if(colorTexId > 0 && colorTexId != 0xFFFFFFFF)
+  //     diffuse_reflectance *= image2D_average(textures[colorTexId]);
+  // }
 
   auto precomp = mi::fresnel_coat_precompute(mat.data[PLASTIC_ROUGHNESS], internal_ior, external_ior, diffuse_reflectance,
                                             {1.0f, 1.0f, 1.0f, 1.0f}, is_spectral_mode, spectrum);

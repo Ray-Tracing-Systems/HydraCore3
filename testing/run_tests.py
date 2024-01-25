@@ -11,7 +11,7 @@ from colorama import Fore
 
 TEST_CPU             = False
 PATH_TO_HYDRA2_TESTS = "/home/frol/PROG/HydraRepos/HydraAPI-tests"
-PATH_TO_HYDRA3_SCENS = "/home/frol/PROG/HydraRepos/comparisonrender"
+PATH_TO_HYDRA3_SCENS = "/home/vsan/repos/Hydra3Tests"
 
 ############################################################################################################
 ############################################################################################################
@@ -260,6 +260,28 @@ reqs.append( REQ_HX("mat_conductor",
                     imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
                     naivemul = 16))
 
+reqs.append( REQ_HX("mat_plastic",
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0001/PlasticRough-0_sphere_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0001/PlasticRough-0_sphere_hydra3-nonlinear.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0002/PlasticRough-025_sphere_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0002/PlasticRough-025_sphere_hydra3-nonlinear.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/PlasticRough-05_sphere_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/PlasticRough-05_sphere_hydra3-nonlinear.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0005/PlasticRough-texture-sphere-hydra3.xml",
+                    ],
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0001/Images/PlasticRough-0_sphere_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0001/Images/PlasticRough-0_sphere_mitsuba-nonlinear.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0002/Images/PlasticRough-025_sphere_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0002/Images/PlasticRough-025_sphere_mitsuba-nonlinear.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/Images/PlasticRough-05_sphere_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/Images/PlasticRough-05_sphere_mitsuba-nonlinear.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0005/Images/PlasticRough-texture-sphere-mitsuba.png",
+                    ],
+                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    naivemul = 4))
+
 reqs.append( REQ_HX("spectral",
                     [
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0001/Spectral-ior-sphere-hydra3.xml",
@@ -279,6 +301,24 @@ reqs.append( REQ_HX("spectral",
                     ],
                     imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
                     naivemul = 16, integrators = ["mispt"], is_spectral = True))
+
+reqs.append( REQ_HX("spectral-cornell",
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0000/Spectral-ior-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0001/Spectral-ior-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0002/Spectral-diffuse-sphere-hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0003/PlasticRough-025_sphere_hydra3.xml",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0004/Spectral-plastic-sphere-hydra3.xml"
+                    ],
+                    [
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0000/Images/Spectral-ior-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0001/Images/Spectral-ior-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0002/Images/Spectral-diffuse-sphere-mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0003/Images/PlasticRough-025_sphere_mitsuba.png",
+                      PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0004/Images/Spectral-plastic-sphere-mitsuba.png",
+                    ],
+                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    naivemul = 8, integrators = ["mispt"], is_spectral = True))
 
 reqs.append( REQ_HX("blend",
                     [
