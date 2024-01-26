@@ -18,7 +18,8 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
 
   if(a_texInfo.path.find(L".bmp") != std::string::npos || a_texInfo.path.find(L".ppm") != std::string::npos || 
-     a_texInfo.path.find(L".jpg") != std::string::npos || a_texInfo.path.find(L".jpeg") != std::string::npos)
+     a_texInfo.path.find(L".jpg") != std::string::npos || a_texInfo.path.find(L".jpeg") != std::string::npos ||
+     a_texInfo.path.find(L".png") != std::string::npos)
   {
     const std::string fileName = hydra_xml::ws2s(a_texInfo.path);
     Image2D<uint32_t> image    = LiteImage::LoadImage<uint32_t>(fileName.c_str());
