@@ -311,20 +311,65 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vect
   mat.colors[GLTF_COLOR_COAT]    = float4(1,1,1,1); 
   mat.colors[GLTF_COLOR_METAL]   = float4(1,1,1,1); 
 
+  for(int i=0;i<4;i++) {
+    mat.row0 [i] = float4(1,0,0,0);
+    mat.row1 [i] = float4(0,1,0,0);
+    mat.texid[i] = 0;
+  }
+
   float fresnelIOR     = 1.5f;
   float reflGlossiness = 1.0f;
   float metalness      = 0.0f;
   float4 baseColor(1,1,1,1);
   if(materialNode != nullptr)
   {
-    if(materialNode.child(L"color") != nullptr)
+    if(materialNode.child(L"color") != nullptr) {
       baseColor = GetColorFromNode(materialNode.child(L"color"), is_spectral_mode);
+      if(materialNode.child(L"color").child(L"texture") != nullptr) {
+        const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"color"), texturesInfo, texCache, textures);
+        mat.row0 [0] = sampler.row0;
+        mat.row1 [0] = sampler.row1;
+        mat.texid[0] = texID;
+      }
+    }
     if(materialNode.child(L"glossiness") != nullptr)
+    {
       reflGlossiness = hydra_xml::readval1f(materialNode.child(L"glossiness"));  
+      if(materialNode.child(L"glossiness").child(L"texture") != nullptr) {
+        const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"glossiness"), texturesInfo, texCache, textures);
+        mat.row0 [2] = sampler.row0;
+        mat.row1 [2] = sampler.row1;
+        mat.texid[2] = texID;
+        mat.cflags |= FLAG_FOUR_TEXTURES;
+      }
+    }
+    else if (materialNode.child(L"roughness") != nullptr)
+    {
+      reflGlossiness = hydra_xml::readval1f(materialNode.child(L"roughness")); 
+      mat.cflags |= FLAG_INVERT_GLOSINESS; 
+      if(materialNode.child(L"roughness").child(L"texture") != nullptr) {
+        const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"roughness"), texturesInfo, texCache, textures);
+        mat.row0 [2] = sampler.row0;
+        mat.row1 [2] = sampler.row1;
+        mat.texid[2] = texID;
+        mat.cflags |= FLAG_FOUR_TEXTURES;
+      }
+    }
+    
+    if(materialNode.child(L"metalness") != nullptr)  
+    {
+      metalness = hydra_xml::readval1f(materialNode.child(L"metalness"));
+      if(materialNode.child(L"metalness").child(L"texture") != nullptr) {
+        const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"metalness"), texturesInfo, texCache, textures);
+        mat.row0 [3] = sampler.row0;
+        mat.row1 [3] = sampler.row1;
+        mat.texid[3] = texID;
+        mat.cflags |= FLAG_FOUR_TEXTURES;
+      }
+    }
+
     if(materialNode.child(L"fresnel_ior") != nullptr)  
       fresnelIOR     = hydra_xml::readval1f(materialNode.child(L"fresnel_ior"));
-    if(materialNode.child(L"metalness") != nullptr)  
-      metalness      = hydra_xml::readval1f(materialNode.child(L"metalness"));
     if(materialNode.child(L"coat") != nullptr)  
       mat.data[GLTF_FLOAT_REFL_COAT] = hydra_xml::readval1f(materialNode.child(L"coat"));
   }

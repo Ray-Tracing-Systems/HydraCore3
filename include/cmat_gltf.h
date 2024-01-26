@@ -4,15 +4,15 @@
 #include "cmaterial.h"
 
 static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
-                                     float3 n, float2 tc, float4 baseColor, BsdfSample* pRes)
+                                     float3 n, float2 tc, float4 baseColor, float4 fourParams, BsdfSample* pRes)
 {
   // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
   const uint   cflags     = a_materials[0].cflags;
   const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor; 
   const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];  
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);   
-  float        metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA];
-  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT];                 
+  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);   
+  float        metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA]*fourParams.y;
+  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;                 
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
   
   if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal component set
@@ -92,14 +92,14 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 
 
 static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
-                     float4 baseColor, BsdfEval* res)
+                     float4 baseColor, float4 fourParams, BsdfEval* res)
 {
   const uint   cflags     = a_materials[0].cflags;
   const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor;
   const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS], 0.0f, 1.0f);
-        float  metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA];
-  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT];      
+  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);
+        float  metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA]*fourParams.y;
+  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;      
   const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
 
   if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal

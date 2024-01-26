@@ -29,7 +29,9 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       FLAG_NMAP_INVERT_X       = 32,
                       FLAG_NMAP_INVERT_Y       = 64,
                       FLAG_NMAP_SWAP_XY        = 128,
-                      FLAG_PACK_FOUR_PARAMS_IN_TEXTURE = 256 }; // bit fields
+                      FLAG_FOUR_TEXTURES       = 256,
+                      FLAG_PACK_FOUR_PARAMS_IN_TEXTURE = 512,
+                      FLAG_INVERT_GLOSINESS    = 1024, }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,
@@ -151,7 +153,7 @@ static constexpr uint BLEND_WEIGHT          = 0;
 static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_WEIGHT;
 
 // The size is taken according to the largest indexes
-static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
+static constexpr uint COLOR_DATA_SIZE  = 4;  // std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
 static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
@@ -166,8 +168,8 @@ struct Material
   uint datai[4];
 
   float4 colors[COLOR_DATA_SIZE]; ///< colors data
-  float4 row0[2];     ///< texture matrix
-  float4 row1[2];     ///< texture matrix
+  float4 row0[4];                 ///< texture matrix
+  float4 row1[4];                 ///< texture matrix
       
   float  data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };

@@ -209,18 +209,20 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
   const float4 rands     = rndFloat4_Pseudo(a_gen);
-
+  const uint cflags      = m_materials[currMatId].cflags;
   RecordMatRndNeeded(bounce, rands);
 
   float4 fourScalarMatParams = float4(1,1,1,1);
-  if(KSPEC_MAT_FOUR_TEXTURES != 0)
+  if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
   {
-    const uint cflags  = m_materials[currMatId].cflags;
     const uint texId2  = m_materials[currMatId].texid[2];
     const uint texId3  = m_materials[currMatId].texid[3];
     
-    const float4 color2 = m_textures[texId2]->sample(texCoordT);
-    const float4 color3 = m_textures[texId3]->sample(texCoordT);
+    const float2 texCoord2T = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
+    const float2 texCoord3T = mulRows2x4(m_materials[currMatId].row0[3], m_materials[currMatId].row1[3], tc);
+
+    const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+    const float4 color3 = m_textures[texId3]->sample(texCoord3T);
     
     if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
       fourScalarMatParams = color2;
@@ -234,7 +236,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, &res);
+      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
     case MAT_TYPE_GLASS: 
@@ -362,16 +364,19 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
     const uint   texId     = m_materials[currMat.id].texid[0];
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
     const uint   mtype     = m_materials[currMat.id].mtype;
+    const uint   cflags    = m_materials[currMat.id].cflags;
 
     float4 fourScalarMatParams = float4(1,1,1,1);
-    if(KSPEC_MAT_FOUR_TEXTURES != 0)
+    if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
     {
-      const uint cflags  = m_materials[currMat.id].cflags;
       const uint texId2  = m_materials[currMat.id].texid[2];
       const uint texId3  = m_materials[currMat.id].texid[3];
 
-      const float4 color2 = m_textures[texId2]->sample(texCoordT);
-      const float4 color3 = m_textures[texId3]->sample(texCoordT);
+      const float2 texCoord2T = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
+      const float2 texCoord3T = mulRows2x4(m_materials[currMat.id].row0[3], m_materials[currMat.id].row1[3], tc);
+
+      const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+      const float4 color3 = m_textures[texId3]->sample(texCoord3T);
     
       if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
         fourScalarMatParams = color2;
@@ -390,7 +395,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
+        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
