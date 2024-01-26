@@ -28,7 +28,8 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       GLTF_COMPONENT_ORENNAYAR = 16,
                       FLAG_NMAP_INVERT_X       = 32,
                       FLAG_NMAP_INVERT_Y       = 64,
-                      FLAG_NMAP_SWAP_XY        = 128 }; // bit fields
+                      FLAG_NMAP_SWAP_XY        = 128,
+                      FLAG_PACK_FOUR_PARAMS_IN_TEXTURE = 256 }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,

@@ -311,8 +311,9 @@ public:
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE    = 8;
   static constexpr uint32_t KSPEC_BUMP_MAPPING        = 9;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 10;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 11;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 11; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 12; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
