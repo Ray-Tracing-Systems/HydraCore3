@@ -526,12 +526,39 @@
     },
 
     {
-        "name": "CPU Release(GLTF_TEX)",
+        "name": "CPU(GLTF_TEX)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
                  "-in", "../comparisonrender/Tests/GLTF/0007/GLTF_sphere_tex2_hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width",  "1024",
+                 "-height", "1024",
+                 "-spp",    "256",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "z_out.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CPU(GLTF_TEX2)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "../comparisonrender/Tests/GLTF/0008/GLTF_sphere_tex_packed_hydra3.xml",
                  "-integrator", "mispt", 
                  "-width",  "1024",
                  "-height", "1024",

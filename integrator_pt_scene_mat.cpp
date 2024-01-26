@@ -168,6 +168,7 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vect
         mat.texid[0] = texID;
       }
     }
+
     if(materialNode.child(L"glossiness") != nullptr)
     {
       reflGlossiness = hydra_xml::readval1f(materialNode.child(L"glossiness"));  
@@ -208,6 +209,21 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vect
       fresnelIOR     = hydra_xml::readval1f(materialNode.child(L"fresnel_ior"));
     if(materialNode.child(L"coat") != nullptr)  
       mat.data[GLTF_FLOAT_REFL_COAT] = hydra_xml::readval1f(materialNode.child(L"coat"));
+
+    if(materialNode.child(L"glossiness_metalness_coat") != nullptr)
+    {
+      const float val = hydra_xml::readval1f(materialNode.child(L"glossiness_metalness_coat"));  
+      metalness       = val;
+      reflGlossiness  = val;
+      mat.data[GLTF_FLOAT_REFL_COAT] = val;
+      if(materialNode.child(L"glossiness_metalness_coat").child(L"texture") != nullptr) {
+        const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"glossiness_metalness_coat"), texturesInfo, texCache, textures);
+        mat.row0 [2] = sampler.row0;
+        mat.row1 [2] = sampler.row1;
+        mat.texid[2] = texID;
+        mat.cflags |= (FLAG_FOUR_TEXTURES | FLAG_PACK_FOUR_PARAMS_IN_TEXTURE);
+      }
+    }
   }
 
   mat.colors[GLTF_COLOR_BASE]  = baseColor; 
