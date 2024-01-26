@@ -22,7 +22,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   {
     const std::string fileName = hydra_xml::ws2s(a_texInfo.path);
     Image2D<uint32_t> image    = LiteImage::LoadImage<uint32_t>(fileName.c_str());
-    std::shared_ptr< Image2D<uint32_t> > pTexture = std::make_shared< Image2D<uint32_t> >(image.width(), image.height(), image.data());
+    auto pTexture = std::make_shared< Image2D<uint32_t> >(std::move(image));
     pTexture->setSRGB(!a_disableGamma);
     pResult = MakeCombinedTexture2D(pTexture, a_sampler);
   }
