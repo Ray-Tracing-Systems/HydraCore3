@@ -11,7 +11,7 @@ from colorama import Fore
 
 TEST_CPU             = False
 PATH_TO_HYDRA2_TESTS = "/home/frol/PROG/HydraRepos/HydraAPI-tests"
-PATH_TO_HYDRA3_SCENS = "/home/vsan/repos/Hydra3Tests"
+PATH_TO_HYDRA3_SCENS = "/home/frol/PROG/HydraRepos/comparisonrender"
 
 ############################################################################################################
 ############################################################################################################
@@ -202,7 +202,6 @@ reqs.append( REQ_H2("mat_normal_bump",      ["test_127"], naivemul = 4, imsize =
 reqs.append( REQ_H2("lgt_sphere",          ["test_201"]) )
 reqs.append( REQ_H2("lgt_point_omni",      ["test_213"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area4_transform", ["test_215"]) )
-reqs.append( REQ_H2("lgt_area_rotate",     ["test_223"]) )
 reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
@@ -257,7 +256,7 @@ reqs.append( REQ_HX("mat_conductor",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0004/Images/Rough-u001-v025-plane-mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Conductor/0006/Images/Rough-texture-eta1.5-sphere-mitsuba.png"
                     ],
-                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    imsize = [(1024, 1024) for i in range(5)],
                     naivemul = 16))
 
 reqs.append( REQ_HX("mat_plastic",
@@ -279,7 +278,7 @@ reqs.append( REQ_HX("mat_plastic",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/Images/PlasticRough-05_sphere_mitsuba-nonlinear.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0005/Images/PlasticRough-texture-sphere-mitsuba.png",
                     ],
-                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    imsize = [(1024, 1024) for i in range(5)],
                     naivemul = 4))
 
 reqs.append( REQ_HX("spectral",
@@ -299,7 +298,7 @@ reqs.append( REQ_HX("spectral",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0005/Images/spectral_cornell_mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral/0007/Images/PlasticRough-025_sphere_mitsuba.png"
                     ],
-                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    imsize = [(1024, 1024) for i in range(6)],
                     naivemul = 16, integrators = ["mispt"], is_spectral = True))
 
 reqs.append( REQ_HX("spectral-cornell",
@@ -317,7 +316,7 @@ reqs.append( REQ_HX("spectral-cornell",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0003/Images/PlasticRough-025_sphere_mitsuba.png",
                       PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0004/Images/Spectral-plastic-sphere-mitsuba.png",
                     ],
-                    imsize = [(1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024), (1024, 1024)],
+                    imsize = [(1024, 1024) for i in range(5)],
                     naivemul = 8, integrators = ["mispt"], is_spectral = True))
 
 reqs.append( REQ_HX("blend",
@@ -338,7 +337,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                         [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0001/Images/Glass-sphere_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0002/Images/Glass_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/Images/quartz-prism-rough-0-cornell-mitsuba.png"],
-                                         imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 8))
+                                         imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"]))
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))
