@@ -12,6 +12,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
     case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
     case KSPEC_BUMP_MAPPING       : return "BUMP";
+    case KSPEC_MAT_FOUR_TEXTURES  : return "4TEX";
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
@@ -86,6 +87,15 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     else if(mat_type == hydraGLTFTypeStr)
     {
       features[KSPEC_MAT_TYPE_GLTF] = 1;
+
+      auto gloss = materialNode.child(L"glossiness");
+      auto rough = materialNode.child(L"roughness");
+      auto metal = materialNode.child(L"metalness");
+      auto alltm = materialNode.child(L"glossiness_metalness_coat");
+      auto nodes = {gloss, rough, metal, alltm};
+      for(auto node : nodes)
+        if(node.child(L"texture") != nullptr)
+          features[KSPEC_MAT_FOUR_TEXTURES] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
@@ -502,6 +512,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
+
+    if((mat.cflags & FLAG_FOUR_TEXTURES) != 0 )
+      m_actualFeatures[KSPEC_MAT_FOUR_TEXTURES] = 1;
 
     if(materialNode.attribute(L"light_id") != nullptr)
     {

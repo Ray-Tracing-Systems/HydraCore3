@@ -557,7 +557,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", 
+        "args": ["--gpu", 
                  "-in", "../comparisonrender/Tests/GLTF/0008/GLTF_sphere_tex_packed_hydra3.xml",
                  "-integrator", "mispt", 
                  "-width",  "1024",
