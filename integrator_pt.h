@@ -287,8 +287,6 @@ public:
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
 
-  // std::vector<Spectrum> m_spectra;
-  std::vector<float> m_wavelengths; 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
   std::vector<float> m_cie_x;

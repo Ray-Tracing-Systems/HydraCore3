@@ -16,6 +16,37 @@ float Spectrum::Sample(float lambda) const
   return lerp(values[o], values[o + 1], t);
 }
 
+
+//std::vector<float> Spectrum::Resample(int channels, float lambdaOffs)
+//{
+//  std::vector<float> res(channels);
+//  std::fill(res.begin(), res.end(), 0.0f);
+//  
+//  const float step = 1.0f;
+//  for(int c=0;c<channels;c++) {
+//    float lambdaStart = LAMBDA_MIN + (float(c+0)/float(channels))*(LAMBDA_MAX - LAMBDA_MIN);
+//    float lambdaEnd   = LAMBDA_MIN + (float(c+1)/float(channels))*(LAMBDA_MAX - LAMBDA_MIN);
+//    
+//    float summ = 0.0f;
+//    int numSamples = 0;
+//    for(float lambda = lambdaStart; lambda <= lambdaEnd; lambda += step) {
+//      summ += Sample(lambda + lambdaOffs);
+//      numSamples++;
+//    }
+//    res[c] = summ / float(numSamples);
+//  }
+//
+//  return res;
+//}
+
+std::vector<float> Spectrum::ResampleUniform()
+{
+  std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN));
+  for(int c=0;c<res.size();c++)
+    res[c] = Sample(LAMBDA_MIN + float(c));
+  return res;
+}
+
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
   Spectrum res;

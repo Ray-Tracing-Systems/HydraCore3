@@ -620,7 +620,6 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
                              const std::vector<float> &spectra,
-                             const std::vector<float> &wavelengths,
                              const std::vector<uint2> &spec_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
@@ -669,15 +668,15 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
   {
     const auto offsets = spec_offsets[specId];
     spectrum.reserve(offsets.y);
-    for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
-    {
-      if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
-      {
-        spectrum.push_back(spectra[i]);
-      }
-    }
+    //for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
+    //{
+    //  if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
+    //  {
+    //    spectrum.push_back(spectra[i]);
+    //  }
+    //}
 
-    // std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+    std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
   }
 
   float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];

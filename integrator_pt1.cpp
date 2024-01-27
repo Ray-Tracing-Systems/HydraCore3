@@ -202,7 +202,7 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
+    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
   }
   lightColor *= m_lights[a_lightId].mult;
   
@@ -471,7 +471,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceX = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceX = float4(1,1,1,1);
@@ -482,7 +482,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceY = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceY = responceX;
@@ -493,7 +493,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceZ = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceZ = responceY;

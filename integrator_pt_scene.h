@@ -131,7 +131,6 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
                              const std::vector<float> &spectra,
-                             const std::vector<float> &wavelengths,
                              const std::vector<uint2> &spec_offsets);
 
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);

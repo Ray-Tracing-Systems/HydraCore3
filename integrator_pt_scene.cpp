@@ -272,14 +272,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       spec_path.append(specNode.attribute(L"loc").as_string());
 
       auto spec = LoadSPDFromFile(spec_path, spec_id);
+      auto specValsUniform = spec.ResampleUniform();
       
-      uint32_t offset = uint32_t(m_wavelengths.size());
-      std::copy(spec.wavelengths.begin(), spec.wavelengths.end(), std::back_inserter(m_wavelengths));
-      std::copy(spec.values.begin(), spec.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, static_cast<uint32_t>(spec.wavelengths.size())});
-      
-      // we expect dense, sorted ids for now
-      //assert(m_spectra[spec_id].id == spec_id);
+      uint32_t offset = uint32_t(m_spec_values.size());
+      std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
+      m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+
     }
 
     // if no spectra are loaded add uniform 1.0 spectrum
@@ -289,11 +287,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uniform1.id = 0;
       uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
       uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
+      auto specValsUniform = uniform1.ResampleUniform();
       
-      uint32_t offset = uint32_t(m_wavelengths.size());
-      std::copy(uniform1.wavelengths.begin(), uniform1.wavelengths.end(), std::back_inserter(m_wavelengths));
-      std::copy(uniform1.values.begin(), uniform1.values.end(), std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, static_cast<uint32_t>(uniform1.wavelengths.size())});
+      uint32_t offset = uint32_t(m_spec_values.size());
+      std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
+      m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
     }
   }
 
@@ -504,7 +502,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == plasticMatTypeStr)
     {
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
-                                m_spec_values, m_wavelengths, m_spec_offset_sz);
+                                m_spec_values, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
     else if(mat_type == dielectricMatTypeStr)
