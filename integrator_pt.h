@@ -336,6 +336,15 @@ public:
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   uint m_disableImageContrib = 0;
+
+  virtual void ProgressBarStart();
+  virtual void ProgressBarAccum(float a_progress);
+  virtual void ProgressBarDone();
+
+  virtual void _ProgressBarStart();
+  virtual void _ProgressBarAccum(float a_progress);
+  virtual void _ProgressBarDone();
+
 };
 
 #endif

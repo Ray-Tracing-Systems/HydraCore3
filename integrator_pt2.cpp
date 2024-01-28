@@ -541,3 +541,7 @@ void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
   else if(std::string(a_funcName) == "PathTraceFromInputRays" || std::string(a_funcName) == "PathTraceFromInputRaysBlock")
     a_out[0] = fromRaysPtTime;
 }
+
+void Integrator::ProgressBarStart()                  { _ProgressBarStart(); }
+void Integrator::ProgressBarAccum(float a_progress)  { _ProgressBarAccum(a_progress); }
+void Integrator::ProgressBarDone()                   { _ProgressBarDone(); }
