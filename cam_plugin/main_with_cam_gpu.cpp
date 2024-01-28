@@ -130,7 +130,7 @@ int main(int argc, const char** argv)
   if(devFeaturesCam.features.shaderFloat64 == VK_TRUE) // in this example we know that hydra3 don't use double precition  
     devFeaturesHydra.features.shaderFloat64 = VK_TRUE; // while cam plugin probably uses it ... 
 
-  sceneInfo.memGeom += MEGA_TILE_SIZE*CHANNELS*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float); // memory for our image data 
+  sceneInfo.memGeom += MEGA_TILE_SIZE*CHANNELS*sizeof(float)*3 + WIN_WIDTH*WIN_HEIGHT*4*sizeof(float) + 50*1024*1024; // memory for our image data and some reserve
 
   auto ctx = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, preferredDeviceId, &devFeaturesHydra, sceneInfo.memGeom, sceneInfo.memTextures); 
 
