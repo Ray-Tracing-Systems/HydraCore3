@@ -39,7 +39,7 @@
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
+                 "-spp", "1024",
                  "-scn_dir", "../comparisonrender",
                  "-out", "OUT_BLEND_GPU.bmp"],
         "stopAtEntry": false,
