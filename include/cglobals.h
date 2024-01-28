@@ -11,7 +11,7 @@ static constexpr uint RAY_FLAG_OUT_OF_SCENE   = 0x40000000;
 static constexpr uint RAY_FLAG_HIT_LIGHT      = 0x20000000;
 static constexpr uint RAY_FLAG_HAS_NON_SPEC   = 0x10000000; // at least one bounce was non specular
 static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
-//static constexpr uint RAY_FLAG_DUMMY        = 0x04000000;
+static constexpr uint RAY_FLAG_WAVES_DIVERGED = 0x04000000; // hit a material with spectral IOR
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
@@ -291,8 +291,6 @@ static inline MisData makeInitialMisData()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 static inline float2 mulRows2x4(const float4 row0, const float4 row1, float2 v)
 {
@@ -310,6 +308,52 @@ static inline uint2 unpackXY1616(uint packedIndex)
   res.y = (packedIndex & 0xFFFF0000) >> 16;   
   return res;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float2 sphereMapToPhiTheta(float3 ray_dir)
+{
+  const float x = ray_dir.z;
+  const float y = ray_dir.x;
+  const float z = -ray_dir.y;
+                                  // r == 1.0f
+  float theta = std::acos(z);     // [0,pi] 
+  float phi   = std::atan2(y, x); // [-pi,pi]
+  if (phi < 0.0f)
+    phi += 2.0f*M_PI;             // [-pi,pi] --> [0, 2*pi];  see PBRT.
+
+  return make_float2(phi, theta);
+}
+
+static inline float2 sphereMapTo2DTexCoord(float3 ray_dir, float* pSinTheta) // should be consistent with sphereMapToPhiTheta
+{
+  const float2 angles = sphereMapToPhiTheta(ray_dir);
+
+  const float texX = clamp(angles.x*0.5f*INV_PI, 0.0f, 1.0f);
+  const float texY = clamp(angles.y*INV_PI,      0.0f, 1.0f);
+
+  (*pSinTheta) = std::sqrt(1.0f - ray_dir.y*ray_dir.y); // sin(angles.y);
+  return make_float2(texX, texY);
+}
+
+static inline float3 texCoord2DToSphereMap(float2 a_texCoord, float* pSinTheta) // reverse to sphereMapTo2DTexCoord 
+{
+  const float phi   = a_texCoord.x * 2.f * M_PI; // see PBRT coords:  Float phi = uv[0] * 2.f * Pi;
+  const float theta = a_texCoord.y * M_PI;       // see PBRT coords:  Float theta = uv[1] * Pi
+
+  const float sinTheta = std::sin(theta);
+
+  const float x = sinTheta*std::cos(phi);           // see PBRT coords: (Vector3f(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta)
+  const float y = sinTheta*std::sin(phi);
+  const float z = std::cos(theta);
+
+  (*pSinTheta)  = sinTheta;
+  return make_float3(y, -z, x);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #endif

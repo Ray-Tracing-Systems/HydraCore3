@@ -26,7 +26,7 @@ void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
       PackXY(uint(x), (uint)(y));
 }
 
-void Integrator::CastSingleRayBlock(uint tid, uint* out_color, uint a_passNum)
+void Integrator::CastSingleRayBlock(uint tid, float* out_color, uint a_passNum)
 { 
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
@@ -102,3 +102,8 @@ void Integrator::PathTraceFromInputRaysBlock(uint tid, uint channels, const RayP
   fromRaysPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
+ConsoleProgressBar g_progressbarForGPU(1000);
+
+void Integrator::_ProgressBarStart()                  { g_progressbarForGPU.Start(); }
+void Integrator::_ProgressBarAccum(float a_progress)  { g_progressbarForGPU.Update(int64_t(a_progress*1000.0f)); }
+void Integrator::_ProgressBarDone()                   { g_progressbarForGPU.Done(); }

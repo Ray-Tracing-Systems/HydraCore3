@@ -9,8 +9,6 @@ static inline void conductorSmoothSampleAndEval(const Material* a_materials, con
                                                 float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
@@ -67,9 +65,6 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
   if(v.z == 0)
     return;
 
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-
-
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
@@ -107,8 +102,6 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
                                float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                BsdfEval* pRes)
 {
-  // const uint cflags = as_uint(a_materials[0].data[UINT_CFLAGS]);
-
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 

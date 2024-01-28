@@ -7,14 +7,14 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
   if(a_wavelengths[0] == 0.0f)
     return res;
 
-  const uint specId = as_uint(m_materials[matId].data[paramSpecId]);
-
+  const uint specId = m_materials[matId].spdid[paramSpecId];
   if(specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
 
   return res;
@@ -26,14 +26,14 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
   if(a_wavelengths[0] == 0.0f)
     return res;
 
-  const uint specId = as_uint(m_materials[matId].data[paramSpecId]);
-
+  const uint specId = m_materials[matId].spdid[paramSpecId];
   if(specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
 
   return res;

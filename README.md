@@ -18,6 +18,32 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 5) build shaders (by calling 'shaders_generated/build.sh')
 6) build solution normally with CMake
 
+# Build diff render (Enzyme AD)
+
+1. install llvm-17 (both dev and not dev)
+ * wget https://apt.llvm.org/llvm.sh
+ * chmod +x llvm.sh
+ * sudo ./llvm.sh 17
+ * sudo apt-get install llvm-17-dev
+ * sudo touch /usr/lib/llvm-17/bin/yaml-bench 
+ * sudo apt-get install libclang-17-dev 
+ * sudo apt install clang-17
+ * sudo apt install libomp-17-dev
+
+2. Build Enzyme 
+ * Download latest release from https://github.com/EnzymeAD/Enzyme
+ * cd /path/to/Enzyme/enzyme
+ * mkdir build && cd build
+ * cmake -G Ninja .. -DLLVM_DIR=usr/lib/llvm-17/lib/cmake/llvm -DClang_DIR=/usr/lib/cmake/clang-17
+ * ninja
+ * you should have 'ClangEnzyme-17.so' in 'enzyme/build/Enzyme'. You have to pass this DLL to clang via '-fplugin=...' when compile the project!
+
+3. Build hydra with CMake and clang
+ * make sure you set 'ENZYME_PLUGIN_DLL' correctly to your 'ClangEnzyme-17.so'
+ * export CC=/usr/bin/clang-17
+ * export CXX=/usr/bin/clang++-17
+ * cmake -DCMAKE_BUILD_TYPE=Release -DUSE_ENZYME=ON -DCLANG_VERSION=17 .. 
+
 # Development pipeline
 1) Select/Find/Make a reference image to you feature
 2) Implement it in renderer on CPU

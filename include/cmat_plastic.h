@@ -7,13 +7,12 @@
 static inline void plasticSampleAndEval(const Material* a_materials, float4 a_reflSpec, float4 rands,
                                         float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* transmittance)
 {
-  // const uint  cflags    = as_uint(a_materials[0].data[UINT_CFLAGS]);
-  const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
-  const float eta       = a_materials[0].data[PLASTIC_IOR_RATIO];
-  const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
-  const uint  nonlinear   = as_uint(a_materials[0].data[PLASTIC_NONLINEAR]);
+  const float alpha         = a_materials[0].data[PLASTIC_ROUGHNESS];
+  const float eta           = a_materials[0].data[PLASTIC_IOR_RATIO];
+  const float spec_weight   = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
+  const uint  nonlinear     = a_materials[0].nonlinear;
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
-  const float2 alpha2 = {alpha, alpha};
+  const float2 alpha2       = {alpha, alpha};
 
   float3 s = n;
   float3 t = n;
@@ -111,12 +110,10 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
                         BsdfEval* pRes, const float* transmittance)
 {
-  // const uint  cflags    = as_uint(a_materials[0].data[UINT_CFLAGS]);
   const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
   const float eta       = a_materials[0].data[PLASTIC_IOR_RATIO];
-  // const uint  precomp_id  = as_uint(a_materials[0].data[PLASTIC_PRECOMP_ID]);
   const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
-  const uint  nonlinear   = as_uint(a_materials[0].data[PLASTIC_NONLINEAR]);
+  const uint  nonlinear   = a_materials[0].nonlinear;
   const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
 
   const float2 alpha2 {alpha, alpha};

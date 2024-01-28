@@ -3,6 +3,7 @@
 #include <cstddef>      // for size_t
 #include <string>
 
+#ifndef KERNEL_SLICER
 struct CamParameters    ///<! add any parameter you like to this structure
 {
   float fov;
@@ -12,6 +13,7 @@ struct CamParameters    ///<! add any parameter you like to this structure
   int   spectralMode;
   std::string opticFile;
 };
+#endif
 
 struct RayPosAndW 
 {
