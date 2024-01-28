@@ -1006,6 +1006,38 @@ static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, comp
   return result / 2;
 }
 
+static inline float FrFilmRefr(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
+{
+  //std::cout << lambda << std::endl;
+  //std::cout << cosThetaI << std::endl;
+  complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaF = sinThetaI * (etaI * etaI) / (etaF * etaF);
+  complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
+  complex sinThetaT = sinThetaF * (etaF * etaF) / (etaT * etaT);
+  complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
+  
+  complex phaseDiff = filmPhaseDiff(cosThetaF, etaF, thickness, lambda);
+
+  float result = 0;
+  Polarization polarization[2] = {S, P};
+  for (int p = 0; p <= 1; ++p)
+  {
+    complex FrReflI   = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrReflF   = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+
+    complex FrRefrI   = FrComplexRefr(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrRefrF   = FrComplexRefr(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+
+
+    complex nom    = FrRefrI * FrRefrF * exp(-phaseDiff.im / 2) * complex(cos(phaseDiff.re / 2), sin(phaseDiff.re / 2));
+    complex denom = 1 + FrReflI * FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
+    result += complex_norm(nom / denom);
+  }
+
+  //std::cout << result / 2 << " " << lambda << " " << cosThetaI << std::endl;
+  return result / 2;
+}
+
 static inline complex getCosTheta(complex cosThetaI, const float4* eta, const float4* k, uint depth, uint comp)
 {
   complex etaI = complex(1.0);
