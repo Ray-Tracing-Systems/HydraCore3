@@ -384,7 +384,7 @@
         ]
     },
     {
-        "name": "Bunny",
+        "name": "BunnyFilm",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
@@ -400,7 +400,39 @@
                  "mispt", 
                  "-width", "500",
                  "-height", "500",
-                 "-spp", "150",
+                 "-spp", "30",
+                 "--spectral"], 
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "BunnySapphire",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "${workspaceFolder}/../Spectral/0004/spectral_cornell_hydra3_sapphire.xml",
+                 "-out", "${workspaceFolder}/../out/sapphire.bmp",
+                 //"-scn_dir", "/home/frol/PROG/HydraRepos/comparisonrender",
+                 "-integrator",
+                 //"whitted_rt", 
+                 //"shadowpt",
+                 //"naivept", 
+                 "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "3000",
                  "--spectral"], 
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -445,18 +477,73 @@
     },
 
     {
-        "name": "SphereCornell",
+        "name": "Prizm",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
-                 "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_hydra2_films.xml",
+                 "-in", "../Spectral/Glass/0003/quartz-prism-rough-0-cornell-hydra3.xml",
                  "-integrator", "mispt", 
-                 "-width", "256",
-                 "-height", "256",
+                 "-width", "300",
+                 "-height", "300",
                  "-spp", "1000", 
                  //"-out", "out_gpu_224.bmp"
                  "-out", "../out/pic.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SphereCornellFilm",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "3000", 
+                 //"-out", "out_gpu_224.bmp"
+                 "-out", "../out/cornell_film.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SphereCornellSapphire",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_sapphire.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "3000", 
+                 "-out", "../out/sapphire.bmp",
                  "--spectral"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

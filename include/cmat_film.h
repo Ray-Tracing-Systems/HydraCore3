@@ -5,30 +5,30 @@
 #include "../spectrum.h"
 #include <iostream>
 
-struct ThinFilmPrecomputed
-{
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES * 2> reflectivity;
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES * 2> transmittivity;
-};
-
 static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* reflectance)
+        uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
+        const float* precomputed_data)
 {
   const float extIOR = 1.f;
   bool reversed = false;
   bool opaque = false;
-  if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) 
+  const float* reflectance;
+  const float* transmittance;
+  if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // inside of object
   {
     n = -1 * n;
     reversed = true;
-    reflectance += FILM_ANGLE_RES * FILM_LENGTH_RES;
+    reflectance = precomputed_data + offsetof(ThinFilmPrecomputed, int_reflectivity) / sizeof(float);
+    transmittance = precomputed_data + offsetof(ThinFilmPrecomputed, int_transmittivity) / sizeof(float);
   }
   else
   {
-    if (length(k[layers - 1]) > 1e-3f)
+    if (length(k[layers - 1]) > 1e-3f) // outside of object
     {
       opaque = true;
     }
+    reflectance = precomputed_data + offsetof(ThinFilmPrecomputed, ext_reflectivity) / sizeof(float);
+    transmittance = precomputed_data + offsetof(ThinFilmPrecomputed, ext_transmittivity) / sizeof(float);
   }
 
   float3 s, t = n;
@@ -76,6 +76,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
       float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
       R[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
+    //std::cout << R[0] << std::endl;
   }
   if (opaque)
   {
@@ -89,13 +90,23 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   else
   {
     float T;
-    if (layers == 2)
+    if (!precompFlag)
     {
-      if (!reversed)
-        T = FrFilmRefr(cosThetaI, complex(1.0f), complex(eta[0][0], k[0][0]), complex(eta[1][0], k[1][0]), thickness[0], a_wavelengths[0]); 
-      else
-        T = FrFilmRefr(cosThetaI, complex(eta[1][0], k[1][0]), complex(eta[0][0], k[0][0]), complex(1.0f), thickness[0], a_wavelengths[0]); 
+      if (layers == 2)
+      {
+        if (!reversed)
+          T = FrFilmRefr(cosThetaI, complex(1.0f), complex(eta[0][0], k[0][0]), complex(eta[1][0], k[1][0]), thickness[0], a_wavelengths[0]); 
+        else
+          T = FrFilmRefr(cosThetaI, complex(eta[1][0], k[1][0]), complex(eta[0][0], k[0][0]), complex(1.0f), thickness[0], a_wavelengths[0]); 
+      }
     }
+    else
+    {
+      float angleVal = acosf(cosThetaI) / M_PI_2;
+      float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
+      T = lerp_gather_2d(transmittance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    }
+
     T *= eta_it * clamp(fabs(cosThetaT), 0.0f, 1.0f) / cosThetaI;
     if (rands.x / (R.x + T) < R.x)
     {
