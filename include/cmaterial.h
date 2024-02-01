@@ -952,23 +952,23 @@ struct ThinFilmPrecomputed
   std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> int_transmittivity;
 };
 
-static inline float getRefractionFactor(float ext_eta, float int_eta, float theta)
+static inline float getRefractionFactor(float ior, float theta)
 {
   float sinTheta = sinf(theta);
 
-  float refrFactor = int_eta / ext_eta;
-  if (ext_eta * sinTheta > int_eta)
+  float refrFactor;
+  if (sinTheta > ior)
   {
     refrFactor = 0;
   }
-  else if (sinTheta > 1.f - 1e-5f)
+  else if (1.f - sinTheta < 1e-3f)
   {
-    refrFactor = int_eta / ext_eta;
+    refrFactor = ior;
   }
   else
   {
-    refrFactor = (ext_eta / int_eta) * sinTheta;
-    refrFactor = (int_eta / ext_eta) * sqrt(clamp((1.f - refrFactor * refrFactor) / (1 - sinTheta * sinTheta), 0.f, 1.f));
+    refrFactor = sinTheta / ior;
+    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor) / (1 - sinTheta * sinTheta)));
   }
   return refrFactor;
 }
@@ -1256,7 +1256,7 @@ static inline FrReflRefr calculateMultFrFilmReflRefr(std::vector<complex>& a_cos
     FrRefr = FrRefr * denom;
     FrRefl = (FrReflI + FrRefl) * denom;
   }
-  if (complex_norm(FrRefl) != complex_norm(FrRefl) || a_cosTheta[0].re < 0.01f)
+  if (complex_norm(FrRefl) != complex_norm(FrRefl))
   {
     std::cout << FrComplexRefl(a_cosTheta[0], a_cosTheta[1], a_eta[0], a_eta[1], p).im << std::endl;
   }
@@ -1296,7 +1296,7 @@ static inline FrReflRefr multFrFilmReflRefr(float theta, const float* eta, const
     result.refl += temp.refl / 2;
     result.refr += temp.refr / 2;
   }
-  //result.refr *= getRefractionFactor(ext_eta, eta[layers - 1], theta);
+  result.refr *= getRefractionFactor(eta[layers - 1] / ext_eta, theta);
   return result;
 }
 
@@ -1337,7 +1337,7 @@ static inline FrReflRefr multFrFilmReflRefr_r(float theta, const float* eta, con
     result.refl += temp.refl / 2;
     result.refr += temp.refr / 2;
   }
-  //result.refr *= getRefractionFactor(eta[layers - 1], int_eta, theta);
+  result.refr *= getRefractionFactor(int_eta / eta[layers - 1], theta);
   return result;
 }
 

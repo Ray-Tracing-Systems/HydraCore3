@@ -107,7 +107,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
       T = lerp_gather_2d(transmittance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
 
-    T *= eta_it * clamp(fabs(cosThetaT), 0.0f, 1.0f) / cosThetaI;
+    //T *= getRefractionFactor(eta_it, acosf(cosThetaI));
     if (rands.x / (R.x + T) < R.x)
     {
       float3 wo = float3(-wi.x, -wi.y, wi.z);
