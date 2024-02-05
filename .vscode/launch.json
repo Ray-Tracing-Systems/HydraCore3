@@ -512,9 +512,9 @@
         "args": ["--gpu",
                  "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_films.xml",
                  "-integrator", "mispt", 
-                 "-width", "500",
-                 "-height", "500",
-                 "-spp", "3000", 
+                 "-width", "400",
+                 "-height", "400",
+                 "-spp", "100", 
                  //"-out", "out_gpu_224.bmp"
                  "-out", "../out/cornell_film.bmp",
                  "--spectral"],

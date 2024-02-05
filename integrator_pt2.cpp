@@ -253,18 +253,20 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
 
       std::vector<float4> etaSpec;
       std::vector<float4> kSpec;
-      std::vector<float> thickness;
+      //std::vector<float> thickness;
 
-      uint eta_offset = m_materials[a_materialId].data[FILM_ETA_SPECID_OFFSET];
-      uint k_offset = m_materials[a_materialId].data[FILM_K_SPECID_OFFSET];
-      uint t_offset = m_materials[a_materialId].data[FILM_THICKNESS_OFFSET];
+      //uint eta_offset = as_uint(m_materials[a_materialId].data[FILM_ETA_SPECID_OFFSET]);
+      //uint k_offset = as_uint(m_materials[a_materialId].data[FILM_K_SPECID_OFFSET]);
+      uint t_offset = as_uint(m_materials[a_materialId].data[FILM_THICKNESS_OFFSET]);
 
       uint layers = as_uint(m_materials[a_materialId].data[FILM_LAYERS_COUNT]);
 
       for (uint layer = 0; layer < layers; layer++)
       {
-        etaSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
-        kSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
+        //etaSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
+        //kSpec.push_back(SampleMatSpectrum(a_materialId, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
+        etaSpec.push_back(SampleFilmsSpectrum(a_materialId, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layer));
+        kSpec.push_back(SampleFilmsSpectrum(a_materialId, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layer));
       }
 
       const uint precomp_id = as_uint(m_materials[currMatId].data[FILM_PRECOMP_ID]);
@@ -442,18 +444,20 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         {
           std::vector<float4> etaSpec;
           std::vector<float4> kSpec;
-          std::vector<float> thickness;
+          //std::vector<float> thickness;
 
-          uint eta_offset = m_materials[currMat.id].data[FILM_ETA_SPECID_OFFSET];
-          uint k_offset = m_materials[currMat.id].data[FILM_K_SPECID_OFFSET];
+          //uint eta_offset = m_materials[currMat.id].data[FILM_ETA_SPECID_OFFSET];
+          //uint k_offset = m_materials[currMat.id].data[FILM_K_SPECID_OFFSET];
           uint t_offset = m_materials[currMat.id].data[FILM_THICKNESS_OFFSET];
 
           uint layers = as_uint(m_materials[currMat.id].data[FILM_LAYERS_COUNT]);
           
           for (uint layer = 0; layer < layers; layer++)
           {
-            etaSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
-            kSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
+            //etaSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_ETA, m_films_eta_id_vec[eta_offset + layer]));
+            //kSpec.push_back(SampleMatSpectrum(currMat.id, wavelengths, FILM_K, m_films_k_id_vec[k_offset + layer]));
+            etaSpec.push_back(SampleFilmsSpectrum(currMat.id, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layer));
+            kSpec.push_back(SampleFilmsSpectrum(currMat.id, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layer));
           }
 
           const uint precomp_id = as_uint(m_materials[currMat.id].data[FILM_PRECOMP_ID]);

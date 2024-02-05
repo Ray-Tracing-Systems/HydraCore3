@@ -298,13 +298,13 @@ public:
   std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
 
   std::vector<float> m_films_thickness_vec;
-  std::vector<uint> m_films_eta_id_vec;
-  std::vector<uint> m_films_k_id_vec;
+  std::vector<uint> m_films_spec_id_vec;
+  std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
-  float4 SampleMatSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint specId);
+  float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);
 
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;

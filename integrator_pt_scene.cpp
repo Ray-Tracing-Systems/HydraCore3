@@ -519,7 +519,7 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   return mat;
 }
 
-void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
+static inline void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
 {
   std::ofstream precomp_file;
   precomp_file.open(name);
@@ -533,13 +533,13 @@ void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
   precomp_file.close();
 }
 
-ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
         const std::vector<float> &wavelengths, const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
 {
   ThinFilmPrecomputed res;
-  for (int w = 0; w < FILM_LENGTH_RES; ++w)
+  for (int i = 0; i < FILM_LENGTH_RES; ++i)
   {
-    float wavelength = (LAMBDA_MAX - LAMBDA_MIN) / (FILM_LENGTH_RES - 1) * w + LAMBDA_MIN;
+    float wavelength = (LAMBDA_MAX - LAMBDA_MIN) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
     std::vector<float> eta, k;
     eta.reserve(layers);
     k.reserve(layers);
@@ -558,9 +558,9 @@ ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, con
       size   = data.y;
       k[layer] = SampleSpectrum(wavelengths.data() + offset, spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
     }
-    for (int a = 0; a < FILM_ANGLE_RES; ++a)
+    for (int j = 0; j < FILM_ANGLE_RES; ++j)
     {
-      float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * a;
+      float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
       float ext_eta = 1.f;
       FrReflRefr forward;
       FrReflRefr backward;
@@ -570,7 +570,7 @@ ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, con
       }
       else
       {
-        forward = multFrFilmReflRefr(theta, eta.data(), k.data(), a_thickness, layers, wavelength);
+        forward = multFrFilmReflRefr(extIOR, cosf(theta), eta.data(), k.data(), a_thickness, layers, wavelength);
       }
       if (eta[layers - 1] * sinf(theta) > ext_eta)
       {
@@ -578,19 +578,19 @@ ThinFilmPrecomputed precomputeThinFilm(const uint* eta_id, const uint* k_id, con
       }
       else
       {
-        backward = multFrFilmReflRefr_r(theta, eta.data(), k.data(), a_thickness, layers, wavelength);
+        backward = multFrFilmReflRefr_r(extIOR, cosf(theta), eta.data(), k.data(), a_thickness, layers, wavelength);
       }
-
-      res.ext_reflectivity[w * FILM_ANGLE_RES + a] = forward.refl;
-      res.ext_transmittivity[w * FILM_ANGLE_RES + a] = forward.refr;
-      res.int_reflectivity[w * FILM_ANGLE_RES + a] = backward.refl;
-      res.int_transmittivity[w * FILM_ANGLE_RES + a] = backward.refr;  
+ 
+      res.ext_reflectivity[i * FILM_ANGLE_RES + j] = forward.refl;
+      res.ext_transmittivity[i * FILM_ANGLE_RES + j] = forward.refr;
+      res.int_reflectivity[i * FILM_ANGLE_RES + j] = backward.refl;
+      res.int_transmittivity[i * FILM_ANGLE_RES + j] = backward.refr;  
     }
   }
-  save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
   return res;
 }
 
@@ -598,7 +598,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
                               std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                               std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                               std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
-                              std::vector<uint> &eta_id_vec, std::vector<uint> &k_id_vec,
+                              std::vector<uint> &spec_id_vec, std::vector<float> &eta_k_vec,
                               const std::vector<float> &spec_values,
                               const std::vector<float> &wavelengths,
                               const std::vector<uint2> &spec_offsets)
@@ -638,11 +638,19 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
 
-  uint layers = 0;
-  mat.data[FILM_THICKNESS_OFFSET] = thickness_vec.size();
-  mat.data[FILM_ETA_SPECID_OFFSET] = eta_id_vec.size();
-  mat.data[FILM_K_SPECID_OFFSET] = k_id_vec.size();
+  mat.data[FILM_ETA_EXT] = 1.00028f; // air
 
+  auto nodeExtIOR = materialNode.child(L"ext_ior");
+  if(nodeExtIOR != nullptr)
+  {
+    mat.data[FILM_ETA_EXT] = nodeExtIOR.attribute(L"val").as_float();
+  }
+
+  mat.data[FILM_THICKNESS_OFFSET] = as_float((uint) thickness_vec.size());
+  mat.data[FILM_ETA_SPECID_OFFSET] = as_float((uint) spec_id_vec.size());
+  mat.data[FILM_ETA_OFFSET] = as_float((uint) eta_k_vec.size());
+
+  uint layers = 0;
   for (auto layerNode : materialNode.child(L"layers").children())
   {
     layers++;
@@ -650,17 +658,27 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     {
       thickness_vec.push_back(layerNode.child(L"thickness").attribute(L"val").as_float());
     }
-    eta_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
-    k_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
+    eta_k_vec.push_back(materialNode.child(L"eta").attribute(L"val").as_float());
+    spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
   }
   mat.data[FILM_LAYERS_COUNT] = as_float(layers);
+  mat.data[FILM_K_SPECID_OFFSET] = as_float((uint) spec_id_vec.size());
+  mat.data[FILM_K_OFFSET] = as_float((uint) eta_k_vec.size());
 
-  uint precompFlag = materialNode.child(L"precompute").attribute(L"val").as_uint();
-  mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
-  if(precompFlag == 1u)
+  for (auto layerNode : materialNode.child(L"layers").children())
   {
+    eta_k_vec.push_back(materialNode.child(L"k").attribute(L"val").as_float());
+    spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
+  }
+
+  uint precompFlag = 0;
+  auto nodePrecomp = materialNode.child(L"precompute");
+  if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0)
+  {
+    precompFlag = 1;
+    mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
     mat.data[FILM_PRECOMP_ID] = as_float(precomputed_film.size() / (sizeof(ThinFilmPrecomputed) / sizeof(float)));
-    auto precomputed = precomputeThinFilm(eta_id_vec.data(), k_id_vec.data(), spec_values, wavelengths, 
+    auto precomputed = precomputeThinFilm(mat.data[FILM_ETA_EXT], spec_id_vec.data(), spec_id_vec.data() + layers, spec_values, wavelengths, 
           spec_offsets, thickness_vec.data(), layers);
     std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
     std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
@@ -1380,7 +1398,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if (mat_type == thinFilmMatTypeStr)
     {
-      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_eta_id_vec, m_films_k_id_vec,
+      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
                                  m_spec_values, m_wavelengths, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
     }

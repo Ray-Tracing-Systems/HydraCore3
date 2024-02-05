@@ -9,7 +9,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
         const float* precomputed_data)
 {
-  const float extIOR = 1.f;
+  const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];
   bool reversed = false;
   bool opaque = false;
   const float* reflectance;
@@ -18,17 +18,17 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   {
     n = -1 * n;
     reversed = true;
-    reflectance = precomputed_data + offsetof(ThinFilmPrecomputed, int_reflectivity) / sizeof(float);
-    transmittance = precomputed_data + offsetof(ThinFilmPrecomputed, int_transmittivity) / sizeof(float);
+    reflectance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
+    transmittance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
   }
-  else
+  else // outside of object
   {
-    if (length(k[layers - 1]) > 1e-3f) // outside of object
+    if (length(k[layers - 1]) > 1e-3f)
     {
       opaque = true;
     }
-    reflectance = precomputed_data + offsetof(ThinFilmPrecomputed, ext_reflectivity) / sizeof(float);
-    transmittance = precomputed_data + offsetof(ThinFilmPrecomputed, ext_transmittivity) / sizeof(float);
+    reflectance = precomputed_data;
+    transmittance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
 
   float3 s, t = n;
@@ -76,7 +76,6 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
       float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
       R[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
-    //std::cout << R[0] << std::endl;
   }
   if (opaque)
   {
