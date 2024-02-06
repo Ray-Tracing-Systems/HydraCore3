@@ -243,7 +243,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   for(auto texNode : scene.TextureNodes())
   {
     TextureInfo tex;
-    tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+
+    if (texNode.attribute(L"loc").empty())
+      tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"path").as_string();
+    else
+      tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+
+
+    
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
     if(tex.width != 0 && tex.height != 0)

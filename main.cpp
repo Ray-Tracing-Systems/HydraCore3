@@ -2,12 +2,11 @@
 #include <fstream>
 #include <filesystem>
 
+#include "imageutils.h"
 #include "integrator_pt.h"
 #include "ArgParser.h"
-#include"mi_materials.h"
+#include "mi_materials.h"
 
-void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
 
 float4x4 ReadMatrixFromString(const std::string& str);
 

@@ -75,6 +75,21 @@ static inline uint RealColorToUint32(float4 real_color)
   return red | (green << 8) | (blue << 16) | (alpha << 24);
 }
 
+static inline unsigned RealColorToUint32(float real_color[4])
+{
+  float  r = real_color[0] * 255.0f;
+  float  g = real_color[1] * 255.0f;
+  float  b = real_color[2] * 255.0f;
+  float  a = real_color[3] * 255.0f;
+
+  unsigned char red   = (unsigned char)r;
+  unsigned char green = (unsigned char)g;
+  unsigned char blue  = (unsigned char)b;
+  unsigned char alpha = (unsigned char)a;
+
+  return red | (green << 8) | (blue << 16) | (alpha << 24);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
