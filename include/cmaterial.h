@@ -944,15 +944,6 @@ enum Polarization
   P = 1
 };
 
-
-struct ThinFilmPrecomputed
-{
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> ext_reflectivity;
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> ext_transmittivity;
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> int_reflectivity;
-  std::array<float, FILM_ANGLE_RES * FILM_LENGTH_RES> int_transmittivity;
-};
-
 static inline float getRefractionFactor(float ior, float cosTheta)
 {
   float sinTheta = sqrt(1 - cosTheta * cosTheta);

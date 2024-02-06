@@ -72,9 +72,8 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
-      float angleVal = acosf(cosThetaI) / M_PI_2;
       float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      R[i] = lerp_gather_2d(reflectance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
+      R[i] = lerp_gather_2d(reflectance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
   }
   if (opaque)
@@ -101,13 +100,11 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
     }
     else
     {
-      float angleVal = acosf(cosThetaI) / M_PI_2;
       float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      T = lerp_gather_2d(transmittance, w, angleVal, FILM_LENGTH_RES, FILM_ANGLE_RES);
+      T = lerp_gather_2d(transmittance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
     }
 
-    //T *= getRefractionFactor(eta_it, acosf(cosThetaI));
-    if (rands.x / (R.x + T) < R.x)
+    if (rands.x * (R.x + T) < R.x)
     {
       float3 wo = float3(-wi.x, -wi.y, wi.z);
       pRes->val = R;
@@ -155,10 +152,8 @@ static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float
   float cosTheta_i = AbsCosTheta(wi);
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
-  
-  float angle = acosf(std::abs(dot(wo, wm))) / M_PI_2;
   float w = (lambda - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-  float F = lerp_gather_2d(reflectance, w, angle, FILM_LENGTH_RES, FILM_ANGLE_RES);
+  float F = lerp_gather_2d(reflectance, w, std::abs(dot(wo, wm)), FILM_LENGTH_RES, FILM_ANGLE_RES);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
