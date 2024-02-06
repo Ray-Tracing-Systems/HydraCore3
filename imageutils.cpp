@@ -226,12 +226,38 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
+{
+  float* out; // width * height * RGBA
+  int width       = 0;
+  int height      = 0;
+  const char* err = nullptr;
+
+  int ret = LoadEXR(&out, &width, &height, infilename, &err);
+  if (ret != TINYEXR_SUCCESS) {
+    if (err) {
+      fprintf(stderr, "[LoadImage4fFromEXR] : %s\n", err);
+      std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
+      delete err;
+    }
+    return std::vector<float>();
+  }
+
+  std::vector<float> result(width * height);
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  memcpy(result.data(), out, width * height * sizeof(float));
+  free(out);
+
+  return result;
+}
+
+
 std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH) 
 {
-  std::vector<float> result;
   float* out; // width * height * RGBA
-  int width  = 0;
-  int height = 0;
+  int width       = 0;
+  int height      = 0;
   const char* err = nullptr; 
 
   int ret = LoadEXR(&out, &width, &height, infilename, &err);
@@ -241,14 +267,14 @@ std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH)
       std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
       delete err;
     }
+    return std::vector<float>();
   }
-  else {
-    result.resize(width * height*4);
-    *pW = uint32_t(width);
-    *pH = uint32_t(height);
-    memcpy(result.data(), out, width*height*sizeof(float)*4);
-    free(out);
-  }
+
+  std::vector<float> result(width * height*4);
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  memcpy(result.data(), out, width*height*sizeof(float)*4);
+  free(out);  
   
   return result;
 }
@@ -270,12 +296,9 @@ float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH)
     }
     return nullptr;
   }
-  else {
-    *pW = uint32_t(width);
-    *pH = uint32_t(height);
-    return out;
-  }
-  
-  return nullptr;
+
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  return out;
 }
 

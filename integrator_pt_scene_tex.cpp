@@ -34,10 +34,21 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   {
     int        wh[2]        = { 0, 0 };
     const auto fileName     = hydra_xml::ws2s(a_texInfo.path);
-    const auto image_vect   = LoadImage4fFromEXR(fileName.c_str(), &wh[0], &wh[1]);    
-    auto       pTexture     = std::make_shared<Image2D<float4>>(wh[0], wh[1], (const float4*)image_vect.data());
-    pTexture->setSRGB(false);
-    pResult                 = MakeCombinedTexture2D(pTexture, a_sampler);
+
+    if (a_texInfo.bpp == 16)
+    {
+      const auto image_vect = LoadImage4fFromEXR(fileName.c_str(), &wh[0], &wh[1]);
+      auto       pTexture   = std::make_shared<Image2D<float4>>(wh[0], wh[1], (const float4*)image_vect.data());
+      pTexture->setSRGB(false);
+      pResult               = MakeCombinedTexture2D(pTexture, a_sampler);
+    }
+    else
+    {
+      const auto image_vect = LoadImage1fFromEXR(fileName.c_str(), &wh[0], &wh[1]);
+      auto       pTexture   = std::make_shared<Image2D<float>>(wh[0], wh[1], (const float*)image_vect.data());
+      pTexture->setSRGB(false);
+      pResult               = MakeCombinedTexture2D(pTexture, a_sampler);
+    }
   }
   else if(a_texInfo.path.find(L".image") != std::string::npos) // hydra image formats: image4f, image4ub
   {

@@ -25,6 +25,7 @@ void SaveFrameBufferToEXR(float* data, int width, int height, int channels, cons
 inline float linearToSRGB(float l);
 std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH);
 std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH);
 
