@@ -133,6 +133,14 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              const std::vector<float> &spectra,
                              const std::vector<uint2> &spec_offsets);
 
+Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                              std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
+                              std::vector<uint> &spec_id_vec, std::vector<float> &eta_k_vec,
+                              const std::vector<float> &spec_values,
+                              const std::vector<uint2> &spec_offsets);
+
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);
 //std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 //bool                  Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir);

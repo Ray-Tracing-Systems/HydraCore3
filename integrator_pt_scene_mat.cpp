@@ -700,3 +700,189 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
   return mat;
 }
+
+
+static inline void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
+{
+  std::ofstream precomp_file;
+  precomp_file.open(name);
+  for (int i = 0; i < x_samples; ++i)
+  {
+    for (int j = 0; j < y_samples; ++j)
+    {
+      precomp_file << arr[i * y_samples + j] << " ";
+    }
+  }
+  precomp_file.close();
+}
+
+
+struct ThinFilmPrecomputed
+{
+  std::vector<float> ext_reflectivity;
+  std::vector<float> ext_transmittivity;
+  std::vector<float> int_reflectivity;
+  std::vector<float> int_transmittivity;
+};
+
+ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values,
+        const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
+{
+  ThinFilmPrecomputed res;
+  for (int i = 0; i < FILM_LENGTH_RES; ++i)
+  {
+    float wavelength = (LAMBDA_MAX - LAMBDA_MIN) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
+    std::vector<float> eta, k;
+    eta.reserve(layers);
+    k.reserve(layers);
+    uint2 data;
+    uint offset;
+    uint size;
+    for (int layer = 0; layer < layers; ++layer)
+    {
+      data  = spec_offsets[eta_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      eta[layer] = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+      data  = spec_offsets[k_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      k[layer] = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+    }
+    for (int j = 0; j < FILM_ANGLE_RES; ++j)
+    {
+      float cosTheta = 1.f / float(FILM_ANGLE_RES - 1) * j;
+      float ext_eta = 1.f;
+      FrReflRefr forward;
+      FrReflRefr backward;
+      if (ext_eta * sqrt(1 - cosTheta * cosTheta) > eta[layers - 1])
+      {
+        forward = {1.f, 0.f};
+      }
+      else
+      {
+        forward = multFrFilmReflRefr(extIOR, cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+      }
+      if (eta[layers - 1] * sqrt(1 - cosTheta * cosTheta) > ext_eta)
+      {
+        backward = {1.f, 0.f};
+      }
+      else
+      {
+        backward = multFrFilmReflRefr_r(extIOR, cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+      }
+ 
+      res.ext_reflectivity.push_back(forward.refl);
+      res.ext_transmittivity.push_back(forward.refr);
+      res.int_reflectivity.push_back(backward.refl);
+      res.int_transmittivity.push_back(backward.refr);  
+    }
+  }
+  //save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  return res;
+}
+
+Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                              std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
+                              std::vector<uint> &spec_id_vec, std::vector<float> &eta_k_vec,
+                              const std::vector<float> &spec_values,
+                              const std::vector<uint2> &spec_offsets)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  Material mat = {};
+  mat.colors[FILM_COLOR]  = float4(1, 1, 1, 0);
+  mat.mtype                    = MAT_TYPE_THIN_FILM;
+  mat.lightId                  = uint(-1);
+
+  auto nodeBSDF = materialNode.child(L"bsdf");
+
+  float alpha_u = 0.0f;
+  float alpha_v = 0.0f;
+
+  auto nodeAlpha = materialNode.child(L"alpha");
+  if(nodeAlpha != nullptr)
+  {
+    alpha_u = nodeAlpha.attribute(L"val").as_float();
+    alpha_v = alpha_u;
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeAlpha, texturesInfo, texCache, textures);
+
+    if(texID != 0)
+      alpha_u = alpha_v = 1.0f;
+    
+    mat.row0 [0]  = sampler.row0;
+    mat.row1 [0]  = sampler.row1;
+    mat.data[FILM_TEXID0] = as_float(texID);
+  }
+  else
+  {
+    auto nodeAlphaU = materialNode.child(L"alpha_u");
+    auto nodeAlphaV = materialNode.child(L"alpha_v");
+
+    alpha_u = nodeAlphaU.attribute(L"val").as_float();
+    alpha_v = nodeAlphaV.attribute(L"val").as_float();
+  }
+
+  mat.data[FILM_ROUGH_U] = alpha_u;
+  mat.data[FILM_ROUGH_V] = alpha_v;
+
+  mat.data[FILM_ETA_EXT] = 1.00028f; // air
+
+  auto nodeExtIOR = materialNode.child(L"ext_ior");
+  if(nodeExtIOR != nullptr)
+  {
+    mat.data[FILM_ETA_EXT] = nodeExtIOR.attribute(L"val").as_float();
+  }
+
+  mat.data[FILM_THICKNESS_OFFSET] = as_float((uint) thickness_vec.size());
+  mat.data[FILM_ETA_SPECID_OFFSET] = as_float((uint) spec_id_vec.size());
+  mat.data[FILM_ETA_OFFSET] = as_float((uint) eta_k_vec.size());
+
+  uint layers = 0;
+  for (auto layerNode : materialNode.child(L"layers").children())
+  {
+    layers++;
+    if (layerNode.child(L"thickness") != nullptr)
+    {
+      thickness_vec.push_back(layerNode.child(L"thickness").attribute(L"val").as_float());
+    }
+    eta_k_vec.push_back(materialNode.child(L"eta").attribute(L"val").as_float());
+    spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
+  }
+  mat.data[FILM_LAYERS_COUNT] = as_float(layers);
+  mat.data[FILM_K_SPECID_OFFSET] = as_float((uint) spec_id_vec.size());
+  mat.data[FILM_K_OFFSET] = as_float((uint) eta_k_vec.size());
+
+  for (auto layerNode : materialNode.child(L"layers").children())
+  {
+    eta_k_vec.push_back(materialNode.child(L"k").attribute(L"val").as_float());
+    spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
+  }
+
+  uint precompFlag = 0;
+  auto nodePrecomp = materialNode.child(L"precompute");
+  if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0)
+  {
+    precompFlag = 1;
+    mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
+    mat.data[FILM_PRECOMP_ID] = as_float(precomputed_film.size() / (sizeof(ThinFilmPrecomputed) / sizeof(float)));
+    auto precomputed = precomputeThinFilm(mat.data[FILM_ETA_EXT], spec_id_vec.data(), spec_id_vec.data() + layers, spec_values, 
+          spec_offsets, thickness_vec.data(), layers);
+    std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
+    std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
+    std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));
+    std::copy(precomputed.int_transmittivity.begin(), precomputed.int_transmittivity.end(), std::back_inserter(precomputed_film));
+  }
+  else
+  {
+    mat.data[FILM_PRECOMP_ID] = as_float(0);
+  }
+
+  return mat;
+}

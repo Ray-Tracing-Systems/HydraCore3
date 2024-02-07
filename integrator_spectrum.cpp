@@ -53,7 +53,7 @@ float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uin
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
 
   return res;

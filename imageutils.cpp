@@ -1,6 +1,6 @@
 #include "imageutils.h"
 #include "include/cglobals.h"
-#include "image2d.h"
+#include "Image2d.h"
 
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr.h"
