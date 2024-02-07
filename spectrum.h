@@ -13,6 +13,8 @@ using namespace LiteMath;
 struct Spectrum
 {
   float Sample(float lambda) const;
+  //std::vector<float> Resample(int channels, float lambdaOffs = 0.0f);
+  std::vector<float> ResampleUniform();
 
   // sorted by wavelength
   std::vector<float> wavelengths; 
@@ -54,34 +56,47 @@ static inline float4 SampleWavelengths(float u, float a, float b)
   return res;
 }
 
-static inline float4 SampleSpectrum(const float* a_spec_wavelengths, const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
-{
-  float4 sampleSpec = float4(0,0,0,0);
-  const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
-  for(uint i = 0; i < spectralSamples; ++i)
-  {
-    if (a_sz == 0 || a_wavelengths[i] < a_spec_wavelengths[0] || a_wavelengths[i] > a_spec_wavelengths[a_sz - 1])
-    {
-      sampleSpec[i] = 0.0f;
-    }
-    else
-    {
-      int last = (int)a_sz - 2, first = 1;
-      while (last > 0) 
-      {
-        int half = last >> 1, 
-        middle = first + half;
-        bool predResult = a_spec_wavelengths[middle] <= a_wavelengths[i];
-        first = predResult ? int(middle + 1) : first;
-        last = predResult ? last - int(half + 1) : int(half);
-      }
-      int o = clamp(int(first - 1), 0, int(a_sz - 2));
+//static inline float4 SampleSpectrum(const float* a_spec_wavelengths, const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
+//{
+//  float4 sampleSpec = float4(0,0,0,0);
+//  const uint spectralSamples = uint(sizeof(a_wavelengths.M) / sizeof(a_wavelengths.M[0])); 
+//  for(uint i = 0; i < spectralSamples; ++i)
+//  {
+//    if (a_sz == 0 || a_wavelengths[i] < a_spec_wavelengths[0] || a_wavelengths[i] > a_spec_wavelengths[a_sz - 1])
+//    {
+//      sampleSpec[i] = 0.0f;
+//    }
+//    else
+//    {
+//      int last = (int)a_sz - 2, first = 1;
+//      while (last > 0) 
+//      {
+//        int half = last >> 1, 
+//        middle = first + half;
+//        bool predResult = a_spec_wavelengths[middle] <= a_wavelengths[i];
+//        first = predResult ? int(middle + 1) : first;
+//        last = predResult ? last - int(half + 1) : int(half);
+//      }
+//      int o = clamp(int(first - 1), 0, int(a_sz - 2));
+//
+//      float t = (a_wavelengths[i] - a_spec_wavelengths[o]) / (a_spec_wavelengths[o + 1] - a_spec_wavelengths[o]);
+//      sampleSpec[i] =  lerp(a_spec_values[o], a_spec_values[o + 1], t);
+//    } 
+//  }
+//  return sampleSpec;
+//}
 
-      float t = (a_wavelengths[i] - a_spec_wavelengths[o]) / (a_spec_wavelengths[o + 1] - a_spec_wavelengths[o]);
-      sampleSpec[i] =  lerp(a_spec_values[o], a_spec_values[o + 1], t);
-    } 
-  }
-  return sampleSpec;
+static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
+{
+  const int  WAVESN = int(LAMBDA_MAX-LAMBDA_MIN);
+  const int4 index1 = int4(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)));   
+  const int4 index2 = min(index1 + int4(1), int4(WAVESN-1));
+
+  const float4 x1 = float4(LAMBDA_MIN) + float4(index1);
+  const float4 y1 = float4(a_spec_values[index1[0]], a_spec_values[index1[1]], a_spec_values[index1[2]], a_spec_values[index1[3]]); // TODO: reorder mem access for better cache: (index1[0], index2[0])
+  const float4 y2 = float4(a_spec_values[index2[0]], a_spec_values[index2[1]], a_spec_values[index2[2]], a_spec_values[index2[3]]); // TODO: reorder mem access for better cache: (index1[1], index2[1])
+
+  return y1 + (a_wavelengths - x1) * (y2 - y1);
 }
 
 //static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)

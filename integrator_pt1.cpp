@@ -43,9 +43,11 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  // if(x == 507 && y == m_winHeight - 1 - 650)
-  //   int a = 1;
-  
+  if(x == 70 && y == 512 - 250 - 1)
+  {
+    int a = 2;
+  }
+
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -192,29 +194,27 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir)
+float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+  const uint specId = m_lights[a_lightId].specId;
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
   {
-    const uint specId = m_lights[a_lightId].specId;
-  
-    if(specId < 0xFFFFFFFF)
-    {
-      // lightColor = SampleSpectrum(m_spectra.data() + specId, *a_wavelengths);
-      const uint2 data  = m_spec_offset_sz[specId];
-      const uint offset = data.x;
-      const uint size   = data.y;
-      lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
-    }
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
   }
   lightColor *= m_lights[a_lightId].mult;
   
   uint iesId = m_lights[a_lightId].iesId;
   if(iesId != uint(-1))
   {
+    if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
+      a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
+    const float3 dirTrans = to_float3(m_lights[a_lightId].iesMatrix*to_float4(a_rayDir, 0.0f));
     float sintheta        = 0.0f;
-    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*a_rayDir, &sintheta);
+    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*dirTrans, &sintheta);
     const float4 texColor = m_textures[iesId]->sample(texCoord);
     lightColor *= texColor;
   }
@@ -262,8 +262,8 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist * (1.f - 1e-6f)));
-  const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni;
+  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+  const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
 
   RecordShadowHitIfNeeded(bounce, inShadow);
 
@@ -288,7 +288,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir);
+    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -344,7 +344,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
@@ -472,7 +472,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceX = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceX = float4(1,1,1,1);
@@ -483,7 +483,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceY = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceY = responceX;
@@ -494,7 +494,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceZ = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceZ = responceY;

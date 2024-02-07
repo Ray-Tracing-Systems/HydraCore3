@@ -154,6 +154,8 @@ set(CORE_SRC
         integrator_pt2.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
+        integrator_pt_scene_mat.cpp
+        integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
         mi_materials.cpp
         spectrum.cpp

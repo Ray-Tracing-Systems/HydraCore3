@@ -32,9 +32,14 @@
 *.app
 
 # Folders
+.vs/
+.vscode/
+bin-debug/
+bin-release/
 build_generated/
 build/
 shaders_generated/
+out/
 
 # Files
 integrator_pt1_generated.cpp

@@ -77,6 +77,21 @@ static inline uint RealColorToUint32(float4 real_color)
   return red | (green << 8) | (blue << 16) | (alpha << 24);
 }
 
+static inline unsigned RealColorToUint32(float real_color[4])
+{
+  float  r = real_color[0] * 255.0f;
+  float  g = real_color[1] * 255.0f;
+  float  b = real_color[2] * 255.0f;
+  float  a = real_color[3] * 255.0f;
+
+  unsigned char red   = (unsigned char)r;
+  unsigned char green = (unsigned char)g;
+  unsigned char blue  = (unsigned char)b;
+  unsigned char alpha = (unsigned char)a;
+
+  return red | (green << 8) | (blue << 16) | (alpha << 24);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
@@ -103,12 +118,12 @@ static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
        and Ryusuke Villemin (JCGT Vol 6, No 1, 2017) */
 static inline void CoordinateSystemV2(const float3 &n, float3* s, float3* t) 
 {
-  float sign = n.z >= 0 ? 1 : -1;
+  float sign = n.z >= 0 ? 1.0f : -1.0f;
   float a    = -(1.0f / (sign + n.z));
   float b    = n.x * n.y * a;
 
   float tmp = (n.z >= 0 ? n.x * n.x * a : -n.x * n.x * a);
-  (*s) = float3{tmp + 1,
+  (*s) = float3{tmp + 1.0f,
                 n.z >= 0 ? b : -b,
                 n.z >= 0 ? -n.x : n.x};
   
@@ -319,11 +334,11 @@ static inline float2 sphereMapToPhiTheta(float3 ray_dir)
   const float x = ray_dir.z;
   const float y = ray_dir.x;
   const float z = -ray_dir.y;
-                             // r == 1.0f
-  float theta = acos(z);     // [0,pi] 
-  float phi   = atan2(y, x); // [-pi,pi]
+                                  // r == 1.0f
+  float theta = std::acos(z);     // [0,pi] 
+  float phi   = std::atan2(y, x); // [-pi,pi]
   if (phi < 0.0f)
-    phi += 2.0f*M_PI;        // [-pi,pi] --> [0, 2*pi];  see PBRT.
+    phi += 2.0f*M_PI;             // [-pi,pi] --> [0, 2*pi];  see PBRT.
 
   return make_float2(phi, theta);
 }

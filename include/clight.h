@@ -11,9 +11,12 @@ static constexpr uint LIGHT_GEOM_POINT  = 5;
 static constexpr uint LIGHT_DIST_LAMBERT = 0;
 static constexpr uint LIGHT_DIST_OMNI    = 1;
 
+static constexpr uint LIGHT_FLAG_POINT_AREA = 1;
+
 struct LightSource
 {
   float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
+  float4x4 iesMatrix; ///<! translation in matrix is always (0,0,0,1)
   float4   pos;       ///<! translation aclually stored here
   float4   intensity; ///<! brightress, i.e. screen value if light is visable directly
   float4   norm;
@@ -23,7 +26,7 @@ struct LightSource
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE, ...
   
   uint     distType;  ///<! LIGHT_DIST_LAMBERT, LIGHT_DIST_OMNI, ...
-  uint     dummy1;
+  uint     flags;     ///<! 
   uint     dummy2;
   uint     dummy3;
 
@@ -38,6 +41,7 @@ struct LightSample
   float3 pos;
   float3 norm;
   bool   isOmni;
+  bool   hasIES;
 };
 
 static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2 rands)
@@ -54,6 +58,7 @@ static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2
   res.pos    = samplePos;
   res.norm   = to_float3(a_pLight[0].norm);
   res.isOmni = false;
+  res.hasIES = (a_pLight[0].iesId != uint(-1));
   return res;
 }
 
@@ -70,6 +75,8 @@ static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, floa
   LightSample res;
   res.pos  = samplePos;
   res.norm = normalize(samplePos - lcenter);
+  res.isOmni = false;
+  res.hasIES = (a_pLight[0].iesId != uint(-1));
   return res;
 }
 
@@ -80,6 +87,7 @@ static inline LightSample directLightSampleRev(const LightSource* a_pLight, floa
   res.pos    = illuminationPoint - norm*100000.0f;
   res.norm   = norm;
   res.isOmni = false;
+  res.hasIES = false;
   return res;
 }
 
@@ -89,5 +97,6 @@ static inline LightSample pointLightSampleRev(const LightSource* a_pLight)
   res.pos    = to_float3(a_pLight[0].pos);
   res.norm   = to_float3(a_pLight[0].norm);
   res.isOmni = (a_pLight[0].distType == LIGHT_DIST_OMNI);
+  res.hasIES = (a_pLight[0].iesId != uint(-1));
   return res;
 }

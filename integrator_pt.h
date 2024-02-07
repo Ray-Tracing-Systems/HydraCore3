@@ -202,7 +202,7 @@ public:
 
   LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir);
+  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -287,8 +287,6 @@ public:
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
 
-  // std::vector<Spectrum> m_spectra;
-  std::vector<float> m_wavelengths; 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
   std::vector<float> m_cie_x;
@@ -318,8 +316,9 @@ public:
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE    = 9;
   static constexpr uint32_t KSPEC_BUMP_MAPPING        = 10;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 11;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 12;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 12; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 13; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -344,6 +343,15 @@ public:
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   uint m_disableImageContrib = 0;
+
+  virtual void ProgressBarStart();
+  virtual void ProgressBarAccum(float a_progress);
+  virtual void ProgressBarDone();
+
+  virtual void _ProgressBarStart();
+  virtual void _ProgressBarAccum(float a_progress);
+  virtual void _ProgressBarDone();
+
 };
 
 #endif

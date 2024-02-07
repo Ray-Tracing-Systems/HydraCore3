@@ -28,7 +28,10 @@ enum GLTF_COMPOMENT { GLTF_COMPONENT_LAMBERT   = 1,
                       GLTF_COMPONENT_ORENNAYAR = 16,
                       FLAG_NMAP_INVERT_X       = 32,
                       FLAG_NMAP_INVERT_Y       = 64,
-                      FLAG_NMAP_SWAP_XY        = 128 }; // bit fields
+                      FLAG_NMAP_SWAP_XY        = 128,
+                      FLAG_FOUR_TEXTURES       = 256,
+                      FLAG_PACK_FOUR_PARAMS_IN_TEXTURE = 512,
+                      FLAG_INVERT_GLOSINESS    = 1024, }; // bit fields
 
 enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_GLASS         = 2,
@@ -72,7 +75,8 @@ static constexpr uint GLTF_FLOAT_ALPHA            = 3; ///< blend factor between
 static constexpr uint GLTF_FLOAT_GLOSINESS        = 4; ///< material glosiness or intensity for lights, take color from baseColor
 static constexpr uint GLTF_FLOAT_IOR              = 5; ///< index of refraction for reflection Fresnel
 static constexpr uint GLTF_FLOAT_ROUGH_ORENNAYAR  = 6; ///< roughness for Oren-Nayar
-static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_FLOAT_ROUGH_ORENNAYAR;
+static constexpr uint GLTF_FLOAT_REFL_COAT        = 7; ///< reflection magnitude for coat
+static constexpr uint GLTF_CUSTOM_LAST_IND        = GLTF_FLOAT_REFL_COAT;
 
 // GLASS
 // colors
@@ -171,7 +175,7 @@ static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
 
 
 // The size is taken according to the largest indexes
-static constexpr uint COLOR_DATA_SIZE  = 3; //std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
+static constexpr uint COLOR_DATA_SIZE  = 4;  // std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
 static constexpr uint CUSTOM_DATA_SIZE = 18; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
@@ -186,8 +190,8 @@ struct Material
   uint datai[4];
 
   float4 colors[COLOR_DATA_SIZE]; ///< colors data
-  float4 row0[2];     ///< texture matrix
-  float4 row1[2];     ///< texture matrix
+  float4 row0[4];                 ///< texture matrix
+  float4 row1[4];                 ///< texture matrix
       
   float  data[CUSTOM_DATA_SIZE]; ///< float, uint and custom data. Read uint: uint x = as_uint(data[INDEX]), write: data[INDEX] = as_float(x)
 };
