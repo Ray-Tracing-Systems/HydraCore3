@@ -15,6 +15,7 @@ static constexpr uint RAY_FLAG_WAVES_DIVERGED = 0x04000000; // hit a material wi
 //static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
 //static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
 
+static constexpr uint32_t FILM_LAYERS_MAX = 8;
 static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
 static constexpr uint32_t FILM_ANGLE_RES = 128;
 static constexpr uint32_t FILM_LENGTH_RES = 128;
