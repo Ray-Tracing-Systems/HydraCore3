@@ -728,13 +728,16 @@ struct ThinFilmPrecomputed
 ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values,
         const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
 {
+  std::vector<complex> cos_theta = std::vector<complex>(FILM_LAYERS_MAX + 1, complex(0.0));
+  std::vector<complex> phase_diff = std::vector<complex>(FILM_LAYERS_MAX - 1, complex(0.0));
   ThinFilmPrecomputed res;
   for (int i = 0; i < FILM_LENGTH_RES; ++i)
   {
     float wavelength = (LAMBDA_MAX - LAMBDA_MIN) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
-    std::vector<float> eta, k;
-    eta.reserve(layers);
-    k.reserve(layers);
+    std::vector<complex> ior;
+    ior.reserve(layers + 1);
+    ior[0] = complex(extIOR, 0.f);
+    float eta, k;
     uint2 data;
     uint offset;
     uint size;
@@ -743,34 +746,35 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       data  = spec_offsets[eta_id[layer]];
       offset = data.x;
       size   = data.y;
-      eta[layer] = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
 
       data  = spec_offsets[k_id[layer]];
       offset = data.x;
       size   = data.y;
-      k[layer] = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+      ior[layer + 1] = complex(eta, k);
     }
     for (int j = 0; j < FILM_ANGLE_RES; ++j)
     {
       float cosTheta = 1.f / float(FILM_ANGLE_RES - 1) * j;
-      float ext_eta = 1.f;
       FrReflRefr forward;
       FrReflRefr backward;
-      if (ext_eta * sqrt(1 - cosTheta * cosTheta) > eta[layers - 1])
+      if (extIOR * sqrt(1 - cosTheta * cosTheta) > ior[layers].re)
       {
         forward = {1.f, 0.f};
       }
       else
       {
-        forward = multFrFilmReflRefr(extIOR, cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
       }
-      if (eta[layers - 1] * sqrt(1 - cosTheta * cosTheta) > ext_eta)
+      if (ior[layers].re * sqrt(1 - cosTheta * cosTheta) > extIOR)
       {
         backward = {1.f, 0.f};
       }
       else
       {
-        backward = multFrFilmReflRefr_r(extIOR, cosTheta, eta.data(), k.data(), a_thickness, layers, wavelength);
+        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
       }
  
       res.ext_reflectivity.push_back(forward.refl);
@@ -818,7 +822,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     
     mat.row0 [0]  = sampler.row0;
     mat.row1 [0]  = sampler.row1;
-    mat.data[FILM_TEXID0] = as_float(texID);
+    mat.texid[0] = texID;
   }
   else
   {

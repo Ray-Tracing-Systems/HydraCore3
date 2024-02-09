@@ -170,8 +170,7 @@ static constexpr uint FILM_K_SPECID_OFFSET   = 7;
 static constexpr uint FILM_ETA_EXT           = 8;
 static constexpr uint FILM_THICKNESS_OFFSET  = 9;
 static constexpr uint FILM_LAYERS_COUNT      = 10;
-static constexpr uint FILM_TEXID0            = 11;
-static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TEXID0;
+static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_LAYERS_COUNT;
 
 
 // The size is taken according to the largest indexes
@@ -1212,7 +1211,7 @@ struct FrReflRefr
   float refl, refr;
 };
 
-static inline FrReflRefr calculateMultFrFilmReflRefr(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
+static inline FrReflRefr calculateMultFrFilm(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
 {
   FrReflRefr result = {0, 0};
   
@@ -1234,75 +1233,81 @@ static inline FrReflRefr calculateMultFrFilmReflRefr(const complex *a_cosTheta, 
   return {complex_norm(FrRefl), complex_norm(FrRefr)};
 }
 
-static inline FrReflRefr multFrFilmReflRefr(float ext_eta, float cosThetaI, const float* eta, const float* k, const float* thickness, uint layers, float lambda)
+static inline FrReflRefr calculateMultFrFilm_r(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
 {
-  std::vector<complex> a_cosTheta = {complex(cosThetaI)};
-  std::vector<complex> a_eta = {complex(ext_eta)};
-  std::vector<complex> a_phaseDiff;
+  FrReflRefr result = {0, 0};
+  
+  complex FrRefl = FrComplexRefl(a_cosTheta[1], a_cosTheta[0], a_eta[1], a_eta[0], p);
+  complex FrRefr = FrComplexRefr(a_cosTheta[1], a_cosTheta[0], a_eta[1], a_eta[0], p);
+  complex FrReflI = complex(1.f);
+  complex FrRefrI = complex(1.f);
+  for (int i = 1; i < layers; ++i)
+  {
+    FrReflI = FrComplexRefl(a_cosTheta[i + 1], a_cosTheta[i], a_eta[i + 1], a_eta[i], p);
+    FrRefrI = FrComplexRefr(a_cosTheta[i + 1], a_cosTheta[i], a_eta[i + 1], a_eta[i], p);
+    FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
 
-  complex ior = complex(1.0);
+    FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
+    complex denom = 1.f / (1 + FrReflI * FrRefl);
+    FrRefr = FrRefr * denom;
+    FrRefl = (FrReflI + FrRefl) * denom;
+  }
+  return {complex_norm(FrRefl), complex_norm(FrRefr)};
+}
+
+static inline FrReflRefr multFrFilm(float cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda, complex* a_cosTheta, complex* a_phaseDiff)
+{
+  a_cosTheta[0] = complex(cosThetaI);
 
   float sinThetaI = sqrt(1.0f - cosThetaI * cosThetaI);
   complex sinTheta = complex(1.0);
   complex cosTheta = complex(1.0);
-  for (int i = 0; i < layers; ++i)
+  for (int i = 1; i <= layers; ++i)
   {
-    ior = complex(eta[i], k[i]);
-    sinTheta = sinThetaI * ext_eta / ior;
+    sinTheta = sinThetaI * a_ior[0] / a_ior[i];
     cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
-    a_cosTheta.push_back(cosTheta);
-    a_eta.push_back(ior);
-    if (i < layers - 1)
-      a_phaseDiff.push_back(filmPhaseDiff(cosTheta, ior, thickness[i], lambda));
+    a_cosTheta[i] = cosTheta;
+    if (i < layers)
+      a_phaseDiff[i - 1] = filmPhaseDiff(cosTheta, a_ior[i], thickness[i - 1], lambda);
   }
 
   FrReflRefr result = {0, 0};
   uint polarization[2] = {PolarizationS, PolarizationP};
   for (int p = 0; p < 2; ++p)
   {
-    FrReflRefr temp = calculateMultFrFilmReflRefr(a_cosTheta.data(), a_eta.data(), a_phaseDiff.data(), layers, polarization[p]);
+    FrReflRefr temp = calculateMultFrFilm(a_cosTheta, a_ior, a_phaseDiff, layers, polarization[p]);
     result.refl += temp.refl / 2;
     result.refr += temp.refr / 2;
   }
-  result.refr *= getRefractionFactor(eta[layers - 1] / ext_eta, cosThetaI);
+  result.refr *= getRefractionFactor(a_ior[layers].re / a_ior[0].re, cosThetaI);
   return result;
 }
 
-static inline FrReflRefr multFrFilmReflRefr_r(float ext_eta, float cosThetaI, const float* eta, const float* k, const float* thickness, uint layers, float lambda)
+static inline FrReflRefr multFrFilm_r(float cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda, complex* a_cosTheta, complex* a_phaseDiff)
 {
-  std::vector<complex> a_cosTheta = {complex(cosThetaI)};
-  std::vector<complex> a_eta = {complex(eta[layers - 1], k[layers - 1])};
-  std::vector<complex> a_phaseDiff;
-
-  complex ior = complex(1.0);
+  a_cosTheta[layers] = complex(cosThetaI);
 
   float sinThetaI = sqrt(1.0f - cosThetaI * cosThetaI);
   complex sinTheta = complex(1.0);
   complex cosTheta = complex(1.0);
-  for (int i = layers - 2; i >= 0; --i)
+  for (int i = layers - 1; i >= 0; --i)
   {
-    ior = complex(eta[i], k[i]);
-    sinTheta = sinThetaI * eta[layers - 1] / ior;
+    sinTheta = sinThetaI * a_ior[layers].re / a_ior[i].re;
     cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
-    a_cosTheta.push_back(cosTheta);
-    a_eta.push_back(ior);
-    a_phaseDiff.push_back(filmPhaseDiff(cosTheta, ior, thickness[i], lambda));
+    a_cosTheta[i] = cosTheta;
+    if (i > 0)
+      a_phaseDiff[i - 1] = filmPhaseDiff(cosTheta, a_ior[i], thickness[i - 1], lambda);
   }
-  ior = complex(ext_eta);
-  sinTheta = sinThetaI * eta[layers - 1] / ext_eta;
-  cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
-  a_cosTheta.push_back(cosTheta);
-  a_eta.push_back(ior);
 
   FrReflRefr result = {0, 0};
   uint polarization[2] = {PolarizationS, PolarizationP};
   for (int p = 0; p < 2; ++p)
   {
-    FrReflRefr temp = calculateMultFrFilmReflRefr(a_cosTheta.data(), a_eta.data(), a_phaseDiff.data(), layers, polarization[p]);
+    FrReflRefr temp = calculateMultFrFilm_r(a_cosTheta, a_ior, a_phaseDiff, layers, polarization[p]);
     result.refl += temp.refl / 2;
     result.refr += temp.refr / 2;
   }
-  result.refr *= getRefractionFactor(ext_eta / eta[layers - 1], cosThetaI);
+  result.refr *= getRefractionFactor(a_ior[0].re / a_ior[layers].re, cosThetaI);
   return result;
 }
 

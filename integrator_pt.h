@@ -299,6 +299,11 @@ public:
   std::vector<uint> m_films_spec_id_vec;
   std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
+  std::vector<complex> m_films_ior = std::vector<complex>(FILM_LAYERS_MAX + 1, complex(0.0));
+  std::vector<complex> m_films_cos_theta = std::vector<complex>(FILM_LAYERS_MAX + 1, complex(0.0));
+  std::vector<complex> m_films_phase_diff = std::vector<complex>(FILM_LAYERS_MAX - 1, complex(0.0));
+
+
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

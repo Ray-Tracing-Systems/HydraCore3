@@ -5,13 +5,12 @@
 #include "../spectrum.h"
 #include <iostream>
 
-static inline void filmSmoothSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
+static inline void filmSmoothSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
-        const float* precomputed_data)
+        const float* precomputed_data, complex* a_cosTheta, complex* a_phaseDiff)
 {
   const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];
   bool reversed = false;
-  bool opaque = false;
   const float* reflectance;
   const float* transmittance;
   if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // inside of object
@@ -23,10 +22,6 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   }
   else // outside of object
   {
-    if (length(k[layers - 1]) > 1e-3f)
-    {
-      opaque = true;
-    }
     reflectance = precomputed_data;
     transmittance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
@@ -36,7 +31,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
   float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
 
-  float ior = eta[layers - 1].x;
+  float ior = a_ior[layers].re;
 
   float4 fr = FrDielectricDetailedV2(wi.z, ior);
 
@@ -44,89 +39,59 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const fl
   const float eta_it = fr.z;
   const float eta_ti = fr.w;  
   
-  float4 R = {0.f, 0.f, 0.f, 0.f};
-  const uint spectralSamples = opaque ? sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]) : 1; 
+  float R, T;
+  FrReflRefr result;
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
   {
-    for(int i = 0; i < spectralSamples; ++i)
+    if (layers == 2)
     {
-      if (layers == 2)
+      if (!reversed)
       {
-        if (!reversed)
-          R[i] = FrFilmRefl(cosThetaI, complex(1.0f), complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]); 
-        else
-          R[i] = FrFilmRefl(cosThetaI, complex(eta[1][i], k[1][i]), complex(eta[0][i], k[0][i]), complex(1.0f), thickness[0], a_wavelengths[i]); 
+        result.refl = FrFilmRefl(cosThetaI, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[0]); 
+        result.refr = FrFilmRefr(cosThetaI, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[0]); 
       }
-      else if (layers > 2)
+      else
       {
-        if (!reversed)
-          R[i] = multFrFilmRefl4(cosThetaI, eta, k, thickness, layers, a_wavelengths[i], i);
-        else
-          R[i] = multFrFilmRefl4_r(cosThetaI, eta, k, thickness, layers, a_wavelengths[i], i);
-      } 
+        result.refl = FrFilmRefl(cosThetaI, a_ior[2], a_ior[1], a_ior[0], thickness[0], a_wavelengths[0]); 
+        result.refr = FrFilmRefr(cosThetaI, a_ior[2], a_ior[1], a_ior[0], thickness[0], a_wavelengths[0]); 
+      }
     }
+    else if (layers > 2)
+    {
+      if (!reversed)
+        result = multFrFilm(cosThetaI, a_ior, thickness, layers, a_wavelengths[0], a_cosTheta, a_phaseDiff);
+      else
+        result = multFrFilm_r(cosThetaI, a_ior, thickness, layers, a_wavelengths[0], a_cosTheta, a_phaseDiff);
+    } 
   }
   else
   {
-    for(int i = 0; i < spectralSamples; ++i)
-    {
-      float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      R[i] = lerp_gather_2d(reflectance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
-    }
+    float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
+    result.refl = lerp_gather_2d(reflectance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    result.refr = lerp_gather_2d(transmittance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
   }
-  if (opaque)
+  R = result.refl;
+  T = result.refr;
+
+  if (rands.x * (R + T) < R)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
-    pRes->val = R;
-    pRes->pdf = 1.f;
+    pRes->val = float4(R);
+    pRes->pdf = R / (R + T);
     pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
     pRes->flags |= RAY_EVENT_S;
     pRes->ior = _extIOR;
   }
   else
   {
-    float T;
-    if (!precompFlag)
-    {
-      if (layers == 2)
-      {
-        if (!reversed)
-          T = FrFilmRefr(cosThetaI, complex(1.0f), complex(eta[0][0], k[0][0]), complex(eta[1][0], k[1][0]), thickness[0], a_wavelengths[0]); 
-        else
-          T = FrFilmRefr(cosThetaI, complex(eta[1][0], k[1][0]), complex(eta[0][0], k[0][0]), complex(1.0f), thickness[0], a_wavelengths[0]); 
-      }
-    }
-    else
-    {
-      float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      T = lerp_gather_2d(transmittance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
-    }
-
-    if (rands.x * (R.x + T) < R.x)
-    {
-      float3 wo = float3(-wi.x, -wi.y, wi.z);
-      pRes->val = R;
-      pRes->pdf = R.x / (R.x + T);
-      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
-      pRes->flags |= RAY_EVENT_S;
-      pRes->ior = _extIOR;
-    }
-    else
-    {
-      float3 wo = refract(wi, cosThetaT, eta_ti);
-      pRes->val = float4(T);
-      pRes->pdf = T / (R.x + T);
-      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
-      pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
-      pRes->ior = (_extIOR == ior) ? extIOR : ior;
-    }
-  }
-
-  if (!opaque)
-  {
-    pRes->flags |= RAY_FLAG_WAVES_DIVERGED;
+    float3 wo = refract(wi, cosThetaT, eta_ti);
+    pRes->val = float4(T);
+    pRes->pdf = T / (R + T);
+    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
+    pRes->ior = (_extIOR == ior) ? extIOR : ior;
   }
 
   pRes->val /= std::max(std::abs(dot(pRes->dir, n)), 1e-6f);
@@ -159,7 +124,7 @@ static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float
   return val;
 }
 
-static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior, complex ior2, float thickness, float lambda)
+static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior1, complex ior2, complex ior3, float thickness, float lambda)
 {
   if(wo.z * wi.z < 0) // not in the same hemisphere
   {
@@ -171,13 +136,13 @@ static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
 
-  float F = FrFilmRefl(std::abs(dot(wo, wm)), complex(1.0f), ior, ior2, thickness, lambda);
+  float F = FrFilmRefl(std::abs(dot(wo, wm)), ior1, ior2, ior3, thickness, lambda);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
 }
 
-static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alpha, const float4* eta, const float4* k, const float* thickness, uint layers, float lambda, uint comp)
+static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alpha, const complex* a_ior, const float* thickness, uint layers, float lambda, uint comp, complex* a_cosTheta, complex* a_phaseDiff)
 {
   if(wo.z * wi.z < 0) // not in the same hemisphere
   {
@@ -189,15 +154,15 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
 
-  float F = multFrFilmRefl4(std::abs(dot(wo, wm)), eta, k, thickness, layers, lambda, comp);
+  float F = multFrFilm(std::abs(dot(wo, wm)), a_ior, thickness, layers, lambda, a_cosTheta, a_phaseDiff).refl;
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
 }
 
 
-static inline void filmRoughSampleAndEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* reflectance)
+static inline void filmRoughSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
+        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* reflectance, complex* a_cosTheta, complex* a_phaseDiff)
 {
   //std::cout << a_wavelengths[0] << std::endl;
   if(v.z == 0)
@@ -240,11 +205,11 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
     {
       if (layers == 2)
       {
-        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
+        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[i]);
       }
       else if (layers > 2)
       {
-        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, a_ior, thickness, layers, a_wavelengths[i], i, a_cosTheta, a_phaseDiff);
       }
     }
   }
@@ -264,8 +229,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const flo
 }
 
 
-static void filmRoughEval(const Material* a_materials, const float4* eta, const float4* k, const float* thickness,
-        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance)
+static void filmRoughEval(const Material* a_materials, const complex* a_ior, const float* thickness,
+        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance, complex* a_cosTheta, complex* a_phaseDiff)
 {
 
   // const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
@@ -297,11 +262,11 @@ static void filmRoughEval(const Material* a_materials, const float4* eta, const 
     {
       if (layers == 2)
       {
-        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, complex(eta[0][i], k[0][i]), complex(eta[1][i], k[1][i]), thickness[0], a_wavelengths[i]);
+        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[i]);
       }
       else if (layers > 2)
       {
-        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, eta, k, thickness, layers, a_wavelengths[i], i);
+        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, a_ior, thickness, layers, a_wavelengths[i], i, a_cosTheta, a_phaseDiff);
       }
     }
   }
