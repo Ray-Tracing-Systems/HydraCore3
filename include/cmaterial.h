@@ -944,23 +944,43 @@ static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
 const uint PolarizationS = 0;
 const uint PolarizationP = 1;
 
+/*
 static inline float getRefractionFactor(float ior, float cosTheta)
 {
-  float sinTheta = sqrt(1 - cosTheta * cosTheta);
+  float sinTheta = sqrt(fabs(1 - cosTheta * cosTheta));
 
   float refrFactor;
   if (sinTheta > ior)
   {
     refrFactor = 0;
   }
-  else if (cosTheta < 1e-3f)
+  else if (cosTheta < 1e-6f)
   {
     refrFactor = ior;
   }
   else
   {
     refrFactor = sinTheta / ior;
-    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor)) / sqrt((cosTheta * cosTheta)));
+    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor)) / fabs(cosTheta));
+  }
+  return refrFactor;
+}
+*/
+
+static inline float getRefractionFactor(float ior, float cosTheta)
+{
+  float theta = acosf(cosTheta);
+  float sinTheta = sinf(theta);
+
+  float refrFactor;
+  if (sinTheta > ior || cosTheta < 1e-6f)
+  {
+    refrFactor = 0;
+  }
+  else
+  {
+    refrFactor = sinTheta / ior;
+    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor) / (1 - sinTheta * sinTheta)));
   }
   return refrFactor;
 }
@@ -993,8 +1013,7 @@ static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, comple
 
 static inline complex filmPhaseDiff(complex cosTheta, complex eta, float thickness, float lambda)
 {
-  static const float pi = 3.14159;
-  return 4 * pi * eta * cosTheta * thickness / lambda;
+  return 4 * M_PI * eta * cosTheta * thickness / lambda;
 }
 
 // I - income medium
@@ -1269,7 +1288,7 @@ static inline FrReflRefr multFrFilm(float cosThetaI, const complex* a_ior, const
 
   FrReflRefr result = {0, 0};
   uint polarization[2] = {PolarizationS, PolarizationP};
-  for (int p = 0; p < 2; ++p)
+  for (uint p = 0; p < 2; ++p)
   {
     FrReflRefr temp = calculateMultFrFilm(a_cosTheta, a_ior, a_phaseDiff, layers, polarization[p]);
     result.refl += temp.refl / 2;

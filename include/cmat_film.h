@@ -69,7 +69,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   else
   {
     float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-    float theta = acos(cosThetaI) / M_PI_2;
+    float theta = acosf(cosThetaI) / M_PI_2;
     result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
     result.refr = lerp_gather_2d(transmittance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
   }
