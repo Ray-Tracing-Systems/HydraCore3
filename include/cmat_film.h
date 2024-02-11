@@ -9,7 +9,8 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
         const float* precomputed_data, complex* a_cosTheta, complex* a_phaseDiff)
 {
-  const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];
+  const float extIOR = a_materials[0].data[FILM_ETA_EXT];
+
   bool reversed = false;
   const float* reflectance;
   const float* transmittance;
@@ -31,7 +32,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
   float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
 
-  float ior = a_ior[layers].re;
+  float ior = a_ior[layers].re / extIOR;
 
   float4 fr = FrDielectricDetailedV2(wi.z, ior);
 
@@ -41,7 +42,6 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   
   float R, T;
   FrReflRefr result;
-
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
   {
@@ -69,33 +69,44 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   else
   {
     float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-    result.refl = lerp_gather_2d(reflectance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
-    result.refr = lerp_gather_2d(transmittance, w, cosThetaI, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    float theta = acos(cosThetaI) / M_PI_2;
+    result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    result.refr = lerp_gather_2d(transmittance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
   }
   R = result.refl;
   T = result.refr;
 
-  if (rands.x * (R + T) < R)
+  if (a_ior[layers].im > 0.001 && 0)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
     pRes->val = float4(R);
-    pRes->pdf = R / (R + T);
+    pRes->pdf = 1.f;
     pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
     pRes->flags |= RAY_EVENT_S;
     pRes->ior = _extIOR;
   }
   else
   {
-    float3 wo = refract(wi, cosThetaT, eta_ti);
-    pRes->val = float4(T);
-    pRes->pdf = T / (R + T);
-    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
-    pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
-    pRes->ior = (_extIOR == ior) ? extIOR : ior;
+    if (rands.x * (R + T) < R)
+    {
+      float3 wo = float3(-wi.x, -wi.y, wi.z);
+      pRes->val = float4(R);
+      pRes->pdf = R / (R + T);
+      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      pRes->flags |= RAY_EVENT_S;
+      pRes->ior = _extIOR;
+    }
+    else
+    {
+      float3 wo = refract(wi, cosThetaT, eta_ti);
+      pRes->val = float4(T);
+      pRes->pdf = T / (R + T);
+      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
+      pRes->ior = (_extIOR == a_ior[layers].re) ? extIOR : a_ior[layers].re;
+    }
   }
-
   pRes->val /= std::max(std::abs(dot(pRes->dir, n)), 1e-6f);
-
 }
 
 
@@ -118,7 +129,8 @@ static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float
   if (cosTheta_i == 0 || cosTheta_o == 0)
     return 0.0f;
   float w = (lambda - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-  float F = lerp_gather_2d(reflectance, w, std::abs(dot(wo, wm)), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  float theta = acos(std::abs(dot(wo, wm))) / M_PI_2;
+  float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
   float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;

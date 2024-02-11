@@ -960,7 +960,7 @@ static inline float getRefractionFactor(float ior, float cosTheta)
   else
   {
     refrFactor = sinTheta / ior;
-    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor) / (cosTheta * cosTheta)));
+    refrFactor = ior * sqrt(fabs((1.f - refrFactor * refrFactor)) / sqrt((cosTheta * cosTheta)));
   }
   return refrFactor;
 }
@@ -1016,11 +1016,11 @@ static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, comp
   uint polarization[2] = {PolarizationS, PolarizationP};
   for (int p = 0; p <= 1; ++p)
   {
-    complex FrReflI   = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
-    complex FrReflF   = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+    complex FrReflI = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrReflF = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
-    complex FrRefl    = FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
-    FrRefl            = (FrReflI + FrRefl) / (1 + FrReflI * FrRefl);
+    complex FrRefl  = FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
+    FrRefl          = (FrReflI + FrRefl) / (1 + FrReflI * FrRefl);
     result += complex_norm(FrRefl);
   }
 
@@ -1041,11 +1041,11 @@ static inline float FrFilmRefr(float cosThetaI, complex etaI, complex etaF, comp
   uint polarization[2] = {PolarizationS, PolarizationP};
   for (int p = 0; p <= 1; ++p)
   {
-    complex FrReflI   = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
-    complex FrReflF   = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+    complex FrReflI = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrReflF = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
-    complex FrRefrI   = FrComplexRefr(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
-    complex FrRefrF   = FrComplexRefr(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
+    complex FrRefrI = FrComplexRefr(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
+    complex FrRefrF = FrComplexRefr(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
 
     complex nom    = FrRefrI * FrRefrF * exp(-phaseDiff.im / 2) * complex(cos(phaseDiff.re / 2), sin(phaseDiff.re / 2));
@@ -1054,10 +1054,9 @@ static inline float FrFilmRefr(float cosThetaI, complex etaI, complex etaF, comp
   }
 
   result *= getRefractionFactor(etaT.re / etaI.re, cosThetaI);
-  //std::cout << result / 2 << " " << lambda << " " << cosThetaI << std::endl;
   return result / 2;
 }
-
+/*
 static inline float calculateMultFrFilmRefl(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
 {
   complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_eta[layers - 1], a_eta[layers], p);
@@ -1205,6 +1204,7 @@ static inline float multFrFilmRefl_r(float cosThetaI, const float* eta, const fl
   }
   return result / 2;
 }
+*/
 
 struct FrReflRefr
 {
@@ -1213,8 +1213,6 @@ struct FrReflRefr
 
 static inline FrReflRefr calculateMultFrFilm(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
 {
-  FrReflRefr result = {0, 0};
-  
   complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_eta[layers - 1], a_eta[layers], p);
   complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_eta[layers - 1], a_eta[layers], p);
   complex FrReflI = complex(1.f);
@@ -1235,8 +1233,6 @@ static inline FrReflRefr calculateMultFrFilm(const complex *a_cosTheta, const co
 
 static inline FrReflRefr calculateMultFrFilm_r(const complex *a_cosTheta, const complex *a_eta, const complex *a_phaseDiff, const uint layers, const uint p)
 {
-  FrReflRefr result = {0, 0};
-  
   complex FrRefl = FrComplexRefl(a_cosTheta[1], a_cosTheta[0], a_eta[1], a_eta[0], p);
   complex FrRefr = FrComplexRefr(a_cosTheta[1], a_cosTheta[0], a_eta[1], a_eta[0], p);
   complex FrReflI = complex(1.f);
@@ -1264,7 +1260,7 @@ static inline FrReflRefr multFrFilm(float cosThetaI, const complex* a_ior, const
   complex cosTheta = complex(1.0);
   for (int i = 1; i <= layers; ++i)
   {
-    sinTheta = sinThetaI * a_ior[0] / a_ior[i];
+    sinTheta = sinThetaI * a_ior[0].re / a_ior[i];
     cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
     a_cosTheta[i] = cosTheta;
     if (i < layers)
@@ -1292,7 +1288,7 @@ static inline FrReflRefr multFrFilm_r(float cosThetaI, const complex* a_ior, con
   complex cosTheta = complex(1.0);
   for (int i = layers - 1; i >= 0; --i)
   {
-    sinTheta = sinThetaI * a_ior[layers].re / a_ior[i].re;
+    sinTheta = sinThetaI * a_ior[layers].re / a_ior[i];
     cosTheta = complex_sqrt(1.0f - sinTheta * sinTheta);
     a_cosTheta[i] = cosTheta;
     if (i > 0)

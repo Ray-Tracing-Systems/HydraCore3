@@ -268,7 +268,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
       uint t_offset = as_uint(m_materials[a_materialId].data[FILM_THICKNESS_OFFSET]);
       uint layers = as_uint(m_materials[a_materialId].data[FILM_LAYERS_COUNT]);
 
-      m_films_ior[0] = complex(m_materials[a_materialId].data[FILM_ETA_EXT], 0.f);
+      m_films_ior[0] = complex(m_materials[a_materialId].data[FILM_ETA_EXT]);
       for (uint layer = 0; layer < layers; layer++)
       {
         m_films_ior[layer + 1] = complex(
@@ -470,7 +470,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           uint t_offset = as_uint(m_materials[a_materialId].data[FILM_THICKNESS_OFFSET]);
           uint layers = as_uint(m_materials[a_materialId].data[FILM_LAYERS_COUNT]);
 
-          m_films_ior[0] = complex(m_materials[a_materialId].data[FILM_ETA_EXT], 0.f);
+          m_films_ior[0] = complex(m_materials[a_materialId].data[FILM_ETA_EXT]);
           for (uint layer = 0; layer < layers; layer++)
           {
             m_films_ior[layer + 1] = complex(
