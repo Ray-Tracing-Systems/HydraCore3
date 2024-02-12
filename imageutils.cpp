@@ -243,12 +243,23 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
     return std::vector<float>();
   }
 
-  std::vector<float> result(width * height);
+  const int imgSize = width * height;
+  std::vector<float> result(imgSize);
   *pW = uint32_t(width);
   *pH = uint32_t(height);
-  memcpy(result.data(), out, width * height * sizeof(float));
-  free(out);
+  
+#pragma omp parallel for
+  for (int i = 0; i < imgSize; ++i)
+  {
+    const int i4 = i * 4;
 
+    if (std::isinf(out[i4]))
+      result[i] = (float)MAXUINT16;
+
+    result[i] = clamp(out[i4], 0.0f, (float)MAXUINT16);
+  }
+
+  free(out);
   return result;
 }
 
