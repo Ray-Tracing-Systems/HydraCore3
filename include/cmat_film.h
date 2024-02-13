@@ -41,7 +41,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   const float eta_ti = fr.w;  
   
   float R, T;
-  FrReflRefr result;
+  //FrReflRefr result;
   /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
@@ -72,11 +72,26 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   {
     float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
     float theta = acos(cosThetaI) * 2.f / M_PI;
-    result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
-    result.refr = lerp_gather_2d(transmittance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    //result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    //result.refr = lerp_gather_2d(transmittance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    w *= FILM_LENGTH_RES - 1;
+    theta *= FILM_ANGLE_RES - 1;
+    uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+
+    float alpha = w - float(index1);
+    float beta = theta - float(index2);
+
+    float v0 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+    float v1 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2 + 1], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    R = lerp(v0, v1, beta);
+
+    v0 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+    v1 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2 + 1], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    T = lerp(v0, v1, beta);
   }
-  R = result.refl;
-  T = result.refr;
+  //R = result.refl;
+  //T = result.refr;
 
   if (a_ior[layers].im > 0.001 && 0)
   {
@@ -132,8 +147,26 @@ static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float
     return 0.0f;
   float w = (lambda - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
   float theta = acos(std::abs(dot(wo, wm))) * 2.f / M_PI;
-  float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
-  float val = trD(wm, alpha) * F * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
+
+  //float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+  w *= FILM_LENGTH_RES - 1;
+  theta *= FILM_ANGLE_RES - 1;
+  uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
+  uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+
+  float a = w - float(index1);
+  float b = theta - float(index2);
+
+  float v0 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2], a);
+  float v1 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2 + 1], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], a);
+  float R = lerp(v0, v1, b);
+
+  //v0 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+  //v1 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2 + 1], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+  //T = lerp(v0, v1, beta);
+
+
+  float val = trD(wm, alpha) * R * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
 }
