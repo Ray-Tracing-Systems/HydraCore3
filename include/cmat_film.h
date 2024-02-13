@@ -12,24 +12,25 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   const float extIOR = a_materials[0].data[FILM_ETA_EXT];
 
   bool reversed = false;
-  const float* reflectance;
-  const float* transmittance;
+  uint32_t refl_offset;
+  uint32_t refr_offset;
   if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // inside of object
   {
     n = -1 * n;
     reversed = true;
-    reflectance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
-    transmittance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
+    refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
+    refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
   }
   else // outside of object
   {
-    reflectance = precomputed_data;
-    transmittance = precomputed_data + FILM_ANGLE_RES * FILM_LENGTH_RES;
+    refl_offset = 0;
+    refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+
   float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
 
   float ior = a_ior[layers].re / extIOR;
@@ -82,18 +83,18 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
     float alpha = w - float(index1);
     float beta = theta - float(index2);
 
-    float v0 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    float v1 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2 + 1], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    float v0 = lerp(precomputed_data[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed_data[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+    float v1 = lerp(precomputed_data[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed_data[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
     R = lerp(v0, v1, beta);
 
-    v0 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    v1 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2 + 1], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    v0 = lerp(precomputed_data[refr_offset + index1 * FILM_LENGTH_RES + index2], precomputed_data[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+    v1 = lerp(precomputed_data[refr_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed_data[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
     T = lerp(v0, v1, beta);
   }
   //R = result.refl;
   //T = result.refr;
 
-  if (a_ior[layers].im > 0.001 && 0)
+  if (a_ior[layers].im > 0.001)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
     pRes->val = float4(R);
@@ -136,6 +137,8 @@ static void filmSmoothEval(const Material* a_materials, const float4 eta_1, cons
 
 static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float2 alpha, float lambda, const float* reflectance)
 {
+  return 0.0f; //TO DO
+  /*
   if(wo.z * wi.z < 0) // not in the same hemisphere
   {
     return 0.0f;
@@ -169,6 +172,7 @@ static float filmRoughEvalInternalPrecomp(float3 wo, float3 wi, float3 wm, float
   float val = trD(wm, alpha) * R * trG(wo, wi, alpha) / (4.0f * cosTheta_i * cosTheta_o);
 
   return val;
+  */
 }
 
 static float filmRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 alpha, complex ior1, complex ior2, complex ior3, float thickness, float lambda)
@@ -212,6 +216,8 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
 static inline void filmRoughSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* reflectance)
 {
+  //TO DO
+  /*
   //std::cout << a_wavelengths[0] << std::endl;
   if(v.z == 0)
     return;
@@ -245,7 +251,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 
   float4 val;
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-
+*/
   /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
@@ -264,6 +270,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   }
   else
   */
+ /*
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
@@ -276,13 +283,15 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
+*/
 }
 
 
 static void filmRoughEval(const Material* a_materials, const complex* a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance)
 {
-
+  // TO DO
+  /*
   // const float2 alpha = float2(a_materials[0].data[FILM_ROUGH_V], a_materials[0].data[FILM_ROUGH_U]);
   const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
                               min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
@@ -304,7 +313,7 @@ static void filmRoughEval(const Material* a_materials, const complex* a_ior, con
   wm = normalize(wm);
   float4 val;
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-
+*/
 /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (!precompFlag)
@@ -323,6 +332,7 @@ static void filmRoughEval(const Material* a_materials, const complex* a_ior, con
   }
   else
   */
+ /*
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
@@ -333,4 +343,5 @@ static void filmRoughEval(const Material* a_materials, const complex* a_ior, con
   pRes->val = val;
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+  */
 }
