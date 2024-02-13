@@ -20,7 +20,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 
 # Build diff render (Enzyme AD)
 
-1. install llvm-17 (both dev and not dev)
+1. install llvm-17 (both dev and not dev) and some libs
  * wget https://apt.llvm.org/llvm.sh
  * chmod +x llvm.sh
  * sudo ./llvm.sh 17
@@ -29,6 +29,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
  * sudo apt-get install libclang-17-dev 
  * sudo apt install clang-17
  * sudo apt install libomp-17-dev
+ * sudo apt-get install libzstd-dev (a compression library which is needed for Enzyme)
 
 2. Build Enzyme 
  * Download latest release from https://github.com/EnzymeAD/Enzyme
