@@ -254,9 +254,9 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
     const int i4 = i * 4;
 
     if (std::isinf(out[i4]))
-      result[i] = (float)MAXUINT16;
+      result[i] = 65504.0f;
 
-    result[i] = clamp(out[i4], 0.0f, (float)MAXUINT16);
+    result[i] = clamp(out[i4], 0.0f, 65504.0f);
   }
 
   free(out);
