@@ -8,7 +8,7 @@
 #include "diff_render/integrator_dr.h"
 #include "ArgParser.h"
 
-#include "adam.h"
+#include "adam.h" // edit
 
 void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
