@@ -457,8 +457,8 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
     
     if(m_camResponseSpectrumId[0] < 0)
     {
-      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(),
-                                       terminateWavelngths(*rayFlags));
+      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, 
+                                       m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), terminateWavelngths(*rayFlags));
       rgb = XYZToRGB(xyz);
     }
     else
