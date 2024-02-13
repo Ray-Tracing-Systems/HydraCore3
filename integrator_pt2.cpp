@@ -281,10 +281,10 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
 
       if(trEffectivelySmooth(alpha))
         filmSmoothSampleAndEval(m_materials.data() + a_materialId, m_films_ior.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, a_misPrev->ior, rands, v, n, tc, &res,
-                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4, m_films_cos_theta.data(), m_films_phase_diff.data());
+                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4);
       else
         filmRoughSampleAndEval(m_materials.data() + a_materialId, m_films_ior.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, rands, v, n, tc, alphaTex, &res,
-                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4, m_films_cos_theta.data(), m_films_phase_diff.data());
+                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4);
       
       //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
       res.flags |= RAY_FLAG_WAVES_DIVERGED;
@@ -482,7 +482,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           const uint precomp_id = as_uint(m_materials[currMat.id].data[FILM_PRECOMP_ID]);
 
           filmRoughEval(m_materials.data() + currMat.id, m_films_ior.data(), &m_films_thickness_vec[t_offset], layers, wavelengths, l, v, n, tc, alphaTex, &currVal,
-                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4, m_films_cos_theta.data(), m_films_phase_diff.data());
+                           m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4);
         }
 
         res.val += currVal.val * currMat.weight;

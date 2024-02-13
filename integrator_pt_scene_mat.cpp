@@ -759,7 +759,8 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
     for (int j = 0; j < FILM_ANGLE_RES; ++j)
     {
       float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
-      float cosTheta = cosf(theta);
+      
+      float cosTheta = clamp(cosf(theta), 1e-6f, 1.f);
       FrReflRefr forward;
       FrReflRefr backward;
       if (layers == 2)
@@ -773,15 +774,6 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       {
         forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
         backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
-      }
-
-      if (ior[0].re * sqrt(1 - cosTheta * cosTheta) > ior[layers].re)
-      {
-        forward = {1.f, 0.f};
-      }
-      if (ior[layers].re * sqrt(1 - cosTheta * cosTheta) > ior[0].re)
-      {
-        backward = {1.f, 0.f};
       }
 
       res.ext_reflectivity.push_back(forward.refl);
