@@ -48,6 +48,7 @@ struct LightSample
 {
   float3 pos;
   float3 norm;
+  float  pdf;
   bool   isOmni;
   bool   hasIES;
 };
@@ -67,6 +68,7 @@ static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2
   res.norm   = to_float3(a_pLight[0].norm);
   res.isOmni = false;
   res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 
@@ -85,6 +87,7 @@ static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, floa
   res.norm = normalize(samplePos - lcenter);
   res.isOmni = false;
   res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 
@@ -96,6 +99,7 @@ static inline LightSample directLightSampleRev(const LightSource* a_pLight, floa
   res.norm   = norm;
   res.isOmni = false;
   res.hasIES = false;
+  res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 
@@ -106,6 +110,7 @@ static inline LightSample pointLightSampleRev(const LightSource* a_pLight)
   res.norm   = to_float3(a_pLight[0].norm);
   res.isOmni = (a_pLight[0].distType == LIGHT_DIST_OMNI);
   res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 

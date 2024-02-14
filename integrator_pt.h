@@ -200,9 +200,9 @@ public:
   uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
   uint m_maxThreadId = m_winWidth*m_winHeight;
 
-  LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
+  LightSample LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir);
+  float4 LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -211,9 +211,10 @@ public:
   \param  ray_dir     - direction of the shadow ray                  (i.e. shadowRayDir)
   \param  lpos        - position on light surface
   \param  lnorm       - normal   on light surface
+  \param  a_envPdf    - pdf for sampling environment which is evaluated else-where
   \return PdfW (solid-angle probability density) for sampling target light from point 'ray_pos' with direction 'ray_dir' to surface point on light (lpos, lnorm)
   */
-  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
+  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
   float4 GetEnvironmentColor(float3 a_dir);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);

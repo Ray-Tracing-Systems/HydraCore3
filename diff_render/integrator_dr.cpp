@@ -649,7 +649,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const fl
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir, dparams);
+    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayDir, dparams);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -704,7 +704,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
@@ -1037,7 +1037,7 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float2 rands, float3 ill
   };
 }
 
-float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams)
+float4 IntegratorDR::LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)

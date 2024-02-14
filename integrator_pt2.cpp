@@ -18,15 +18,42 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint)
+LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint)
 {
-  const uint gtype = m_lights[a_lightId].geomType;
+  const uint   gtype  = m_lights[a_lightId].geomType;
+  const float2 rands2 = float2(rands.x, rands.y);
   switch(gtype)
   {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands2, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands2);
     case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
-    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
+    case LIGHT_GEOM_ENV: 
+    if(KSPEC_LIGHT_ENV != 0)
+    {
+      const uint32_t offset = m_lights[a_lightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[a_lightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[a_lightId].pdfTableSizeY;
+      
+      const Map2DPiecewiseSample sample = SampleMap2D(rands, offset, sizeX, sizeY);
+
+      // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0)
+      //
+      // const float4 texCoordT =  m_lights[a_lightId].invMatrix*float4(sample.texCoord.x, sample.texCoord.y, 0.0f, 0.0f);
+
+      float sintheta = 0.0f;
+      const float3 sampleDir = texCoord2DToSphereMap(sample.texCoord, &sintheta);
+      const float3 samplePos = illiminationPoint + sampleDir*1000.0f; // TODO: add sceen bounding sphere radius here
+      const float  samplePdf = (sample.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
+      
+      LightSample sam;
+      sam.hasIES = false;
+      sam.isOmni = false;
+      sam.norm   = sampleDir; 
+      sam.pos    = samplePos;
+      sam.pdf    = samplePdf; // evaluated here for environment lights 
+      return sam;
+    }
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
   };
 }
 
@@ -41,7 +68,7 @@ float Integrator::LightPdfSelectRev(int a_lightId)
 //  return dot(diff, diff);
 //}
 
-float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
+float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf)
 {
   const uint gtype      = m_lights[a_lightId].geomType;
   const float hitDist   = length(illuminationPoint - lpos);
@@ -75,7 +102,54 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
     break;                                                                                              ///< Note(!): dark line on top of image for pink light appears because area light don't shine to the side. 
   };
   
-  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+  if(gtype == LIGHT_GEOM_ENV)
+    return a_envPdf;
+  else
+    return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+}
+
+float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
+{
+  float4 lightColor = m_lights[a_lightId].intensity;  
+  
+  // get spectral data for light source
+  //
+  const uint specId = m_lights[a_lightId].specId;
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
+  {
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
+  }
+  lightColor *= m_lights[a_lightId].mult;
+  
+  // get ies data for light source
+  //
+  const uint iesId = m_lights[a_lightId].iesId;
+  if(KSPEC_LIGHT_IES != 0 && iesId != uint(-1))
+  {
+    if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
+      a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
+    const float3 dirTrans = to_float3(m_lights[a_lightId].iesMatrix*to_float4(a_rayDir, 0.0f));
+    float sintheta        = 0.0f;
+    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*dirTrans, &sintheta);
+    const float4 texColor = m_textures[iesId]->sample(texCoord);
+    lightColor *= texColor;
+  }
+
+  // get environment color
+  //
+  const uint texId = m_lights[a_lightId].texId;
+  if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
+  {
+    float sintheta = 0.0f;
+    const float2 texCoord = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
+    const float4 texColor = m_textures[texId]->sample(texCoord);
+    lightColor *= texColor;
+  }
+
+  return lightColor;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

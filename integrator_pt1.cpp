@@ -193,40 +193,6 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
 }
 
-float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
-{
-  float4 lightColor = m_lights[a_lightId].intensity;  
-  
-  // get spectral data for light source
-  //
-  const uint specId = m_lights[a_lightId].specId;
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
-  {
-    const uint2 data  = m_spec_offset_sz[specId];
-    const uint offset = data.x;
-    const uint size   = data.y;
-    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
-  }
-  lightColor *= m_lights[a_lightId].mult;
-  
-  // get ies data for light source
-  //
-  uint iesId = m_lights[a_lightId].iesId;
-  if(KSPEC_LIGHT_IES != 0 && iesId != uint(-1))
-  {
-    if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
-      a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
-    const float3 dirTrans = to_float3(m_lights[a_lightId].iesMatrix*to_float4(a_rayDir, 0.0f));
-    float sintheta        = 0.0f;
-    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*dirTrans, &sintheta);
-    const float4 texColor = m_textures[iesId]->sample(texCoord);
-    lightColor *= texColor;
-  }
-
-  return lightColor;
-}
-
-
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
                                           const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
                                           const uint* rayFlags, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
@@ -250,10 +216,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float2 rands = rndFloat2_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
-  RecordLightRndIfNeeded(bounce, lightId, rands);
+  RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
 
   if(lightId < 0) // no lights or invalid light id
   {
@@ -261,7 +227,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     return;
   }
   
-  const LightSample lSam = LightSampleRev(lightId, rands, hit.pos);
+  const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos);
   const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
@@ -276,7 +242,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
     float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     
-    float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm);
+    float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
     float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
     const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
     const bool isPoint      = (m_lights[lightId].geomType == LIGHT_GEOM_POINT); 
@@ -292,7 +258,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
+    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -348,21 +314,18 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
     if(m_intergatorType == INTEGRATOR_MIS_PT) 
     {
-      if(bounce > 0)
+      if(bounce > 0 && lightId != 0xFFFFFFFF)
       {
-        if(lightId != 0xFFFFFFFF)
-        {
-          const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm);
-          misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
-          if (prevPdfW <= 0.0f) // specular bounce
-            misWeight = 1.0f;
-        }
+        const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f);
+        misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
+        if (prevPdfW <= 0.0f) // specular bounce
+          misWeight = 1.0f;
       }
     }
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
