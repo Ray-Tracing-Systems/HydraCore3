@@ -47,7 +47,7 @@ LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illim
       
       LightSample sam;
       sam.hasIES = false;
-      sam.isOmni = false;
+      sam.isOmni = true;
       sam.norm   = sampleDir; 
       sam.pos    = samplePos;
       sam.pdf    = samplePdf; // evaluated here for environment lights 

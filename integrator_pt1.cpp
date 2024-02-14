@@ -42,7 +42,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 70 && y == 512 - 250 - 1)
+  if(x == 256 && y == 512 - 465 - 1)
   {
     int a = 2;
   }
