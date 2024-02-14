@@ -17,7 +17,7 @@ float4x4 ReadMatrixFromString(const std::string& str);
 //std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
 
-int main(int argc, const char** argv)
+int main(int argc, const char** argv) // common hydra main
 {
   #ifndef NDEBUG
   bool enableValidationLayers = true;
@@ -139,7 +139,7 @@ int main(int argc, const char** argv)
   #ifdef USE_VULKAN
   if(onGPU)
   { 
-    unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
+    unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 1);
 
     // simple way
     //
