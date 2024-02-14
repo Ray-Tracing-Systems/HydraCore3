@@ -216,7 +216,7 @@ public:
   */
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
-  float4 GetEnvironmentColor(float3 a_dir);
+  float4 EnvironmentColor(float3 a_dir, float& outPdf);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
@@ -285,6 +285,7 @@ public:
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
   uint  m_envTexId       = uint(-1);
+  uint  m_envLightId     = uint(-1);
   uint  m_envEnableSam   = 0;
   float m_exposureMult   = 1.0f;
   

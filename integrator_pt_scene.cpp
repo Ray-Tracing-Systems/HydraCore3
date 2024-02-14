@@ -338,7 +338,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         lightSource.pdfTableSizeX   = tableW;
         lightSource.pdfTableSizeY   = tableH;
         m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
+        m_envLightId = uint(m_lights.size()-1);
       }
+      else
+        m_envLightId = uint(-1);
 
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
     }

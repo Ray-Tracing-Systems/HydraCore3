@@ -765,7 +765,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
-float4 IntegratorDR::GetEnvironmentColor(float3 a_dir, const float* dparams)
+float4 IntegratorDR::EnvironmentColor(float3 a_dir, const float* dparams)
 {
   return m_envColor;
 }
@@ -780,7 +780,7 @@ void IntegratorDR::kernel_HitEnvironment(uint tid, const uint* rayFlags, const f
     return;
   
   // TODO: HDRI maps
-  const float4 envData  = GetEnvironmentColor(to_float3(*rayDirAndFar), dparams);
+  const float4 envData  = EnvironmentColor(to_float3(*rayDirAndFar), dparams);
   // const float3 envColor = to_float3(envData)/envData.w;    // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
 
   const float4 envColor = envData;

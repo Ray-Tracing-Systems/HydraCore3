@@ -175,3 +175,33 @@ static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, 
   (*pPDF) = (a_accum[currPos + 1] - a_accum[currPos]) / a_accum[N - 1];
   return currPos;
 }
+
+static inline float evalMap2DPdf(float2 texCoordT, const float* intervals, const int sizeX, const int sizeY)
+{  
+  const float fw = (float)sizeX;
+  const float fh = (float)sizeY;
+  
+  //texCoordT.x = WrapVal(texCoordT.x);
+  //texCoordT.y = WrapVal(texCoordT.y);
+
+  if (texCoordT.x < 0.0f || texCoordT.x > 1.0f) texCoordT.x -= (float)((int)(texCoordT.x));
+  if (texCoordT.y < 0.0f || texCoordT.x > 1.0f) texCoordT.y -= (float)((int)(texCoordT.y));
+
+  int pixelX = (int)(fw*texCoordT.x - 0.5f);
+  int pixelY = (int)(fh*texCoordT.y - 0.5f);
+
+  if (pixelX >= sizeX) pixelX = sizeX - 1;
+  if (pixelY >= sizeY) pixelY = sizeY - 1;
+
+  if (pixelX < 0) pixelX += sizeX;
+  if (pixelY < 0) pixelY += sizeY;
+
+  const int pixelOffset = pixelY*sizeX + pixelX;
+  const int maxSize     = sizeX*sizeY;
+  const int offset0     = (pixelOffset + 0 < maxSize+0) ? pixelOffset + 0 : maxSize - 1;
+  const int offset1     = (pixelOffset + 1 < maxSize+1) ? pixelOffset + 1 : maxSize;
+
+  const float2 interval = make_float2(intervals[offset0], intervals[offset1]);
+  
+  return (interval.y - interval.x)*(fw*fh)/intervals[sizeX*sizeY];
+}

@@ -152,6 +152,61 @@ float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, f
   return lightColor;
 }
 
+float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
+{
+  float4 color = m_envColor;
+  
+  // apply tex color
+  //
+  if(KSPEC_LIGHT_ENV != 0 && m_envTexId != uint(-1))
+  {
+    float sinTheta  = 1.0f;
+    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
+    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
+    
+    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT && m_envLightId != uint(-1))
+    {
+      const uint32_t offset = m_lights[m_envLightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[m_envLightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[m_envLightId].pdfTableSizeY;
+
+      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
+      //
+      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, sizeX, sizeY);
+      outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
+    }
+
+    const float4 texColor = m_textures[m_envTexId]->sample(texCoordT); 
+    color *= texColor; 
+  }
+
+  return color;
+}
+
+Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY)
+{
+  const float fw = (float)sizeX;
+  const float fh = (float)sizeY;
+  const float fN = fw*fh;
+
+  float pdf = 1.0f;
+  int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
+
+  if (pixelOffset >= sizeX*sizeY)
+    pixelOffset = sizeX*sizeY - 1;
+
+  const int yPos = pixelOffset / sizeX;
+  const int xPos = pixelOffset - yPos*sizeX;
+
+  const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
+  const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
+
+  Map2DPiecewiseSample result;
+  result.mapPdf   = pdf*fN; 
+  result.texCoord = make_float2(texX, texY);
+  return result;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -552,69 +607,6 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   } while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
 
   return res;
-}
-
-float4 Integrator::GetEnvironmentColor(float3 a_dir)
-{
-  float4 color = m_envColor;
-  float outPdf = 1.0f;
-  
-  // apply tex color
-  //
-  if(KSPEC_LIGHT_ENV != 0 && m_envTexId != uint(-1))
-  {
-    float sinTheta  = 1.0f;
-    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
-    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
-    
-    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT)
-    {
-      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
-      //
-      // const float mapPdf = evalMap2DPdf(texCoordT, intervals, sizeX, sizeY);
-      // outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
-    }
-
-    const float4 texColor = m_textures[m_envTexId]->sample(texCoordT); 
-    color *= texColor; 
-  }
-
-  if(m_intergatorType == INTEGRATOR_STUPID_PT)
-  {
-    outPdf = 1.0f;
-  }
-  else if(m_intergatorType == INTEGRATOR_SHADOW_PT)
-  {
-    color = float4(0.0f);
-    outPdf = 1.0f;
-  }
-
-  return color / outPdf;
-}
-
-
-Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY)
-{
-  const float fw = (float)sizeX;
-  const float fh = (float)sizeY;
-  const float fN = fw*fh;
-
-  float pdf = 1.0f;
-  int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
-
-  if (pixelOffset >= sizeX*sizeY)
-    pixelOffset = sizeX*sizeY - 1;
-
-  const int yPos = pixelOffset / sizeX;
-  const int xPos = pixelOffset - yPos*sizeX;
-
-  const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
-  const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
-
-  Map2DPiecewiseSample result;
-  result.mapPdf   = pdf*fN; 
-  result.texCoord = make_float2(texX, texY);
-  return result;
 }
 
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)

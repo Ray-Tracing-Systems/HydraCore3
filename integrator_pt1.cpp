@@ -389,8 +389,25 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   if(!isOutOfScene(currRayFlags))
     return;
   
-  const float4 envColor = GetEnvironmentColor(to_float3(*rayDirAndFar));
+  float envPdf = 1.0f;
+  float4 envColor = EnvironmentColor(to_float3(*rayDirAndFar), envPdf);
 
+  const auto misPrev = *a_prevMisData;
+  const bool isSpec  = isSpecular(&misPrev);
+
+  if(m_intergatorType == INTEGRATOR_MIS_PT && !isSpec) // do MIS here, check if rayBounceNum > 0
+  {
+    // if (rayBounceNum > 0 && (misPrev.isSpecular == 0))
+    //float lgtPdf    = lightPdfSelectRev(pEnvLight)*skyLightEvalPDF(pEnvLight, rayDir, a_globals, a_pdfStorage);
+    //float bsdfPdf   = misPrev.matSamplePdf;
+    //float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
+    //envColor *= misWeight;    
+  }
+  else if(m_intergatorType == INTEGRATOR_SHADOW_PT)
+  {
+    envColor = float4(0.0f);
+  }
+ 
   if(m_intergatorType == INTEGRATOR_STUPID_PT)     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
     *accumColor = (*accumThoroughput) * envColor;
   else
