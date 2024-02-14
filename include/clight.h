@@ -7,6 +7,7 @@ static constexpr uint LIGHT_GEOM_DISC   = 2;
 static constexpr uint LIGHT_GEOM_SPHERE = 3;
 static constexpr uint LIGHT_GEOM_DIRECT = 4;
 static constexpr uint LIGHT_GEOM_POINT  = 5;
+static constexpr uint LIGHT_GEOM_ENV    = 6;
 
 static constexpr uint LIGHT_DIST_LAMBERT = 0;
 static constexpr uint LIGHT_DIST_OMNI    = 1;
@@ -19,7 +20,9 @@ struct LightSource
   float4x4 iesMatrix; ///<! translation in matrix is always (0,0,0,1)
   float4   pos;       ///<! translation aclually stored here
   float4   intensity; ///<! brightress, i.e. screen value if light is visable directly
-  float4   norm;
+  float4   norm;      ///<! light direction
+  float4   samplerRow0; ///<! texture sampler, row0
+  float4   samplerRow1; ///<! texture sampler, row1
   
   float2   size;
   float    pdfA;

@@ -3,9 +3,9 @@
 std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
 
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures, 
-                                    float4& a_envColor, 
-                                    std::vector<unsigned int>& a_actualFeatures)
+                                    const std::vector<TextureInfo>& texturesInfo, 
+                                    std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures)
 {
   const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
   const std::wstring shape = lightInst.lightNode.attribute(L"shape").as_string();
@@ -28,9 +28,24 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   lightSource.iesId    = uint(-1);
   lightSource.texId    = uint(-1);
   lightSource.flags    = 0;
+  lightSource.samplerRow0 = float4(1,0,0,0);
+  lightSource.samplerRow1 = float4(0,1,0,0);
+
   if(ltype == std::wstring(L"sky"))
   {
-    a_envColor = color;
+    lightSource.intensity = color;
+    lightSource.geomType  = LIGHT_GEOM_ENV;
+    lightSource.distType  = LIGHT_DIST_OMNI;
+
+    auto texNode = lightInst.lightNode.child(L"intensity").child(L"color").child(L"texture");
+    if(texNode != nullptr) 
+    {
+      const auto& [sampler, texId] = LoadTextureFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), texturesInfo, texCache, a_textures); 
+      lightSource.texId     = texId;
+      lightSource.samplerRow0 = sampler.row0;
+      lightSource.samplerRow1 = sampler.row1;
+      //lightSource.flags    = 0; // TODO: add perez model
+    }
   }
   else if(ltype == std::wstring(L"directional"))
   {
@@ -110,7 +125,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     // normalize ies texture
     //
     float maxVal = 0.0f;
-    for (auto i = 0; i < sphericalTexture.size(); i++)
+    for (size_t i = 0; i < sphericalTexture.size(); i++)
       maxVal = std::max(maxVal, sphericalTexture[i]);
 
     if(maxVal == 0.0f)
@@ -120,7 +135,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     }
 
     float invMax = 1.0f / maxVal;
-    for (auto i = 0; i < sphericalTexture.size(); i++)
+    for (size_t i = 0; i < sphericalTexture.size(); i++)
     {
       float val = invMax*sphericalTexture[i];
       sphericalTexture[i] = val;
@@ -152,7 +167,6 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     if(pointArea != 0)
       lightSource.flags |= LIGHT_FLAG_POINT_AREA;
 
-    a_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
   }
 
   return lightSource;

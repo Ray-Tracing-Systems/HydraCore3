@@ -426,11 +426,8 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   if(!isOutOfScene(currRayFlags))
     return;
   
-  // TODO: HDRI maps
-  const float4 envData  = GetEnvironmentColorAndPdf(to_float3(*rayDirAndFar));
-  // const float3 envColor = to_float3(envData)/envData.w;    // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
+  const float4 envColor = GetEnvironmentColor(to_float3(*rayDirAndFar));
 
-  const float4 envColor = envData;
   if(m_intergatorType == INTEGRATOR_STUPID_PT)     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
     *accumColor = (*accumThoroughput) * envColor;
   else

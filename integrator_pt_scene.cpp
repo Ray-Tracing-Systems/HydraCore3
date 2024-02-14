@@ -15,12 +15,14 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_FOUR_TEXTURES  : return "4TEX";
     case KSPEC_LIGHT_IES          : return "LGT_IES";
     case KSPEC_LIGHT_ENV          : return "LGT_ENV";
+
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
       strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
       return strout.str();
     }
+    
     default:
     break;
   };
@@ -311,9 +313,24 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   for(auto lightInst : scene.InstancesLights())
   {
-    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode,    // ==>
-                                               m_textures, m_envColor, m_actualFeatures); // <==
-    m_lights.push_back(lightSource);
+    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
+    
+    bool addToLightSources = true;             // don't sample LDR, perez or simple colored env lights
+    if(lightSource.geomType == LIGHT_GEOM_ENV) // just account for them in implicit strategy
+    {
+      m_envColor   = lightSource.intensity;
+      m_envSamRow0 = lightSource.samplerRow0; 
+      m_envSamRow1 = lightSource.samplerRow1; 
+      m_envTexId   = lightSource.texId;
+
+      auto info = texturesInfo[lightSource.texId];
+      addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
+
+      m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
+    }
+
+    if(addToLightSources)
+      m_lights.push_back(lightSource);
   }
 
   //// (2) load materials

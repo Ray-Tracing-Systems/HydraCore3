@@ -480,9 +480,42 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   return res;
 }
 
-float4 Integrator::GetEnvironmentColorAndPdf(float3 a_dir)
+float4 Integrator::GetEnvironmentColor(float3 a_dir)
 {
-  return m_envColor;
+  float4 color = m_envColor;
+  float outPdf = 1.0f;
+  
+  // apply tex color
+  //
+  if(KSPEC_LIGHT_ENV != 0 && m_envTexId != uint(-1))
+  {
+    float sinTheta  = 1.0f;
+    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
+    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
+    
+    if (sinTheta != 0.f)
+    {
+      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
+      //
+      // const float mapPdf = evalMap2DPdf(texCoordT, intervals, sizeX, sizeY);
+      // outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), DEPSILON));     
+    }
+
+    const float4 texColor = m_textures[m_envTexId]->sample(texCoordT); 
+    color *= texColor; 
+  }
+
+  if(m_intergatorType == INTEGRATOR_STUPID_PT)
+  {
+    outPdf = 1.0f;
+  }
+  else if(m_intergatorType == INTEGRATOR_SHADOW_PT)
+  {
+    color = float4(0.0f);
+    outPdf = 1.0f;
+  }
+
+  return color / outPdf;
 }
 
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)

@@ -215,7 +215,7 @@ public:
   */
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
 
-  float4 GetEnvironmentColorAndPdf(float3 a_dir);
+  float4 GetEnvironmentColor(float3 a_dir);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
@@ -265,10 +265,13 @@ public:
 
   std::vector<LightSource> m_lights;
   float4 m_envColor      = float4{0.0f};
+  float4 m_envSamRow0    = float4(1,0,0,0);
+  float4 m_envSamRow1    = float4(0,1,0,0);
   float4 m_camRespoceRGB = float4(1,1,1,1);
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
+  uint  m_envTexId       = uint(-1);
   float m_exposureMult   = 1.0f;
   
   /// @brief ////////////////////////////////////////////////////// cam variables
