@@ -123,6 +123,12 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       features[KSPEC_BUMP_MAPPING] = 1;
   }
 
+  for(auto lightInst : g_lastScene.InstancesLights())
+  {
+    if(lightInst.lightNode.child(L"ies") != nullptr)
+      features[KSPEC_LIGHT_IES] = 1;
+  }
+
   for(auto settings : g_lastScene.Settings())
   {
     g_lastSceneInfo.width  = settings.width;
@@ -460,6 +466,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       int pointArea = iesNode.attribute(L"point_area").as_int();
       if(pointArea != 0)
         lightSource.flags |= LIGHT_FLAG_POINT_AREA;
+
+      m_actualFeatures[KSPEC_LIGHT_IES] = 1;
     }
 
     m_lights.push_back(lightSource);

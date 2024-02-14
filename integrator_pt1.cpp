@@ -196,6 +196,9 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
+  
+  // get spectral data for light source
+  //
   const uint specId = m_lights[a_lightId].specId;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
   {
@@ -206,8 +209,10 @@ float4 Integrator::GetLightSourceIntensity(uint a_lightId, const float4* a_wavel
   }
   lightColor *= m_lights[a_lightId].mult;
   
+  // get ies data for light source
+  //
   uint iesId = m_lights[a_lightId].iesId;
-  if(iesId != uint(-1))
+  if(KSPEC_LIGHT_IES != 0 && iesId != uint(-1))
   {
     if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
       a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
