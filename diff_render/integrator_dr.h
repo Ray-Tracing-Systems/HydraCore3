@@ -94,7 +94,7 @@ public:
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
                              float4* accumColor, const float* dparams);                              
 
-  void kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, 
+  void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const uint* in_pakedXY, 
                                 const float4* wavelengths, float* out_color, const float* dparams);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

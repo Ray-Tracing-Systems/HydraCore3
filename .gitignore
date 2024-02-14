@@ -32,7 +32,11 @@
 *.app
 
 # Folders
+.vs/
+.vscode/
+bin-debug/
+bin-release/
 build_generated/
-
+out/
 
 # Files

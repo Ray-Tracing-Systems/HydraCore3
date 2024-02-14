@@ -1,4 +1,6 @@
+#include "imageutils.h"
 #include "integrator_pt_scene.h"
+
 
 //bool LoadHDRImageFromFile(const wchar_t* a_fileName, int* pW, int* pH, std::vector<float>& a_data);
 
@@ -13,6 +15,7 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
   return MakeCombinedTexture2D(pTexture1, sampler);
 }
 
+
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
@@ -21,23 +24,40 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
      a_texInfo.path.find(L".jpg") != std::string::npos || a_texInfo.path.find(L".jpeg") != std::string::npos ||
      a_texInfo.path.find(L".png") != std::string::npos)
   {
-    const std::string fileName = hydra_xml::ws2s(a_texInfo.path);
+    const std::string fileName = hydra_xml::ws2s(a_texInfo.path);    
     Image2D<uint32_t> image    = LiteImage::LoadImage<uint32_t>(fileName.c_str());
-    auto pTexture = std::make_shared< Image2D<uint32_t> >(std::move(image));
+    auto pTexture              = std::make_shared< Image2D<uint32_t> >(std::move(image));
     pTexture->setSRGB(!a_disableGamma);
-    pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+    pResult                    = MakeCombinedTexture2D(pTexture, a_sampler);
   }
-  //else if(a_texInfo.path.find(L".exr") != std::string::npos)
-  //{
-  //
-  //}
+  else if (a_texInfo.path.find(L".exr") != std::string::npos)
+  {
+    int        wh[2]        = { 0, 0 };
+    const auto fileName     = hydra_xml::ws2s(a_texInfo.path);
+
+    if (a_texInfo.bpp == 16)
+    {
+      const auto image_vect = LoadImage4fFromEXR(fileName.c_str(), &wh[0], &wh[1]);
+      auto       pTexture   = std::make_shared<Image2D<float4>>(wh[0], wh[1], (const float4*)image_vect.data());
+      pTexture->setSRGB(false);
+      pResult               = MakeCombinedTexture2D(pTexture, a_sampler);
+    }
+    else
+    {
+      const auto image_vect = LoadImage1fFromEXR(fileName.c_str(), &wh[0], &wh[1]);
+      auto       pTexture   = std::make_shared<Image2D<float>>(wh[0], wh[1], (const float*)image_vect.data());
+      pTexture->setSRGB(false);
+      pResult               = MakeCombinedTexture2D(pTexture, a_sampler);
+    }
+  }
   else if(a_texInfo.path.find(L".image") != std::string::npos) // hydra image formats: image4f, image4ub
   {
     int wh[2] = {0,0};
+    std::string fnameA(a_texInfo.path.begin(), a_texInfo.path.end());
+
     #ifdef WIN32
     std::ifstream fin(a_texInfo.path.c_str(), std::ios::binary);
     #else
-    std::string   fnameA(a_texInfo.path.begin(), a_texInfo.path.end());
     std::ifstream fin(fnameA.c_str(), std::ios::binary);
     if(!fin.is_open())
       std::cout << "[LoadTextureAndMakeCombined]: can't open '" << fnameA << "'" << std::endl;
@@ -48,9 +68,9 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     {
       std::cout << "[LoadTextureAndMakeCombined]: can't read texture from file '" << fnameA.c_str() << "'; use white dummy;" << std::endl;
       float4 data[1] = {float4(1.0f, 1.0f, 1.0f, 1.0f)};
-      auto pTexture = std::make_shared< Image2D<float4> >(1, 1, data);
+      auto pTexture  = std::make_shared< Image2D<float4> >(1, 1, data);
       pTexture->setSRGB(false);
-      pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+      pResult        = MakeCombinedTexture2D(pTexture, a_sampler);
     }
     else if(a_texInfo.bpp == 16) // image4f
     {
@@ -59,7 +79,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
       fin.close();
   
       auto pTexture = std::make_shared< Image2D<float4> >(wh[0], wh[1], (const float4*)data.data());
-      pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+      pResult       = MakeCombinedTexture2D(pTexture, a_sampler);
     }
     else                        // image4ub
     {
@@ -69,7 +89,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   
       auto pTexture = std::make_shared< Image2D<uint32_t> >(wh[0], wh[1], data.data());
       pTexture->setSRGB(!a_disableGamma);
-      pResult = MakeCombinedTexture2D(pTexture, a_sampler);
+      pResult       = MakeCombinedTexture2D(pTexture, a_sampler);
     }
   }
  
