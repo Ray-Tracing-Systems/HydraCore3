@@ -263,12 +263,22 @@ public:
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
   std::vector<float>       m_pdfLightData;
+  struct Map2DPiecewiseSample
+  {
+    float2 texCoord;
+    float  mapPdf;
+  };
+
+  Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY);
 
   float4 m_envColor      = float4{0.0f};
   float4 m_envSamRow0    = float4(1,0,0,0);
   float4 m_envSamRow1    = float4(0,1,0,0);
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   float4 m_camRespoceRGB = float4(1,1,1,1);
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;

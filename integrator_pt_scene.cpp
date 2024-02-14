@@ -332,10 +332,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       {
         const auto pTex = m_textures[lightSource.texId];
         int tableW = 0, tableH = 0;
-        std::vector<float> lumImage = PdfTableFromImage(pTex, &tableW, &tableH);
-        lightSource.pdfTableOffset = uint32_t(m_pdfLightData.size());
-        lightSource.pdfTableSize   = uint32_t(lumImage.size());
-        m_pdfLightData.insert(m_pdfLightData.end(), lumImage.begin(), lumImage.end());
+        std::vector<float> pdfImage = PdfTableFromImage(pTex, &tableW, &tableH);
+        lightSource.pdfTableOffset  = uint32_t(m_pdfLightData.size());
+        lightSource.pdfTableSize    = uint32_t(pdfImage.size());
+        lightSource.pdfTableSizeX   = tableW;
+        lightSource.pdfTableSizeY   = tableH;
+        m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
       }
 
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;

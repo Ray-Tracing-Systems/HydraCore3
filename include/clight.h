@@ -37,6 +37,11 @@ struct LightSource
   uint     texId;
   uint     iesId;
   float    mult;
+
+  uint     pdfTableSizeX;
+  uint     pdfTableSizeY;
+  uint     dummy1;
+  uint     dummy2;
 };
 
 struct LightSample
@@ -102,4 +107,66 @@ static inline LightSample pointLightSampleRev(const LightSource* a_pLight)
   res.isOmni = (a_pLight[0].distType == LIGHT_DIST_OMNI);
   res.hasIES = (a_pLight[0].iesId != uint(-1));
   return res;
+}
+
+/**
+\brief  Select index proportional to piecewise constant function that is stored in a_accum[0 .. N-2]; Binary search version.
+\param  a_r     - input random variable in rage [0, 1]
+\param  a_accum - input float array. it must be a result of prefix summ - i.e. it must be sorted.
+\param  N       - size of extended array - i.e. a_accum[N-1] == summ(a_accum[0 .. N-2]).
+\param  pPDF    - out parameter. probability of picking up found value.
+\return found index
+
+*/
+static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, const int N, 
+                                float* pPDF) 
+{
+  int leftBound  = 0;
+  int rightBound = N - 2; // because a_accum[N-1] == summ(a_accum[0 .. N-2]).
+  int counter    = 0;
+  int currPos    = -1;
+
+  const int maxStep = 50;
+  const float x = a_r*a_accum[N - 1];
+
+  while (rightBound - leftBound > 1 && counter < maxStep)
+  {
+    const int currSize = rightBound + leftBound;
+    const int currPos1 = (currSize % 2 == 0) ? (currSize + 1) / 2 : (currSize + 0) / 2;
+
+    const float a = a_accum[currPos1 + 0];
+    const float b = a_accum[currPos1 + 1];
+
+    if (a < x && x <= b)
+    {
+      currPos = currPos1;
+      break;
+    }
+    else if (x <= a)
+      rightBound = currPos1;
+    else if (x > b)
+      leftBound = currPos1;
+
+    counter++;
+  }
+
+  if (currPos < 0) // check the rest intervals
+  {
+    const float a1 = a_accum[leftBound + 0];
+    const float b1 = a_accum[leftBound + 1];
+    const float a2 = a_accum[rightBound + 0];
+    const float b2 = a_accum[rightBound + 1];
+    if (a1 < x && x <= b1)
+      currPos = leftBound;
+    if (a2 < x && x <= b2)
+      currPos = rightBound;
+  }
+
+  if (x == 0.0f)
+    currPos = 0;
+  else if (currPos < 0)
+    currPos = (rightBound + leftBound + 1) / 2;
+
+  (*pPDF) = (a_accum[currPos + 1] - a_accum[currPos]) / a_accum[N - 1];
+  return currPos;
 }

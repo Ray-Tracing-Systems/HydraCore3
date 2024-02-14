@@ -518,6 +518,31 @@ float4 Integrator::GetEnvironmentColor(float3 a_dir)
   return color / outPdf;
 }
 
+
+Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY)
+{
+  const float fw = (float)sizeX;
+  const float fh = (float)sizeY;
+  const float fN = fw*fh;
+
+  float pdf = 1.0f;
+  int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
+
+  if (pixelOffset >= sizeX*sizeY)
+    pixelOffset = sizeX*sizeY - 1;
+
+  const int yPos = pixelOffset / sizeX;
+  const int xPos = pixelOffset - yPos*sizeX;
+
+  const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
+  const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
+
+  Map2DPiecewiseSample result;
+  result.mapPdf   = pdf*fN; 
+  result.texCoord = make_float2(texX, texY);
+  return result;
+}
+
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 {
   const int remapListId  = m_remapInst[a_instId];
