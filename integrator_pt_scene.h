@@ -133,6 +133,11 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              const std::vector<float> &spectra,
                              const std::vector<uint2> &spec_offsets);
 
+LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures, 
+                                    float4& a_envColor, 
+                                    std::vector<unsigned int>& a_actualFeatures);
+
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);
 //std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 //bool                  Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir);
