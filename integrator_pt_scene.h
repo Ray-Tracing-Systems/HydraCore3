@@ -137,7 +137,9 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
                                     const std::vector<TextureInfo>& texturesInfo, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures);
-                                    
+
+std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_img, int* pW, int* pH);
+
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);
 //std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 //bool                  Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir);

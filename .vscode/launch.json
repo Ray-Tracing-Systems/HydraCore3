@@ -340,7 +340,7 @@
                  //"-integrator", "prt", 
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "256",
+                 "-spp", "1024",
                  "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_214/z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

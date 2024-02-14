@@ -264,6 +264,8 @@ public:
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
   std::vector<LightSource> m_lights;
+  std::vector<float>       m_pdfLightData;
+
   float4 m_envColor      = float4{0.0f};
   float4 m_envSamRow0    = float4(1,0,0,0);
   float4 m_envSamRow1    = float4(0,1,0,0);
@@ -272,6 +274,7 @@ public:
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
   uint  m_envTexId       = uint(-1);
+  uint  m_envEnableSam   = 0;
   float m_exposureMult   = 1.0f;
   
   /// @brief ////////////////////////////////////////////////////// cam variables

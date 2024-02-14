@@ -30,8 +30,8 @@ struct LightSource
   
   uint     distType;  ///<! LIGHT_DIST_LAMBERT, LIGHT_DIST_OMNI, ...
   uint     flags;     ///<! 
-  uint     dummy2;
-  uint     dummy3;
+  uint     pdfTableOffset;
+  uint     pdfTableSize;
 
   uint     specId;
   uint     texId;

@@ -493,12 +493,12 @@ float4 Integrator::GetEnvironmentColor(float3 a_dir)
     const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
     const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
     
-    if (sinTheta != 0.f)
+    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT)
     {
       // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
       //
       // const float mapPdf = evalMap2DPdf(texCoordT, intervals, sizeX, sizeY);
-      // outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), DEPSILON));     
+      // outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 
     const float4 texColor = m_textures[m_envTexId]->sample(texCoordT); 

@@ -171,3 +171,51 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
 
   return lightSource;
 }
+
+static std::vector<float> PrefixSumm(const std::vector<float>& a_vec)
+{
+  double accum = 0.0f;
+  std::vector<float> avgBAccum(a_vec.size() + 1);
+  for (size_t i = 0; i < a_vec.size(); i++)
+  {
+    avgBAccum[i] = float(accum);
+    accum += double(a_vec[i]);
+  }
+  avgBAccum[avgBAccum.size() - 1] = float(accum);
+  return avgBAccum;
+}
+
+std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_img, int* pW, int* pH)
+{
+  const auto pTex = a_img;
+  
+  int tableW = pTex->width();
+  int tableH = pTex->height();
+  const float2 whInv(1.0f/tableW, 1.0f/tableH);
+  std::vector<float> lumImage(tableW*tableH);
+        
+  float avg = 0.0f;
+  #pragma omp parallel for reduction(+:avg) default(shared)
+  for(int y=0;y<tableH;y++) {
+    const float fy = float(y) + 0.5f;
+    float avgInRow = 0.0f;
+    for(int x=0;x<tableW;x++) {
+      const float fx = float(x) + 0.5f;
+      const float2 texCoord = float2(fx, fy)*whInv;
+      const float4 color    = pTex->sample(texCoord);
+      const float  lum      = std::max(color.x, std::max(color.y, color.z));
+      lumImage[y*tableW+x]  = lum;
+      avgInRow += lum;
+    }
+    avg += avgInRow; 
+  }
+
+  avg /= float(tableW*tableH); 
+  for(size_t i=0;i<lumImage.size();i++)
+    lumImage[i] = std::max(lumImage[i], 0.1f*avg);
+  
+  (*pW) = tableW;
+  (*pH) = tableH;
+
+  return PrefixSumm(lumImage);
+}
