@@ -350,7 +350,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_envLightId = uint(m_lights.size());
       }
 
-      m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
+      m_actualFeatures[Integrator::KSPEC_LIGHT_ENV] = 1;
     }
 
     if(addToLightSources)
