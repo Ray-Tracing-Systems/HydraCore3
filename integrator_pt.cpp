@@ -399,14 +399,14 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   const bool isSpec   = isSpecular(&misPrev);
   const bool exitZero = (currRayFlags & RAY_FLAG_PRIME_RAY_MISS) != 0;
 
-  if(m_intergatorType == INTEGRATOR_MIS_PT && !isSpec && !exitZero)
+  if(m_intergatorType == INTEGRATOR_MIS_PT && m_envEnableSam != 0 && !isSpec && !exitZero)
   {
     float lgtPdf    = LightPdfSelectRev(m_envLightId)*envPdf;
     float bsdfPdf   = misPrev.matSamplePdf;
     float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
     envColor *= misWeight;    
   }
-  else if(m_intergatorType == INTEGRATOR_SHADOW_PT)
+  else if(m_intergatorType == INTEGRATOR_SHADOW_PT && m_envEnableSam != 0)
   {
     envColor = float4(0.0f);
   }
