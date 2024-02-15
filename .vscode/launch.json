@@ -253,7 +253,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
                  "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_203/statex_00001.xml",
-                 "-integrator", "naivept",
+                 "-integrator", "mispt",
                  "-width", "512",
                  "-height", "512",
                  "-spp", "1024",

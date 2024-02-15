@@ -190,7 +190,10 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     *out_instId            = hit.instId;
   }
   else
-    *rayFlags              = currRayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
+  {
+    const uint flagsToAdd = (bounce == 0) ? (RAY_FLAG_PRIME_RAY_MISS | RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE) : (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
+    *rayFlags             = currRayFlags | flagsToAdd;
+  }
 }
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
@@ -392,16 +395,16 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   float envPdf = 1.0f;
   float4 envColor = EnvironmentColor(to_float3(*rayDirAndFar), envPdf);
 
-  const auto misPrev = *a_prevMisData;
-  const bool isSpec  = isSpecular(&misPrev);
+  const auto misPrev  = *a_prevMisData;
+  const bool isSpec   = isSpecular(&misPrev);
+  const bool exitZero = (currRayFlags & RAY_FLAG_PRIME_RAY_MISS) != 0;
 
-  if(m_intergatorType == INTEGRATOR_MIS_PT && !isSpec) // do MIS here, check if rayBounceNum > 0
+  if(m_intergatorType == INTEGRATOR_MIS_PT && !isSpec && !exitZero)
   {
-    // if (rayBounceNum > 0 && (misPrev.isSpecular == 0))
-    //float lgtPdf    = lightPdfSelectRev(pEnvLight)*skyLightEvalPDF(pEnvLight, rayDir, a_globals, a_pdfStorage);
-    //float bsdfPdf   = misPrev.matSamplePdf;
-    //float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
-    //envColor *= misWeight;    
+    float lgtPdf    = LightPdfSelectRev(m_envLightId)*envPdf;
+    float bsdfPdf   = misPrev.matSamplePdf;
+    float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
+    envColor *= misWeight;    
   }
   else if(m_intergatorType == INTEGRATOR_SHADOW_PT)
   {
@@ -576,7 +579,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                       &accumColor);
+                        &accumColor);
 
   kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
                            out_color);
