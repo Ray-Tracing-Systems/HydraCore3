@@ -273,7 +273,7 @@ public:
     float  mapPdf;
   };
 
-  Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY);
+  Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY);
 
   float4 m_envColor      = float4{0.0f};
   float4 m_envSamRow0    = float4(1,0,0,0);

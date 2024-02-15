@@ -34,24 +34,24 @@ LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illim
       const uint32_t sizeX  = m_lights[a_lightId].pdfTableSizeX;
       const uint32_t sizeY  = m_lights[a_lightId].pdfTableSizeY;
       
-      const Map2DPiecewiseSample sample = SampleMap2D(rands, offset, sizeX, sizeY);
+      const Map2DPiecewiseSample sam = SampleMap2D(rands, offset, int(sizeX), int(sizeY));
 
       // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0 in HydraCore2)
       //
-      const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0Inv, m_lights[a_lightId].samplerRow1Inv, sample.texCoord);
+      const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0Inv, m_lights[a_lightId].samplerRow1Inv, sam.texCoord);
 
       float sintheta = 0.0f;
       const float3 sampleDir = texCoord2DToSphereMap(texCoordT, &sintheta);
       const float3 samplePos = illiminationPoint + sampleDir*1000.0f; // TODO: add sceen bounding sphere radius here
-      const float  samplePdf = (sample.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
+      const float  samplePdf = (sam.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
       
-      LightSample sam;
-      sam.hasIES = false;
-      sam.isOmni = true;
-      sam.norm   = sampleDir; 
-      sam.pos    = samplePos;
-      sam.pdf    = samplePdf; // evaluated here for environment lights 
-      return sam;
+      LightSample res;
+      res.hasIES = false;
+      res.isOmni = true;
+      res.norm   = sampleDir; 
+      res.pos    = samplePos;
+      res.pdf    = samplePdf; // evaluated here for environment lights 
+      return res;
     }
     default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
   };
@@ -160,7 +160,8 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
   
   // apply tex color
   //
-  if(KSPEC_LIGHT_ENV != 0 && m_envTexId != uint(-1))
+  const uint envTexId = m_envTexId;
+  if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))
   {
     float sinTheta  = 1.0f;
     const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
@@ -174,18 +175,18 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
 
       // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
       //
-      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, sizeX, sizeY);
+      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, int(sizeX), int(sizeY));
       outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 
-    const float4 texColor = m_textures[m_envTexId]->sample(texCoordT); 
+    const float4 texColor = m_textures[envTexId]->sample(texCoordT); 
     color *= texColor; 
   }
 
   return color;
 }
 
-Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, uint32_t sizeX, uint32_t sizeY)
+Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY)
 {
   const float fw = (float)sizeX;
   const float fh = (float)sizeY;
