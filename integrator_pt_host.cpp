@@ -102,8 +102,30 @@ void Integrator::PathTraceFromInputRaysBlock(uint tid, uint channels, const RayP
   fromRaysPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
-ConsoleProgressBar g_progressbarForGPU(1000);
+//ConsoleProgressBar g_progressbarForGPU(1000);
+//
+//void Integrator::_ProgressBarStart()                  { g_progressbarForGPU.Start(); }
+//void Integrator::_ProgressBarAccum(float a_progress)  { g_progressbarForGPU.Update(int64_t(a_progress*1000.0f)); }
+//void Integrator::_ProgressBarDone()                   { g_progressbarForGPU.Done(); }
 
-void Integrator::_ProgressBarStart()                  { g_progressbarForGPU.Start(); }
-void Integrator::_ProgressBarAccum(float a_progress)  { g_progressbarForGPU.Update(int64_t(a_progress*1000.0f)); }
-void Integrator::_ProgressBarDone()                   { g_progressbarForGPU.Done(); }
+void Integrator::_ProgressBarStart() 
+{ 
+  m_currProgress = 0.0f; 
+  std::cout << "rendering (gpu), progress = " << std::fixed << std::setprecision(2) << 0 << " %   \r";
+  std::cout.flush();
+}
+void Integrator::_ProgressBarAccum(float a_progress)  
+{ 
+  m_currProgress += a_progress; 
+  if(std::abs(m_currProgress - m_currProgressOld) > 0.05f)
+  {
+    std::cout << "rendering (gpu), progress = " << std::fixed << std::setprecision(2) << 100.0f*m_currProgress << " %   \r";
+    std::cout.flush();
+    m_currProgressOld = m_currProgress;
+  }
+}
+void Integrator::_ProgressBarDone() 
+{ 
+  std::cout << "rendering (gpu), progress = " << std::fixed << std::setprecision(2) << 100.0f*m_currProgress << " %   \r";
+  std::cout << std::endl; std::cout.flush(); 
+}

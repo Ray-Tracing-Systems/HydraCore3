@@ -365,7 +365,8 @@ public:
   virtual void _ProgressBarStart();
   virtual void _ProgressBarAccum(float a_progress);
   virtual void _ProgressBarDone();
-
+  float m_currProgress    = 0.0f;
+  float m_currProgressOld = 0.0f;
 };
 
 #endif
