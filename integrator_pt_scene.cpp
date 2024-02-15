@@ -129,8 +129,16 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   for(auto lightInst : g_lastScene.InstancesLights())
   {
+    const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
+
     if(lightInst.lightNode.child(L"ies") != nullptr)
       features[KSPEC_LIGHT_IES] = 1;
+    else if(ltype == std::wstring(L"sky"))
+    {
+      auto texNode = lightInst.lightNode.child(L"intensity").child(L"color").child(L"texture");
+      if(texNode != nullptr)
+        features[KSPEC_LIGHT_ENV] = 1;
+    }
   }
 
   for(auto settings : g_lastScene.Settings())
@@ -316,6 +324,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
     
+    if(lightSource.iesId != uint(-1))
+      m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
+
     bool addToLightSources = true;             // don't sample LDR, perez or simple colored env lights
     if(lightSource.geomType == LIGHT_GEOM_ENV) // just account for them in implicit strategy
     {

@@ -11,7 +11,7 @@ float4x4 ReadMatrixFromString(const std::string& str);
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
-#include "integrator_pt1_generated.h" // advanced way
+#include "integrator_pt_generated.h" // advanced way
 //std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
 

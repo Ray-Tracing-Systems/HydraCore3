@@ -277,7 +277,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", 
+        "args": ["--gpu", 
                  "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_204/statex_00001.xml",
                  "-integrator", "mispt",
                  "-width", "512",
