@@ -36,12 +36,12 @@ LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illim
       
       const Map2DPiecewiseSample sample = SampleMap2D(rands, offset, sizeX, sizeY);
 
-      // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0)
+      // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0 in HydraCore2)
       //
-      // const float4 texCoordT =  m_lights[a_lightId].invMatrix*float4(sample.texCoord.x, sample.texCoord.y, 0.0f, 0.0f);
+      const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0Inv, m_lights[a_lightId].samplerRow1Inv, sample.texCoord);
 
       float sintheta = 0.0f;
-      const float3 sampleDir = texCoord2DToSphereMap(sample.texCoord, &sintheta);
+      const float3 sampleDir = texCoord2DToSphereMap(texCoordT, &sintheta);
       const float3 samplePos = illiminationPoint + sampleDir*1000.0f; // TODO: add sceen bounding sphere radius here
       const float  samplePdf = (sample.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
       
@@ -144,8 +144,10 @@ float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, f
   if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
   {
     float sintheta = 0.0f;
-    const float2 texCoord = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
-    const float4 texColor = m_textures[texId]->sample(texCoord);
+    const float2 texCoord  = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
+    const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0, m_lights[a_lightId].samplerRow1, texCoord);
+
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
     lightColor *= texColor;
   }
 

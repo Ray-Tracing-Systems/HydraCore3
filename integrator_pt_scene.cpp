@@ -319,10 +319,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     bool addToLightSources = true;             // don't sample LDR, perez or simple colored env lights
     if(lightSource.geomType == LIGHT_GEOM_ENV) // just account for them in implicit strategy
     {
+      float4x4 transformTexCoord;   
+      transformTexCoord.set_row(0, lightSource.samplerRow0);
+      transformTexCoord.set_row(1, lightSource.samplerRow1);
+      
+      float4x4 transformTexCoordInv = inverse4x4(transformTexCoord);
+      lightSource.samplerRow0Inv = transformTexCoordInv.get_row(0);
+      lightSource.samplerRow1Inv = transformTexCoordInv.get_row(1);
+
       m_envColor   = lightSource.intensity;
       m_envSamRow0 = lightSource.samplerRow0; 
       m_envSamRow1 = lightSource.samplerRow1; 
       m_envTexId   = lightSource.texId;
+      m_envLightId = uint(-1);
 
       auto info         = texturesInfo[lightSource.texId];
       addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
@@ -340,8 +349,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
         m_envLightId = uint(m_lights.size()-1);
       }
-      else
-        m_envLightId = uint(-1);
 
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
     }

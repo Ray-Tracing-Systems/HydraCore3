@@ -16,14 +16,18 @@ static constexpr uint LIGHT_FLAG_POINT_AREA = 1;
 
 struct LightSource
 {
-  float4x4 matrix;    ///<! translation in matrix is always (0,0,0,1)
-  float4x4 iesMatrix; ///<! translation in matrix is always (0,0,0,1)
-  float4   pos;       ///<! translation aclually stored here
-  float4   intensity; ///<! brightress, i.e. screen value if light is visable directly
-  float4   norm;      ///<! light direction
-  float4   samplerRow0; ///<! texture sampler, row0
-  float4   samplerRow1; ///<! texture sampler, row1
+  float4x4 matrix;         ///<! translation in matrix is always (0,0,0,1)
+  float4x4 iesMatrix;      ///<! translation in matrix is always (0,0,0,1)
+
+  float4   samplerRow0;    ///<! texture sampler, row0
+  float4   samplerRow1;    ///<! texture sampler, row1
+  float4   samplerRow0Inv; ///<! texture sampler, inverse matrix, row0
+  float4   samplerRow1Inv; ///<! texture sampler, inverse matrix, row1
   
+  float4   pos;            ///<! translation aclually stored here
+  float4   intensity;      ///<! brightress, i.e. screen value if light is visable directly
+  float4   norm;           ///<! light direction
+
   float2   size;
   float    pdfA;
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE, ...
