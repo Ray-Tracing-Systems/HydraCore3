@@ -150,8 +150,9 @@ endif()
 set(CORE_SRC
         ${MAIN_FILES}
         integrator_rt.cpp
-        integrator_pt1.cpp
-        integrator_pt2.cpp
+        integrator_pt_kernels.cpp
+        integrator_pt_lgt.cpp
+        integrator_pt_mat.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
         integrator_pt_scene_mat.cpp
