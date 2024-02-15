@@ -103,9 +103,9 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/geom/cmesh.cpp)
 
 set(VULKAN_SRC
-        integrator_pt1_generated.cpp
-        integrator_pt1_generated_init.cpp
-        integrator_pt1_generated_ds.cpp )
+        integrator_pt_generated.cpp
+        integrator_pt_generated_init.cpp
+        integrator_pt_generated_ds.cpp )
 
 set(VULKAN_CAM1
         cam_plugin/CamPinHole_pinhole_gpu.cpp
@@ -150,7 +150,7 @@ endif()
 set(CORE_SRC
         ${MAIN_FILES}
         integrator_rt.cpp
-        integrator_pt_kernels.cpp
+        integrator_pt.cpp
         integrator_pt_lgt.cpp
         integrator_pt_mat.cpp
         integrator_pt_host.cpp
