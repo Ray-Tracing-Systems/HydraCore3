@@ -182,17 +182,6 @@ class REQ_HP(REQ):
 
 reqs = []
 
-'''
-reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
-                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/01_sponza/statex_00001.xml",
-                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/02_cry_sponza/statex_00001.xml"],
-                                 [PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z0_gpumispt.bmp", 
-                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z1_gpumispt.bmp",
-                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
-                                  [(1024,1024), (1024,1024), (1024,1024)]))
-
-'''
-
 reqs.append( REQ_H2("mat_mirror",           ["test_102"], integrators = ["naivept","mispt"]) )
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
@@ -207,6 +196,7 @@ reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
+reqs.append( REQ_H2("lgt_env",             ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )
 
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
@@ -338,6 +328,17 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0002/Images/Glass_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/Images/quartz-prism-rough-0-cornell-mitsuba.png"],
                                          imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"]))
+
+'''
+reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/01_sponza/statex_00001.xml",
+                                  "/home/frol/PROG/msu-graphics-group/scenes/03_classic_scenes/02_cry_sponza/statex_00001.xml"],
+                                 [PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z0_gpumispt.bmp", 
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z1_gpumispt.bmp",
+                                  PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
+                                  [(1024,1024), (1024,1024), (1024,1024)]))
+
+'''
 
 Log().set_workdir(".")
 Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))

@@ -343,25 +343,28 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_envSamRow1 = lightSource.samplerRow1; 
       m_envTexId   = lightSource.texId;
       m_envLightId = uint(-1);
-
-      auto info         = texturesInfo[lightSource.texId];
-      addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
-      m_envEnableSam    = addToLightSources ? 1 : 0;
-
-      if(addToLightSources) // add appropriate pdf table to table data
+      
+      if(lightSource.texId != uint(-1))
       {
-        const auto pTex = m_textures[lightSource.texId];
-        int tableW = 0, tableH = 0;
-        std::vector<float> pdfImage = PdfTableFromImage(pTex, &tableW, &tableH);
-        lightSource.pdfTableOffset  = uint32_t(m_pdfLightData.size());
-        lightSource.pdfTableSize    = uint32_t(pdfImage.size());
-        lightSource.pdfTableSizeX   = tableW;
-        lightSource.pdfTableSizeY   = tableH;
-        m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
-        m_envLightId = uint(m_lights.size());
+        auto info         = texturesInfo[lightSource.texId];
+        addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
+        m_envEnableSam    = addToLightSources ? 1 : 0;
+  
+        if(addToLightSources) // add appropriate pdf table to table data
+        {
+          const auto pTex = m_textures[lightSource.texId];
+          int tableW = 0, tableH = 0;
+          std::vector<float> pdfImage = PdfTableFromImage(pTex, &tableW, &tableH);
+          lightSource.pdfTableOffset  = uint32_t(m_pdfLightData.size());
+          lightSource.pdfTableSize    = uint32_t(pdfImage.size());
+          lightSource.pdfTableSizeX   = tableW;
+          lightSource.pdfTableSizeY   = tableH;
+          m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
+          m_envLightId = uint(m_lights.size());
+        }
+  
+        m_actualFeatures[Integrator::KSPEC_LIGHT_ENV] = 1;
       }
-
-      m_actualFeatures[Integrator::KSPEC_LIGHT_ENV] = 1;
     }
 
     if(addToLightSources)
