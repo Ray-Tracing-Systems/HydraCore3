@@ -1,19 +1,10 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <cmath>
-#include <algorithm>
-
-#if defined(_WIN32)
-    #ifndef NOMINMAX
-    #define NOMINMAX
-    #endif
-#endif
+#include "imageutils.h"
+#include "include/cglobals.h"
+#include "Image2d.h"
 
 #define TINYEXR_IMPLEMENTATION
 #include "tinyexr.h"
+
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false) 
 {
@@ -87,6 +78,7 @@ bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfi
   return true;
 }
 
+
 bool SaveImage3DToEXR(const float* data, int width, int height, int channels, const char* outfilename) 
 {
   EXRHeader header;
@@ -142,6 +134,7 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   return true;
 }
 
+
 void SaveImage3DToImage3D1f(const float* data, int width, int height, int channels, const char* outfilename) 
 { 
   std::ofstream fout(outfilename, std::ios::binary);
@@ -150,6 +143,7 @@ void SaveImage3DToImage3D1f(const float* data, int width, int height, int channe
   fout.write((const char*)data, sizeof(float)*size_t(width*height*channels));
   fout.close();
 }
+
 
 void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_normConst = 1.0f)
 {  
@@ -165,7 +159,8 @@ void FlipYAndNormalizeImage2D1f(float* data, int width, int height, float a_norm
   }
 }
 
-void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f)
+
+void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst)
 {
   if(channels == 4)
     SaveImage4fToEXR(data, width, height, outfilename, a_normConst, true);
@@ -181,79 +176,15 @@ void SaveFrameBufferToEXR(float* data, int width, int height, int channels, cons
   }
 }
 
-static inline float clamp(float u, float a, float b) { return std::min(std::max(a, u), b); }
 
-static inline unsigned RealColorToUint32(float real_color[4])
-{
-  float  r = real_color[0]*255.0f;
-  float  g = real_color[1]*255.0f;
-  float  b = real_color[2]*255.0f;
-  float  a = real_color[3]*255.0f;
-
-  unsigned char red   = (unsigned char)r;
-  unsigned char green = (unsigned char)g;
-  unsigned char blue  = (unsigned char)b;
-  unsigned char alpha = (unsigned char)a;
-
-  return red | (green << 8) | (blue << 16) | (alpha << 24);
-}
-
-struct Pixel { unsigned char r, g, b; };
-
-static bool WriteBMP(const char* fname, Pixel* a_pixelData, int width, int height)
-{
-  int paddedsize = (width*height) * sizeof(Pixel);
-  unsigned char bmpfileheader[14] = {'B','M', 0,0,0,0, 0,0, 0,0, 54,0,0,0};
-  unsigned char bmpinfoheader[40] = {40,0,0,0, 0,0,0,0, 0,0,0,0, 1,0, 24,0};
-
-  bmpfileheader[ 2] = (unsigned char)(paddedsize    );
-  bmpfileheader[ 3] = (unsigned char)(paddedsize>> 8);
-  bmpfileheader[ 4] = (unsigned char)(paddedsize>>16);
-  bmpfileheader[ 5] = (unsigned char)(paddedsize>>24);
-
-  bmpinfoheader[ 4] = (unsigned char)(width    );
-  bmpinfoheader[ 5] = (unsigned char)(width>> 8);
-  bmpinfoheader[ 6] = (unsigned char)(width>>16);
-  bmpinfoheader[ 7] = (unsigned char)(width>>24);
-  bmpinfoheader[ 8] = (unsigned char)(height    );
-  bmpinfoheader[ 9] = (unsigned char)(height>> 8);
-  bmpinfoheader[10] = (unsigned char)(height>>16);
-  bmpinfoheader[11] = (unsigned char)(height>>24);
-
-  std::ofstream out(fname, std::ios::out | std::ios::binary);
-  if(!out.is_open())
-    return false;
-  out.write((const char*)bmpfileheader, 14);
-  out.write((const char*)bmpinfoheader, 40);
-  out.write((const char*)a_pixelData, paddedsize);
-  out.flush();
-  out.close();
-  return true;
-}
-
-static bool SaveBMP(const char* fname, const unsigned int* pixels, int w, int h)
-{
-  std::vector<Pixel> pixels2(w*h);
-
-  for (size_t i = 0; i < pixels2.size(); i++)
-  {
-    Pixel px;
-    px.r       = (pixels[i] & 0x00FF0000) >> 16;
-    px.g       = (pixels[i] & 0x0000FF00) >> 8;
-    px.b       = (pixels[i] & 0x000000FF);
-    pixels2[i] = px;
-  }
-
-  return WriteBMP(fname, &pixels2[0], w, h);
-}
-
-static inline float linearToSRGB(float l)
+inline float linearToSRGB(float l)
 {
   if(l <= 0.00313066844250063f)
     return l * 12.92f;
   else
     return 1.055f * std::pow(l, 1.0f/2.4f) - 0.055f;
 }
+
 
 std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma)
 {
@@ -285,22 +216,58 @@ std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, in
 }
 
 
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f) 
+bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
 {
   auto pixelData = FrameBufferColorToLDRImage(rgb,width,height,a_normConst,a_gamma);
-  SaveBMP(outfilename, pixelData.data(), width, height);
+  LiteImage::SaveBMP(outfilename, pixelData.data(), width, height);
   return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
+{
+  float* out; // width * height * RGBA
+  int width       = 0;
+  int height      = 0;
+  const char* err = nullptr;
+
+  int ret = LoadEXR(&out, &width, &height, infilename, &err);
+  if (ret != TINYEXR_SUCCESS) {
+    if (err) {
+      fprintf(stderr, "[LoadImage4fFromEXR] : %s\n", err);
+      std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
+      delete err;
+    }
+    return std::vector<float>();
+  }
+
+  const int imgSize = width * height;
+  std::vector<float> result(imgSize);
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  
+  #pragma omp parallel for
+  for (int i = 0; i < imgSize; ++i)
+  {
+    const int i4 = i * 4;
+    if (std::isinf(out[i4]))
+      result[i] = 65504.0f;                       // max half float according to ieee
+    else
+      result[i] = clamp(out[i4], 0.0f, 65504.0f); // max half float according to ieee
+  }
+
+  free(out);
+  return result;
+}
+
+
 std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH) 
 {
-  std::vector<float> result;
   float* out; // width * height * RGBA
-  int width  = 0;
-  int height = 0;
+  int width       = 0;
+  int height      = 0;
   const char* err = nullptr; 
 
   int ret = LoadEXR(&out, &width, &height, infilename, &err);
@@ -310,17 +277,18 @@ std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH)
       std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
       delete err;
     }
+    return std::vector<float>();
   }
-  else {
-    result.resize(width * height*4);
-    *pW = uint32_t(width);
-    *pH = uint32_t(height);
-    memcpy(result.data(), out, width*height*sizeof(float)*4);
-    free(out);
-  }
+
+  std::vector<float> result(width * height*4);
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  memcpy(result.data(), out, width*height*sizeof(float)*4);
+  free(out);  
   
   return result;
 }
+
 
 float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH)
 {
@@ -338,12 +306,9 @@ float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH)
     }
     return nullptr;
   }
-  else {
-    *pW = uint32_t(width);
-    *pH = uint32_t(height);
-    return out;
-  }
-  
-  return nullptr;
+
+  *pW = uint32_t(width);
+  *pH = uint32_t(height);
+  return out;
 }
 

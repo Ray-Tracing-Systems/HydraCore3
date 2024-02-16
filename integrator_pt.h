@@ -200,9 +200,9 @@ public:
   uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
   uint m_maxThreadId = m_winWidth*m_winHeight;
 
-  LightSample LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint);
+  LightSample LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir);
+  float4 LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -211,11 +211,12 @@ public:
   \param  ray_dir     - direction of the shadow ray                  (i.e. shadowRayDir)
   \param  lpos        - position on light surface
   \param  lnorm       - normal   on light surface
+  \param  a_envPdf    - pdf for sampling environment which is evaluated else-where
   \return PdfW (solid-angle probability density) for sampling target light from point 'ray_pos' with direction 'ray_dir' to surface point on light (lpos, lnorm)
   */
-  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm);
+  float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
-  float4 GetEnvironmentColorAndPdf(float3 a_dir);
+  float4 EnvironmentColor(float3 a_dir, float& outPdf);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
@@ -263,12 +264,29 @@ public:
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
+  std::vector<float>       m_pdfLightData;
+  struct Map2DPiecewiseSample
+  {
+    float2 texCoord;
+    float  mapPdf;
+  };
+
+  Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY);
+
   float4 m_envColor      = float4{0.0f};
+  float4 m_envSamRow0    = float4(1,0,0,0);
+  float4 m_envSamRow1    = float4(0,1,0,0);
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   float4 m_camRespoceRGB = float4(1,1,1,1);
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
+  uint  m_envTexId       = uint(-1);
+  uint  m_envLightId     = uint(-1);
+  uint  m_envEnableSam   = 0;
   float m_exposureMult   = 1.0f;
   
   /// @brief ////////////////////////////////////////////////////// cam variables
@@ -287,8 +305,6 @@ public:
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
 
-  // std::vector<Spectrum> m_spectra;
-  std::vector<float> m_wavelengths; 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
   std::vector<float> m_cie_x;
@@ -311,8 +327,12 @@ public:
   static constexpr uint32_t KSPEC_BLEND_STACK_SIZE    = 8;
   static constexpr uint32_t KSPEC_BUMP_MAPPING        = 9;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 10;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 11;
   
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 11; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t KSPEC_LIGHT_IES           = 12;
+  static constexpr uint32_t KSPEC_LIGHT_ENV           = 13;
+
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 14; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -337,6 +357,16 @@ public:
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   uint m_disableImageContrib = 0;
+
+  virtual void ProgressBarStart();
+  virtual void ProgressBarAccum(float a_progress);
+  virtual void ProgressBarDone();
+
+  virtual void _ProgressBarStart();
+  virtual void _ProgressBarAccum(float a_progress);
+  virtual void _ProgressBarDone();
+  float m_currProgress    = 0.0f;
+  float m_currProgressOld = 0.0f;
 };
 
 #endif

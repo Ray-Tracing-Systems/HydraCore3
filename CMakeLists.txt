@@ -9,7 +9,7 @@ if(USE_ENZYME)
   set(CLANG_VERSION "17" CACHE STRING "clang and LLVM version to use")
   set(CMAKE_C_COMPILER   "/usr/bin/clang-${CLANG_VERSION}")   # $ export CC=/usr/bin/clang-17
   set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}") # $ export CXX=/usr/bin/clang++-17
-  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_098/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
+  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_101/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_definitions(-DUSE_ENZYME)
 endif()
@@ -103,9 +103,9 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/geom/cmesh.cpp)
 
 set(VULKAN_SRC
-        integrator_pt1_generated.cpp
-        integrator_pt1_generated_init.cpp
-        integrator_pt1_generated_ds.cpp )
+        integrator_pt_generated.cpp
+        integrator_pt_generated_init.cpp
+        integrator_pt_generated_ds.cpp )
 
 set(VULKAN_CAM1
         cam_plugin/CamPinHole_pinhole_gpu.cpp
@@ -150,10 +150,14 @@ endif()
 set(CORE_SRC
         ${MAIN_FILES}
         integrator_rt.cpp
-        integrator_pt1.cpp
-        integrator_pt2.cpp
+        integrator_pt.cpp
+        integrator_pt_lgt.cpp
+        integrator_pt_mat.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
+        integrator_pt_scene_mat.cpp
+        integrator_pt_scene_lgt.cpp
+        integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
         mi_materials.cpp
         spectrum.cpp

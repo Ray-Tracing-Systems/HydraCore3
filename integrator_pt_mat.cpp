@@ -18,70 +18,6 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-LightSample Integrator::LightSampleRev(int a_lightId, float2 rands, float3 illiminationPoint)
-{
-  const uint gtype = m_lights[a_lightId].geomType;
-  switch(gtype)
-  {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands);
-    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
-    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands);
-  };
-}
-
-float Integrator::LightPdfSelectRev(int a_lightId) 
-{ 
-  return 1.0f/float(m_lights.size()); // uniform select
-}
-
-//static inline float DistanceSquared(float3 a, float3 b)
-//{
-//  const float3 diff = b - a;
-//  return dot(diff, diff);
-//}
-
-float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm)
-{
-  const uint gtype    = m_lights[a_lightId].geomType;
-  const float hitDist = length(illuminationPoint - lpos);
-  
-  float cosVal = 1.0f;
-  switch(gtype)
-  {
-    case LIGHT_GEOM_SPHERE:
-    {
-      // const float  lradius = m_lights[a_lightId].size.x;
-      // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
-      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
-      //  return 1.0f;
-      const float3 dirToV  = normalize(lpos - illuminationPoint);
-      cosVal = std::abs(dot(dirToV, lnorm));
-    }
-    break;
-
-    case LIGHT_GEOM_POINT:
-    {
-      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI)
-        cosVal = 1.0f;
-      else
-        cosVal = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
-    };
-    break;
-
-    default:
-    cosVal  = std::max(dot(ray_dir, -1.0f*lnorm), 0.0f);
-    break;
-  };
-  
-  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSample* a_pRes)
@@ -208,8 +144,26 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
   const float4 rands     = rndFloat4_Pseudo(a_gen);
-
+  const uint cflags      = m_materials[currMatId].cflags;
   RecordMatRndNeeded(bounce, rands);
+
+  float4 fourScalarMatParams = float4(1,1,1,1);
+  if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
+  {
+    const uint texId2  = m_materials[currMatId].texid[2];
+    const uint texId3  = m_materials[currMatId].texid[3];
+    
+    const float2 texCoord2T = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
+    const float2 texCoord3T = mulRows2x4(m_materials[currMatId].row0[3], m_materials[currMatId].row1[3], tc);
+
+    const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+    const float4 color3 = m_textures[texId3]->sample(texCoord3T);
+    
+    if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
+      fourScalarMatParams = color2;
+    else
+      fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
+  }
 
   switch(mtype)
   {
@@ -217,7 +171,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, &res);
+      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
     case MAT_TYPE_GLASS: 
@@ -345,6 +299,25 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
     const uint   texId     = m_materials[currMat.id].texid[0];
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
     const uint   mtype     = m_materials[currMat.id].mtype;
+    const uint   cflags    = m_materials[currMat.id].cflags;
+
+    float4 fourScalarMatParams = float4(1,1,1,1);
+    if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
+    {
+      const uint texId2  = m_materials[currMat.id].texid[2];
+      const uint texId3  = m_materials[currMat.id].texid[3];
+
+      const float2 texCoord2T = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
+      const float2 texCoord3T = mulRows2x4(m_materials[currMat.id].row0[3], m_materials[currMat.id].row1[3], tc);
+
+      const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+      const float4 color3 = m_textures[texId3]->sample(texCoord3T);
+    
+      if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
+        fourScalarMatParams = color2;
+      else
+        fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
+    }
 
     BsdfEval currVal;
     {
@@ -357,7 +330,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
+        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
@@ -442,11 +415,6 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   return res;
 }
 
-float4 Integrator::GetEnvironmentColorAndPdf(float3 a_dir)
-{
-  return m_envColor;
-}
-
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 {
   const int remapListId  = m_remapInst[a_instId];
@@ -491,15 +459,3 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 
   return res;
 } 
-
-void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
-{
-  if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
-    a_out[0] = naivePtTime;
-  else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")
-    a_out[0] = shadowPtTime;
-  else if(std::string(a_funcName) == "RayTrace" || std::string(a_funcName) == "RayTraceBlock")
-    a_out[0] = raytraceTime;
-  else if(std::string(a_funcName) == "PathTraceFromInputRays" || std::string(a_funcName) == "PathTraceFromInputRaysBlock")
-    a_out[0] = fromRaysPtTime;
-}
