@@ -410,6 +410,19 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   {
     envColor = float4(0.0f);
   }
+  
+  const uint camBackId = m_envCamBackId;
+  if(exitZero && camBackId != uint(-1)) // apply camera back color to ray
+  {
+    const uint XY = m_packedXY[tid];
+    const uint x  = (XY & 0x0000FFFF);
+    const uint y  = (XY & 0xFFFF0000) >> 16;
+
+    const float2 texCoord = float2((float(x) + 0.5f)/float(m_winWidth), 
+                                   (float(y) + 0.5f)/float(m_winHeight));
+
+    envColor = m_textures[camBackId]->sample(texCoord);
+  }
  
   if(m_intergatorType == INTEGRATOR_STUPID_PT)     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
     *accumColor = (*accumThoroughput) * envColor;

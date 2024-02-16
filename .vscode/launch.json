@@ -245,6 +245,31 @@
         ]
     },
 
+    {
+        "name": "CPU(test_162)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_162/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "682",
+                 "-spp", "1",
+                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_162/z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     
     {
         "name": "CPU(test_203)",

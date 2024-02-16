@@ -338,11 +338,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       lightSource.samplerRow0Inv = transformTexCoordInv.get_row(0);
       lightSource.samplerRow1Inv = transformTexCoordInv.get_row(1);
 
-      m_envColor   = lightSource.intensity;
-      m_envSamRow0 = lightSource.samplerRow0; 
-      m_envSamRow1 = lightSource.samplerRow1; 
-      m_envTexId   = lightSource.texId;
-      m_envLightId = uint(-1);
+      m_envColor     = lightSource.intensity;
+      m_envSamRow0   = lightSource.samplerRow0; 
+      m_envSamRow1   = lightSource.samplerRow1; 
+      m_envTexId     = lightSource.texId;
+      m_envLightId   = uint(-1);
+      m_envCamBackId = lightSource.camBackTexId;
       
       if(lightSource.texId != uint(-1))
       {
@@ -365,6 +366,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   
         m_actualFeatures[Integrator::KSPEC_LIGHT_ENV] = 1;
       }
+      else
+        addToLightSources = false;
     }
 
     if(addToLightSources)

@@ -44,7 +44,7 @@ struct LightSource
 
   uint     pdfTableSizeX;
   uint     pdfTableSizeY;
-  uint     dummy1;
+  uint     camBackTexId;
   uint     dummy2;
 };
 

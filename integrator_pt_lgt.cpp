@@ -70,7 +70,10 @@ float Integrator::LightPdfSelectRev(int a_lightId)
 
 float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf)
 {
-  const uint gtype      = m_lights[a_lightId].geomType;
+  const uint gtype = m_lights[a_lightId].geomType;
+  if(gtype == LIGHT_GEOM_ENV)
+    return a_envPdf;
+
   const float hitDist   = length(illuminationPoint - lpos);
   const float cosValTmp = dot(ray_dir, -1.0f*lnorm);
   float cosVal = 1.0f;
@@ -102,10 +105,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
     break;                                                                                              ///< Note(!): dark line on top of image for pink light appears because area light don't shine to the side. 
   };
   
-  if(gtype == LIGHT_GEOM_ENV)
-    return a_envPdf;
-  else
-    return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
 float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)

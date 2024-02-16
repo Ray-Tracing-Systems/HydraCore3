@@ -30,6 +30,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   lightSource.flags    = 0;
   lightSource.samplerRow0 = float4(1,0,0,0);
   lightSource.samplerRow1 = float4(0,1,0,0);
+  lightSource.camBackTexId = uint(-1);
 
   if(ltype == std::wstring(L"sky"))
   {
@@ -44,7 +45,16 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
       lightSource.texId     = texId;
       lightSource.samplerRow0 = sampler.row0;
       lightSource.samplerRow1 = sampler.row1;
-      //lightSource.flags    = 0; // TODO: add perez model
+      //lightSource.flags    |= LIGHT_ENV_PEREZ_MODEL; // TODO: add perez model
+    }
+
+    // camera back
+    //
+    auto backNode = lightInst.lightNode.child(L"back");
+    if(backNode != nullptr)
+    {
+      const auto& [sampler2, texId2] = LoadTextureFromNode(lightInst.lightNode.child(L"back"), texturesInfo, texCache, a_textures); 
+      lightSource.camBackTexId = texId2;
     }
   }
   else if(ltype == std::wstring(L"directional"))
