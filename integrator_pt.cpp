@@ -117,7 +117,8 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
 
 void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
+                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, 
+                                  RandomGen* a_gen)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -128,7 +129,13 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
-  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
+  float time = 0.0f;
+  if(m_enabledFeatures[KSPEC_MOTION_BLUR] !=0) 
+  {
+    time  = rndFloat1_Pseudo(a_gen); 
+  }
+
+  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
 
   if(hit.geomId != uint32_t(-1))
@@ -235,7 +242,14 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
+
+  float time = 0.0f;
+  if(m_enabledFeatures[KSPEC_MOTION_BLUR] !=0) 
+  {
+    time  = rndFloat1_Pseudo(a_gen); 
+  }
+
+  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time);
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
 
   RecordShadowHitIfNeeded(bounce, inShadow);
@@ -581,7 +595,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
@@ -612,7 +626,7 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
@@ -647,7 +661,7 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
