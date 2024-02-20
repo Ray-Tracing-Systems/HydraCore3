@@ -44,6 +44,8 @@ namespace hydra_xml
     uint32_t           rmapId = uint32_t(-1); ///< remap list id, todo: add function to get real remap list by id
     uint32_t           lightInstId = uint32_t(-1);
     LiteMath::float4x4 matrix;                ///< transform matrix
+    LiteMath::float4x4 matrix_motion;         ///< transform matrix at the end of motion
+    bool               hasMotion = false;    ///< is this instance moving? (i.e has meaningful motion matrix)
     pugi::xml_node     node;
   };
 
@@ -138,6 +140,15 @@ namespace hydra_xml
       inst.rmapId = uint32_t(m_iter->attribute(L"rmap_id").as_int()); // because we must process -1 case separately!
       inst.matrix = float4x4FromString(m_iter->attribute(L"matrix").as_string());
       inst.lightInstId = m_iter->attribute(L"linst_id").empty() ? uint32_t(-1) : m_iter->attribute(L"linst_id").as_uint();
+
+      inst.matrix_motion = inst.matrix;
+
+      if(m_iter->child(L"motion"))
+      {
+        inst.matrix_motion = float4x4FromString(m_iter->child(L"motion").attribute(L"matrix").as_string());
+        inst.hasMotion     = true;
+      }
+
       inst.node   = (*m_iter);
       return inst;
     }
