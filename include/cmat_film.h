@@ -45,7 +45,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   //FrReflRefr result;
   /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-  if (!precompFlag)
+  if (precompFlag == 0u)
   {
     if (layers == 2)
     {
@@ -254,7 +254,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 */
   /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-  if (!precompFlag)
+  if (precompFlag == 0u)
   {
     for(int i = 0; i < spectralSamples; ++i)
     {
@@ -316,7 +316,7 @@ static void filmRoughEval(const Material* a_materials, const complex* a_ior, con
 */
 /*
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-  if (!precompFlag)
+  if (precompFlag == 0u)
   {
     for(int i = 0; i < spectralSamples; ++i)
     {

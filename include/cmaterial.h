@@ -939,10 +939,8 @@ static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include <iostream>
-
-const uint PolarizationS = 0;
-const uint PolarizationP = 1;
+static constexpr uint PolarizationS = 0;
+static constexpr uint PolarizationP = 1;
 
 /*
 static inline float getRefractionFactor(float ior, float cosTheta)
@@ -985,7 +983,7 @@ static inline float getRefractionFactor(float ior, float cosTheta)
   return refrFactor;
 }
 
-static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, complex etaI, complex etaT, uint polarization)
+static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT, uint polarization)
 {
   if (complex_norm(cosThetaI) < 1e-6f) //approximated
   {
@@ -993,20 +991,20 @@ static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, comple
   }
   if (polarization == PolarizationS)
   {
-    return (etaI * cosThetaI - etaT * cosThetaT) / (etaI * cosThetaI + etaT * cosThetaT);
+    return (iorI * cosThetaI - iorT * cosThetaT) / (iorI * cosThetaI + iorT * cosThetaT);
   }
   else if (polarization == PolarizationP)
   {
-    return (etaT * cosThetaI - etaI * cosThetaT) / (etaT * cosThetaI + etaI * cosThetaT);
+    return (iorT * cosThetaI - iorI * cosThetaT) / (iorT * cosThetaI + iorI * cosThetaT);
   }
   return 1.0f;
 }
 
-static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, complex etaI, complex etaT, uint polarization)
+static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT, uint polarization)
 {
   if (complex_norm(cosThetaI) < 1e-6f) //approximated
   {
-    if (complex_norm(etaI - etaT) < 1e-6f)
+    if (complex_norm(iorI - iorT) < 1e-6f)
     {
       return {1, 0};
     }
@@ -1014,18 +1012,18 @@ static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, comple
   }
   if (polarization == PolarizationS)
   {
-    return (2 * etaI * cosThetaI) / (etaI * cosThetaI + etaT * cosThetaT);
+    return (2 * iorI * cosThetaI) / (iorI * cosThetaI + iorT * cosThetaT);
   }
   else if (polarization == PolarizationP)
   {
-    return (2 * etaI * cosThetaI) / (etaT * cosThetaI + etaI * cosThetaT);
+    return (2 * iorI * cosThetaI) / (iorT * cosThetaI + iorI * cosThetaT);
   }
   return 0.f;
 }
 
 static inline complex filmPhaseDiff(complex cosTheta, complex eta, float thickness, float lambda)
 {
-  return 4 * M_PI * eta * cosTheta * thickness / lambda;
+  return 4 * M_PI * eta * cosTheta * thickness / complex(lambda);
 }
 
 // I - income medium
