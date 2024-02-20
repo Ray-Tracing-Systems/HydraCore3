@@ -27,10 +27,11 @@ public:
   void CommitScene(BuildQuality a_qualityLevel) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
+  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber) override;
   void     UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix) override;
 
-  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
-  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
+  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;
+  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time= 0.0f) override;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cassert>
+#include <algorithm>
 
 #include "CrossRT.h"
 #include "embree3/rtcore.h"
@@ -21,12 +22,14 @@ public:
   void CommitScene  (BuildQuality a_qualityLevel) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
+  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber) override;
   void     UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix) override;
 
-  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
-  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
+  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;
+  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;
 
 protected:
+  size_t maxFrames = 1;
   RTCDevice m_device = nullptr;
   RTCScene  m_scene  = nullptr;
 
@@ -244,6 +247,36 @@ uint32_t EmbreeRT::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_ma
   return uint32_t(m_inst.size()-1);
 }
 
+uint32_t EmbreeRT::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber)
+{
+ if(a_geomId >= m_blas.size())
+    return uint32_t(-1);
+
+  RTCGeometry instanceGeom = rtcNewGeometry(m_device, RTC_GEOMETRY_TYPE_INSTANCE);
+  rtcSetGeometryInstancedScene(instanceGeom, m_blas[a_geomId]);                   // say that 'instanceGeom' is an instance of 'm_blas[a_geomId]'
+  rtcSetGeometryTimeStepCount(instanceGeom, a_matrixNumber); 
+
+
+  rtcAttachGeometry(m_scene,instanceGeom);                                        // attach our instance to global scene 
+  rtcReleaseGeometry(instanceGeom);
+  
+  // update instance matrix
+  //
+  for (uint32_t t = 0; t < a_matrixNumber; ++t)
+  {
+    rtcSetGeometryTransform(instanceGeom, t, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, (const float*)&a_matrices[t]);  
+  }
+
+  rtcCommitGeometry(instanceGeom);
+  
+  m_inst.push_back(instanceGeom);
+  m_geomIdByInstId.push_back(a_geomId);
+
+  maxFrames = std::max(maxFrames, a_matrixNumber);
+
+  return uint32_t(m_inst.size()-1);
+}
+
 void EmbreeRT::CommitScene(BuildQuality a_qualityLevel)
 {
   rtcSetSceneBuildQuality(m_scene, TransformBuildQ(a_qualityLevel));
@@ -260,7 +293,7 @@ void  EmbreeRT::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& 
   rtcCommitGeometry(m_inst[a_instanceId]);
 }
 
-CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {    
   // The intersect context can be used to set intersection
   // filters or flags, and it also contains the instance ID stack
@@ -283,7 +316,13 @@ CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::fl
   rayhit.ray.dir_y = dirAndFar.y;
   rayhit.ray.dir_z = dirAndFar.z;
   rayhit.ray.tfar  = dirAndFar.w; // std::numeric_limits<float>::infinity();
-  
+
+
+  // input time is in [0, 1], while in Embree 0 is the first frame, 1 is the second, 2 - third etc.
+  // therefore we multiply time with the maximum animation length
+  // although instances with fewer frames set will actually continue moving
+  rayhit.ray.time = time * (maxFrames - 1);
+
   rayhit.ray.mask   = -1;
   rayhit.ray.flags  = 0;
   rayhit.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
@@ -315,7 +354,7 @@ CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::fl
   return result;
 }
 
-bool EmbreeRT::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+bool EmbreeRT::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {
   // The intersect context can be used to set intersection
   // filters or flags, and it also contains the instance ID stack
@@ -338,6 +377,8 @@ bool EmbreeRT::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dir
   ray.dir_y = dirAndFar.y;
   ray.dir_z = dirAndFar.z;
   ray.tfar  = dirAndFar.w; // std::numeric_limits<float>::infinity();
+
+  ray.time  = time * (maxFrames - 1);
 
   rtcOccluded1(m_scene, &context, &ray);  
 

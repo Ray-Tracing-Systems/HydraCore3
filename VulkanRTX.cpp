@@ -95,6 +95,12 @@ uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_m
   return m_pScnMgr->InstanceMesh(a_geomId, a_matrix);
 }
 
+uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber)
+{
+  std::cout << "[VulkanRTX::AddInstance] motion blur: not implemented" << std::endl;
+  return uint32_t(-1);
+}
+
 void VulkanRTX::CommitScene(BuildQuality a_qualityLevel)
 {
   m_pScnMgr->BuildTLAS();
@@ -106,7 +112,7 @@ void VulkanRTX::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& 
   std::cout << "[VulkanRTX::UpdateInstance]: not implemented" << std::endl;
 }
 
-CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {    
   CRT_Hit result;
   result.t      = std::numeric_limits<float>::max();
@@ -116,7 +122,7 @@ CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::fl
   return result;
 }
 
-bool VulkanRTX::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+bool VulkanRTX::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {
   return false;
 }
