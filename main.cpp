@@ -155,8 +155,8 @@ int main(int argc, const char** argv) // common hydra main
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster
     //
+    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = enablePRT;
     Integrator_Generated::EnabledPipelines().enableRayTraceMega               = enableRT;
-    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; // not used, for testing only
     Integrator_Generated::EnabledPipelines().enablePackXYMega                 = true;  // always true for this main.cpp;
     Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
     Integrator_Generated::EnabledPipelines().enablePathTraceMega              = enableShadowPT || enableMISPT;
