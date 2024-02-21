@@ -74,6 +74,7 @@ CRT_Hit m_pAccelStruct_RayQuery_NearestHit(const vec4 rayPos, const vec4 rayDir)
   //  res.coords[0] = bars.y;
   //  res.coords[1] = bars.x;
   //  res.coords[2] = 1.0f - bars.y - bars.x;
+  //  res.coords[3] = 0.0f;
   //}
   //return res;
 }
