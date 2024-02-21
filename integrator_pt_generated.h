@@ -326,6 +326,8 @@ protected:
   VkPipelineLayout      CastSingleRayMegaLayout   = VK_NULL_HANDLE;
   VkPipeline            CastSingleRayMegaPipeline = VK_NULL_HANDLE; 
   VkDescriptorSetLayout CastSingleRayMegaDSLayout = VK_NULL_HANDLE;
+  std::vector<VkStridedDeviceAddressRegionKHR> CastSingleRayMegaSBTStrides;
+
   VkDescriptorSetLayout CreateCastSingleRayMegaDSLayout();
   virtual void InitKernel_CastSingleRayMega(const char* a_filePath);
   VkPipelineLayout      PackXYMegaLayout   = VK_NULL_HANDLE;
@@ -395,7 +397,13 @@ public:
 
   static MegaKernelIsEnabled  m_megaKernelFlags;
   static MegaKernelIsEnabled& EnabledPipelines() { return m_megaKernelFlags; }
+  
 
+  // FOR RAY TRACING PIPELINE
+  uint32_t m_numShaderGroups = 0u;
+  uint32_t m_numHitStages  = 1u;
+  uint32_t m_numMissStages = 2u;
+  VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_rtPipelineProperties{};
 };
 
 

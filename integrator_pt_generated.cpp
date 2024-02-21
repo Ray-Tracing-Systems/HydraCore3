@@ -47,6 +47,15 @@ void Integrator_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice
 {
   physicalDevice = a_physicalDevice;
   device         = a_device;
+
+  {
+    m_rtPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+    VkPhysicalDeviceProperties2 deviceProperties2{};
+    deviceProperties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    deviceProperties2.pNext = &m_rtPipelineProperties;
+    vkGetPhysicalDeviceProperties2(a_physicalDevice, &deviceProperties2);
+  }
+
   m_allCreatedPipelineLayouts.reserve(256);
   m_allCreatedPipelines.reserve(256);
   m_allSpecConstVals = ListRequiredFeatures();

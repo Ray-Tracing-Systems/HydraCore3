@@ -369,6 +369,11 @@ void Integrator_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
     MakeRayTracingPipelineAndLayout(shader_paths, enableMotionBlur, "main", kspec, CastSingleRayMegaDSLayout, 
                                     &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline); 
     
+    //auto pAlloc    = vk_utils::CreateMemoryAlloc_VMA(m_instance, m_device, m_physicalDevice, alloc_flags, m_vulkanVersion);
+    //m_pResourceMgr = std::make_shared<vk_utils::ResourceManager>(m_device, m_physicalDevice, pAlloc, m_pCopyHelper);
+
+    //CastSingleRayMegaSBTStrides = vk_rt_utils::CreateSimpleSBTSeparateBuffers(device, m_pResourceMgr, CastSingleRayMegaPipeline, m_numShaderGroups,
+    //                                                                          m_numHitStages, m_numMissStages, m_rtPipelineProperties);
 
     // MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, CastSingleRayMegaDSLayout, &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline);
   }
