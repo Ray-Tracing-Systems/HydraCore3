@@ -118,11 +118,14 @@ void Integrator_Generated::MakeRayTracingPipelineAndLayout(const std::vector< st
 {
   // (1) load shader modules
   //
-  std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups; //(shader_paths.size());
-  std::vector<VkShaderModule>                       shaderModules; //(shader_paths.size());
-  std::vector<VkPipelineShaderStageCreateInfo>      shaderStages; //(shader_paths.size());
-  std::vector<VkPushConstantRange>                  pcRanges; //(shader_paths.size());
+  std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups; 
+  std::vector<VkShaderModule>                       shaderModules; 
+  std::vector<VkPipelineShaderStageCreateInfo>      shaderStages;  
   
+  shaderGroups.reserve(shader_paths.size());
+  shaderModules.reserve(shader_paths.size());
+  shaderStages.reserve(shader_paths.size());
+
   for(const auto& [stage, path] : shader_paths)
   {
     VkPipelineShaderStageCreateInfo shaderStage = {};
@@ -156,17 +159,19 @@ void Integrator_Generated::MakeRayTracingPipelineAndLayout(const std::vector< st
     shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
     
     shaderGroups.push_back(shaderGroup);
-
-    VkPushConstantRange pcRange = {};
-    pcRange.stageFlags = stage;
-    pcRange.offset     = 0;
-    pcRange.size       = 128; // at least 128 bytes for push constants for all Vulkan implementations
-    pcRanges.push_back(pcRange);
   }
 
   // (2) create pipeline layout
   //
-
+  std::array<VkPushConstantRange,3> pcRanges = {};
+  pcRanges[0].stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+  pcRanges[1].stageFlags = VK_SHADER_STAGE_MISS_BIT_KHR;
+  pcRanges[2].stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+  for(size_t i=0;i<pcRanges.size();i++) {
+    pcRanges[i].offset = 0;
+    pcRanges[i].size   = 128;
+  }
+    
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.pushConstantRangeCount = uint32_t(pcRanges.size());
@@ -891,6 +896,7 @@ VkPhysicalDeviceFeatures2 Integrator_Generated::ListRequiredDeviceFeatures(std::
     static VkPhysicalDeviceBufferDeviceAddressFeatures      enabledDeviceAddressFeatures = {};
     static VkPhysicalDeviceRayQueryFeaturesKHR              enabledRayQueryFeatures =  {};
     static VkPhysicalDeviceDescriptorIndexingFeatures       indexingFeatures = {};
+    static VkPhysicalDeviceRayTracingPipelineFeaturesKHR    enabledRTPipelineFeatures{};
 
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
     indexingFeatures.pNext = nullptr;
@@ -909,10 +915,16 @@ VkPhysicalDeviceFeatures2 Integrator_Generated::ListRequiredDeviceFeatures(std::
     enabledAccelStructFeatures.accelerationStructure = VK_TRUE;
     enabledAccelStructFeatures.pNext                 = &enabledDeviceAddressFeatures;
 
-    (*ppNext) = &enabledAccelStructFeatures; ppNext = &indexingFeatures.pNext;
+    enabledRTPipelineFeatures.sType              = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+    enabledRTPipelineFeatures.rayTracingPipeline = VK_TRUE;
+    enabledRTPipelineFeatures.pNext              = &enabledAccelStructFeatures;
+   
+    (*ppNext) = &enabledRTPipelineFeatures; 
+    ppNext = &indexingFeatures.pNext;
     
     // Required by VK_KHR_RAY_QUERY
     deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
     deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     deviceExtensions.push_back("VK_KHR_spirv_1_4");
     deviceExtensions.push_back("VK_KHR_shader_float_controls");  
@@ -921,9 +933,9 @@ VkPhysicalDeviceFeatures2 Integrator_Generated::ListRequiredDeviceFeatures(std::
     deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
     deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
     // // Required by VK_KHR_ray_tracing_pipeline
-    // m_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     // // Required by VK_KHR_spirv_1_4
-    // m_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+    deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
     deviceExtensions.push_back("VK_EXT_descriptor_indexing"); // TODO: move bindless texture it to seperate feature!
   }
   return features2;
