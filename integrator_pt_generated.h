@@ -326,7 +326,10 @@ protected:
   VkPipelineLayout      CastSingleRayMegaLayout   = VK_NULL_HANDLE;
   VkPipeline            CastSingleRayMegaPipeline = VK_NULL_HANDLE; 
   VkDescriptorSetLayout CastSingleRayMegaDSLayout = VK_NULL_HANDLE;
+  
   std::vector<VkStridedDeviceAddressRegionKHR> CastSingleRayMegaSBTStrides;
+  std::vector<VkStridedDeviceAddressRegionKHR> AlocateAllShaderTables(std::vector<VkPipeline> a_rtPipelines, uint32_t a_numShaderGroups, uint32_t a_numHitStages, uint32_t a_numMissStages, VkPhysicalDeviceRayTracingPipelinePropertiesKHR a_rtPipelineProps);
+
 
   VkDescriptorSetLayout CreateCastSingleRayMegaDSLayout();
   virtual void InitKernel_CastSingleRayMega(const char* a_filePath);
@@ -373,8 +376,8 @@ protected:
   virtual void MakeComputePipelineOnly(const char* a_shaderPath, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, VkPipelineLayout pipelineLayout, 
                                        VkPipeline* pPipeline);
 
-  virtual void MakeRayTracingPipelineAndLayout(const std::vector< std::pair<VkShaderStageFlagBits, std::string> >& shader_paths, bool a_hw_motion_blur, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, 
-                                               VkPipelineLayout* pPipelineLayout, VkPipeline* pPipeline);                                       
+  virtual uint32_t MakeRayTracingPipelineAndLayout(const std::vector< std::pair<VkShaderStageFlagBits, std::string> >& shader_paths, bool a_hw_motion_blur, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, 
+                                                   VkPipelineLayout* pPipelineLayout, VkPipeline* pPipeline);                                       
 
   std::vector<VkPipelineLayout> m_allCreatedPipelineLayouts; ///<! remenber them here to delete later
   std::vector<VkPipeline>       m_allCreatedPipelines;       ///<! remenber them here to delete later
@@ -400,10 +403,13 @@ public:
   
 
   // FOR RAY TRACING PIPELINE
-  uint32_t m_numShaderGroups = 0u;
+  uint32_t m_numShaderGroups = 0u; // sems to be always 4 in fact .... 
   uint32_t m_numHitStages  = 1u;
   uint32_t m_numMissStages = 2u;
   VkPhysicalDeviceRayTracingPipelinePropertiesKHR  m_rtPipelineProperties{};
+  std::vector<VkBuffer> m_allShaderTableBuffers;
+  VkDeviceMemory        m_allShaderTableMem;
+
 };
 
 

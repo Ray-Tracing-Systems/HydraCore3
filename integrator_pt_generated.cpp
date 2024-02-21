@@ -74,6 +74,9 @@ void Integrator_Generated::InitVulkanObjects(VkDevice a_device, VkPhysicalDevice
   m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateVulkanRTX(a_device, a_physicalDevice, queueAllFID, m_ctx.pCopyHelper,
                                                              maxMeshes, maxTotalVertices, maxTotalPrimitives, maxPrimitivesPerMesh, true),
                                                             [](ISceneObject *p) { DeleteSceneRT(p); } );
+
+  auto allSBT = AlocateAllShaderTables({CastSingleRayMegaPipeline}, m_numShaderGroups, m_numHitStages, m_numMissStages, m_rtPipelineProperties);   
+  CastSingleRayMegaSBTStrides = allSBT; // allSBT[0]                                                      
 }
 
 void Integrator_Generated::UpdatePlainMembers(std::shared_ptr<vk_utils::ICopyEngine> a_pCopyEngine)

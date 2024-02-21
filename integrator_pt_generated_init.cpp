@@ -5,7 +5,8 @@
 #include <cassert>
 #include "vk_copy.h"
 #include "vk_context.h"
-
+#include "ray_tracing/vk_rt_funcs.h"
+#include "ray_tracing/vk_rt_utils.h"
 
 #include "integrator_pt_generated.h"
 #include "include/Integrator_generated_ubo.h"
@@ -113,8 +114,8 @@ void Integrator_Generated::MakeComputePipelineOnly(const char* a_shaderPath, con
     vkDestroyShaderModule(device, shaderModule, VK_NULL_HANDLE);
 }
 
-void Integrator_Generated::MakeRayTracingPipelineAndLayout(const std::vector< std::pair<VkShaderStageFlagBits, std::string> >& shader_paths, bool a_hw_motion_blur, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, 
-                                                           VkPipelineLayout* pPipelineLayout, VkPipeline* pPipeline)
+uint32_t Integrator_Generated::MakeRayTracingPipelineAndLayout(const std::vector< std::pair<VkShaderStageFlagBits, std::string> >& shader_paths, bool a_hw_motion_blur, const char* a_mainName, const VkSpecializationInfo *a_specInfo, const VkDescriptorSetLayout a_dsLayout, 
+                                                               VkPipelineLayout* pPipelineLayout, VkPipeline* pPipeline)
 {
   // (1) load shader modules
   //
@@ -211,7 +212,8 @@ void Integrator_Generated::MakeRayTracingPipelineAndLayout(const std::vector< st
       vkDestroyShaderModule(device, shaderModules[i], VK_NULL_HANDLE);
     shaderModules[i] = VK_NULL_HANDLE;
   }
-
+  
+  return uint32_t(shaderGroups.size());
 }
 
 
@@ -366,15 +368,9 @@ void Integrator_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
       shader_paths.emplace_back(std::make_pair(VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, shaderPathRCHT.c_str()));
     }
  
-    MakeRayTracingPipelineAndLayout(shader_paths, enableMotionBlur, "main", kspec, CastSingleRayMegaDSLayout, 
-                                    &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline); 
+    m_numShaderGroups = MakeRayTracingPipelineAndLayout(shader_paths, enableMotionBlur, "main", kspec, CastSingleRayMegaDSLayout, 
+                                                        &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline); 
     
-    //auto pAlloc    = vk_utils::CreateMemoryAlloc_VMA(m_instance, m_device, m_physicalDevice, alloc_flags, m_vulkanVersion);
-    //m_pResourceMgr = std::make_shared<vk_utils::ResourceManager>(m_device, m_physicalDevice, pAlloc, m_pCopyHelper);
-
-    //CastSingleRayMegaSBTStrides = vk_rt_utils::CreateSimpleSBTSeparateBuffers(device, m_pResourceMgr, CastSingleRayMegaPipeline, m_numShaderGroups,
-    //                                                                          m_numHitStages, m_numMissStages, m_rtPipelineProperties);
-
     // MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, CastSingleRayMegaDSLayout, &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline);
   }
   else
@@ -383,6 +379,140 @@ void Integrator_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
     CastSingleRayMegaPipeline = nullptr;
   }
 }
+
+std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllShaderTables(std::vector<VkPipeline> a_rtPipelines, uint32_t a_numShaderGroups, uint32_t a_numHitStages, uint32_t a_numMissStages, VkPhysicalDeviceRayTracingPipelinePropertiesKHR a_rtPipelineProps)
+{
+  m_allShaderTableBuffers.clear();
+  VkPipeline a_rtPipeline = a_rtPipelines[0]; // todo add for loop
+  
+  // (1) create buffers for SBT
+  //
+  std::vector<VkStridedDeviceAddressRegionKHR> SBT_strides;
+  //{
+
+  const uint32_t handleSize        = a_rtPipelineProps.shaderGroupHandleSize;
+  const uint32_t handleSizeAligned = vk_utils::getSBTAlignedSize(a_rtPipelineProps.shaderGroupHandleSize, a_rtPipelineProps.shaderGroupHandleAlignment);
+  const uint32_t sbtSize           = a_numShaderGroups * handleSize;
+
+  std::vector<uint8_t> shaderHandleStorage(sbtSize);
+  VK_CHECK_RESULT(vkGetRayTracingShaderGroupHandlesKHR(device, a_rtPipeline, 0, a_numShaderGroups, sbtSize, shaderHandleStorage.data()));
+  VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                             VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  
+  auto raygenBuf  = vk_utils::createBuffer(device, handleSize, flags);
+  auto raymissBuf = vk_utils::createBuffer(device, handleSize, flags);
+  auto rayhitBuf  = vk_utils::createBuffer(device, handleSize, flags);
+
+  m_allShaderTableBuffers.push_back(raygenBuf);
+  m_allShaderTableBuffers.push_back(raymissBuf);
+  m_allShaderTableBuffers.push_back(rayhitBuf);
+  
+  //}
+
+  // (2) allocate and bind everything for 'm_allShaderTableBuffers'
+  //
+  // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+  //m_allShaderTableMem = vk_utils::allocateAndBindWithPadding(device, physicalDevice, m_allShaderTableBuffers, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT);
+  {
+    auto a_buffers = m_allShaderTableBuffers;
+    auto a_dev     = device;
+    auto a_physDev = physicalDevice;
+
+    std::vector<VkMemoryRequirements> memInfos(a_buffers.size());
+    for(size_t i = 0; i < memInfos.size(); ++i)
+    {
+      if(a_buffers[i] != VK_NULL_HANDLE)
+        vkGetBufferMemoryRequirements(a_dev, a_buffers[i], &memInfos[i]);
+      else
+      {
+        memInfos[i] = memInfos[0];
+        memInfos[i].size = 0;
+      }
+    }
+    
+    for(size_t i=1;i<memInfos.size();i++)
+    {
+      if(memInfos[i].memoryTypeBits != memInfos[0].memoryTypeBits)
+      {
+        VK_UTILS_LOG_WARNING("[allocateAndBindWithPadding]: input buffers have different memReq.memoryTypeBits");
+        //return VK_NULL_HANDLE;
+        exit(0);
+      }
+    }
+
+    auto offsets  = vk_utils::calculateMemOffsets(memInfos);
+    auto memTotal = offsets[offsets.size() - 1];
+
+    VkDeviceMemory res;
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext           = nullptr;
+    allocateInfo.allocationSize  = memTotal;
+    allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memInfos[0].memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, a_physDev);
+
+    VkMemoryAllocateFlagsInfo memoryAllocateFlagsInfo{};
+    {
+      memoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+      memoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+      allocateInfo.pNext = &memoryAllocateFlagsInfo;
+    }
+
+    VK_CHECK_RESULT(vkAllocateMemory(a_dev, &allocateInfo, NULL, &res));
+
+    for (size_t i = 0; i < memInfos.size(); i++)
+    {
+      if(a_buffers[i] != VK_NULL_HANDLE)
+        vkBindBufferMemory(a_dev, a_buffers[i], res, offsets[i]);
+    }
+  }
+  
+  // (3) get all device addresses
+  //
+
+  //{
+
+  const auto rgenStride = vk_utils::getSBTAlignedSize(handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+  const auto missSize   = vk_utils::getSBTAlignedSize(a_numMissStages * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+  const auto hitSize    = vk_utils::getSBTAlignedSize(a_numHitStages  * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+  
+  SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, raygenBuf),  rgenStride,         rgenStride });
+  SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, raymissBuf), handleSizeAligned,  missSize });
+  SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, rayhitBuf),  handleSizeAligned,  hitSize});
+  SBT_strides.push_back({ 0u, 0u, 0u });
+
+  /*
+  auto *pData = shaderHandleStorage.data();
+  // single raygen
+  {
+    void* mapped = a_pResMgr->MapBufferToHostMemory(raygenBuf, 0, VK_WHOLE_SIZE);
+    memcpy(mapped, pData, handleSize);
+    
+    pData += handleSize;
+    a_pResMgr->UnmapBuffer(raygenBuf);
+  }
+
+  // a_numMissStages raymiss
+  {
+    void* mapped = a_pResMgr->MapBufferToHostMemory(raymissBuf, 0, VK_WHOLE_SIZE);
+    memcpy(mapped, pData, handleSize * a_numMissStages);
+    pData += handleSize * a_numMissStages;
+    a_pResMgr->UnmapBuffer(raymissBuf);
+  }
+		
+	// a_numHitStages rayhit
+  {
+    void* mapped = a_pResMgr->MapBufferToHostMemory(rayhitBuf, 0, VK_WHOLE_SIZE);
+    memcpy(mapped, pData, handleSize * a_numHitStages);
+    pData += handleSize * a_numHitStages;
+    a_pResMgr->UnmapBuffer(rayhitBuf);
+  }*/
+
+  //}
+
+  return SBT_strides;
+}
+
+
 
 void Integrator_Generated::InitKernel_PackXYMega(const char* a_filePath)
 {
