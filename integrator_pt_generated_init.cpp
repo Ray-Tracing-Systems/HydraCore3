@@ -396,6 +396,7 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
 
   std::vector<uint8_t> shaderHandleStorage(sbtSize);
   VK_CHECK_RESULT(vkGetRayTracingShaderGroupHandlesKHR(device, a_rtPipeline, 0, a_numShaderGroups, sbtSize, shaderHandleStorage.data()));
+  
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                              VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
   
@@ -413,10 +414,13 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
   //
   // VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
   //m_allShaderTableMem = vk_utils::allocateAndBindWithPadding(device, physicalDevice, m_allShaderTableBuffers, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT);
+  std::vector<size_t> offsets;
+  size_t memTotal;
   {
     auto a_buffers = m_allShaderTableBuffers;
     auto a_dev     = device;
     auto a_physDev = physicalDevice;
+    auto& res      = m_allShaderTableMem;
 
     std::vector<VkMemoryRequirements> memInfos(a_buffers.size());
     for(size_t i = 0; i < memInfos.size(); ++i)
@@ -440,10 +444,9 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
       }
     }
 
-    auto offsets  = vk_utils::calculateMemOffsets(memInfos);
-    auto memTotal = offsets[offsets.size() - 1];
+    offsets  = vk_utils::calculateMemOffsets(memInfos); // out
+    memTotal = offsets[offsets.size() - 1];             // out
 
-    VkDeviceMemory res;
     VkMemoryAllocateInfo allocateInfo = {};
     allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.pNext           = nullptr;
@@ -479,33 +482,25 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
   SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, raymissBuf), handleSizeAligned,  missSize });
   SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, rayhitBuf),  handleSizeAligned,  hitSize});
   SBT_strides.push_back({ 0u, 0u, 0u });
-
-  /*
+  
+  char* mapped = nullptr;
+  VkResult result = vkMapMemory(device, m_allShaderTableMem, 0, memTotal, 0, (void**)&mapped);
+  VK_CHECK_RESULT(result);
+  
   auto *pData = shaderHandleStorage.data();
-  // single raygen
+
   {
-    void* mapped = a_pResMgr->MapBufferToHostMemory(raygenBuf, 0, VK_WHOLE_SIZE);
-    memcpy(mapped, pData, handleSize);
-    
-    pData += handleSize;
-    a_pResMgr->UnmapBuffer(raygenBuf);
+    memcpy(mapped + offsets[0], pData, handleSize * 1);
+    pData += handleSize * 1;
+
+    memcpy(mapped + offsets[1], pData, handleSize * a_numMissStages);
+    pData += handleSize * a_numMissStages;
+
+    memcpy(mapped + offsets[2], pData, handleSize * a_numHitStages);
+    pData += handleSize * a_numHitStages;
   }
 
-  // a_numMissStages raymiss
-  {
-    void* mapped = a_pResMgr->MapBufferToHostMemory(raymissBuf, 0, VK_WHOLE_SIZE);
-    memcpy(mapped, pData, handleSize * a_numMissStages);
-    pData += handleSize * a_numMissStages;
-    a_pResMgr->UnmapBuffer(raymissBuf);
-  }
-		
-	// a_numHitStages rayhit
-  {
-    void* mapped = a_pResMgr->MapBufferToHostMemory(rayhitBuf, 0, VK_WHOLE_SIZE);
-    memcpy(mapped, pData, handleSize * a_numHitStages);
-    pData += handleSize * a_numHitStages;
-    a_pResMgr->UnmapBuffer(rayhitBuf);
-  }*/
+  vkUnmapMemory(device, m_allShaderTableMem);     
 
   //}
 
