@@ -326,11 +326,16 @@ void Integrator_Generated::CastSingleRayMegaCmd(uint tid, float* out_color)
   pcData.m_sizeZ  = 1;
   pcData.m_tFlags = m_currThreadFlags;
 
-  vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
-  
-  vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaPipeline);
-  vkCmdDispatch    (m_currCmdBuffer, (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
- 
+  //vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(KernelArgsPC), &pcData);
+  //vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaPipeline);
+  //vkCmdDispatch    (m_currCmdBuffer, (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
+
+  vkCmdPushConstants(m_currCmdBuffer, CastSingleRayMegaLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, 0, sizeof(KernelArgsPC), &pcData);
+  vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, CastSingleRayMegaPipeline);
+  vkCmdTraceRaysKHR(m_currCmdBuffer,
+                    &CastSingleRayMegaSBTStrides[0],&CastSingleRayMegaSBTStrides[1],&CastSingleRayMegaSBTStrides[2], &CastSingleRayMegaSBTStrides[3],
+                    (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
+
 }
 
 void Integrator_Generated::PackXYMegaCmd(uint tidX, uint tidY)

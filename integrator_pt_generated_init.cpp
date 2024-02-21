@@ -490,13 +490,13 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
   auto *pData = shaderHandleStorage.data();
 
   {
-    memcpy(mapped + offsets[0], pData, handleSize * 1);
+    memcpy(mapped + offsets[0], pData, handleSize * 1); // raygenBuf
     pData += handleSize * 1;
 
-    memcpy(mapped + offsets[1], pData, handleSize * a_numMissStages);
+    memcpy(mapped + offsets[1], pData, handleSize * a_numMissStages); // raymissBuf
     pData += handleSize * a_numMissStages;
 
-    memcpy(mapped + offsets[2], pData, handleSize * a_numHitStages);
+    memcpy(mapped + offsets[2], pData, handleSize * a_numHitStages); // rayhitBuf
     pData += handleSize * a_numHitStages;
   }
 
