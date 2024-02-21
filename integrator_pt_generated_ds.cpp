@@ -227,95 +227,97 @@ VkDescriptorSetLayout Integrator_Generated::CreateCastSingleRayMegaDSLayout()
 {
   std::array<VkDescriptorSetLayoutBinding, 19+1> dsBindings;
 
+  auto computeAndRT = VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_MISS_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+
   // binding for out_color
   dsBindings[0].binding            = 0;
   dsBindings[0].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[0].descriptorCount    = 1;
-  dsBindings[0].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[0].stageFlags         = computeAndRT;
   dsBindings[0].pImmutableSamplers = nullptr;
 
   // binding for m_vNorm4f
   dsBindings[1].binding            = 1;
   dsBindings[1].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[1].descriptorCount    = 1;
-  dsBindings[1].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[1].stageFlags         = computeAndRT;
   dsBindings[1].pImmutableSamplers = nullptr;
 
   // binding for m_vTang4f
   dsBindings[2].binding            = 2;
   dsBindings[2].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[2].descriptorCount    = 1;
-  dsBindings[2].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[2].stageFlags         = computeAndRT;
   dsBindings[2].pImmutableSamplers = nullptr;
 
   // binding for m_triIndices
   dsBindings[3].binding            = 3;
   dsBindings[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[3].descriptorCount    = 1;
-  dsBindings[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[3].stageFlags         = computeAndRT;
   dsBindings[3].pImmutableSamplers = nullptr;
 
   // binding for m_allRemapListsOffsets
   dsBindings[4].binding            = 4;
   dsBindings[4].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[4].descriptorCount    = 1;
-  dsBindings[4].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[4].stageFlags         = computeAndRT;
   dsBindings[4].pImmutableSamplers = nullptr;
 
   // binding for m_allRemapLists
   dsBindings[5].binding            = 5;
   dsBindings[5].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[5].descriptorCount    = 1;
-  dsBindings[5].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[5].stageFlags         = computeAndRT;
   dsBindings[5].pImmutableSamplers = nullptr;
 
   // binding for m_precomp_coat_transmittance
   dsBindings[6].binding            = 6;
   dsBindings[6].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[6].descriptorCount    = 1;
-  dsBindings[6].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[6].stageFlags         = computeAndRT;
   dsBindings[6].pImmutableSamplers = nullptr;
 
   // binding for m_lights
   dsBindings[7].binding            = 7;
   dsBindings[7].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[7].descriptorCount    = 1;
-  dsBindings[7].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[7].stageFlags         = computeAndRT;
   dsBindings[7].pImmutableSamplers = nullptr;
 
   // binding for m_materials
   dsBindings[8].binding            = 8;
   dsBindings[8].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[8].descriptorCount    = 1;
-  dsBindings[8].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[8].stageFlags         = computeAndRT;
   dsBindings[8].pImmutableSamplers = nullptr;
 
   // binding for m_remapInst
   dsBindings[9].binding            = 9;
   dsBindings[9].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[9].descriptorCount    = 1;
-  dsBindings[9].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[9].stageFlags         = computeAndRT;
   dsBindings[9].pImmutableSamplers = nullptr;
 
   // binding for m_vertOffset
   dsBindings[10].binding            = 10;
   dsBindings[10].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[10].descriptorCount    = 1;
-  dsBindings[10].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[10].stageFlags         = computeAndRT;
   dsBindings[10].pImmutableSamplers = nullptr;
 
   // binding for m_spec_values
   dsBindings[11].binding            = 11;
   dsBindings[11].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[11].descriptorCount    = 1;
-  dsBindings[11].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[11].stageFlags         = computeAndRT;
   dsBindings[11].pImmutableSamplers = nullptr;
 
   // binding for m_packedXY
   dsBindings[12].binding            = 12;
   dsBindings[12].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[12].descriptorCount    = 1;
-  dsBindings[12].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[12].stageFlags         = computeAndRT;
   dsBindings[12].pImmutableSamplers = nullptr;
 
   // binding for m_textures
@@ -325,49 +327,49 @@ VkDescriptorSetLayout Integrator_Generated::CreateCastSingleRayMegaDSLayout()
   if(m_vdata.m_texturesArrayMaxSize == 0)
     m_vdata.m_texturesArrayMaxSize = GetDefaultMaxTextures();
   dsBindings[13].descriptorCount    = m_vdata.m_texturesArrayMaxSize;
-  dsBindings[13].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[13].stageFlags         = computeAndRT;
   dsBindings[13].pImmutableSamplers = nullptr;
 
   // binding for m_pdfLightData
   dsBindings[14].binding            = 14;
   dsBindings[14].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[14].descriptorCount    = 1;
-  dsBindings[14].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[14].stageFlags         = computeAndRT;
   dsBindings[14].pImmutableSamplers = nullptr;
 
   // binding for m_spec_offset_sz
   dsBindings[15].binding            = 15;
   dsBindings[15].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[15].descriptorCount    = 1;
-  dsBindings[15].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[15].stageFlags         = computeAndRT;
   dsBindings[15].pImmutableSamplers = nullptr;
 
   // binding for m_pAccelStruct
   dsBindings[16].binding            = 16;
   dsBindings[16].descriptorType     = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
   dsBindings[16].descriptorCount    = 1;
-  dsBindings[16].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[16].stageFlags         = computeAndRT;
   dsBindings[16].pImmutableSamplers = nullptr;
 
   // binding for m_matIdByPrimId
   dsBindings[17].binding            = 17;
   dsBindings[17].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[17].descriptorCount    = 1;
-  dsBindings[17].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[17].stageFlags         = computeAndRT;
   dsBindings[17].pImmutableSamplers = nullptr;
 
   // binding for m_matIdOffsets
   dsBindings[18].binding            = 18;
   dsBindings[18].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[18].descriptorCount    = 1;
-  dsBindings[18].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[18].stageFlags         = computeAndRT;
   dsBindings[18].pImmutableSamplers = nullptr;
 
   // binding for POD members stored in m_classDataBuffer
   dsBindings[19].binding            = 19;
   dsBindings[19].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   dsBindings[19].descriptorCount    = 1;
-  dsBindings[19].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+  dsBindings[19].stageFlags         = computeAndRT;
   dsBindings[19].pImmutableSamplers = nullptr;
   
   VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {};

@@ -369,14 +369,8 @@ void Integrator_Generated::InitKernel_CastSingleRayMega(const char* a_filePath)
     MakeRayTracingPipelineAndLayout(shader_paths, enableMotionBlur, "main", kspec, CastSingleRayMegaDSLayout, 
                                     &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline); 
     
-  
-    //m_numShaderGroups = static_cast<uint32_t>(maker.shaderGroups.size());
-    //VkPipelineCreateFlags pipelineFlags = 0;
-    //if(enableMotionBlur)
-    //  pipelineFlags |= VK_PIPELINE_CREATE_RAY_TRACING_ALLOW_MOTION_BIT_NV;
-    //m_rtPipeline.pipeline = maker.MakePipeline(m_device, pipelineFlags, 2);
 
-    MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, CastSingleRayMegaDSLayout, &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline);
+    // MakeComputePipelineAndLayout(shaderPath.c_str(), "main", kspec, CastSingleRayMegaDSLayout, &CastSingleRayMegaLayout, &CastSingleRayMegaPipeline);
   }
   else
   {
