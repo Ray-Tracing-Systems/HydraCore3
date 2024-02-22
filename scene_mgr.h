@@ -2,7 +2,7 @@
 #define CHIMERA_SCENE_MGR_H
 
 #include <vector>
-
+#include <unordered_map>
 #include <geom/vk_mesh.h>
 #include <ray_tracing/vk_rt_utils.h>
 #include "LiteMath.h"
@@ -77,7 +77,8 @@ struct SceneManager
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
   uint32_t AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshData);
 
-  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender = true);
+  uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
+                        const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
 
   void MarkInstance(uint32_t instId);
   void UnmarkInstance(uint32_t instId);
@@ -111,6 +112,7 @@ struct SceneManager
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
   void BuildAllBLAS();
   void BuildTLAS();
+  void BuildTLAS_MotionBlur();
 
 private:
   const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
@@ -130,6 +132,7 @@ private:
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
+  std::unordered_map<uint32_t, float4x4> m_motionMatrices = {};
 
   std::vector<hydra_xml::Camera> m_sceneCameras = {};
 

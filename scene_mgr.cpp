@@ -164,11 +164,11 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   return idx;
 }
 
-uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float4x4 &matrix, bool markForRender)
+  uint32_t SceneManager::InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion, 
+                                      const LiteMath::float4x4 end_matrix, bool markForRender);
 {
   assert(meshId < m_meshInfos.size());
 
-  //@TODO: maybe move
   m_instanceMatrices.push_back(matrix);
 
   InstanceInfo info;
@@ -176,6 +176,9 @@ uint32_t SceneManager::InstanceMesh(const uint32_t meshId, const LiteMath::float
   info.mesh_id       = meshId;
   info.renderMark    = markForRender;
   info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
+
+  if(hasMotion)
+    m_motionMatrices[info.inst_id] = end_matrix;
 
   m_instanceInfos.push_back(info);
 
@@ -493,6 +496,100 @@ void SceneManager::BuildTLAS()
   VkDeviceOrHostAddressConstKHR instBufferDeviceAddress{};
   instBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, instancesBuffer);
   m_pBuilderV2->BuildTLAS(static_cast<uint32_t>(geometryInstances.size()), instBufferDeviceAddress);
+
+  if (instancesAlloc != VK_NULL_HANDLE)
+  {
+    vkFreeMemory(m_device, instancesAlloc, nullptr);
+  }
+  if (instancesBuffer != VK_NULL_HANDLE)
+  {
+    vkDestroyBuffer(m_device, instancesBuffer, nullptr);
+  }
+}
+
+void SceneManager::BuildTLAS_MotionBlur()
+{
+  BuildAllBLAS();
+
+  struct VkAccelerationStructureMotionInstanceNVPad : VkAccelerationStructureMotionInstanceNV
+  {
+    uint64_t _pad{0};
+  };
+  static_assert((sizeof(VkAccelerationStructureMotionInstanceNVPad) == 160));
+
+  std::vector<VkAccelerationStructureMotionInstanceNVPad> geometryInstances;
+  geometryInstances.reserve(m_instanceInfos.size());
+
+  for(const auto& inst : m_instanceInfos)
+  {
+    if(m_motionMatrices.count(inst.inst_id) > 0)
+    {
+      VkAccelerationStructureMatrixMotionInstanceNV data;
+      data.transformT0                            = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
+      data.transformT1                            = transformMatrixFromFloat4x4(m_motionMatrices[inst.inst_id]);
+      data.instanceCustomIndex                    = inst.mesh_id;  // gl_InstanceCustomIndexEXT
+      data.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id);
+      data.instanceShaderBindingTableRecordOffset = 0;  
+      data.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+      data.mask                                   = 0xFF;
+      VkAccelerationStructureMotionInstanceNVPad rayInst;
+      rayInst.type                      = VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_MATRIX_MOTION_NV;
+      rayInst.data.matrixMotionInstance = data;
+
+      geometryInstances.emplace_back(rayInst);
+    }
+    else
+    {
+      VkAccelerationStructureInstanceKHR data{};
+      data.transform                              = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
+      data.instanceCustomIndex                    = inst.mesh_id; 
+      data.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id);
+      data.instanceShaderBindingTableRecordOffset = 0;  
+      data.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+      data.mask                                   = 0xFF;
+
+      VkAccelerationStructureMotionInstanceNVPad rayInst;
+      rayInst.type                = VK_ACCELERATION_STRUCTURE_MOTION_INSTANCE_TYPE_STATIC_NV;
+      rayInst.data.staticInstance = data;
+
+      geometryInstances.emplace_back(rayInst);
+    }
+  }
+
+  VkBufferUsageFlags buf_flags = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+                                 VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+  VkBuffer instancesBuffer = VK_NULL_HANDLE;
+
+  VkMemoryRequirements memReqs {};
+  instancesBuffer = vk_utils::createBuffer(m_device, sizeof(VkAccelerationStructureMotionInstanceNVPad) * geometryInstances.size(), 
+                                           buf_flags, &memReqs);
+
+  VkMemoryAllocateFlagsInfo memoryAllocateFlagsInfo{};
+  memoryAllocateFlagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+  memoryAllocateFlagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+  VkDeviceMemory instancesAlloc;
+  VkMemoryAllocateInfo allocateInfo = {};
+  allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocateInfo.pNext           = &memoryAllocateFlagsInfo;
+  allocateInfo.allocationSize  = memReqs.size;
+  allocateInfo.memoryTypeIndex = vk_utils::findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_physDevice);
+  VK_CHECK_RESULT(vkAllocateMemory(m_device, &allocateInfo, nullptr, &instancesAlloc));
+
+  VK_CHECK_RESULT(vkBindBufferMemory(m_device, instancesBuffer, instancesAlloc, 0));
+  m_pCopyHelper->UpdateBuffer(instancesBuffer, 0, geometryInstances.data(),
+                              sizeof(VkAccelerationStructureMotionInstanceNVPad) * geometryInstances.size());
+
+  VkBuildAccelerationStructureFlagsKHR buildFlags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+
+  buildFlags |= VK_BUILD_ACCELERATION_STRUCTURE_MOTION_BIT_NV;
+
+  VkDeviceOrHostAddressConstKHR instBufferDeviceAddress{};
+  instBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, instancesBuffer);
+  m_pBuilderV2->BuildTLAS(static_cast<uint32_t>(geometryInstances.size()), instBufferDeviceAddress, buildFlags);
+
 
   if (instancesAlloc != VK_NULL_HANDLE)
   {
