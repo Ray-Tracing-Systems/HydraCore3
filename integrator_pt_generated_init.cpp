@@ -400,9 +400,13 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                              VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
   
-  auto raygenBuf  = vk_utils::createBuffer(device, handleSize, flags);
-  auto raymissBuf = vk_utils::createBuffer(device, handleSize, flags);
-  auto rayhitBuf  = vk_utils::createBuffer(device, handleSize, flags);
+  const auto rgenStride = vk_utils::getSBTAlignedSize(handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+  const auto missSize   = vk_utils::getSBTAlignedSize(a_numMissStages * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+  const auto hitSize    = vk_utils::getSBTAlignedSize(a_numHitStages  * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
+
+  auto raygenBuf  = vk_utils::createBuffer(device, rgenStride, flags);
+  auto raymissBuf = vk_utils::createBuffer(device, missSize * a_numMissStages, flags);
+  auto rayhitBuf  = vk_utils::createBuffer(device, hitSize * a_numHitStages, flags);
 
   m_allShaderTableBuffers.push_back(raygenBuf);
   m_allShaderTableBuffers.push_back(raymissBuf);
@@ -473,10 +477,6 @@ std::vector<VkStridedDeviceAddressRegionKHR> Integrator_Generated::AlocateAllSha
   //
 
   //{
-
-  const auto rgenStride = vk_utils::getSBTAlignedSize(handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
-  const auto missSize   = vk_utils::getSBTAlignedSize(a_numMissStages * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
-  const auto hitSize    = vk_utils::getSBTAlignedSize(a_numHitStages  * handleSizeAligned, a_rtPipelineProps.shaderGroupBaseAlignment);
   
   SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, raygenBuf),  rgenStride,         rgenStride });
   SBT_strides.push_back({ vk_rt_utils::getBufferDeviceAddress(device, raymissBuf), handleSizeAligned,  missSize });
