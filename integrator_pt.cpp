@@ -42,11 +42,6 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 237 && y == 512 - 109 - 1)
-  {
-    int a = 2;
-  }
-
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -130,7 +125,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   const float4 rayDir = *rayDirAndFar ;
 
   float time = 0.0f;
-  if(m_enabledFeatures[KSPEC_MOTION_BLUR] !=0) 
+  if(m_normMatrices2.size() > 0) 
   {
     time  = rndFloat1_Pseudo(a_gen); 
   }
@@ -178,8 +173,18 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
     // transform surface point with matrix and flip normal if needed
     //
-    hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    hitTang                = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
+    float3 hitNorm1 = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
+    float3 hitTang1 = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
+
+    if(m_normMatrices2.size() > 0)
+    {
+      float3 hitNorm2 = normalize(mul3x3(m_normMatrices2[hit.instId], hitNorm));
+      float3 hitTang2 = normalize(mul3x3(m_normMatrices2[hit.instId], hitTang));
+
+      hitNorm = lerp(hitNorm1, hitNorm2, time);
+      hitTang = lerp(hitTang1, hitTang2, time);
+    }
+
     const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
     hitNorm                = flipNorm * hitNorm;
     hitTang                = flipNorm * hitTang; // do we need this ??
@@ -244,7 +249,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
   float time = 0.0f;
-  if(m_enabledFeatures[KSPEC_MOTION_BLUR] !=0) 
+  if(m_normMatrices2.size() > 0) 
   {
     time  = rndFloat1_Pseudo(a_gen); 
   }

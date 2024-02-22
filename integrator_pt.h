@@ -260,7 +260,8 @@ public:
   float4x4                      m_worldViewInv;
 
   std::vector<RandomGen>        m_randomGens;
-  std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices;  ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices2; ///< per instance normal matrix for motion end point (used when motion blur is enabled)
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
 

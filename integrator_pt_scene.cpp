@@ -613,17 +613,26 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       LiteMath::float4x4 movement[2] = {inst.matrix, inst.matrix_motion};
       m_pAccelStruct->AddInstance(inst.geomId, movement, 2);
       m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] = 1;
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix_motion)));
     }
     else
     {
       m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix)));
     }
 
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
+    
     m_remapInst.push_back(inst.rmapId);
 
     m_instIdToLightInstId[inst.instId] = inst.lightInstId;
     realInstId++;
+  }
+
+  if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 0)
+  {
+    m_normMatrices2.clear();
+    m_normMatrices2.resize(0);
   }
 
   m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
