@@ -335,7 +335,7 @@ void Integrator_Generated::CastSingleRayMegaCmd(uint tid, float* out_color)
   vkCmdBindPipeline(m_currCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, CastSingleRayMegaPipeline);
   vkCmdTraceRaysKHR(m_currCmdBuffer,
                     &CastSingleRayMegaSBTStrides[0],&CastSingleRayMegaSBTStrides[1],&CastSingleRayMegaSBTStrides[2], &CastSingleRayMegaSBTStrides[3],
-                    (sizeX + blockSizeX - 1) / blockSizeX, (sizeY + blockSizeY - 1) / blockSizeY, (sizeZ + blockSizeZ - 1) / blockSizeZ);
+                    sizeX, sizeY,sizeZ);
 
 }
 
@@ -534,7 +534,7 @@ void Integrator_Generated::CastSingleRayCmd(VkCommandBuffer a_commandBuffer, uin
 {
   m_currCmdBuffer = a_commandBuffer;
   VkMemoryBarrier memoryBarrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT }; 
-  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, CastSingleRayMegaLayout, 0, 1, &m_allGeneratedDS[1], 0, nullptr);
+  vkCmdBindDescriptorSets(a_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, CastSingleRayMegaLayout, 0, 1, &m_allGeneratedDS[1], 0, nullptr); //!!
   CastSingleRayMegaCmd(tid, out_color);
   vkCmdPipelineBarrier(m_currCmdBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &memoryBarrier, 0, nullptr, 0, nullptr); 
 }

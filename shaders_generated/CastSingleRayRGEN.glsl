@@ -202,7 +202,16 @@ void main()
   //const uint tid = uint(gl_GlobalInvocationID[0]); 
   const uint tid = uint(gl_LaunchIDEXT.x); 
   ///////////////////////////////////////////////////////////////// prolog
-
+  
+  //const uint XY = m_packedXY[tid];
+  //const uint x  = (XY & 0x0000FFFF);
+  //const uint y  = (XY & 0xFFFF0000) >> 16;
+  //
+  //out_color[(y*uint(ubo.m_winWidth)+x)*4 + 0] = 1.0f;
+  //out_color[(y*uint(ubo.m_winWidth)+x)*4 + 1] = 0.5f;
+  //out_color[(y*uint(ubo.m_winWidth)+x)*4 + 2] = 1.0f;
+  //out_color[(y*uint(ubo.m_winWidth)+x)*4 + 3] = 0.0f;
+  
   
   vec4 rayPosAndNear,  rayDirAndFar;
   kernel_InitEyeRay_m_packedXY(tid, 0, rayPosAndNear, rayDirAndFar);
@@ -213,6 +222,6 @@ void main()
     return;
   
   kernel_GetRayColor_m_packedXY_out_color(tid, hit, baricentrics, 0, 0);
-
+  
 }
 
