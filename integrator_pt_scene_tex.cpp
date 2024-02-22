@@ -1,7 +1,6 @@
 #include "imageutils.h"
 #include "integrator_pt_scene.h"
 
-
 //bool LoadHDRImageFromFile(const wchar_t* a_fileName, int* pW, int* pH, std::vector<float>& a_data);
 
 std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
