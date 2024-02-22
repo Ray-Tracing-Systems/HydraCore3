@@ -596,7 +596,7 @@
                  "mispt", 
                  "-width", "1000",
                  "-height", "1000",
-                 "-spp", "10000",
+                 "-spp", "5000",
                  "--spectral"], 
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -707,6 +707,34 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
                  "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "5000", 
+                 //"-out", "out_gpu_224.bmp"
+                 "-out", "../out/cornell_film.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SphereCornellFilm_sapphire",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../Spectral/Glass/0001/Glass-sphere_gloss-1_cornell_films_sapphire.xml",
                  "-integrator", "mispt", 
                  "-width", "400",
                  "-height", "400",

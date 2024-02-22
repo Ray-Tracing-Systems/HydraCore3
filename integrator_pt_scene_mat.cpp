@@ -728,9 +728,11 @@ struct ThinFilmPrecomputed
 ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values,
         const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
 {
-  std::vector<complex> cos_theta = std::vector<complex>(FILM_LAYERS_MAX + 1, complex(0.0));
-  std::vector<complex> phase_diff = std::vector<complex>(FILM_LAYERS_MAX - 1, complex(0.0));
   ThinFilmPrecomputed res;
+  res.ext_reflectivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
+  res.ext_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
+  res.int_reflectivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
+  res.int_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
   for (int i = 0; i < FILM_LENGTH_RES; ++i)
   {
     float wavelength = (LAMBDA_MAX - LAMBDA_MIN - 1) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
@@ -755,7 +757,6 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
 
       ior[layer + 1] = complex(eta, k);
     }
-    //std::cout << multFrFilm(0.5, ior.data(), a_thickness, layers, 500.f, cos_theta.data(), phase_diff.data()).refl << std::endl;
     for (int j = 0; j < FILM_ANGLE_RES; ++j)
     {
       float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
@@ -772,18 +773,13 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       }
       else
       {
-        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
-        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength, cos_theta.data(), phase_diff.data());
+        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
       }
-
-      res.ext_reflectivity.push_back(forward.refl);
-      res.ext_transmittivity.push_back(forward.refr);
-      res.int_reflectivity.push_back(backward.refl);
-      res.int_transmittivity.push_back(backward.refr);  
-      //res.ext_reflectivity[i * FILM_ANGLE_RES + j] = forward.refl;
-      //res.ext_transmittivity[i * FILM_ANGLE_RES + j] = forward.refr;
-      //res.int_reflectivity[i * FILM_ANGLE_RES + j] = backward.refl;
-      //res.int_transmittivity[i * FILM_ANGLE_RES + j] = backward.refr;  
+      res.ext_reflectivity[i * FILM_ANGLE_RES + j] = forward.refl;
+      res.ext_transmittivity[i * FILM_ANGLE_RES + j] = forward.refr;
+      res.int_reflectivity[i * FILM_ANGLE_RES + j] = backward.refl;
+      res.int_transmittivity[i * FILM_ANGLE_RES + j] = backward.refr;  
     }
   }
   save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
