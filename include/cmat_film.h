@@ -213,7 +213,7 @@ static float filmRoughEvalInternal2(float3 wo, float3 wi, float3 wm, float2 alph
 */
 
 static inline void filmRoughSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
-        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* reflectance)
+        uint layers, const float4 a_wavelengths, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed)
 {
   const float extIOR = a_materials[0].data[FILM_ETA_EXT];
 
@@ -242,84 +242,93 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   if(wi.z <= 0)
     return;
 
-  const float cosThetaI = std::max(wi.z, EPSILON_32);
-
   const float4 wm_pdf = sample_visible_normal(wi, {rands.x, rands.y}, alpha);
   const float3 wm = to_float3(wm_pdf);
-  const float3 wo = reflect((-1.0f) * wi, wm);
-  const float cos_theta_o = std::max(wo.z, EPSILON_32);
-  if(wo.z <= 0 || wm_pdf.w == 0.0f) // not in the same hemisphere
-  {
-    return;
-  }
 
-  float G1 = smith_g1(wo, wm, alpha);
-  float4 val;
+  const float cosThetaI = std::max(dot(wi, wm), EPSILON_32);
+
+  float ior = a_ior[layers].re / extIOR;
+
+  float4 fr = FrDielectricDetailedV2(cosThetaI, ior);
+
+  const float cosThetaT = fr.y;
+  const float eta_it = fr.z;
+  const float eta_ti = fr.w;  
+
   const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
+
+  float R, T;
+  FrReflRefr result;
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
 /*
   if (precompFlag == 0u)
   {
-    for(int i = 0; i < spectralSamples; ++i)
+    if (layers == 2)
     {
-      if (layers == 2)
-      {
-        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[i]);
-      }
-      else if (layers > 2)
-      {
-        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, a_ior, thickness, layers, a_wavelengths[i], i, a_cosTheta, a_phaseDiff);
-      }
+      R = filmRoughEvalInternal(wo, wi, wm, alpha, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[i]);
+    }
+    else if (layers > 2)
+    {
+      R = filmRoughEvalInternal2(wo, wi, wm, alpha, a_ior, thickness, layers, a_wavelengths[i], i, a_cosTheta, a_phaseDiff);
     }
   }
   else
   */
   {
-    for (int i = 0; i < spectralSamples; ++i)
-    {
-      //val[i] = filmRoughEvalInternalPrecomp(wo, wi, wm, alpha, a_wavelengths[i], reflectance);
+    //R = filmRoughEvalInternalPrecomp(wo, wi, wm, alpha, a_wavelengths[i], reflectance);
 
-      if(wo.z * wi.z < 0) // not in the same hemisphere
-      {
-        val[i] = 0.0f;
-        continue;
-      }
+    float w = (a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
+    float theta = acos(std::abs(dot(wi, wm))) * 2.f / M_PI;
 
-      float cosTheta_o = AbsCosTheta(wo);
-      float cosTheta_i = AbsCosTheta(wi);
-      if (cosTheta_i == 0 || cosTheta_o == 0)
-      {
-        val[i] = 0.0f;
-        continue;
-      }
-      float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      float theta = acos(std::abs(dot(wo, wm))) * 2.f / M_PI;
+    //float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    w *= FILM_LENGTH_RES - 1;
+    theta *= FILM_ANGLE_RES - 1;
+    uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
 
-      //float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
-      w *= FILM_LENGTH_RES - 1;
-      theta *= FILM_ANGLE_RES - 1;
-      uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
-      uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+    float a = w - float(index1);
+    float b = theta - float(index2);
 
-      float a = w - float(index1);
-      float b = theta - float(index2);
+    float v0 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], a);
+    float v1 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], a);
+    float R = lerp(v0, v1, b);
 
-      float v0 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2], a);
-      float v1 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2 + 1], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], a);
-      float R = lerp(v0, v1, b);
-
-      //v0 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-      //v1 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2 + 1], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
-      //T = lerp(v0, v1, beta);
-
-      val[i] = G1 * R;/// (4.0f * cosTheta_i * cosTheta_o);
-    }
+    v0 = lerp(precomputed[refr_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2], a);
+    v1 = lerp(precomputed[refr_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], a);
+    T = lerp(v0, v1, b);
   }
-   
-  pRes->dir   = normalize(wo.x * s + wo.y * t + wo.z * n);
-  pRes->pdf   = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm)));
-  pRes->val   = pRes->pdf * val / cos_theta_o; 
+  if (rands.z * (R + T) < R)
+  {
+    const float3 wo = reflect((-1.0f) * wi, wm);
+    float G1 = smith_g1(wo, wm, alpha);
+    const float cosThetaO = std::max(wo.z, EPSILON_32);
+    if(wo.z <= 0 || wm_pdf.w == 0.0f) // not in the same hemisphere
+    {
+      return;
+    }
+    pRes->dir   = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->pdf   = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm)));
+    pRes->val   = float4(pRes->pdf * G1 * R / cosThetaO); 
+  }
+  else
+  {  
+    float3 ws, wt;
+    CoordinateSystemV2(wm, &ws, &wt);
+    const float3 local_wi = {dot(ws, wi), dot(wt, wi), dot(wm, wi)};
+    const float3 local_wo = refract(local_wi, cosThetaT, eta_ti);
+    const float3 wo = normalize(local_wo.x * ws + local_wo.y * wt + local_wo.z * wm);
+    if (wi.z * wo.z > 0.0)
+    {
+      return;
+    }
+    float G1 = smith_g1(wo, wm, alpha);
+    const float cosThetaO = std::max(-wo.z, EPSILON_32);
+    pRes->dir   = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->pdf   = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm)));
+    pRes->val   = float4(pRes->pdf * G1 * T / cosThetaO); 
+  }
+
   //pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
