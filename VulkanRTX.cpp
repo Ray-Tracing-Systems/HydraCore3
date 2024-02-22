@@ -95,15 +95,32 @@ uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_m
   return m_pScnMgr->InstanceMesh(a_geomId, a_matrix);
 }
 
-uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber)
+uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
 {
-  std::cout << "[VulkanRTX::AddInstance] motion blur: not implemented" << std::endl;
-  return uint32_t(-1);
+  if(a_matrixNumber == 0 || a_matrices == nullptr)
+  {
+    std::cout << "[VulkanRTX::AddInstance] motion blur: empty matrices array" << std::endl;
+    return uint32_t(-1);
+  }
+
+  if(a_matrixNumber == 1)
+    return m_pScnMgr->InstanceMesh(a_geomId, a_matrices[0]);
+
+  if(a_matrixNumber > 2)
+  {
+    std::cout << "[VulkanRTX::AddInstance] motion blur: only 2 matrices (start and end point) are supported on GPU" << std::endl;
+  }
+
+  return m_pScnMgr->InstanceMesh(a_geomId, a_matrices[0], true, a_matrices[1]);
 }
 
-void VulkanRTX::CommitScene(BuildQuality a_qualityLevel)
+void VulkanRTX::CommitScene(BuildQuality a_qualityLevel, uint32_t options = BuildOptions::NONE)
 {
-  m_pScnMgr->BuildTLAS();
+  if(options & BuildOptions::MOTION_BLUR)
+    m_pScnMgr->BuildTLAS_MotionBlur();
+  else
+    m_pScnMgr->BuildTLAS();
+    
   m_accel = m_pScnMgr->GetTLAS();
 }  
 

@@ -24,10 +24,10 @@ public:
   void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,  BuildQuality a_qualityLevel, size_t vByteStride) override;
 
   void ClearScene() override; 
-  void CommitScene(BuildQuality a_qualityLevel) override; 
+  void CommitScene(BuildQuality a_qualityLevel, uint32_t options = 0) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
-  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber) override;
+  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;
   void     UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix) override;
 
   CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;

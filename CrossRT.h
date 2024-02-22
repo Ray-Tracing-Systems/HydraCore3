@@ -12,6 +12,13 @@ enum BuildQuality
   BUILD_REFIT  = 3,
 };
 
+enum BuildOptions 
+{
+    NONE                   = 0x00000000,
+    MOTION_BLUR            = 0x00000001,   
+    BUILD_OPTIONS_MAX_ENUM = 0x7FFFFFFF
+};
+
 /**
 \brief API to ray-scene intersection on CPU
 */
@@ -70,7 +77,7 @@ struct ISceneObject
   /**
   \brief Finish instancing and build top level acceleration structure
   */
-  virtual void CommitScene(BuildQuality a_qualityLevel = BUILD_MEDIUM) = 0; ///< 
+  virtual void CommitScene(BuildQuality a_qualityLevel = BUILD_MEDIUM, uint32_t options = 0) = 0; ///< 
   
   /**
   \brief Add instance to scene
@@ -88,7 +95,7 @@ struct ISceneObject
   \param a_matrixNumber - size of matrices array
 
   */
-  virtual uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, size_t a_matrixNumber) = 0; 
+  virtual uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) = 0; 
   
   /**
   \brief Add instance to scene
