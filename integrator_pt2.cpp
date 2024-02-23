@@ -283,7 +283,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
         filmSmoothSampleAndEval(m_materials.data() + a_materialId, m_films_ior.data(), m_films_thickness_vec.data() + t_offset, layers, wavelengths, a_misPrev->ior, rands, v, n, tc, &res,
                            m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4);
       else
-        filmRoughSampleAndEval(m_materials.data() + a_materialId, m_films_ior.data(), m_films_thickness_vec.data() + t_offset, layers, wavelengths, rands, v, n, tc, alphaTex, &res,
+        filmRoughSampleAndEval(m_materials.data() + a_materialId, m_films_ior.data(), m_films_thickness_vec.data() + t_offset, layers, wavelengths, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
                            m_precomp_thin_films.data() + precomp_id * FILM_ANGLE_RES * FILM_LENGTH_RES * 4);
       
       //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
