@@ -164,8 +164,8 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   return idx;
 }
 
-  uint32_t SceneManager::InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion, 
-                                      const LiteMath::float4x4 end_matrix, bool markForRender);
+uint32_t SceneManager::InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion, 
+                                    const LiteMath::float4x4 end_matrix, bool markForRender)
 {
   assert(meshId < m_meshInfos.size());
 
