@@ -235,12 +235,11 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
-  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f));
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f)); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  RecordShadowHitIfNeeded(bounce, needShade);
 
-  RecordShadowHitIfNeeded(bounce, inShadow);
-
-  if(!inShadow && inIllumArea) 
+  if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
   {
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
     float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
