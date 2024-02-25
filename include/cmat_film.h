@@ -17,11 +17,14 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // inside of object
   {
     n = -1 * n;
+  }
+  if (dot(n, v) < 0.f)
+  {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
   }
-  else // outside of object
+  else
   {
     refl_offset = 0;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
@@ -223,11 +226,15 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   if ((pRes->flags & RAY_FLAG_HAS_INV_NORMAL) != 0) // inside of object
   {
     n = -1 * n;
+  }
+
+  if (dot(v, n) < 0.f)
+  {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
   }
-  else // outside of object
+  else
   {
     refl_offset = 0;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
@@ -238,16 +245,24 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
-  float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+  float3 wo = float3(dot(v, s), dot(v, t), dot(v, n));
 
-  const float4 wm_pdf = sample_visible_normal(wi, {rands.x, rands.y}, alpha);
+  if (reversed)
+  {
+    wo = -1 * wo;
+  }
+  const float4 wm_pdf = sample_visible_normal(wo, {rands.x, rands.y}, alpha);
   const float3 wm = to_float3(wm_pdf);
+  if(wm_pdf.w == 0.0f) // not in the same hemisphere
+  {
+    return;
+  }
 
-  float cosThetaI = clamp(fabs(dot(wi, wm)), 0.00001, 1.0f);
+  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
 
   float ior = a_ior[layers].re / extIOR;
 
-  float4 fr = FrDielectricDetailedV2(dot(wi, wm) * sign(wi.z), ior);
+  float4 fr = FrDielectricDetailedV2(dot(wo, wm), ior);
 
   const float cosThetaT = fr.y;
   const float eta_it = fr.z;
@@ -283,10 +298,10 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 
   if (a_ior[layers].im > 0.001)
   {
-    float3 wo = float3(-wi.x, -wi.y, wi.z);
+    float3 wi = float3(-wo.x, -wo.y, wo.z);
     pRes->val = float4(R);
     pRes->pdf = 1.f;
-    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
     pRes->flags |= RAY_EVENT_S;
     pRes->ior = _extIOR;
   }
@@ -294,12 +309,18 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   {
     if (rands.w * (R + T) < R)
     {
-      float3 wo = float3(-wi.x, -wi.y, wi.z);
-      float G1 = smith_g1(wo, wm, alpha);
-      const float cosThetaO = std::max(std::abs(wo.z), 1e-6f);
-      pRes->val = G1 * float4(R) / cosThetaO;
-      pRes->pdf = R / (R + T);
-      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      float3 wi = reflect((-1.0f) * wo, wm);
+      if (wi.z * wo.z < 0.f)
+      {
+        return;
+      }
+      pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(R) / (4.0f * std::abs(dot(wi, wm)));
+      pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wi, wm))) * R / (R + T);
+      if (reversed)
+      {
+        wi = -1 * wi;
+      }
+      pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
       pRes->flags |= RAY_EVENT_S;
       pRes->ior = _extIOR;
     }
@@ -307,19 +328,23 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
     {
       float3 ws, wt;
       CoordinateSystemV2(wm, &ws, &wt);
-      const float3 local_wi = {dot(ws, wi), dot(wt, wi), dot(wm, wi)};
-      const float3 local_wo = refract(local_wi, cosThetaT, eta_ti);
-      //std::cout << cosThetaT << std::endl;
-      const float3 wo = normalize(local_wo.x * ws + local_wo.y * wt + local_wo.z * wm);
-      float G1 = smith_g1(wo, wm, alpha);
-      const float cosThetaO = std::max(std::abs(wo.z), 1e-6f);
-      if (wi.z * wo.z > 0.0)
+      const float3 local_wo = {dot(ws, wo), dot(wt, wo), dot(wm, wo)};
+      const float3 local_wi = refract(local_wo, cosThetaT, eta_ti);
+      float3 wi = normalize(local_wi.x * ws + local_wi.y * wt + local_wi.z * wm);
+      //const float cosThetaO = std::max(std::abs(wi.z), 1e-6f);
+      if (wi.z * wo.z > 0.f)
       {
         return;
       }
-      pRes->val = G1 * float4(T) / cosThetaO;
-      pRes->pdf = T / (R + T);
-      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      float denom = sqr(dot(wi, wm) + dot(wo, wm) / eta_it);
+      float dwm_dwi = fabs(dot(wi, wm)) / denom;
+      pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(T) * fabs(dot(wi, wm) * dot(wo, wm)) / (wi.z * wo.z * denom);
+      pRes->pdf = wm_pdf.w * dwm_dwi * T / (R + T);
+      if (reversed)
+      {
+        wi = -1 * wi;
+      }
+      pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
       pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
       pRes->ior = (_extIOR == a_ior[layers].re) ? extIOR : a_ior[layers].re;
     }

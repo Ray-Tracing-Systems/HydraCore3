@@ -596,7 +596,7 @@
                  "mispt", 
                  "-width", "500",
                  "-height", "500",
-                 "-spp", "10000",
+                 "-spp", "100",
                  "--spectral"], 
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
