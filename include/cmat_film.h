@@ -298,9 +298,17 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 
   if (a_ior[layers].im > 0.001)
   {
-    float3 wi = float3(-wo.x, -wo.y, wo.z);
-    pRes->val = float4(R);
-    pRes->pdf = 1.f;
+    float3 wi = reflect((-1.0f) * wo, wm);
+    if (wi.z * wo.z < 0.f)
+    {
+      return;
+    }
+    pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(R) / (4.0f * std::abs(dot(wi, wm)));
+    pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wi, wm)));
+    if (reversed)
+    {
+      wi = -1 * wi;
+    }
     pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
     pRes->flags |= RAY_EVENT_S;
     pRes->ior = _extIOR;
