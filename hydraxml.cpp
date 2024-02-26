@@ -316,6 +316,19 @@ namespace hydra_xml
     return res;
   }
 
+  std::vector<uint32_t> readvalVectorU(const pugi::xml_attribute &a_attr)
+  {
+    std::vector<uint32_t> res;
+
+    std::wstringstream ws(a_attr.as_string());
+    uint32_t val = 0xFFFFFFFF;
+    while (ws >> val) 
+    {
+      res.push_back(val);
+    }
+    return res;
+  }
+
   LiteMath::float3 readval3f(const pugi::xml_node a_node)
   {
     float3 color;
