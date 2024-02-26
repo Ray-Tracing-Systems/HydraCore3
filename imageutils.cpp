@@ -236,8 +236,10 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
   int ret = LoadEXR(&out, &width, &height, infilename, &err);
   if (ret != TINYEXR_SUCCESS) {
     if (err) {
-      fprintf(stderr, "[LoadImage4fFromEXR] : %s\n", err);
-      std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
+      fprintf(stderr, "[LoadImage1fFromEXR] : %s\n", err);
+      std::cerr << "[LoadImage1fFromEXR] : " << err;
+      std::cerr << " from path : " << infilename << std::endl;
+      
       delete err;
     }
     return std::vector<float>();

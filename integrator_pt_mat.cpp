@@ -197,7 +197,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
       const float4 color       = texColor;
-      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0);
+      // const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0);
+      const float4 reflSpec    = SampleMatParamSpectrumTexture(currMatId, wavelengths, DIFFUSE_COLOR, 0, tc);
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
     }
     break;
@@ -364,8 +365,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
         const float4 color    = texColor;
-        const float4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0);
-
+        // const float4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0);
+        const float4 reflSpec    = SampleMatParamSpectrumTexture(currMat.id, wavelengths, DIFFUSE_COLOR, 0, tc);
         diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, color, &currVal);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;

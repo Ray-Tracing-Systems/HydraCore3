@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// unused
+
 float Spectrum::Sample(float lambda) const
 {
   if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
