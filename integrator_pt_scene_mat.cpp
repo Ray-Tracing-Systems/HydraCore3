@@ -510,23 +510,26 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
     auto specId  = GetSpectrumIdFromNode(nodeColor);
     mat.spdid[0] = specId;
 
-    auto textures_sz = spec_tex_offset_sz[specId].y;
-    auto offset = spec_tex_offset_sz[specId].x;
-    if(textures_sz > 0 && loadedSpectralTextures.count(specId) == 0)
+    if(is_spectral_mode)
     {
-      for(uint32_t i = 0; i < textures_sz; ++i)
+      auto textures_sz = spec_tex_offset_sz[specId].y;
+      auto offset = spec_tex_offset_sz[specId].x;
+      if(textures_sz > 0 && loadedSpectralTextures.count(specId) == 0)
       {
-        uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
+        for(uint32_t i = 0; i < textures_sz; ++i)
+        {
+          uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
 
-        //TODO: put sampler somewhere in XML
-        HydraSampler sampler;
-        sampler.inputGamma = 1.0f;
-        sampler.texId = xml_tex_id;
+          //TODO: put sampler somewhere in XML
+          HydraSampler sampler;
+          sampler.inputGamma = 1.0f;
+          sampler.texId = xml_tex_id;
 
-        const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, texturesInfo, sampler, texCache, textures);
-        spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
+          const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, texturesInfo, sampler, texCache, textures);
+          spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
+        }
+        loadedSpectralTextures.insert(specId);
       }
-      loadedSpectralTextures.insert(specId);
     }
   }
 
