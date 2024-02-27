@@ -81,6 +81,9 @@ float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavele
                     (m_spec_tex_ids_wavelengths[tex_offset + o + 1].y - m_spec_tex_ids_wavelengths[tex_offset + o].y );
                     
           float4 outColor = lerp(texColor1, texColor2, t);
+
+          if(std::isinf(outColor.x) || std::isnan(outColor.x) || outColor.x < 0)
+            std::cout << t << " " << outColor.x << std::endl;
           
           res[i] = outColor.x;
         }

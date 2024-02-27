@@ -108,11 +108,20 @@ static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_
   const int4 index1 = int4(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)));   
   const int4 index2 = min(index1 + int4(1), int4(WAVESN-1));
 
+  // const float4 mask = {index1.x >= WAVESN ? 0 : 1, index1.y >= WAVESN ? 0 : 1, index1.z >= WAVESN ? 0 : 1, index1.w >= WAVESN ? 0 : 1};
+  
+
   const float4 x1 = float4(LAMBDA_MIN) + float4(index1);
   const float4 y1 = float4(a_spec_values[index1[0]], a_spec_values[index1[1]], a_spec_values[index1[2]], a_spec_values[index1[3]]); // TODO: reorder mem access for better cache: (index1[0], index2[0])
   const float4 y2 = float4(a_spec_values[index2[0]], a_spec_values[index2[1]], a_spec_values[index2[2]], a_spec_values[index2[3]]); // TODO: reorder mem access for better cache: (index1[1], index2[1])
 
-  return y1 + (a_wavelengths - x1) * (y2 - y1);
+  auto res = (y1 + (a_wavelengths - x1) * (y2 - y1));
+  // if(std::isinf(res.x) || std::isnan(res.x) || res.x < 0)
+  // {
+  //   int a = 2;
+  // }
+
+  return res;
 }
 
 //static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)

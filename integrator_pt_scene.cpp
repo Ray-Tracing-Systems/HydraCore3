@@ -289,23 +289,22 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       auto spec_id   = specNode.attribute(L"id").as_uint();
 
-      auto refs_attr = specNode.attribute(L"ref_ids");
+      auto refs_attr = specNode.attribute(L"lambda_ref_ids");
       if(refs_attr)
       {
-        assert(specNode.attribute(L"wavelengths") != nullptr);
+        auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 
-        auto tex_refs    = hydra_xml::readvalVectorU(refs_attr);
-        auto wavelengths = hydra_xml::readvalVectorU(specNode.attribute(L"wavelengths"));
+        assert(lambda_ref_ids.size() % 2 == 0);
 
-        assert(tex_refs.size() == wavelengths.size());
+        size_t tex_spec_sz = lambda_ref_ids.size() / 2;
 
         uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
-        for(size_t idx = 0; idx < wavelengths.size(); ++idx)
+        for(size_t idx = 0; idx < tex_spec_sz; ++idx)
         {
-          m_spec_tex_ids_wavelengths.push_back({tex_refs[idx], wavelengths[idx]});
+          m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
         }
         
-        m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_refs.size())});
+        m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
         m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
       }
       else

@@ -121,6 +121,14 @@ float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, f
     const uint offset = data.x;
     const uint size   = data.y;
     lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
+
+    if(std::isinf(lightColor.x) || std::isnan(lightColor.x) || lightColor.x < 0)
+    {
+      std::cout << "Light intensity is: " << lightColor.x << " ! " << std::endl;
+      std::cout << "specId = " << specId << "; data = (" << data.x << ", " << data.y << "); ";
+      std::cout << "offset = " << offset << "; size = " << size << std::endl;
+      std::cout << "a_wavelengths = (" << a_wavelengths->x << ", "<< a_wavelengths->y << ", "<< a_wavelengths->z << ", "<< a_wavelengths->w << ")" << std::endl;
+    }
   }
   lightColor *= m_lights[a_lightId].mult;
   

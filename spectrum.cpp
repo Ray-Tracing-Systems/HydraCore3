@@ -41,8 +41,8 @@ float Spectrum::Sample(float lambda) const
 
 std::vector<float> Spectrum::ResampleUniform()
 {
-  std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN));
-  for(int c=0;c<res.size();c++)
+  std::vector<float> res(size_t(LAMBDA_MAX + 1 - LAMBDA_MIN));
+  for(size_t c = 0; c < res.size(); ++c)
     res[c] = Sample(LAMBDA_MIN + float(c));
   return res;
 }
