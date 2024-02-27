@@ -175,6 +175,11 @@ struct Material
 };
 
 
+static inline float safe_sqrt(float val)
+{
+  return std::sqrt(std::max(val, 0.0f));
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Lambert BRDF
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -223,8 +228,8 @@ static inline float orennayarFunc(const float3 a_l, const float3 a_v, const floa
   const float cosTheta_wi = dot(a_l, a_n);
   const float cosTheta_wo = dot(a_v, a_n);
 
-  const float sinTheta_wi = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wi * cosTheta_wi));
-  const float sinTheta_wo = std::sqrt(std::max(0.0f, 1.0f - cosTheta_wo * cosTheta_wo));
+  const float sinTheta_wi = safe_sqrt(1.0f - cosTheta_wi * cosTheta_wi);
+  const float sinTheta_wo = safe_sqrt(1.0f - cosTheta_wo * cosTheta_wo);
 
   const float sigma  = a_roughness * M_PI * 0.5f; //Radians(sig)
   const float sigma2 = sigma * sigma;
@@ -305,7 +310,7 @@ static inline float GGX_GeomShadMask(const float cosThetaN, const float alpha)
   // Optimized and equal to the commented-out formulas on top.
   const float cosTheta_sqr = clamp(cosThetaN * cosThetaN, 0.0f, 1.0f);
   const float tan2         = (1.0f - cosTheta_sqr) / std::max(cosTheta_sqr, 1e-6f);
-  const float GP           = 2.0f / (1.0f + std::sqrt(1.0f + alpha * alpha * tan2));
+  const float GP           = 2.0f / (1.0f + safe_sqrt(1.0f + alpha * alpha * tan2));
   return GP;
 }
 
@@ -320,8 +325,8 @@ static inline float3 ggxSample(const float2 rands, const float3 v, const float3 
     
   const float3 wo       = float3(dot(v, nx), dot(v, ny), dot(v, nz));
   const float phi       = rands.x * M_TWOPI;
-  const float cosTheta  = clamp(std::sqrt((1.0f - rands.y) / (1.0f + roughSqr * roughSqr * rands.y - rands.y)), 0.0f, 1.0f);
-  const float sinTheta  = std::sqrt(1.0f - cosTheta * cosTheta);
+  const float cosTheta  = clamp(safe_sqrt((1.0f - rands.y) / (1.0f + roughSqr * roughSqr * rands.y - rands.y)), 0.0f, 1.0f);
+  const float sinTheta  = safe_sqrt(1.0f - cosTheta * cosTheta);
   const float3 wh       = SphericalDirectionPBRT(sinTheta, cosTheta, phi);
     
   const float3 wi = 2.0f * dot(wo, wh) * wh - wo;      // Compute incident direction by reflecting about wm  
@@ -388,7 +393,7 @@ static inline float Sin2Theta(float3 w)
 }
 static inline float SinTheta(float3 w) 
 {
-  return std::sqrt(Sin2Theta(w));
+  return safe_sqrt(Sin2Theta(w));
 }
 
 static inline float TanTheta(float3 w) 
@@ -419,7 +424,7 @@ static inline float3 FaceForward(float3 v, float3 n2)
 
 static inline float2 SampleUniformDiskPolar(float2 u) 
 {
-  float r = std::sqrt(u[0]);
+  float r = safe_sqrt(u[0]);
   float theta = M_TWOPI * u[1];
   return {r * std::cos(theta), r * std::sin(theta)};
 }
@@ -447,7 +452,7 @@ static inline float trLambda(float3 w, float2 alpha)
   if (std::isinf(tan2Theta))
     return 0;
   float alpha2 = (CosPhi(w) * alpha.x) * (CosPhi(w) * alpha.x) + (SinPhi(w) * alpha.y) * (SinPhi(w) * alpha.y);
-  return (std::sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
+  return (safe_sqrt(1.0f + alpha2 * tan2Theta) - 1.0f) / 2.0f;
 }
 
 static inline float trG1(float3 w, float2 alpha) 
@@ -487,11 +492,11 @@ static inline float3 trSample(float3 wo, float2 rands, float2 alpha)
   float2 p = SampleUniformDiskPolar(rands);
 
   // Warp hemispherical projection for visible normal sampling
-  float h = std::sqrt(1 - p.x * p.x);
+  float h = safe_sqrt(1 - p.x * p.x);
   p.y = lerp(h, p.y, (1 + wh.z) / 2);
 
   // Reproject to hemisphere and transform normal to ellipsoid configuration
-  float pz = std::sqrt(std::max(0.0f, 1.0f - dot(p, p)));
+  float pz = safe_sqrt(1.0f - dot(p, p));
   float3 nh = p.x * T1 + p.y * T2 + pz * wh;
   return normalize(float3(alpha.x * nh.x, alpha.y * nh.y, std::max(1e-6f, nh.z)));
 }
@@ -514,14 +519,14 @@ static inline float FrDielectricPBRT(float cosThetaI, float etaI, float etaT)
   }
 
   // Compute _cosThetaT_ using Snell's law
-  float sinThetaI = std::sqrt(std::max(0.0f, 1.0f - cosThetaI * cosThetaI));
+  float sinThetaI = safe_sqrt(1.0f - cosThetaI * cosThetaI);
   float sinThetaT = etaI / etaT * sinThetaI;
 
   // Handle total internal reflection
   if (sinThetaT >= 1.0f) 
     return 1.0f;
 
-  const float cosThetaT = std::sqrt(std::max(0.0f, 1.0f - sinThetaT * sinThetaT));
+  const float cosThetaT = safe_sqrt(1.0f - sinThetaT * sinThetaT);
   const float Rparl     = ((etaT * cosThetaI) - (etaI * cosThetaT)) / ((etaT * cosThetaI) + (etaI * cosThetaT));
   const float Rperp     = ((etaI * cosThetaI) - (etaT * cosThetaT)) / ((etaI * cosThetaI) + (etaT * cosThetaT));
   return 0.5f*(Rparl * Rparl + Rperp * Rperp);
@@ -541,7 +546,7 @@ static inline float FrDielectric(float cosTheta_i, float eta)
   float sin2Theta_t = sin2Theta_i / (eta * eta);
   if (sin2Theta_t >= 1.0f)
       return 1.f;
-  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+  float cosTheta_t = safe_sqrt(1.0f - sin2Theta_t);
 
   float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
   float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
@@ -562,7 +567,7 @@ static inline float FresnelMitsuba(float cos_theta_i, float eta)
 
   /* Find the absolute cosines of the incident/transmitted rays */
   float cos_theta_i_abs = std::abs(cos_theta_i);
-  float cos_theta_t_abs = std::sqrt(cos_theta_t_sqr);
+  float cos_theta_t_abs = safe_sqrt(cos_theta_t_sqr);
 
   auto index_matched = eta == 1.f;
   auto special_case  = index_matched || cos_theta_i_abs == 0.f;
@@ -598,7 +603,7 @@ static inline float4 FrDielectricDetailed(float cosTheta_i, float eta)
   float sin2Theta_t = sin2Theta_i / (eta * eta);
   if (sin2Theta_t >= 1.0f)
       r = 1.f;
-  float cosTheta_t = std::sqrt(std::max(0.f, 1.0f - sin2Theta_t));
+  float cosTheta_t = safe_sqrt(1.0f - sin2Theta_t);
 
   float r_parl = (eta * cosTheta_i - cosTheta_t) / (eta * cosTheta_i + cosTheta_t);
   float r_perp = (cosTheta_i - eta * cosTheta_t) / (cosTheta_i + eta * cosTheta_t);
@@ -624,7 +629,7 @@ static inline float4 FrDielectricDetailedV2(float cos_theta_i, float eta)
 
   float cos_theta_t_sqr = -1.f * (-1.f * cos_theta_i * cos_theta_i + 1.f) * eta_ti * eta_ti + 1.f;
   float cos_theta_i_abs = std::abs(cos_theta_i);
-  float cos_theta_t_abs = std::sqrt(std::max(cos_theta_t_sqr, 0.0f));
+  float cos_theta_t_abs = safe_sqrt(cos_theta_t_sqr);
 
 
   float r = 0.0f;
@@ -709,7 +714,7 @@ static inline float sin_theta_2(const float3 &v)
 static inline float2 sincos_phi(const float3 &v) 
 {
   float sin_theta2 = sin_theta_2(v);
-  float inv_sin_theta = 1.f / std::sqrt(sin_theta_2(v));
+  float inv_sin_theta = 1.f / safe_sqrt(sin_theta_2(v));
 
   float2 result = {v.x * inv_sin_theta, v.y * inv_sin_theta};
 
@@ -748,7 +753,8 @@ static inline float3 square_to_cosine_hemisphere(const float2 &s)
     float2 p = square_to_uniform_disk_concentric(s);
 
     // Guard against numerical imprecisions
-    float z = std::sqrt(1.f - (p.x * p.x + p.y * p.y));
+    float z =  safe_sqrt(1.f - (p.x * p.x + p.y * p.y));
+   
 
     return { p.x, p.y, z };
 }
@@ -768,7 +774,7 @@ static inline float smith_g1(const float3 &v, const float3 &m, float2 alpha)
         result;
 
 
-  result = 2.f / (1.f + std::sqrt(1.f + tan_theta_alpha_2));
+  result = 2.f / (1.f + safe_sqrt(1.f + tan_theta_alpha_2));
 
   // Perpendicular incidence -- no shadowing/masking
   if(xy_alpha_2 == 0.f)
@@ -812,14 +818,14 @@ static inline float2 sample_visible_11(float cos_theta_i, float2 samp)
   float2 p = square_to_uniform_disk_concentric(samp);
 
   float s = 0.5f * (1.f + cos_theta_i);
-  p.y = lerp(std::sqrt(1.f - p.x * p.x), p.y, s);
+  p.y = lerp(safe_sqrt(1.f - p.x * p.x), p.y, s);
 
   // Project onto chosen side of the hemisphere
   float x = p.x, y = p.y,
-        z = std::sqrt(1.f - dot(p, p));
+        z = safe_sqrt(1.f - dot(p, p));
 
   // Convert to slope
-  float sin_theta_i = std::sqrt(std::max(1.f - cos_theta_i * cos_theta_i, 0.0f));
+  float sin_theta_i = safe_sqrt(1.f - cos_theta_i * cos_theta_i);
   float norm = 1.f / (sin_theta_i * y + cos_theta_i * z);
   return float2(cos_theta_i * y - sin_theta_i * z, x) * norm;
 }

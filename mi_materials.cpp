@@ -417,11 +417,14 @@ namespace mi
 
     auto reflectance = eval_reflectance<MI_ROUGH_TRANSMITTANCE_RES>(alpha, 1.f / eta, mu, one_minus_mu_sqr, zeros);
     res.internal_reflectance = 0.0f;
-    for(auto i = 0; i < reflectance.size(); ++i)
+    for(size_t i = 0; i < reflectance.size(); ++i)
     {
       res.internal_reflectance += reflectance[i] * mu[i];
     }
     res.internal_reflectance = (res.internal_reflectance / reflectance.size()) * 2.f;
+
+    if(res.internal_reflectance < 0 || std::isnan(res.internal_reflectance) || std::isinf(res.internal_reflectance))
+        std::cout << "WARNING! Precomputed plastic reflectance is " << res.internal_reflectance << std::endl;
 
     // std::cout << "internal_transmittance = ";
     // for(auto i = 0; i < transmittance.size(); ++i)
@@ -436,6 +439,12 @@ namespace mi
     // // 0.898716927 for alpha = 0.25
     // std::cout << "lerp_gather = " << lerp_gather(res.transmittance.data(), 0.648724854, MI_ROUGH_TRANSMITTANCE_RES) << std::endl;
     // // 0.869521677 for alpha = 0.25
+
+    for(size_t i = 0; i < res.transmittance.size(); ++i)
+    {
+      if(res.transmittance[i] < 0 || std::isnan(res.transmittance[i]) || std::isinf(res.transmittance[i]))
+        std::cout << "WARNING! Precomputed plastic transmittance is " << res.transmittance[i] << std::endl;
+    }
 
     return res;
   }
