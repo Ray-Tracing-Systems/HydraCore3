@@ -105,7 +105,7 @@ static inline float4 SampleWavelengths(float u, float a, float b)
 static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
 {
   const int  WAVESN = int(LAMBDA_MAX-LAMBDA_MIN);
-  const int4 index1 = int4(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)));   
+  const int4 index1 = int4(min(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)), float4(WAVESN - 1)));   
   const int4 index2 = min(index1 + int4(1), int4(WAVESN-1));
 
   // const float4 mask = {index1.x >= WAVESN ? 0 : 1, index1.y >= WAVESN ? 0 : 1, index1.z >= WAVESN ? 0 : 1, index1.w >= WAVESN ? 0 : 1};

@@ -108,7 +108,7 @@ class REQ_H2(REQ):
           Log().print_colored_text("  {}: PSNR({}, CPU/GPU) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color) 
 
 class REQ_HX(REQ):
-  def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], integrators = ["naivept","shadowpt","mispt"], naivemul = 4, is_spectral = False):
+  def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], integrators = ["naivept","shadowpt","mispt"], naivemul = 4, is_spectral = False, auxArgs = []):
     self.name   = name
     self.scn_path = scn_path
     self.ref_path = ref_path
@@ -116,7 +116,8 @@ class REQ_HX(REQ):
     self.integs = integrators
     self.naivem = naivemul
     self.spectral = is_spectral
-    self.times  = []
+    self.auxArgs  = auxArgs 
+    self.times    = []
 
   def test(req, gpu_id=0):
     for (scnp, imgp, id, imsize2) in zip(req.scn_path, req.ref_path, range(0,len(req.scn_path)), req.imsize):
@@ -137,10 +138,9 @@ class REQ_HX(REQ):
             args = args + ["-scn_dir", PATH_TO_HYDRA3_SCENS]
           if req.spectral:
             args = args + ["--spectral"]
-          #print(args)
-          req.run(test_name, args, image_ref, outp, inregrator)
+          #print(args + req.auxArgs)
+          req.run(test_name, args + req.auxArgs, image_ref, outp, inregrator)
           #print("finished")
-
 
 class REQ_HP(REQ):
   def __init__(self, name, scn_path, ref_path, imsize):
@@ -196,7 +196,23 @@ reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
-reqs.append( REQ_H2("lgt_env",             ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )
+reqs.append( REQ_H2("lgt_area_mis",        ["test_248"], integrators = ["naivept", "mispt"], naivemul = 4) )
+
+reqs.append( REQ_HX("lgt_direct",
+                    [PATH_TO_HYDRA2_TESTS + "/tests_f/test_248/statex_00001.xml"],
+                    [PATH_TO_HYDRA2_TESTS + "/tests_images/test_248/z_ref_0.png"],
+                    imsize = [(512, 512)],
+                    naivemul = 1, integrators = ["mispt"], is_spectral = False, 
+                    auxArgs = ["-fb_layer", "direct"]))
+
+reqs.append( REQ_HX("lgt_indirect",
+                    [PATH_TO_HYDRA2_TESTS + "/tests_f/test_248/statex_00001.xml"],
+                    [PATH_TO_HYDRA2_TESTS + "/tests_images/test_248/z_ref_1.png"],
+                    imsize = [(512, 512)],
+                    naivemul = 1, integrators = ["mispt"], is_spectral = False, 
+                    auxArgs = ["-fb_layer", "indirect"]))
+
+reqs.append( REQ_H2("lgt_env", ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )
 
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                             PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
