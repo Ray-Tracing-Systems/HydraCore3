@@ -336,8 +336,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
       misWeight = 0.0f;
     
-    const bool isDirectLight = !hasNonSpecular(currRayFlags);
-    if(m_renderLayer == FB_INDIRECT && isDirectLight)
+    const bool isDirectLight  = !hasNonSpecular(currRayFlags);
+    const bool isFirstNonSpec = (currRayFlags & RAY_FLAG_FIRST_NON_SPEC) != 0;
+    if(m_renderLayer == FB_INDIRECT && (isDirectLight || isFirstNonSpec))
       misWeight = 0.0f;
 
     float4 currAccumColor      = *accumColor;
@@ -384,10 +385,11 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
   *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
   
-  uint nextFlags = currRayFlags | matSam.flags;
+  uint nextFlags = ((currRayFlags & ~RAY_FLAG_FIRST_NON_SPEC) | matSam.flags); // always force reset RAY_FLAG_FIRST_NON_SPEC;
   if(m_renderLayer == FB_DIRECT && hasNonSpecular(currRayFlags))   // NOTE: use currRayFlags for check, not nextFlags because of MIS: a ray may hit light source in next bounce
     nextFlags |= RAY_FLAG_IS_DEAD;                                 //       but if we already have non specular bounce previously, definitely can stop  
-
+  else if(!hasNonSpecular(currRayFlags) && hasNonSpecular(nextFlags))
+    nextFlags |= RAY_FLAG_FIRST_NON_SPEC;
   *rayFlags      = nextFlags;                                   
 }
 

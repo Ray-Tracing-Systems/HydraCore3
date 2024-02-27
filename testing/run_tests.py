@@ -196,6 +196,7 @@ reqs.append( REQ_H2("lgt_area_rotate",     ["test_224"]) )
 reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
 reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
+reqs.append( REQ_H2("lgt_area_mis",        ["test_248"], naivemul = 4) )
 reqs.append( REQ_H2("lgt_env",             ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )
 
 reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
