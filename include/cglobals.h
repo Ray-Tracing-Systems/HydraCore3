@@ -12,8 +12,8 @@ static constexpr uint RAY_FLAG_HIT_LIGHT      = 0x20000000;
 static constexpr uint RAY_FLAG_HAS_NON_SPEC   = 0x10000000; // at least one bounce was non specular
 static constexpr uint RAY_FLAG_HAS_INV_NORMAL = 0x08000000;
 static constexpr uint RAY_FLAG_WAVES_DIVERGED = 0x04000000; // hit a material with spectral IOR
-//static constexpr uint RAY_FLAG_DUMMY        = 0x02000000;
-//static constexpr uint RAY_FLAG_DUMMY        = 0x01000000;
+static constexpr uint RAY_FLAG_PRIME_RAY_MISS = 0x02000000;
+static constexpr uint RAY_FLAG_FIRST_NON_SPEC = 0x01000000; // indicate that previous bounce is the first non specular bounce
 
 static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
 static constexpr uint32_t FILM_ANGLE_RES = 128;

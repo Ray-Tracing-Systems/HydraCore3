@@ -152,26 +152,25 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     res.ior   = 1.0f;
   }
 
-  const uint32_t currMatId = a_materialId;
-  const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
-  const uint   texId     = m_materials[currMatId].texid[0];
-  const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
-  const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
-                              drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
-
-  const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-  
-  const float3 lambertDir   = lambertSample(float2(rands.x, rands.y), v, n);
-  const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
-  const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
-  
-  res.val   = lambertVal*color;
-  res.dir   = lambertDir;
-  res.pdf   = lambertPdf;
-  res.flags = RAY_FLAG_HAS_NON_SPEC;
-  
-  /*
   uint32_t currMatId = a_materialId;
+  
+  //const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
+  //const uint   texId     = m_materials[currMatId].texid[0];
+  //const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams);
+  //const float4 rands = float4(drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 0], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 1],
+  //                            drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 2], drands[bounce*RND_PER_BOUNCE + RND_MTL_ID + 3]);
+
+  //const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
+  
+  //const float3 lambertDir   = lambertSample(float2(rands.x, rands.y), v, n);
+  //const float  lambertPdf   = lambertEvalPDF(lambertDir, v, n);
+  //const float  lambertVal   = lambertEvalBSDF(lambertDir, v, n);
+  //
+  //res.val   = lambertVal*color;
+  //res.dir   = lambertDir;
+  //res.pdf   = lambertPdf;
+  //res.flags = RAY_FLAG_HAS_NON_SPEC;
+  
   uint     mtype     = m_materials[currMatId].mtype;
   uint     layer     = 0;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
@@ -186,6 +185,25 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
   // First : return cosThetaOut in sam;
   // Second: apply cos(theta2)/cos(theta1) to cos(theta1) to get cos(theta2)
   //
+  const uint cflags = m_materials[currMatId].cflags;
+  float4 fourScalarMatParams = float4(1,1,1,1);
+  if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
+  {
+    const uint texId2  = m_materials[currMatId].texid[2];
+    const uint texId3  = m_materials[currMatId].texid[3];
+    
+    const float2 texCoord2T = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
+    const float2 texCoord3T = mulRows2x4(m_materials[currMatId].row0[3], m_materials[currMatId].row1[3], tc);
+
+    const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+    const float4 color3 = m_textures[texId3]->sample(texCoord3T);
+    
+    if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
+      fourScalarMatParams = color2;
+    else
+      fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
+  }
+
   const uint normalMapId   = m_materials[currMatId].texid[1];
   const float3 geomNormal  = n;
         float3 shadeNormal = n;
@@ -206,7 +224,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, &res);
+      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
     case MAT_TYPE_GLASS: 
@@ -265,7 +283,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     const float cosThetaOut2 = std::abs(dot(res.dir, shadeNormal));
     res.val *= cosThetaOut2 / std::max(cosThetaOut1, 1e-10f);
   }
-  */
+  
 
   return res;
 }
@@ -283,13 +301,12 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
   const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
   const float4 color     = m_materials[a_materialId].colors[GLTF_COLOR_BASE] * texColor;
   
-  float lambertVal       = lambertEvalBSDF(l, v, n);
-  const float lambertPdf = lambertEvalPDF (l, v, n);    
+  //float lambertVal       = lambertEvalBSDF(l, v, n);
+  //const float lambertPdf = lambertEvalPDF (l, v, n);    
+  //
+  //res.val = lambertVal*color;
+  //res.pdf = lambertPdf;
   
-  res.val = lambertVal*color;
-  res.pdf = lambertPdf;
-  
-  /*
   MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
   MatIdWeight material_stack[KSPEC_BLEND_STACK_SIZE];
   if(KSPEC_MAT_TYPE_BLEND != 0)
@@ -335,6 +352,23 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
     const uint   texId     = m_materials[currMat.id].texid[0];
     const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); 
     const uint   mtype     = m_materials[currMat.id].mtype;
+    const uint   cflags    = m_materials[currMat.id].cflags;
+
+    float4 fourScalarMatParams = float4(1,1,1,1);
+    if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
+    {
+      const uint texId2  = m_materials[currMat.id].texid[2];
+      const uint texId3  = m_materials[currMat.id].texid[3];
+      const float2 texCoord2T = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
+      const float2 texCoord3T = mulRows2x4(m_materials[currMat.id].row0[3], m_materials[currMat.id].row1[3], tc);
+      const float4 color2 = m_textures[texId2]->sample(texCoord2T);
+      const float4 color3 = m_textures[texId3]->sample(texCoord3T);
+    
+      if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
+        fourScalarMatParams = color2;
+      else
+        fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
+    }
 
     BsdfEval currVal;
     {
@@ -347,7 +381,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, &currVal);
+        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
@@ -426,7 +460,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
     }
 
   } while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
-  */
+
 
   return res;
 }
@@ -612,10 +646,10 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const fl
     else if(isPoint)
       misWeight = 1.0f;
 
-    if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
+    if(m_renderLayer >= 1 && int(bounce) < int(m_renderLayer)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
-    const float4 lightColor = GetLightSourceIntensity(lightId, wavelengths, shadowRayDir, dparams);
+    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayDir, dparams);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -670,7 +704,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = GetLightSourceIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, wavelengths, to_float3(*rayDirAndFar), dparams)*texColor*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
@@ -690,7 +724,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
       misWeight = 0.0f;
     
-    if(m_skipBounce >= 1 && bounce < m_skipBounce) // skip some number of bounces if this is set
+    if(m_renderLayer >= 1 && bounce < m_renderLayer) // skip some number of bounces if this is set
       misWeight = 0.0f;
 
     float4 currAccumColor      = *accumColor;
@@ -731,7 +765,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
   *rayFlags      = currRayFlags | matSam.flags;
 }
 
-float4 IntegratorDR::GetEnvironmentColorAndPdf(float3 a_dir, const float* dparams)
+float4 IntegratorDR::EnvironmentColor(float3 a_dir, const float* dparams)
 {
   return m_envColor;
 }
@@ -746,7 +780,7 @@ void IntegratorDR::kernel_HitEnvironment(uint tid, const uint* rayFlags, const f
     return;
   
   // TODO: HDRI maps
-  const float4 envData  = GetEnvironmentColorAndPdf(to_float3(*rayDirAndFar), dparams);
+  const float4 envData  = EnvironmentColor(to_float3(*rayDirAndFar), dparams);
   // const float3 envColor = to_float3(envData)/envData.w;    // explicitly account for pdf; when MIS will be enabled, need to deal with MIS weight also!
 
   const float4 envColor = envData;
@@ -757,7 +791,7 @@ void IntegratorDR::kernel_HitEnvironment(uint tid, const uint* rayFlags, const f
 }
 
 
-void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY,
+void IntegratorDR::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const uint* in_pakedXY,
                                             const float4* wavelengths, float* out_color, const float* dparams)
 {
   if(tid >= m_maxThreadId)
@@ -777,7 +811,8 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
     
     if(m_camResponseSpectrumId[0] < 0)
     {
-      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, 
+                                       m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), terminateWavelngths(*rayFlags));
       rgb = XYZToRGB(xyz);
     }
     else
@@ -790,7 +825,7 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceX = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceX = float4(1,1,1,1);
@@ -801,7 +836,7 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceY = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceY = responceX;
@@ -812,7 +847,7 @@ void IntegratorDR::kernel_ContributeToImage(uint tid, uint channels, const float
           const uint2 data  = m_spec_offset_sz[specId];
           const uint offset = data.x;
           const uint size   = data.y;
-          responceZ = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, waves, size);
+          responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
         }
         else
           responceZ = responceY;
@@ -965,7 +1000,7 @@ float4 IntegratorDR::SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavele
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
 
   return res;
@@ -984,7 +1019,7 @@ float4 IntegratorDR::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
 
   return res;
@@ -1002,7 +1037,7 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float2 rands, float3 ill
   };
 }
 
-float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams)
+float4 IntegratorDR::LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayDir, const float* dparams)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
@@ -1015,7 +1050,7 @@ float4 IntegratorDR::GetLightSourceIntensity(uint a_lightId, const float4* a_wav
       const uint2 data  = m_spec_offset_sz[specId];
       const uint offset = data.x;
       const uint size   = data.y;
-      lightColor = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, *a_wavelengths, size);
+      lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
     }
   }
   lightColor *= m_lights[a_lightId].mult;
@@ -1469,7 +1504,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor, dparams);
 
-  kernel_ContributeToImage(tid, channels, &accumColor, m_packedXY.data(), &wavelengths, out_color, dparams);
+  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, m_packedXY.data(), &wavelengths, out_color, dparams);
   return accumColor;
 }
 
