@@ -635,7 +635,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_normMatrices2.resize(0);
   }
 
-  m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
+  m_pAccelStruct->CommitScene(BUILD_HIGH, BuildOptions::MOTION_BLUR); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
   
   // (4) load remap lists and put all of the to the flat data structure
   // 

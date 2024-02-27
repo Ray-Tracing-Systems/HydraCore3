@@ -412,6 +412,33 @@
     },
 
     {
+        "name": "GPU Debug Motion Blur",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--gpu", 
+                //  "-in", "/media/vs/data/repos/chimera-mk2/resources/scenes/motion_test/"
+                 "-in", "scenes/test_035/motion_test.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "128",
+                 "-out", "OUT_MOTION_GPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "CPU(GLTF_TEX)",
         "type": "cppdbg",
         "request": "launch",
