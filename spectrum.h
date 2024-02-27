@@ -39,18 +39,18 @@ inline size_t BinarySearch(const float* array, size_t array_sz, float val)
 
 
 // temporary?
-inline size_t BinarySearchU2(const uint2* array, size_t array_sz, uint32_t val) 
+inline uint32_t BinarySearchU2(const uint2* array, uint32_t array_sz, float val) 
 {
   int32_t last = (int32_t)array_sz - 2, first = 1;
   while (last > 0) 
   {
-    size_t half = (size_t)last >> 1, 
+    uint32_t half = (uint32_t)last >> 1, 
     middle = first + half;
     bool predResult = array[middle].y <= val;
-    first = predResult ? int32_t(middle + 1) : first;
-    last = predResult ? last - int32_t(half + 1) : int32_t(half);
+    first = predResult ? int(middle + 1) : first;
+    last = predResult ? last - int(half + 1) : int(half);
   }
-  return (size_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
+  return (uint32_t)clamp(int(first - 1), 0, int(array_sz - 2));
 }
 
 // "stratified" sample wavelengths in [a, b] with random number u

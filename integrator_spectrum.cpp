@@ -68,10 +68,10 @@ float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavele
             continue;
           }
 
-          int o = BinarySearchU2(m_spec_tex_ids_wavelengths.data() + tex_offset, tex_size, a_wavelengths[i]);
+          uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data() + tex_offset, tex_size, a_wavelengths[i]);
 
-          int texID1 = m_spec_tex_ids_wavelengths[tex_offset + o].x;
-          int texID2 = m_spec_tex_ids_wavelengths[tex_offset + o + 1].x;
+          uint32_t texID1 = m_spec_tex_ids_wavelengths[tex_offset + o].x;
+          uint32_t texID2 = m_spec_tex_ids_wavelengths[tex_offset + o + 1].x;
 
           const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], texCoords);
           const float4 texColor1 = m_textures[texID1]->sample(texCoordT);
