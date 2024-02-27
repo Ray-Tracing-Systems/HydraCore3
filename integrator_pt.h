@@ -154,7 +154,7 @@ public:
   static inline uint packMatId(uint a_flags, uint a_matId) { return (a_flags & 0xFF000000) | (a_matId & 0x00FFFFFF); }       
   static inline uint maxMaterials()             { return 0x00FFFFFF+1; }
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// CPU API
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Integrator Settings
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
@@ -185,8 +185,15 @@ public:
     m_worldView = a_mat;
     m_worldViewInv = LiteMath::inverse4x4(m_worldView);
   }
-
+  
+  static constexpr uint32_t FB_COLOR    = 0;
+  static constexpr uint32_t FB_DIRECT   = 1;
+  static constexpr uint32_t FB_INDIRECT = 2;
+  void SetFrameBufferLayer(uint32_t a_layer) { m_renderLayer = a_layer; }
+ 
   uint GetSPP() const { return m_spp; } 
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// \\ Integrator Settings
 
 //protected:
   int m_winStartX   = 0;
@@ -194,8 +201,10 @@ public:
   int m_winWidth    = 512;
   int m_winHeight   = 512;
   uint m_traceDepth = 10;
-  uint m_skipBounce = 0; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
-                         ///!< TODO: don't account specular bounces(!)
+  
+  uint m_renderLayer = FB_COLOR; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 
+                                      ///!< TODO: don't account specular bounces(!)
+
   uint m_spp         = 1024;
   uint m_tileSize    = 8; ///!< screen mini tile, 2x2, 4x4 or 8x8 pixels.
   uint m_maxThreadId = m_winWidth*m_winHeight;

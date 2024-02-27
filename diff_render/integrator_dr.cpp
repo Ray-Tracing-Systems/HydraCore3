@@ -646,7 +646,7 @@ void IntegratorDR::kernel_SampleLightSource(uint tid, uint cpuThreadId, const fl
     else if(isPoint)
       misWeight = 1.0f;
 
-    if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
+    if(m_renderLayer >= 1 && int(bounce) < int(m_renderLayer)-1) // skip some number of bounces if this is set
       misWeight = 0.0f;
     
     const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayDir, dparams);
@@ -724,7 +724,7 @@ void IntegratorDR::kernel_NextBounce(uint tid, uint bounce, const float4* in_hit
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
       misWeight = 0.0f;
     
-    if(m_skipBounce >= 1 && bounce < m_skipBounce) // skip some number of bounces if this is set
+    if(m_renderLayer >= 1 && bounce < m_renderLayer) // skip some number of bounces if this is set
       misWeight = 0.0f;
 
     float4 currAccumColor      = *accumColor;

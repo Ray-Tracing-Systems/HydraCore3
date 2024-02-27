@@ -250,16 +250,13 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   float time = 0.0f;
   if(m_normMatrices2.size() > 0) 
-  {
     time  = rndFloat1_Pseudo(a_gen); 
-  }
 
-  const bool   inShadow     = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time);
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  RecordShadowHitIfNeeded(bounce, needShade);
 
-  RecordShadowHitIfNeeded(bounce, inShadow);
-
-  if(!inShadow && inIllumArea) 
+  if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
   {
     const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
     float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
@@ -277,8 +274,11 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
     else if(isPoint)
       misWeight = 1.0f;
 
-    if(m_skipBounce >= 1 && int(bounce) < int(m_skipBounce)-1) // skip some number of bounces if this is set
+    const bool isDirectLight = !hasNonSpecular(currRayFlags);
+    if((m_renderLayer == FB_DIRECT   && !isDirectLight) || 
+        m_renderLayer == FB_INDIRECT && isDirectLight) // skip some number of bounces if this is set
       misWeight = 0.0f;
+      
     
     const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
@@ -353,7 +353,9 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(currRayFlags))
       misWeight = 0.0f;
     
-    if(m_skipBounce >= 1 && bounce < m_skipBounce) // skip some number of bounces if this is set
+    const bool isDirectLight  = !hasNonSpecular(currRayFlags);
+    const bool isFirstNonSpec = (currRayFlags & RAY_FLAG_FIRST_NON_SPEC) != 0;
+    if(m_renderLayer == FB_INDIRECT && (isDirectLight || isFirstNonSpec))
       misWeight = 0.0f;
 
     float4 currAccumColor      = *accumColor;
@@ -395,11 +397,17 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   if((matSam.flags & RAY_EVENT_T) != 0)
   {
     hit.pos = hit.pos + hitDist * ray_dir * 2 * 1e-6f;
-  }
+  }  
 
   *rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
   *rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
-  *rayFlags      = currRayFlags | matSam.flags;
+  
+  uint nextFlags = ((currRayFlags & ~RAY_FLAG_FIRST_NON_SPEC) | matSam.flags); // always force reset RAY_FLAG_FIRST_NON_SPEC;
+  if(m_renderLayer == FB_DIRECT && hasNonSpecular(currRayFlags))   // NOTE: use currRayFlags for check, not nextFlags because of MIS: a ray may hit light source in next bounce
+    nextFlags |= RAY_FLAG_IS_DEAD;                                 //       but if we already have non specular bounce previously, definitely can stop  
+  else if(!hasNonSpecular(currRayFlags) && hasNonSpecular(nextFlags))
+    nextFlags |= RAY_FLAG_FIRST_NON_SPEC;
+  *rayFlags      = nextFlags;                                   
 }
 
 void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
