@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <string>
 
 #include "imageutils.h"
 #include "integrator_pt.h"
@@ -45,6 +46,7 @@ int main(int argc, const char** argv) // common hydra main
   std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
+  std::string fbLayer        = "color";
   float gamma                = 2.4f; // out gamma, special value, see save image functions.
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -75,6 +77,9 @@ int main(int argc, const char** argv) // common hydra main
 
   if(args.hasOption("-integrator"))
     integratorType = args.getOptionValue<std::string>("-integrator");
+
+  if(args.hasOption("-fb_layer"))
+    fbLayer = args.getOptionValue<std::string>("-fb_layer");
 
   if(args.hasOption("-spp-naive-mul"))
     NAIVE_PT_REPEAT = std::max(args.getOptionValue<int>("-spp-naive-mul"),1);
@@ -196,125 +201,170 @@ int main(int argc, const char** argv) // common hydra main
   std::cout << "[main]: PackXYBlock() ... " << std::endl;
   pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
 
-  float timings[4] = {0,0,0,0};
+  std::vector<uint32_t> fbLayers = {Integrator::FB_COLOR};
+  std::vector<float> directLightCopy;
+  bool splitDirectAndIndirect = false;
+  {
+    if(fbLayer == "direct" || fbLayer == "direct_light")
+      fbLayers = {Integrator::FB_DIRECT};
+    else if(fbLayer == "indirect" || fbLayer == "indirect_light" || fbLayer == "secondary" || fbLayer == "secondary_light")
+      fbLayers = {Integrator::FB_INDIRECT};
+    else if(fbLayer == "all" || fbLayer == "both" || fbLayer == "split_direct_indirect") {
+      fbLayers = {Integrator::FB_DIRECT, Integrator::FB_INDIRECT};
+      splitDirectAndIndirect = true;
+    }
+  }
 
-  // now test path tracing
+  for(auto imLayer : fbLayers) 
+  {
+    float timings[4] = {0,0,0,0};
+    pImpl->SetFrameBufferLayer(imLayer);
+    std::cout << "[main]: Rendering frame buffer layer: " << imLayer << std::endl;
+
+    std::string suffix = splitDirectAndIndirect ? "_" + std::to_string(imLayer) : "";
+
+    if(enableNaivePT)
+    {
+      std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->NaivePathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
+  
+      std::cout << std::endl;
+      pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
+      std::cout << "NaivePathTraceBlock(exec)  = " << timings[0]              << " ms " << std::endl;
+      std::cout << "NaivePathTraceBlock(copy)  = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "NaivePathTraceBlock(ovrh)  = " << timings[3]              << " ms " << std::endl;
+      std::cout << std::endl;
+  
+      const float normConst = 1.0f/float(PASS_NUMBER*NAIVE_PT_REPEAT);
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + ".exr";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + ".bmp";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+      }
+    } // end if enableNaivePT
+
+    const float normConst = 1.0f/float(PASS_NUMBER);
+    if(enableShadowPT)
+    {
+      std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + ".exr";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + ".bmp";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+      }
+    } // end if enableShadowPT
+
+    if(enableMISPT)
+    {
+      std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+  
+      pImpl->GetExecutionTime("PathTraceBlock", timings);
+      std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+      std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + ".exr";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + ".bmp";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+      }
+    } // end if (enableMISPT)
+
+    if(enableRT || enablePRT)
+    {
+      const float normConstRT = 1.0f;  // must be always one for RT currently
+      std::cout << "[main]: RayBlock ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->UpdateMembersPlainData();
+      if(enablePRT)
+      {
+        pImpl->CastSingleRayBlock(FB_WIDTH*FB_HEIGHT, realColor.data(), 1);
+        pImpl->GetExecutionTime("CastSingleRayBlock", timings);
+        std::cout << "CastSingleRayBlock(exec) = " << timings[0]              << " ms " << std::endl;
+        std::cout << "CastSingleRayBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+        std::cout << "CastSingleRayBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+      }
+      else
+      {
+        pImpl->RayTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), 1);
+        pImpl->GetExecutionTime("RayTraceBlock", timings);
+        std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+        std::cout << "RayTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+        std::cout << "RayTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+      }
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + ".exr";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + ".bmp";
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
+      }
+    } // end if(enableRT || enablePRT)
+    
+    if(imLayer == Integrator::FB_DIRECT) // preserve direct light in separate image
+      directLightCopy = realColor;
+  }
+  
+  // save finale image as summ direct and indirect light
   //
-  if(enableNaivePT)
+  if(splitDirectAndIndirect) 
   {
-    std::cout << "[main]: NaivePathTraceBlock() ... " << std::endl;
-    std::fill(realColor.begin(), realColor.end(), 0.0f);
-
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_STUPID_PT);
-    pImpl->UpdateMembersPlainData();
-    pImpl->NaivePathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER*NAIVE_PT_REPEAT);
-
-    std::cout << std::endl;
-    pImpl->GetExecutionTime("NaivePathTraceBlock", timings);
-    std::cout << "NaivePathTraceBlock(exec)  = " << timings[0]              << " ms " << std::endl;
-    std::cout << "NaivePathTraceBlock(copy)  = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "NaivePathTraceBlock(ovrh)  = " << timings[3]              << " ms " << std::endl;
-    std::cout << std::endl;
-
-    const float normConst = 1.0f/float(PASS_NUMBER*NAIVE_PT_REPEAT);
-
+    std::cout << "[main]: save final image to " << imageOut.c_str() << std::endl;  
+    for(size_t i=0; i<realColor.size(); i++)
+      realColor[i] += directLightCopy[i];
+    
+    const float normConst = 1.0f/float(PASS_NUMBER);
     if(saveHDR)
-    {
-      const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.exr";
-      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-    }
+      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst);
     else
-    {
-      const std::string outName = (integratorType == "naivept") ? imageOut : imageOutClean + "_naivept.bmp";
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
-    }
-  }
-
-  const float normConst = 1.0f/float(PASS_NUMBER);
-  if(enableShadowPT)
-  {
-    std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
-
-    std::fill(realColor.begin(), realColor.end(), 0.0f);
-
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
-    pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
-
-    if(saveHDR)
-    {
-      const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.exr";
-      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-    }
-    else
-    {
-      const std::string outName = (integratorType == "shadowpt") ? imageOut : imageOutClean + "_shadowpt.bmp";
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
-    }
-  }
-
-  if(enableMISPT)
-  {
-    std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
-
-    std::fill(realColor.begin(), realColor.end(), 0.0f);
-
-    pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
-    pImpl->UpdateMembersPlainData();
-    pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
-
-    pImpl->GetExecutionTime("PathTraceBlock", timings);
-    std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-    std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-    std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-
-    if(saveHDR)
-    {
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.exr";
-      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-    }
-    else
-    {
-      const std::string outName = (integratorType == "mispt") ? imageOut : imageOutClean + "_mispt.bmp";
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
-    }
-  }
-
-  if(enableRT || enablePRT)
-  {
-    const float normConstRT = 1.0f;  // must be always one for RT currently
-    std::cout << "[main]: RayBlock ... " << std::endl;
-
-    std::fill(realColor.begin(), realColor.end(), 0.0f);
-
-    pImpl->UpdateMembersPlainData();
-    if(enablePRT)
-    {
-      pImpl->CastSingleRayBlock(FB_WIDTH*FB_HEIGHT, realColor.data(), 1);
-      pImpl->GetExecutionTime("CastSingleRayBlock", timings);
-      std::cout << "CastSingleRayBlock(exec) = " << timings[0]              << " ms " << std::endl;
-      std::cout << "CastSingleRayBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-      std::cout << "CastSingleRayBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-    }
-    else
-    {
-      pImpl->RayTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), 1);
-      pImpl->GetExecutionTime("RayTraceBlock", timings);
-      std::cout << "RayTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-      std::cout << "RayTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-      std::cout << "RayTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-    }
-
-    if(saveHDR)
-    {
-      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.exr";
-      SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-    }
-    else
-    {
-      const std::string outName = (integratorType == "raytracing") ? imageOut : imageOutClean + "_rt.bmp";
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
-    }
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
   }
 
   return 0;
