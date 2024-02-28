@@ -85,7 +85,7 @@ bool Integrator::kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* 
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
-  CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, 0.0f);
+  CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
   
   Lite_Hit res;
   res.primId = hit.primId;
@@ -243,7 +243,7 @@ void Integrator::kernel_RayBounce(uint tid, uint bounce, const float4* in_hitPar
     const float3 shadowRayDir = normalize(lightPos - hit.pos);
     const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f) * 5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
-    const bool inShadow = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist * 0.9995f), 0.0f);
+    const bool inShadow = m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist * 0.9995f));
 
     if(!inShadow && dot(shadowRayDir, to_float3(m_lights[lightId].norm)) < 0.0f)
     {
