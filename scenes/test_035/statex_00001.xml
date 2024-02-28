@@ -43,6 +43,11 @@
       <color val="25.1327 25.1327 25.1327" />
     </emission>
   </material>
+    <material id="7" name="environment_material" type="hydra_material" light_id="0" visible="1">
+    <emission>
+      <color val="0 0 0" />
+    </emission>
+  </material>
 </materials_lib>
 <geometry_lib total_chunks="5">
   <mesh id="0" name="my_cube" type="vsgf" bytesize="1560" loc="data/chunk_00002.vsgf" offset="0" vertNum="24" triNum="12" dl="0" path="" bbox=" -0.75 0.75 -0.75 0.75 -0.75 0.75">
@@ -71,7 +76,13 @@
   </mesh>
 </geometry_lib>
 <lights_lib>
-  <light id="0" name="my_area_light" type="area" shape="rect" distribution="diffuse" visible="1" mat_id="6" mesh_id="2">
+  <light id="0" name="environment" type="sky" shape="point" distribution="uniform" visible="1" mat_id="7">
+    <intensity>
+      <color val="0 0 0" />
+      <multiplier val="1" />
+    </intensity>
+  </light>
+  <light id="1" name="my_area_light" type="area" shape="rect" distribution="diffuse" visible="1" mat_id="6" mesh_id="2">
     <size half_length="1" half_width="1" />
     <intensity>
       <color val="1 1 1" />
@@ -101,8 +112,8 @@
     <trace_depth>5</trace_depth>
     <diff_trace_depth>3</diff_trace_depth>
     <pt_error>2</pt_error>
-    <minRaysPerPixel>256</minRaysPerPixel>
-    <maxRaysPerPixel>1024</maxRaysPerPixel>
+    <minRaysPerPixel>1</minRaysPerPixel>
+    <maxRaysPerPixel>2</maxRaysPerPixel>
   </render_settings>
 </render_lib>
 <scenes>
@@ -113,9 +124,10 @@
     <instance id="1" mesh_id="1" rmap_id="-1" scn_id="0" scn_sid="0" matrix="-1 0 8.74228e-08 0 0 1 0 0 -8.74228e-08 0 -1 0 0 0 0 1 ">
       <transform_sequence transformation="scale * rotation * position" rotation="Euler in dergees" />
     </instance>
-    <instance_light id="0" light_id="0" matrix="1 0 0 0 0 1 0 3.85 0 0 1 0 0 0 0 1 " lgroup_id="-1">
+    <instance_light id="0" light_id="0" matrix="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 " lgroup_id="-1" />
+    <instance_light id="1" light_id="1" matrix="1 0 0 0 0 1 0 3.85 0 0 1 0 0 0 0 1 " lgroup_id="-1">
       <transform_sequence transformation="scale * rotation * position" rotation="Euler in dergees" />
     </instance_light>
-    <instance id="2" mesh_id="2" rmap_id="-1" matrix="1 0 0 0 0 1 0 3.85 0 0 1 0 0 0 0 1 " light_id="0" linst_id="0" />
+    <instance id="2" mesh_id="2" rmap_id="-1" matrix="1 0 0 0 0 1 0 3.85 0 0 1 0 0 0 0 1 " light_id="1" linst_id="1" />
   </scene>
 </scenes>
