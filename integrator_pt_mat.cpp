@@ -5,7 +5,7 @@
 #include "include/cmat_gltf.h"
 #include "include/cmat_conductor.h"
 #include "include/cmat_glass.h"
-#include "include/cmat_film.h"
+#include "include/cmat_film_runtime.h"
 #include "include/cmat_diffuse.h"
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
