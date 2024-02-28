@@ -733,7 +733,7 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
   res.ext_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
   res.int_reflectivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
   res.int_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
-  for (int i = 0; i < FILM_LENGTH_RES; ++i)
+  for (size_t i = 0; i < FILM_LENGTH_RES; ++i)
   {
     float wavelength = (LAMBDA_MAX - LAMBDA_MIN - 1) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
     std::vector<complex> ior;
@@ -743,7 +743,7 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
     uint2 data;
     uint offset;
     uint size;
-    for (int layer = 0; layer < layers; ++layer)
+    for (size_t layer = 0; layer < layers; ++layer)
     {
       data  = spec_offsets[eta_id[layer]];
       offset = data.x;
@@ -780,6 +780,22 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       res.ext_transmittivity[i * FILM_ANGLE_RES + j] = forward.refr;
       res.int_reflectivity[i * FILM_ANGLE_RES + j] = backward.refl;
       res.int_transmittivity[i * FILM_ANGLE_RES + j] = backward.refr;  
+      if(forward.refl < 0 || std::isnan(forward.refl) || std::isinf(forward.refl))
+      {
+        std::cout << "WARNING! Precomputed film external reflectance is " << forward.refl << std::endl;
+      }
+      if(forward.refr < 0 || std::isnan(forward.refr) || std::isinf(forward.refr))
+      {
+        std::cout << "WARNING! Precomputed film external transmittance is " << forward.refr << std::endl;
+      }
+      if(backward.refl < 0 || std::isnan(backward.refl) || std::isinf(backward.refl))
+      {      
+        std::cout << "WARNING! Precomputed film internal reflectance is " << backward.refl << std::endl;
+      }
+      if(backward.refr < 0 || std::isnan(backward.refr) || std::isinf(backward.refr))
+      {
+        std::cout << "WARNING! Precomputed film internal transmittance is " << backward.refr << std::endl;
+      }
     }
   }
   save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);

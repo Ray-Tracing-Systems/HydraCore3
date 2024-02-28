@@ -42,9 +42,9 @@ shaders_generated/
 out/
 
 # Files
-integrator_pt1_generated.cpp
-integrator_pt1_generated.h
-integrator_pt1_generated_ds.cpp
-integrator_pt1_generated_init.cpp
-integrator_pt1_temp.cpp
+integrator_pt_generated.cpp
+integrator_pt_generated.h
+integrator_pt_generated_ds.cpp
+integrator_pt_generated_init.cpp
+integrator_pt_temp.cpp
 include/Integrator_generated_ubo.h

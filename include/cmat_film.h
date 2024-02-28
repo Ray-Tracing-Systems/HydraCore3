@@ -303,8 +303,10 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
     {
       return;
     }
-    pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(R) / (4.0f * std::abs(dot(wi, wm)));
-    pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wi, wm)));
+    float D = eval_microfacet(wm, alpha, 1);
+    float G = microfacet_G(wi, wo, wm, alpha);
+    pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
+    pRes->pdf = D / (4.0f * std::abs(dot(wi, wm)));
     if (reversed)
     {
       wi = -1 * wi;
@@ -322,8 +324,10 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
       {
         return;
       }
-      pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(R) / (4.0f * std::abs(dot(wi, wm)));
-      pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wi, wm))) * R / (R + T);
+      float D = eval_microfacet(wm, alpha, 1);
+      float G = microfacet_G(wi, wo, wm, alpha);
+      pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
+      pRes->pdf = D / (4.0f * std::abs(dot(wo, wm))) * R / (R + T);
       if (reversed)
       {
         wi = -1 * wi;
@@ -339,15 +343,16 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
       const float3 local_wo = {dot(ws, wo), dot(wt, wo), dot(wm, wo)};
       const float3 local_wi = refract(local_wo, cosThetaT, eta_ti);
       float3 wi = normalize(local_wi.x * ws + local_wi.y * wt + local_wi.z * wm);
-      //const float cosThetaO = std::max(std::abs(wi.z), 1e-6f);
       if (wi.z * wo.z > 0.f)
       {
         return;
       }
+      float D = eval_microfacet(wm, alpha, 1);
+      float G = microfacet_G(wi, wo, wm, alpha);
       float denom = sqr(dot(wi, wm) + dot(wo, wm) / eta_it);
       float dwm_dwi = fabs(dot(wi, wm)) / denom;
-      pRes->val = wm_pdf.w * smith_g1(wo, wm, alpha) * float4(T) * fabs(dot(wi, wm) * dot(wo, wm)) / (wi.z * wo.z * denom);
-      pRes->pdf = wm_pdf.w * dwm_dwi * T / (R + T);
+      pRes->val = D * G * float4(T) * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
+      pRes->pdf = D * dwm_dwi * T / (R + T);
       if (reversed)
       {
         wi = -1 * wi;
@@ -357,98 +362,71 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
       pRes->ior = (_extIOR == a_ior[layers].re) ? extIOR : a_ior[layers].re;
     }
   }
-  //pRes->val /= std::max(std::abs(dot(pRes->dir, wm)), 1e-6f);
 }
 
 
 static void filmRoughEval(const Material* a_materials, const complex* a_ior, const float* thickness,
-        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* reflectance)
+        uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* precomputed)
 {
-  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
-                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+  if (a_ior[layers].im < 0.001)
+  {
+    return;
+  }
+
+  const float extIOR = a_materials[0].data[FILM_ETA_EXT];
+  uint32_t refl_offset;
+  uint32_t refr_offset;
+
+  if (dot(v, n) < 0.f)
+  {
+    refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
+    refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 3;
+  }
+  else
+  {
+    refl_offset = 0;
+    refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
+  }
+
+  const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
-
-  // v = (-1.0f) * v;
   const float3 wo = float3(dot(l, s), dot(l, t), dot(l, n));
   const float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
+  const float3 wm = normalize(wo + wi);
 
-  if(wo.z * wi.z < 0.0f)
+  if (wi.z * wo.z < 0.f)
+  {
     return;
+  }
 
-  const float cos_theta_i = std::max(wi.z, EPSILON_32);
-  const float cos_theta_o = std::max(wo.z, EPSILON_32);
-
-  float3 H = normalize(wo + wi);
-  float  D = eval_microfacet(H, alpha, 1);
-  float  G = microfacet_G(wi, wo, H, alpha);
+  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
+  float ior = a_ior[layers].re / extIOR;
   
-  const float res = D * G / (4.f * cos_theta_i * cos_theta_o);
-  float4 val;
-  const uint spectralSamples = sizeof(a_wavelengths.M)/sizeof(a_wavelengths.M[0]); 
-
+  float R;
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-/*
-  if (precompFlag == 0u)
   {
-    for(int i = 0; i < spectralSamples; ++i)
-    {
-      if (layers == 2)
-      {
-        val[i] = filmRoughEvalInternal(wo, wi, wm, alpha, a_ior[0], a_ior[1], a_ior[2], thickness[0], a_wavelengths[i]);
-      }
-      else if (layers > 2)
-      {
-        val[i] = filmRoughEvalInternal2(wo, wi, wm, alpha, a_ior, thickness, layers, a_wavelengths[i], i, a_cosTheta, a_phaseDiff);
-      }
-    }
-  }
-  else
-  */
- 
-  {
-    for (int i = 0; i < spectralSamples; ++i)
-    {
-      //val[i] = filmRoughEvalInternalPrecomp(wo, wi, wm, alpha, a_wavelengths[i], reflectance);
+    float w = clamp((a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN), 0.f, 1.f);
+    float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+    //result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    //result.refr = lerp_gather_2d(transmittance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
+    w *= FILM_LENGTH_RES - 1;
+    theta *= FILM_ANGLE_RES - 1;
+    uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
 
-      if(wo.z * wi.z < 0) // not in the same hemisphere
-      {
-        val[i] = 0.0f;
-        continue;
-      }
+    float alpha = w - float(index1);
+    float beta = theta - float(index2);
 
-      float cosTheta_o = AbsCosTheta(wo);
-      float cosTheta_i = AbsCosTheta(wi);
-      if (cosTheta_i == 0 || cosTheta_o == 0)
-      {
-        val[i] = 0.0f;
-        continue;
-      }
-      float w = (a_wavelengths[i] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN);
-      float theta = acos(dot(wo, wi)) / M_PI;
-
-      //float F = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
-      w *= FILM_LENGTH_RES - 1;
-      theta *= FILM_ANGLE_RES - 1;
-      uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
-      uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
-
-      float a = w - float(index1);
-      float b = theta - float(index2);
-
-      float v0 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2], a);
-      float v1 = lerp(reflectance[index1 * FILM_LENGTH_RES + index2 + 1], reflectance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], a);
-      float R = lerp(v0, v1, b);
-
-      //v0 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-      //v1 = lerp(transmittance[index1 * FILM_LENGTH_RES + index2 + 1], transmittance[(index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
-      //T = lerp(v0, v1, beta);
-
-      val[i] = res * R;
-    }
+    float v0 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
+    float v1 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    R = lerp(v0, v1, beta);
   }
 
-  pRes->val = val;
-  pRes->pdf = D * smith_g1(wi, H, alpha) / (4.f * cos_theta_i);
+  float D = eval_microfacet(wm, alpha, 1);
+  float G = microfacet_G(wi, wo, wm, alpha);
+  pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
+  pRes->pdf = D / (4.0f * std::abs(dot(wi, wm)));
 }
