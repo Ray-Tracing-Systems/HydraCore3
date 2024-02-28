@@ -162,6 +162,7 @@ set(CORE_SRC
         integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
         mlt/integrator_qmc.cpp
+        mlt/rnd_qmc.cpp
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp

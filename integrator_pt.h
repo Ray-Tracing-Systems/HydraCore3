@@ -231,12 +231,12 @@ public:
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
   BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags);
+                                   MisData* a_misPrev, const uint a_currRayFlags, uint tid);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                              MisData* a_misPrev, BsdfSample* a_pRes);
+                              uint tid, MisData* a_misPrev, BsdfSample* a_pRes);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
 
@@ -369,11 +369,11 @@ public:
   // for MLT
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  virtual float  GetRandomNumbersSpec(RandomGen* a_gen);
-  virtual float4 GetRandomNumbersLens(RandomGen* a_gen);
-  virtual float4 GetRandomNumbersMats(RandomGen* a_gen, int a_bounce);
-  virtual float4 GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce);
-  virtual float  GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer);
+  virtual float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 

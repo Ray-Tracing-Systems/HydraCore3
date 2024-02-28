@@ -1,8 +1,10 @@
 #include "integrator_pt.h"
 #include <memory>
+#include <limits>
 #include <omp.h>
 
 #include "utils.h" // for progress bar
+#include "rnd_qmc.h"
 
 class IntegratorQMC : public Integrator
 {
@@ -17,15 +19,19 @@ public:
       maxThreadNum = omp_get_max_threads();
     }
 
-    std::cout << "[IntegratorQMC]: omp_get_num_threads() = " << maxThreadNum << std::endl;
+    m_qmcThreadStride = std::numeric_limits<uint32_t>::max()/uint32_t(maxThreadNum);
+
+    std::cout << "[IntegratorQMC]: omp_get_num_threads() = " << maxThreadNum << ", m_qmcThreadStride = " << m_qmcThreadStride << std::endl;
     m_currQMCPos.resize(maxThreadNum);
+
+    qmc::init(m_qmcTable);
   }
 
-  float  GetRandomNumbersSpec(RandomGen* a_gen) override;
-  float4 GetRandomNumbersLens(RandomGen* a_gen) override;
-  float4 GetRandomNumbersMats(RandomGen* a_gen, int a_bounce) override;
-  float4 GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce) override;
-  float  GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer) override;
+  float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
+  float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen) override;
+  float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) override;
+  float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce) override;
+  float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) override;
 
   void   kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                             float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
@@ -38,6 +44,8 @@ public:
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
 
   std::vector<uint32_t> m_currQMCPos;
+  unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
+  uint32_t m_qmcThreadStride = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,37 +54,49 @@ public:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float  IntegratorQMC::GetRandomNumbersSpec(RandomGen* a_gen) 
+float  IntegratorQMC::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
   return rndFloat1_Pseudo(a_gen); 
 }
 
-float4 IntegratorQMC::GetRandomNumbersLens(RandomGen* a_gen) 
+float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  return rndFloat4_Pseudo(a_gen); 
+  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  rands.x = qmc::rndFloat(sampleId, 0, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(sampleId, 1, m_qmcTable[0]);
+  return rands; 
 }
 
-float4 IntegratorQMC::GetRandomNumbersMats(RandomGen* a_gen, int a_bounce) 
-{ 
-  return rndFloat4_Pseudo(a_gen); 
-}
-
-float4 IntegratorQMC::GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce)
+float4 IntegratorQMC::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
+  float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  rndId   = qmc::rndFloat(sampleId, 2, m_qmcTable[0]);
+  rands.x = qmc::rndFloat(sampleId, 3, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(sampleId, 4, m_qmcTable[0]);
   return float4(rands.x, rands.y, rands.z, rndId);
 }
 
-float IntegratorQMC::GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer) 
+float4 IntegratorQMC::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
+{ 
+  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  rands.x = qmc::rndFloat(sampleId, 5, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(sampleId, 6, m_qmcTable[0]);
+  return rands; 
+}
+
+float IntegratorQMC::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
   return rndFloat1_Pseudo(a_gen); 
 }
 
 void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                   float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
+                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                       float4* accumColor,    float4* accumuThoroughput,
+                                       RandomGen* gen, uint* rayFlags, MisData* misData) // 
 {
   if(tid >= m_maxThreadId)
     return;
@@ -87,19 +107,9 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
-  const uint XY = packedXY[tid];
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
 
-  const uint x = (XY & 0x0000FFFF);
-  const uint y = (XY & 0xFFFF0000) >> 16;
-  const float4 pixelOffsets = GetRandomNumbersLens(&genLocal);
-
-  if(x == 237 && y == 512 - 109 - 1)
-  {
-    int a = 2;
-  }
-
-  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
-                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
+  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
@@ -107,7 +117,7 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    float u = GetRandomNumbersSpec(&genLocal);
+    float u = GetRandomNumbersSpec(tid, &genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
     tmp = u;
   }
@@ -132,14 +142,22 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
   if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
     return;
   
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, const_cast<RandomGen*>(gen));
+
   m_randomGens[tid] = *gen;
   if(m_disableImageContrib !=0)
     return;
-
-  const uint XY = in_pakedXY[tid];
-  const uint x  = (XY & 0x0000FFFF);
-  const uint y  = (XY & 0xFFFF0000) >> 16;
   
+  ///////////////////////////////////////////////////////////////////////////////
+  uint x = uint(pixelOffsets.x*float(m_winWidth));
+  uint y = uint(pixelOffsets.y*float(m_winHeight));
+  
+  if(x >= uint(m_winWidth-1))
+    x = uint(m_winWidth-1);
+  if(y >= uint(m_winHeight-1))
+    y = uint(m_winHeight-1);
+  ///////////////////////////////////////////////////////////////////////////////    
+
   float4 specSamples = *a_accumColor; 
   float4 tmpVal      = specSamples*m_camRespoceRGB;
   float3 rgb         = to_float3(tmpVal);
@@ -215,12 +233,16 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
   if(channels == 1)
   {
     const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    #pragma omp atomic
     out_color[y*m_winWidth+x] += mono;
   }
   else if(channels <= 4)
-  {
+  { 
+    #pragma omp atomic
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+    #pragma omp atomic
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+    #pragma omp atomic
     out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
   }
   else
@@ -232,6 +254,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
       const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
       const int offsetPixel = int(y)*m_winWidth + int(x);
       const int offsetLayer = channelId*m_winWidth*m_winHeight;
+      #pragma omp atomic
       out_color[offsetLayer + offsetPixel] += color[i];
     }
   }

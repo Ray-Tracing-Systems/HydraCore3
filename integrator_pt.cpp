@@ -21,17 +21,17 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float  Integrator::GetRandomNumbersSpec(RandomGen* a_gen) { return rndFloat1_Pseudo(a_gen); }
-float4 Integrator::GetRandomNumbersLens(RandomGen* a_gen) { return rndFloat4_Pseudo(a_gen); }
-float4 Integrator::GetRandomNumbersMats(RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
-float4 Integrator::GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce)
+float  Integrator::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) { return rndFloat1_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLens(uint tid, RandomGen* a_gen) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
   const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   return float4(rands.x, rands.y, rands.z, rndId);
 }
 
-float Integrator::GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
+float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
-  const float4 pixelOffsets = GetRandomNumbersLens(&genLocal);
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
 
   if(x == 237 && y == 512 - 109 - 1)
   {
@@ -71,7 +71,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    float u = GetRandomNumbersSpec(&genLocal);
+    float u = GetRandomNumbersSpec(tid, &genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
     tmp = u;
   }
@@ -234,7 +234,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float4 rands = GetRandomNumbersLgts(a_gen, bounce); 
+  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounce); 
   const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
   RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write whole float4 ?
 
@@ -366,7 +366,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const uint bounceTmp    = bounce;
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags, tid);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
