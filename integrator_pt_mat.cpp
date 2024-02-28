@@ -32,7 +32,7 @@ uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint bounce, uint lay
   const uint matId2 = m_materials[a_materialId].datai[1];
 
   uint32_t selectedMatId = matId1;
-  const float select = rndFloat1_Pseudo(a_gen);
+  const float select = GetRandomNumbersMatB(a_gen, bounce, layer);
   RecordBlendRndNeeded(bounce, layer, select);
 
   if(select < weight)
@@ -143,8 +143,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
-  const float4 rands     = rndFloat4_Pseudo(a_gen);
   const uint cflags      = m_materials[currMatId].cflags;
+  const float4 rands     = GetRandomNumbersMats(a_gen, bounce);
   RecordMatRndNeeded(bounce, rands);
 
   float4 fourScalarMatParams = float4(1,1,1,1);

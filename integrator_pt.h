@@ -365,6 +365,17 @@ public:
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  // for MLT
+  //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  virtual float  GetRandomNumbersSpec(RandomGen* a_gen);
+  virtual float4 GetRandomNumbersLens(RandomGen* a_gen);
+  virtual float4 GetRandomNumbersMats(RandomGen* a_gen, int a_bounce);
+  virtual float4 GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce);
+  virtual float  GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer);
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   uint m_disableImageContrib = 0;
 

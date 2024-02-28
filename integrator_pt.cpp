@@ -21,6 +21,21 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float  Integrator::GetRandomNumbersSpec(RandomGen* a_gen) { return rndFloat1_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLens(RandomGen* a_gen) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersMats(RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLgts(RandomGen* a_gen, int a_bounce)
+{
+  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  return float4(rands.x, rands.y, rands.z, rndId);
+}
+
+float Integrator::GetRandomNumbersMatB(RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                    float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
@@ -40,7 +55,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
-  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
+  const float4 pixelOffsets = GetRandomNumbersLens(&genLocal);
 
   if(x == 237 && y == 512 - 109 - 1)
   {
@@ -56,7 +71,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    float u = rndFloat1_Pseudo(&genLocal);
+    float u = GetRandomNumbersSpec(&genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
     tmp = u;
   }
@@ -67,7 +82,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
       (*wavelengths)[i] = 0.0f;
   }
 
-  RecordPixelRndIfNeeded(pixelOffsets, tmp);
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
@@ -219,10 +234,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
 
-  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
-  RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
+  const float4 rands = GetRandomNumbersLgts(a_gen, bounce); 
+  const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
+  RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write whole float4 ?
 
   if(lightId < 0) // no lights or invalid light id
   {
