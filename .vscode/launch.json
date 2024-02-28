@@ -258,7 +258,7 @@
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "64",
-                 "-fb_layer", "split_direct_indirect",
+                 "-fb_layer", "color",
                  "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_248/z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

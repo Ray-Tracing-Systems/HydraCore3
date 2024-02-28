@@ -9,6 +9,7 @@
 #include "mi_materials.h"
 
 float4x4 ReadMatrixFromString(const std::string& str);
+std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
@@ -176,7 +177,8 @@ int main(int argc, const char** argv) // common hydra main
   }
   else
   #endif
-    pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    //pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////

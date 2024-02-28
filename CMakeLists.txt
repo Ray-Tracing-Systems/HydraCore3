@@ -67,9 +67,11 @@ endif()
 # try to silence warnings for include files from these dirs
 include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
 include_directories(SYSTEM "external/tinyexr"
-                    "external/volk"
-                    "external/LiteMath")
-include_directories("external"
+                           "external/volk"
+                           "external/LiteMath")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+                    "external"
                     "external/vkutils"
                     "external/CrossRT")
 
@@ -159,6 +161,7 @@ set(CORE_SRC
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
+        mlt/integrator_qmc.cpp
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp
