@@ -1,5 +1,7 @@
 #include "integrator_pt_scene.h"
 
+#include <spectral/spec/basic_spectrum.h>
+
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
   switch(a_featureId)
@@ -83,8 +85,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     {
       float4 transpColor = float4(0, 0, 0, 0);
       auto nodeTransp = materialNode.child(L"transparency");
-      if (nodeTransp != nullptr)
-        transpColor = GetColorFromNode(nodeTransp.child(L"color"), pSceneInfo->spectral);
+      if (nodeTransp != nullptr && !pSceneInfo->spectral)
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), {}, false);// if spectral color then not transparent
   
       if(LiteMath::length3f(transpColor) > 1e-5f)
         features[KSPEC_MAT_TYPE_GLASS] = 1;
@@ -267,9 +269,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
   //// 
 
-  std::vector<TextureInfo> texturesInfo;
-  texturesInfo.resize(0);
-  texturesInfo.reserve(100);
+  ResourceContext resources{};
+
+  resources.textures.resize(0);
+  resources.textures.reserve(100);
 
   #ifdef WIN32
   size_t endPos = scenePathStr.find_last_of("\\");
@@ -300,7 +303,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
       texturesInfo.push_back(tex);
     }
-    
+    resources.textures.push_back(tex);
   }
 
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> texCache;
@@ -310,8 +313,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_textures.reserve(256);
   m_textures.push_back(MakeWhiteDummy());
 
-  // std::vector<SpectrumInfo> spectraInfo;
-  // spectraInfo.reserve(100);
+
+  resources.spectra.reserve(100);
   if(m_spectral_mode != 0)
   {  
     for(auto specNode : scene.SpectraNodes())
@@ -354,12 +357,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
 
     // if no spectra are loaded add uniform 1.0 spectrum
-    if(m_spec_offset_sz.empty())
+    if(resources.spectra.empty())
     {
       Spectrum uniform1;
       uniform1.id = 0;
-      uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
-      uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
+
+      spec::BasicSpectrum *sp = new spec::BasicSpectrum();
+
+      sp->set(200.0f, 1.0f);
+      sp->set(400.0f, 1.0f);
+      sp->set(600.0f, 1.0f);
+      sp->set(800.0f, 1.0f);
+
+      uniform1.spectrum.reset(sp);
       auto specValsUniform = uniform1.ResampleUniform();
       
       uint32_t offset = uint32_t(m_spec_values.size());
@@ -378,7 +388,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
-    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
+    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, resources, texCache, m_textures);                                
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
@@ -406,7 +416,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       
       if(lightSource.texId != uint(-1))
       {
-        auto info         = texturesInfo[lightSource.texId];
+        auto info         = resources.textures[lightSource.texId];
         addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
         m_envEnableSam    = addToLightSources ? 1 : 0;
   
@@ -452,7 +462,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = ConvertOldHydraMaterial(materialNode, resources, texCache, m_textures, m_spectral_mode);
       if(mat.mtype == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
@@ -460,36 +470,36 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == hydraGLTFTypeStr)
     {
-      mat = ConvertGLTFMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = ConvertGLTFMaterial(materialNode, resources, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadRoughConductorMaterial(materialNode, resources, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+      mat = LoadDiffuseMaterial(materialNode, resources, texCache, m_textures, m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
     {
-      mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadBlendMaterial(materialNode, resources, texCache, m_textures);
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
     else if(mat_type == plasticMatTypeStr)
     {
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+      mat = LoadPlasticMaterial(materialNode, resources, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
                                 m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
     else if(mat_type == dielectricMatTypeStr)
     {
-      mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadDielectricMaterial(materialNode, resources, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
 
@@ -540,7 +550,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
         auto textureNode = normalNode.child(L"texture");
 
-        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures);
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, resources, texCache, m_textures);
 
         mat.row0 [1] = sampler.row0;
         mat.row1 [1] = sampler.row1;
@@ -608,7 +618,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
             break;
         }
 
-        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), false);
+        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), resources, false);
         m_camRespoceRGB.w = 1.0f;
       }
     }

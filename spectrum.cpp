@@ -2,68 +2,27 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <spectral/spec/spectral_util.h>
 
-
-float Spectrum::Sample(float lambda) const
-{
-  if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
-    return 0;
- 
-  // int o = BinarySearch(wavelengths.size(), [&](int i) { return wavelengths[i] <= lambda; });
-  int o = BinarySearch(wavelengths.data(), wavelengths.size(), lambda);
-
-  float t = (lambda - wavelengths[o]) / (wavelengths[o + 1] - wavelengths[o]);
-  return lerp(values[o], values[o + 1], t);
-}
-
-
-//std::vector<float> Spectrum::Resample(int channels, float lambdaOffs)
-//{
-//  std::vector<float> res(channels);
-//  std::fill(res.begin(), res.end(), 0.0f);
-//  
-//  const float step = 1.0f;
-//  for(int c=0;c<channels;c++) {
-//    float lambdaStart = LAMBDA_MIN + (float(c+0)/float(channels))*(LAMBDA_MAX - LAMBDA_MIN);
-//    float lambdaEnd   = LAMBDA_MIN + (float(c+1)/float(channels))*(LAMBDA_MAX - LAMBDA_MIN);
-//    
-//    float summ = 0.0f;
-//    int numSamples = 0;
-//    for(float lambda = lambdaStart; lambda <= lambdaEnd; lambda += step) {
-//      summ += Sample(lambda + lambdaOffs);
-//      numSamples++;
-//    }
-//    res[c] = summ / float(numSamples);
-//  }
-//
-//  return res;
-//}
 
 std::vector<float> Spectrum::ResampleUniform()
 {
-  std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN + 1));
-  for(uint32_t c = 0; c < res.size(); ++c)
-    res[c] = Sample(LAMBDA_MIN + float(c));
+  std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN));
+  for(unsigned c = 0; c < res.size(); c++)
+    res[c] = spectrum->get_or_interpolate(static_cast<spec::Float>(LAMBDA_MIN + c));
   return res;
+}
+
+float Spectrum::Sample(float lambda) const
+{
+  return spectrum->get_or_interpolate(lambda);
 }
 
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
   Spectrum res;
 
-  std::ifstream in(path.string());
-  std::string line;
-  while(std::getline(in, line))
-  {
-    if(line.size() > 0 && line[0] == '#')
-      continue;
-
-    auto pos = line.find_first_of(' ');
-    float lambda = std::stof(line.substr(0, pos));
-    float spec   = std::stof(line.substr(pos + 1, line.size() - 1));
-    res.wavelengths.push_back(lambda);
-    res.values.push_back(spec);
-  }
+  spec::util::load(path, res.spectrum);
   res.id = spec_id;
 
   return res;

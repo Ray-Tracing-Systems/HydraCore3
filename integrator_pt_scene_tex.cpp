@@ -95,7 +95,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   return pResult;
 }
 
-std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
+std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const ResourceContext &resources,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                       std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
@@ -112,14 +112,14 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
     if(texNode.attribute(L"input_gamma").as_int() == 1)
       disableGamma = true;
 
-    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, disableGamma));
+    textures.push_back(LoadTextureAndMakeCombined(resources.textures[texId], sampler.sampler, disableGamma));
     p = texCache.find(sampler);
   }
 
   return {sampler, p->second};
 }
 
-std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureInfo> &texturesInfo, const HydraSampler& sampler,
+std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const ResourceContext &resources, const HydraSampler& sampler,
                                                   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                   std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
@@ -129,7 +129,7 @@ std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vec
     texCache[sampler] = uint(textures.size());
     bool disableGamma = true;
 
-    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, disableGamma));
+    textures.push_back(LoadTextureAndMakeCombined(resources.textures[texId], sampler.sampler, disableGamma));
     p = texCache.find(sampler);
   }
 

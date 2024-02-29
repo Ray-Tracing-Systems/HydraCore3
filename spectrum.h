@@ -5,6 +5,8 @@
 #include <filesystem>
 #include "LiteMath.h"
 #include "include/cglobals.h"
+#include <spectral/spec/spectrum.h>
+
 #ifndef __OPENCL_VERSION__
 using namespace LiteMath;
 #endif
@@ -16,9 +18,7 @@ struct Spectrum
   //std::vector<float> Resample(int channels, float lambdaOffs = 0.0f);
   std::vector<float> ResampleUniform();
 
-  // sorted by wavelength
-  std::vector<float> wavelengths; 
-  std::vector<float> values;
+  spec::ISpectrum::ptr spectrum;
   uint32_t id = 0;
 };
 #endif

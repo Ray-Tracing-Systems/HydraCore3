@@ -95,6 +95,8 @@ int main(int argc, const char** argv)
   if(args.hasOption("-grad"))
     gradMode = args.getOptionValue<int>("-grad");
 
+  ResourceContext resources{};
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[drmain]: loading xml ... " << scenePath.c_str() << std::endl;

@@ -3,7 +3,7 @@
 std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
 
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
-                                    const std::vector<TextureInfo>& texturesInfo, 
+                                    const ResourceContext &resources, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures)
 {
@@ -17,7 +17,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
   if (power == 0.0f) power = 1.0f;
 
-  float4 color     = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), a_spectral_mode != 0);
+  float4 color     = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), resources, a_spectral_mode != 0);
   auto matrix      = lightInst.matrix;
   auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
 
@@ -41,7 +41,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     auto texNode = lightInst.lightNode.child(L"intensity").child(L"color").child(L"texture");
     if(texNode != nullptr) 
     {
-      const auto& [sampler, texId] = LoadTextureFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), texturesInfo, texCache, a_textures); 
+      const auto& [sampler, texId] = LoadTextureFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), resources, texCache, a_textures); 
       lightSource.texId     = texId;
       lightSource.samplerRow0 = sampler.row0;
       lightSource.samplerRow1 = sampler.row1;
@@ -53,7 +53,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     auto backNode = lightInst.lightNode.child(L"back");
     if(backNode != nullptr)
     {
-      const auto& [sampler2, texId2] = LoadTextureFromNode(lightInst.lightNode.child(L"back"), texturesInfo, texCache, a_textures); 
+      const auto& [sampler2, texId2] = LoadTextureFromNode(lightInst.lightNode.child(L"back"), resources, texCache, a_textures); 
       lightSource.camBackTexId = texId2;
     }
   }

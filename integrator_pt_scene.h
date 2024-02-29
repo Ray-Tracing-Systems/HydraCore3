@@ -79,6 +79,12 @@ struct SpectrumInfo
   uint32_t id;
 };
 
+struct ResourceContext
+{
+  std::vector<SpectrumInfo> spectra;
+  std::vector<TextureInfo> textures;
+};
+
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
 std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo);
@@ -88,52 +94,51 @@ uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
+std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const ResourceContext &resources,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                       std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
-
-std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureInfo> &texturesInfo, const HydraSampler& sampler,
+std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const ResourceContext &resources, const HydraSampler& sampler,
                                                   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                   std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
-float4 GetColorFromNode(const pugi::xml_node& a_node, bool is_spectral_mode);
+float4 GetColorFromNode(const pugi::xml_node& a_node, const ResourceContext &resources, bool is_spectral_mode);
 
-Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              bool is_spectral_mode);
 
-Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                  bool is_spectral_mode);
 
-Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                     std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                     bool is_spectral_mode);
 
-Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              std::vector<uint2> &spec_tex_ids_wavelengths,
                              const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures,
                              bool is_spectral_mode);
 
-Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                 std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                 bool is_spectral_mode);
 
 
-Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadBlendMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                            std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                            std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
 float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex);
 
-Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              std::vector<float> &precomputed_transmittance,
@@ -143,7 +148,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures);
 
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
-                                    const std::vector<TextureInfo>& texturesInfo, 
+                                    const ResourceContext &resources, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures);
 
