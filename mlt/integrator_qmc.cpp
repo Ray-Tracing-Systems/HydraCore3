@@ -88,13 +88,15 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
   
-  const int rgIndex  = tid % uint(m_randomGens.size());
+  ///////////////////////////////////////////////////////////////////////////////////// begin change
+  const uint rgIndex = tid % uint(m_randomGens.size());
   RandomGen genLocal = m_randomGens[rgIndex];
 
   const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
 
   float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
+  ///////////////////////////////////////////////////////////////////////////////////// end change
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
@@ -127,12 +129,12 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
     return;
   
   const float4 pixelOffsets = GetRandomNumbersLens(tid, const_cast<RandomGen*>(gen));
-  const uint   rgenIndex    = tid % uint(m_randomGens.size());
+  const uint   rgenIndex    = tid % uint(m_randomGens.size()); ////////////////// change
   m_randomGens[rgenIndex]   = *gen;
   if(m_disableImageContrib !=0)
     return;
   
-  ///////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////// change
   uint x = uint(pixelOffsets.x*float(m_winWidth));
   uint y = uint(pixelOffsets.y*float(m_winHeight));
   
@@ -140,7 +142,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
     x = uint(m_winWidth-1);
   if(y >= uint(m_winHeight-1))
     y = uint(m_winHeight-1);
-  ///////////////////////////////////////////////////////////////////////////////    
+  /////////////////////////////////////////////////////////////////////////////// change   
 
   float4 specSamples = *a_accumColor; 
   float4 tmpVal      = specSamples*m_camRespoceRGB;
@@ -209,6 +211,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   
+  /////////////////////////////////////////////////////////////////////////////// change, add atomics
   if(channels == 1)
   {
     const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
@@ -237,7 +240,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
       out_color[offsetLayer + offsetPixel] += color[i];
     }
   }
-
+   /////////////////////////////////////////////////////////////////////////////// end change, atomics
 }
 
 void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
@@ -251,7 +254,7 @@ void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_col
   m_maxThreadId = uint(samplesNum);
 
   #ifndef _DEBUG
-  #pragma omp parallel for default(shared)
+  #pragma omp parallel for default(shared) 
   #endif
   for (IndexType i = 0; i < IndexType(samplesNum); ++i) 
   {

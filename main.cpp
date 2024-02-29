@@ -93,7 +93,8 @@ int main(int argc, const char** argv) // common hydra main
       gamma = args.getOptionValue<float>("-gamma");
   }
 
-  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  bool qmcIsEnabled  = args.hasOption("--qmc");
 
   float4x4 look_at;
   auto override_camera_pos = args.hasOption("-look_at");
@@ -177,9 +178,12 @@ int main(int argc, const char** argv) // common hydra main
   }
   else
   #endif
-    //pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
-    pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
-
+  {
+    if(qmcIsEnabled)
+      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    else
+      pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+  }
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
