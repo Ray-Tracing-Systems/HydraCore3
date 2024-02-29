@@ -20,11 +20,13 @@ public:
   
   void ClearGeom() override;
   
-  uint32_t AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride) override;
-  void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,  BuildQuality a_qualityLevel, size_t vByteStride) override;
+  uint32_t AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, 
+                               uint32_t a_flags, size_t vByteStride) override;
+  void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices,
+                                  size_t a_indNumber, uint32_t a_flags, size_t vByteStride) override;
 
   void ClearScene() override; 
-  void CommitScene(BuildQuality a_qualityLevel, uint32_t options = 0) override; 
+  void CommitScene(uint32_t options = BUILD_HIGH) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;

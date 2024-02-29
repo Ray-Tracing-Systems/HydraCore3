@@ -15,11 +15,13 @@ public:
   void ClearGeom() override;
   const char* Name() const override { return "VulkanRTX"; }
 
-  uint32_t AddGeom_Triangles3f(const float * a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride) override;
-  void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride) override;
+  uint32_t AddGeom_Triangles3f(const float * a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, 
+                               uint32_t a_flags, size_t vByteStride) override;
+  void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices,
+                                  size_t a_indNumber, uint32_t a_flags, size_t vByteStride) override;
 
   void ClearScene() override; 
-  void CommitScene  (BuildQuality a_qualityLevel, uint32_t options = 0) override; 
+  void CommitScene  (uint32_t options = BUILD_HIGH) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;
@@ -51,16 +53,24 @@ protected:
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum RTCBuildQuality TransformBuildQ(BuildQuality a_quality)
+enum RTCBuildQuality TransformBuildQ(uint32_t a_flags)
 {
-  switch(a_quality)
+  if(a_flags & BUILD_LOW)
   {
-    case BUILD_LOW   : return RTC_BUILD_QUALITY_LOW;
-    case BUILD_MEDIUM: return RTC_BUILD_QUALITY_MEDIUM;
-    case BUILD_HIGH  : return RTC_BUILD_QUALITY_HIGH;
-    case BUILD_REFIT : return RTC_BUILD_QUALITY_REFIT;
-    default:           return RTC_BUILD_QUALITY_MEDIUM;
-  };
+    return RTC_BUILD_QUALITY_LOW;
+  }
+  else if(a_flags & BUILD_MEDIUM)
+  {
+    return RTC_BUILD_QUALITY_MEDIUM;
+  }
+  else if(a_flags & BUILD_HIGH)
+  {
+    return RTC_BUILD_QUALITY_HIGH;
+  }
+  else if(a_flags & BUILD_REFIT)
+  {
+    return RTC_BUILD_QUALITY_REFIT;
+  }
 
   return RTC_BUILD_QUALITY_MEDIUM;
 }
@@ -123,7 +133,8 @@ void EmbreeRT::ClearGeom()
 }
   
 
-uint32_t EmbreeRT::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride)
+uint32_t EmbreeRT::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,
+                                       uint32_t a_flags, size_t vByteStride)
 {
   if(vByteStride == 0)
     vByteStride = sizeof(float)*3;
@@ -159,7 +170,7 @@ uint32_t EmbreeRT::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumbe
   // attach 'geom' to 'meshScene' and then remember 'meshScene' in 'm_blas'
   //
   auto meshScene = rtcNewScene(m_device);
-  rtcSetSceneBuildQuality(meshScene, TransformBuildQ(a_qualityLevel));
+  rtcSetSceneBuildQuality(meshScene, TransformBuildQ(a_flags));
   
   /*uint32_t geomId = */
   rtcAttachGeometry(meshScene, geom);
@@ -176,7 +187,8 @@ uint32_t EmbreeRT::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumbe
   return uint32_t(m_blas.size()-1);
 }
 
-void EmbreeRT::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride)
+void EmbreeRT::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,
+                                      uint32_t a_flags, size_t vByteStride)
 {
   //std::cout << "[EmbreeRT]::UpdateGeom_Triangles3f is not implemented yet!" << std::endl;  
   //return;
@@ -277,9 +289,9 @@ uint32_t EmbreeRT::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_ma
   return uint32_t(m_inst.size()-1);
 }
 
-void EmbreeRT::CommitScene(BuildQuality a_qualityLevel, uint32_t options)
+void EmbreeRT::CommitScene(uint32_t options)
 {
-  rtcSetSceneBuildQuality(m_scene, TransformBuildQ(a_qualityLevel));
+  rtcSetSceneBuildQuality(m_scene, TransformBuildQ(options));
   rtcCommitScene(m_scene);
 }  
 

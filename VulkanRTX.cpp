@@ -48,7 +48,8 @@ void VulkanRTX::ClearGeom()
 //  m_pScnMgr->DestroyScene();
 }
   
-uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, BuildQuality a_qualityLevel, size_t vByteStride)
+uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,
+                                        uint32_t a_flags, size_t vByteStride)
 {
   if(vByteStride == 0)
     vByteStride = sizeof(float)*3;
@@ -80,7 +81,8 @@ uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
   return idx;
 }
 
-void VulkanRTX::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,  BuildQuality a_qualityLevel, size_t vByteStride)
+void VulkanRTX::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices,
+                                       size_t a_indNumber, uint32_t a_flags, size_t vByteStride)
 {
   std::cout << "[VulkanRTX::UpdateGeom_Triangles3f]: not implemented" << std::endl;
 }
@@ -114,9 +116,9 @@ uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_m
   return m_pScnMgr->InstanceMesh(a_geomId, a_matrices[0], true, a_matrices[1]);
 }
 
-void VulkanRTX::CommitScene(BuildQuality a_qualityLevel, uint32_t options = BuildOptions::NONE)
+void VulkanRTX::CommitScene(uint32_t options)
 {
-  if(options & BuildOptions::MOTION_BLUR)
+  if(options & MOTION_BLUR)
     m_pScnMgr->BuildTLAS_MotionBlur();
   else
     m_pScnMgr->BuildTLAS();
