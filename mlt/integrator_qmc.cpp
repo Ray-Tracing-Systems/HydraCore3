@@ -1,7 +1,7 @@
 #include "integrator_pt.h"
 #include <memory>
 #include <limits>
-#include <omp.h>
+//#include <omp.h>
 
 #include "utils.h" // for progress bar
 #include "rnd_qmc.h"
@@ -12,18 +12,6 @@ public:
 
   IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
   {
-    int maxThreadNum = 0;
-    #pragma omp parallel
-    {
-      #pragma omp single
-      maxThreadNum = omp_get_max_threads();
-    }
-
-    m_qmcThreadStride = std::numeric_limits<uint32_t>::max()/uint32_t(maxThreadNum);
-
-    std::cout << "[IntegratorQMC]: omp_get_num_threads() = " << maxThreadNum << ", m_qmcThreadStride = " << m_qmcThreadStride << std::endl;
-    m_currQMCPos.resize(maxThreadNum);
-
     qmc::init(m_qmcTable);
   }
 
@@ -42,10 +30,7 @@ public:
                                   const uint* in_pakedXY, const float4* wavelengths, float* out_color) override;
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
-
-  std::vector<uint32_t> m_currQMCPos;
   unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
-  uint32_t m_qmcThreadStride = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,31 +46,28 @@ float  IntegratorQMC::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)
 
 float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
   float4 rands = rndFloat4_Pseudo(a_gen);
-  rands.x = qmc::rndFloat(sampleId, 0, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(sampleId, 1, m_qmcTable[0]);
+  rands.x = qmc::rndFloat(tid, 0, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(tid, 1, m_qmcTable[0]);
+  return rands; 
+}
+
+float4 IntegratorQMC::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
+{ 
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  rands.x = qmc::rndFloat(tid, 2, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(tid, 3, m_qmcTable[0]);
   return rands; 
 }
 
 float4 IntegratorQMC::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
   float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  rndId   = qmc::rndFloat(sampleId, 2, m_qmcTable[0]);
-  rands.x = qmc::rndFloat(sampleId, 3, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(sampleId, 4, m_qmcTable[0]);
+  rndId   = qmc::rndFloat(tid, 4, m_qmcTable[0]);
+  rands.x = qmc::rndFloat(tid, 5, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(tid, 6, m_qmcTable[0]);
   return float4(rands.x, rands.y, rands.z, rndId);
-}
-
-float4 IntegratorQMC::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
-{ 
-  const uint32_t sampleId = omp_get_thread_num()*m_qmcThreadStride + tid;
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  rands.x = qmc::rndFloat(sampleId, 5, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(sampleId, 6, m_qmcTable[0]);
-  return rands; 
 }
 
 float IntegratorQMC::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
@@ -103,9 +85,11 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
+  
+  const int rgIndex  = tid % uint(m_randomGens.size());
+  RandomGen genLocal = m_randomGens[rgIndex];
 
   const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
 
@@ -143,8 +127,8 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
     return;
   
   const float4 pixelOffsets = GetRandomNumbersLens(tid, const_cast<RandomGen*>(gen));
-
-  m_randomGens[tid] = *gen;
+  const uint   rgenIndex    = tid % uint(m_randomGens.size());
+  m_randomGens[rgenIndex]   = *gen;
   if(m_disableImageContrib !=0)
     return;
   
@@ -224,11 +208,6 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  //if(x == 415 && (y == 256-130-1))
-  //{
-  //  int a = 2;
-  //  //colorRes = float4(1,0,0,0);
-  //}
   
   if(channels == 1)
   {
@@ -263,26 +242,25 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
 
 void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
 {
-  for(auto& pos : m_currQMCPos) // reset all qmc positions to zero
-    pos = 0;
-
-  ConsoleProgressBar progress(pixelsNum);
+  ConsoleProgressBar progress(pixelsNum*a_passNum);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
+  
+  using IndexType = unsigned; // or int
+  const size_t samplesNum = std::min<size_t>(size_t(std::numeric_limits<IndexType>::max()), size_t(pixelsNum)*size_t(a_passNum));
+  m_maxThreadId = uint(samplesNum);
+
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for (int i = 0; i < pixelsNum; ++i) {
-    for (int j = 0; j < a_passNum; ++j) {
-      PathTrace(m_currQMCPos[omp_get_thread_num()], channels, out_color);
-      m_currQMCPos[omp_get_thread_num()]++;
-    }
+  for (IndexType i = 0; i < IndexType(samplesNum); ++i) 
+  {
+    PathTrace(i, channels, out_color);
     progress.Update();
   }
   progress.Done();
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

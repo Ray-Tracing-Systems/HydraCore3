@@ -2,7 +2,7 @@
 
 namespace qmc
 {
-  constexpr static int   QRNG_DIMENSIONS = 7;
+  constexpr static int   QRNG_DIMENSIONS = 11;
   constexpr static int   QRNG_RESOLUTION = 31;
   constexpr static float INT_SCALE       = (1.0f / (float)0x80000001U);
 
