@@ -1015,9 +1015,9 @@ static inline complex filmPhaseDiff(complex cosTheta, complex eta, float thickne
 static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
 {
   complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
-  complex sinThetaF = sinThetaI * (etaI * etaI) / (etaF * etaF);
+  complex sinThetaF = sinThetaI * (etaI.re * etaI.re) / (etaF * etaF);
   complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
-  complex sinThetaT = sinThetaF * (etaF * etaF) / (etaT * etaT);
+  complex sinThetaT = sinThetaI * (etaI.re * etaI.re) / (etaT * etaT);
   complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
   
   complex phaseDiff = filmPhaseDiff(cosThetaF, etaF, thickness, lambda);
@@ -1040,9 +1040,9 @@ static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, comp
 static inline float FrFilmRefr(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
 {
   complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
-  complex sinThetaF = sinThetaI * (etaI * etaI) / (etaF * etaF);
+  complex sinThetaF = sinThetaI * (etaI.re * etaI.re) / (etaF * etaF);
   complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
-  complex sinThetaT = sinThetaF * (etaF * etaF) / (etaT * etaT);
+  complex sinThetaT = sinThetaI * (etaI.re * etaI.re) / (etaT * etaT);
   complex cosThetaT = complex_sqrt(1.0f - sinThetaT);
   
   complex phaseDiff = filmPhaseDiff(cosThetaF, etaF, thickness, lambda);
