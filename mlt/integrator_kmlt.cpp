@@ -370,6 +370,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   auto start = std::chrono::high_resolution_clock::now();
   
   double avgBrightnessOut = 0.0f;
+  float  avgAcceptanceRate = 0.0f;
 
   #ifndef _DEBUG
   #pragma omp parallel
@@ -491,16 +492,24 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
         out_color[offset*4+2] += contribAtY.z;
       }
       
-
       progress.Update();
     }
+
+    #pragma omp atomic
+    avgAcceptanceRate += float(accept);
 
     double avgBrightness = accumBrightness / double(largeSteps);
     #pragma omp atomic
     avgBrightnessOut += avgBrightness;
   }
 
-  avgBrightnessOut = avgBrightnessOut / double(m_maxThreadId);
+  progress.Done();
+
+  avgBrightnessOut  = avgBrightnessOut  / double(m_maxThreadId);
+  avgAcceptanceRate = avgAcceptanceRate / float(pixelsNum*a_passNum);
+
+  std::cout << "[IntegratorKMLT]: acceptance rate = " << avgAcceptanceRate << std::endl;
+  std::cout.flush();
 
   double actualBrightness = 0.0;
   {
@@ -513,10 +522,9 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   }
   
   const float normConst = float(a_passNum)*float(avgBrightnessOut/actualBrightness);
-  for(uint i=0;i<pixelsNum*4;i++)
+  for(uint i=0;i<pixelsNum*channels;i++)
     out_color[i] *= normConst;
 
-  progress.Done();
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
