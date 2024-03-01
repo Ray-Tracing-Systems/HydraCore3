@@ -40,9 +40,9 @@ public:
   
   inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
 
-  std::vector<float>   m_allRandomNumbers;
   std::vector<float4>  m_allColors;
   std::vector<int2>    m_allXY;
+  std::vector<const float*> m_allPtrs;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,32 +53,32 @@ public:
 
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  const uint offset = tid*RandsPerThread();
-  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
+  const float* data = m_allPtrs[tid];
+  return float4(data[0], data[1], data[2], data[3]);
 }
 
 float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  const uint offset = tid*RandsPerThread();
-  return m_allRandomNumbers[offset + 4]; 
+  const float* data = m_allPtrs[tid];
+  return data[4]; 
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
-  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
-  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
+  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
+  return float4(data[0], data[1], data[2], data[3]);
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
-  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
+  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
+  return float4(data[0], data[1], data[2], data[3]);
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
-  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
-  return m_allRandomNumbers[offset + a_layer];
+  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
+  return data[a_layer];
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -234,9 +234,7 @@ void IntegratorKMLT::kernel_ContributeToImage(uint tid, const uint* rayFlags, ui
 
 float4 IntegratorKMLT::F(const std::vector<float>& xVal, uint tid, int*pX, int* pY)
 {
-  float* pRands = m_allRandomNumbers.data() + m_traceDepth*PER_BOUNCE*tid;
-  assert(pRands + xVal.size() <= m_allRandomNumbers.data() + m_allRandomNumbers.size()); // check if we are out of bounds
-  memcpy(pRands, xVal.data(), xVal.size()*sizeof(float));
+  m_allPtrs[tid] = xVal.data();
   PathTrace(tid, 4, nullptr);
   (*pX) = m_allXY[tid].x;
   (*pY) = m_allXY[tid].y;
@@ -312,10 +310,10 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   #endif
 
   m_maxThreadId = maxThreads;
-  m_allRandomNumbers.resize(m_traceDepth*RandsPerThread()*maxThreads);
   m_allColors.resize(maxThreads);
   m_allXY.resize(maxThreads);
   m_randomGens.resize(maxThreads);
+  m_allPtrs.resize(maxThreads);
 
   const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
