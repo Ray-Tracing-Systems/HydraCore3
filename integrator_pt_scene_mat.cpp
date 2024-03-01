@@ -886,7 +886,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
 
   uint precompFlag = 0;
   auto nodePrecomp = materialNode.child(L"precompute");
-  if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0 || true)
+  if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0)
   {
     precompFlag = 1u;
     mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
