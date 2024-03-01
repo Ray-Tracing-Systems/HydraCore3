@@ -1,10 +1,9 @@
 #include "integrator_pt.h"
 #include <memory>
 #include <limits>
-//#include <omp.h>
+#include <omp.h>
 
 #include "utils.h" // for progress bar
-#include "rnd_qmc.h"
 
 class IntegratorKMLT : public Integrator
 {
@@ -12,7 +11,7 @@ public:
 
   IntegratorKMLT(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
   {
-    qmc::init(m_qmcTable);
+
   }
 
   float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
@@ -30,7 +29,20 @@ public:
                                   const uint* in_pakedXY, const float4* wavelengths, float* out_color) override;
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
-  unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
+  
+  float4 F(const std::vector<float>& xVal, uint tid, int*pX, int* pY);
+
+  static constexpr uint LGHT_ID      = 0;
+  static constexpr uint MATS_ID      = 4;
+  static constexpr uint BLND_ID      = 8;
+  static constexpr uint PER_BOUNCE   = 10;
+  static constexpr uint BOUNCE_START = 5;
+  
+  inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
+
+  std::vector<float>   m_allRandomNumbers;
+  std::vector<float4>  m_allColors;
+  std::vector<int2>    m_allXY;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,40 +51,38 @@ public:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
-{ 
-  return rndFloat1_Pseudo(a_gen); 
-}
-
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  rands.x = qmc::rndFloat(tid, 0, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 1, m_qmcTable[0]);
-  return rands; 
+  return float4(m_allRandomNumbers[tid*RandsPerThread() + 0],
+                m_allRandomNumbers[tid*RandsPerThread() + 1],
+                m_allRandomNumbers[tid*RandsPerThread() + 2],
+                m_allRandomNumbers[tid*RandsPerThread() + 3]);
+}
+
+float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
+{ 
+  return m_allRandomNumbers[tid*RandsPerThread() + 4]; 
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  rands.x = qmc::rndFloat(tid, 2, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 3, m_qmcTable[0]);
-  return rands; 
+  return float4(m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 0],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 1],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 2],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 3]);
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  rndId   = qmc::rndFloat(tid, 4, m_qmcTable[0]);
-  rands.x = qmc::rndFloat(tid, 5, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 6, m_qmcTable[0]);
-  return float4(rands.x, rands.y, rands.z, rndId);
+  return float4(m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 0],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 1],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 2],
+                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 3]);
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
-  return rndFloat1_Pseudo(a_gen); 
+  return m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID + a_layer];
 }
 
 void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
@@ -93,6 +103,16 @@ void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   RandomGen genLocal = m_randomGens[rgIndex];
 
   const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+
+  uint x = uint(pixelOffsets.x*float(m_winWidth));
+  uint y = uint(pixelOffsets.y*float(m_winHeight));
+  
+  if(x >= uint(m_winWidth-1))
+    x = uint(m_winWidth-1);
+  if(y >= uint(m_winHeight-1))
+    y = uint(m_winHeight-1);
+  
+  m_allXY[tid] = int2(x,y);
 
   float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -209,60 +229,282 @@ void IntegratorKMLT::kernel_ContributeToImage(uint tid, const uint* rayFlags, ui
     }
   }
 
-  float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  
-  /////////////////////////////////////////////////////////////////////////////// change, add atomics
-  if(channels == 1)
+  float4 colorRes  = m_exposureMult * to_float4(rgb, 1.0f);
+  m_allColors[tid] = colorRes;
+
+  // /////////////////////////////////////////////////////////////////////////////// change, add atomics
+  // if(channels == 1)
+  // {
+  //   const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+  //   #pragma omp atomic
+  //   out_color[y*m_winWidth+x] += mono;
+  // }
+  // else if(channels <= 4)
+  // { 
+  //   #pragma omp atomic
+  //   out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+  //   #pragma omp atomic
+  //   out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+  //   #pragma omp atomic
+  //   out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+  // }
+  // else
+  // {
+  //   auto waves = (*wavelengths);
+  //   auto color = (*a_accumColor)*m_exposureMult;
+  //   for(int i=0;i<4;i++) {
+  //     const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+  //     const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
+  //     const int offsetPixel = int(y)*m_winWidth + int(x);
+  //     const int offsetLayer = channelId*m_winWidth*m_winHeight;
+  //     #pragma omp atomic
+  //     out_color[offsetLayer + offsetPixel] += color[i];
+  //   }
+  // }
+  // /////////////////////////////////////////////////////////////////////////////// end change, atomics
+}
+
+float4 IntegratorKMLT::F(const std::vector<float>& xVal, uint tid, int*pX, int* pY)
+{
+  float* pRands = m_allRandomNumbers.data() + m_traceDepth*PER_BOUNCE*tid;
+  assert(pRands + xVal.size() <= m_allRandomNumbers.data() + m_allRandomNumbers.size()); // check if we are out of bounds
+  memcpy(pRands, xVal.data(), xVal.size()*sizeof(float));
+  PathTrace(tid, 4, nullptr);
+  (*pX) = m_allXY[tid].x;
+  (*pY) = m_allXY[tid].y;
+  return m_allColors[tid];
+}
+
+static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB(!!!)
+{
+  return std::max(0.333334f*(color.x + color.y + color.z), 0.0f);
+}
+
+constexpr float MUTATE_COEFF_SCREEN = 128.0f;
+constexpr float MUTATE_COEFF_BSDF   = 64.0f;
+
+/**
+\brief mutate random number in primary sample space -- interval [0,1]
+\param valueX    - input original value
+\param rands     - input pseudo random numbers
+\param p2        - parameter of step size. The greater parameter is, the smaller step we gain. Default = 64.0f;
+\param p1        - parameter of step size. The greater parameter is, the smaller step we gain. Default = 1024.0f;
+\return mutated random float in range [0,1]
+
+*/
+static inline float MutateKelemen(float valueX, float2 rands, float p2, float p1)   // mutate in primary space
+{
+  const float s1    = 1.0f / p1;
+  const float s2    = 1.0f / p2;
+  const float power = -std::log(s2 / s1);
+  const float dv    = std::max(s2*( std::exp(power*std::sqrt(rands.x)) - std::exp(power) ), 0.0f);
+
+  if (rands.y < 0.5f)
   {
-    const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-    #pragma omp atomic
-    out_color[y*m_winWidth+x] += mono;
-  }
-  else if(channels <= 4)
-  { 
-    #pragma omp atomic
-    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
-    #pragma omp atomic
-    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
-    #pragma omp atomic
-    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+    valueX += dv;
+    if (valueX > 1.0f)
+      valueX -= 1.0f;
   }
   else
   {
-    auto waves = (*wavelengths);
-    auto color = (*a_accumColor)*m_exposureMult;
-    for(int i=0;i<4;i++) {
-      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
-      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
-      const int offsetPixel = int(y)*m_winWidth + int(x);
-      const int offsetLayer = channelId*m_winWidth*m_winHeight;
-      #pragma omp atomic
-      out_color[offsetLayer + offsetPixel] += color[i];
-    }
+    valueX -= dv;
+    if (valueX < 0.0f)
+      valueX += 1.0f;
   }
-   /////////////////////////////////////////////////////////////////////////////// end change, atomics
+
+  return valueX;
+}
+
+std::vector<float> MutatePrimarySpace(const std::vector<float>& v2, RandomGen* pGen, int bounceNum)
+{
+  std::vector<float> res(v2.size());
+
+  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); 
+  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f);
+  res[2] = MutateKelemen(v2[2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+  res[3] = MutateKelemen(v2[3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+  res[4] = MutateKelemen(v2[4], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+
+  for(int bounce=0; bounce < bounceNum; bounce++) 
+  {
+    const uint matIndex = IntegratorKMLT::BOUNCE_START + bounce*IntegratorKMLT::PER_BOUNCE + IntegratorKMLT::MATS_ID;
+    const uint ltgIndex = IntegratorKMLT::BOUNCE_START + bounce*IntegratorKMLT::PER_BOUNCE + IntegratorKMLT::LGHT_ID;
+    
+    res[matIndex+0] = MutateKelemen(v2[matIndex+0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[matIndex+1] = MutateKelemen(v2[matIndex+1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[matIndex+2] = MutateKelemen(v2[matIndex+2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[matIndex+3] = MutateKelemen(v2[matIndex+3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+
+    res[ltgIndex+0] = MutateKelemen(v2[ltgIndex+0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[ltgIndex+1] = MutateKelemen(v2[ltgIndex+1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[ltgIndex+2] = MutateKelemen(v2[ltgIndex+2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+    res[ltgIndex+3] = MutateKelemen(v2[ltgIndex+3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+  }
+
+  return res;
 }
 
 void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
 {
   this->SetFrameBufferLayer(FB_INDIRECT);
   
+  uint maxThreads = 1;
+  #ifndef _DEBUG
+  #pragma omp parallel
+  {
+    #pragma omp single
+    maxThreads = omp_get_max_threads();
+  }
+  #endif
+
+  m_maxThreadId = maxThreads;
+  m_allRandomNumbers.resize(m_traceDepth*RandsPerThread()*maxThreads);
+  m_allColors.resize(maxThreads);
+  m_allXY.resize(maxThreads);
+  m_randomGens.resize(maxThreads);
+
+  const size_t samplesPerPass = size_t(pixelsNum)*size_t(a_passNum) / maxThreads;
+
   ConsoleProgressBar progress(pixelsNum*a_passNum);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
   
-  using IndexType = unsigned; // or int
-  const size_t samplesNum = std::min<size_t>(size_t(std::numeric_limits<IndexType>::max()), size_t(pixelsNum)*size_t(a_passNum));
-  m_maxThreadId = uint(samplesNum);
+  double avgBrightnessOut = 0.0f;
 
   #ifndef _DEBUG
-  #pragma omp parallel for default(shared) 
+  #pragma omp parallel
   #endif
-  for (IndexType i = 0; i < IndexType(samplesNum); ++i) 
   {
-    PathTrace(i, channels, out_color);
-    progress.Update();
+    int tid = omp_get_thread_num();
+    
+    const int NRandomisation = (clock() % 9) + (clock() % 4) + 1;
+    RandomGen gen1 = RandomGenInit(tid*7 + 1);
+    RandomGen gen2 = RandomGenInit(tid);
+    for (int i = 0; i < NRandomisation; i++) 
+    {
+      NextState(&gen1);
+      NextState(&gen2);
+    }
+
+    // (1) Initial State
+    //
+    int xScr = 0, yScr = 0;
+    std::vector<float> xVec(m_traceDepth*RandsPerThread());
+    for(size_t i=0;i<xVec.size();i++)
+      xVec[i] = rndFloat1_Pseudo(&gen2);
+
+    float4 yColor = F(xVec, tid, &xScr, &yScr);
+    float  y      = contribFunc(yColor);
+   
+    // (2) Markov Chain
+    //
+    size_t accept     = 0;
+    size_t largeSteps = 0;
+    double accumBrightness = 0.0;
+
+    for(size_t i=0;i<samplesPerPass;i++) 
+    {
+      auto xOld = xVec;
+
+      const float plarge     = 0.33f;                           // 33% for large step;
+      const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
+      
+      std::vector<float> xNew(xOld.size());
+      {
+        if (isLargeStep)                                        // large step
+        {
+          for(size_t i=0;i<xNew.size();i++)
+            xNew[i] = rndFloat1_Pseudo(&gen2);
+        }
+        else
+          xNew = MutatePrimarySpace(xOld, &gen2, m_traceDepth); // small step
+      }
+
+      float  yOld      = y;
+      float4 yOldColor = yColor;
+  
+      int xScrOld = xScr, yScrOld = yScr;
+      int xScrNew = 0,    yScrNew = 0;
+  
+      float4 yNewColor = F(xNew, tid, &xScrNew, &yScrNew);
+      float  yNew      = contribFunc(yNewColor);
+  
+      float a = (yOld == 0.0f) ? 1.0f : std::min(1.0f, yNew / yOld);
+      float p = rndFloat1_Pseudo(&gen1);
+
+      if (p <= a) // accept 
+      {
+        xVec   = xNew;
+        y      = yNew;
+        yColor = yNewColor;
+        xScr   = xScrNew;
+        yScr   = yScrNew;
+        accept++;
+      }
+      else        // reject
+      {
+        //x      = x;
+        //y      = y;
+        //yColor = yColor;
+      }
+
+      if(isLargeStep)
+      {
+        accumBrightness += double(yNew);
+        largeSteps++;
+      }
+
+      // (5) contrib to image
+      //
+      float3 contribAtX = to_float3(yOldColor)*(1.0f / std::max(yOld, 1e-6f))*(1.0f - a);
+      float3 contribAtY = to_float3(yNewColor)*(1.0f / std::max(yNew, 1e-6f))*a;
+
+      if (dot(contribAtX, contribAtX) > 1e-12f)
+      { 
+        const int offset = yScrOld*m_winWidth + xScrOld;
+        #pragma omp atomic
+        out_color[offset*4+0] += contribAtX.x;
+        #pragma omp atomic
+        out_color[offset*4+1] += contribAtX.y;
+        #pragma omp atomic
+        out_color[offset*4+2] += contribAtX.z;
+      }
+
+      if (dot(contribAtY, contribAtY) > 1e-12f)
+      { 
+        const int offset = yScrNew*m_winWidth + xScrNew;
+        #pragma omp atomic
+        out_color[offset*4+0] += contribAtY.x;
+        #pragma omp atomic
+        out_color[offset*4+1] += contribAtY.y;
+        #pragma omp atomic
+        out_color[offset*4+2] += contribAtY.z;
+      }
+
+      progress.Update();
+    }
+
+    double avgBrightness = accumBrightness / double(largeSteps);
+    #pragma omp atomic
+    avgBrightnessOut += avgBrightness;
   }
+
+  avgBrightnessOut = avgBrightnessOut / double(m_maxThreadId);
+
+  double actualBrightness = 0.0;
+  {
+    for(uint i=0;i<pixelsNum;i++)
+    {
+      float4 color = float4(out_color[i*4+0], out_color[i*4+1], out_color[i*4+2], out_color[i*4+3]);
+      actualBrightness += contribFunc(color);
+    }
+    actualBrightness /= double(pixelsNum);
+  }
+
+  const float normConst = float(a_passNum)*float(avgBrightnessOut/actualBrightness);
+  for(uint i=0;i<pixelsNum*4;i++)
+    out_color[i] *= normConst;
+
   progress.Done();
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
