@@ -23,7 +23,7 @@ public:
   void   kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                             float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                             float4* accumColor,    float4* accumuThoroughput,
-                            RandomGen* gen, uint* rayFlags, MisData* misData) override;
+                            RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY);
 
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
@@ -38,8 +38,9 @@ public:
   
   inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
 
-  std::vector<float> m_allRands;
-  uint               m_randsPerThread = 0;
+  std::vector<float>    m_allRands;
+  std::vector<int>      m_allLargeSteps;
+  uint                  m_randsPerThread = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -47,148 +48,6 @@ public:
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
-{ 
-  const float* data = m_allRands.data() + tid*m_randsPerThread;
-  return float4(data[0], data[1], data[2], data[3]);
-}
-
-float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
-{ 
-  const float* data = m_allRands.data() + tid*m_randsPerThread;
-  return data[4]; 
-}
-
-float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
-{ 
-  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
-  return float4(data[0], data[1], data[2], data[3]);
-}
-
-float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
-{
-  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
-  return float4(data[0], data[1], data[2], data[3]);
-}
-
-float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
-{ 
-  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
-  return data[a_layer];
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                       float4* accumColor,    float4* accumuThoroughput,
-                                       RandomGen* gen, uint* rayFlags, MisData* misData) // 
-{
-  if(tid >= m_maxThreadId)
-    return;
-
-  *accumColor        = make_float4(0,0,0,0);
-  *accumuThoroughput = make_float4(1,1,1,1);
-  *rayFlags          = 0;
-  *misData           = makeInitialMisData();
-  
-  ///////////////////////////////////////////////////////////////////////////////////// begin change
-  const uint rgIndex = tid % uint(m_randomGens.size());
-  RandomGen genLocal = m_randomGens[rgIndex];
-
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
-
-  uint x = uint(pixelOffsets.x*float(m_winWidth));
-  uint y = uint(pixelOffsets.y*float(m_winHeight));
-  
-  if(x >= uint(m_winWidth-1))
-    x = uint(m_winWidth-1);
-  if(y >= uint(m_winHeight-1))
-    y = uint(m_winHeight-1);
-
-  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
-  float3 rayPos = float3(0,0,0);
-  ///////////////////////////////////////////////////////////////////////////////////// end change
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
-  
-  float tmp = 0.0f;
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = GetRandomNumbersSpec(tid, &genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
-  else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
-
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
- 
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = genLocal;
-}
-
-float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
-{
-  float4 accumColor, accumThroughput;
-  float4 rayPosAndNear, rayDirAndFar;
-  float4 wavelengths;
-  RandomGen gen; 
-  MisData   mis;
-  uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
-
-  for(uint depth = 0; depth < m_traceDepth; depth++) 
-  {
-    float4   shadeColor, hitPart1, hitPart2, hitPart3;
-    uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
-    if(isDeadRay(rayFlags))
-      break;
-    
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
-                             depth, &gen, &shadeColor);
-
-    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
-
-    if(isDeadRay(rayFlags))
-      break;
-  }
-
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
-
-  {
-    const float4 pixelOffsets = GetRandomNumbersLens(tid, nullptr);
-  
-    /////////////////////////////////////////////////////////////////////////////// change
-    uint x = uint(pixelOffsets.x*float(m_winWidth));
-    uint y = uint(pixelOffsets.y*float(m_winHeight));
-    
-    if(x >= uint(m_winWidth-1))
-      x = uint(m_winWidth-1);
-    if(y >= uint(m_winHeight-1))
-      y = uint(m_winHeight-1);
-    /////////////////////////////////////////////////////////////////////////////// change   
-  
-    (*pX) = x;
-    (*pY) = y;
-  }
-
-  return accumColor*m_exposureMult;
-}
-
-static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB(!!!)
-{
-  return std::max(0.333334f*(color.x + color.y + color.z), 0.0f);
-}
 
 constexpr float MUTATE_COEFF_SCREEN = 128.0f;
 constexpr float MUTATE_COEFF_BSDF   = 64.0f;
@@ -225,6 +84,227 @@ static inline float MutateKelemen(float valueX, float2 rands, float p2, float p1
   return valueX;
 }
 
+#define LAZY_EVALUATION 0
+
+float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
+{ 
+  float* data  = m_allRands.data() + tid*m_randsPerThread;
+#if LAZY_EVALUATION  
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  
+  if(m_allLargeSteps[tid] == 0)
+  {
+    const float2 xy = float2(rands.x, rands.y);
+    const float2 zw = float2(rands.z, rands.w);
+    rands.x = MutateKelemen(data[0], xy, MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+    rands.y = MutateKelemen(data[1], zw, MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+    //rands.z = MutateKelemen(data[2], rndFloat2_Pseudo(a_gen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+    //rands.w = MutateKelemen(data[3], rndFloat2_Pseudo(a_gen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+  }
+
+  data[0] = rands.x;
+  data[1] = rands.y;
+  //data[2] = rands.z;
+  //data[3] = rands.w;
+
+  return rands;
+#else
+  return float4(data[0], data[1], data[2], data[3]);
+#endif
+}
+
+float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
+{ 
+  float* data   = m_allRands.data() + tid*m_randsPerThread;
+#if LAZY_EVALUATION  
+  float2 rndVal = rndFloat2_Pseudo(a_gen);
+  
+  if(m_allLargeSteps[tid] == 0)
+  {
+    float2 copy = rndVal;
+    rndVal.x = MutateKelemen(data[4], copy, MUTATE_COEFF_BSDF, 1024.0f);
+  }
+
+  data[4] = rndVal.x;
+  return rndVal.x; 
+#else
+  return data[4]; 
+#endif
+}
+
+float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
+{ 
+  float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
+#if LAZY_EVALUATION  
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  
+  if(m_allLargeSteps[tid] == 0)
+  {
+    const float2 xy = float2(rands.x, rands.y);
+    const float2 zw = float2(rands.z, rands.w);
+    const float4 r2 = rndFloat4_Pseudo(a_gen);
+    rands.x = MutateKelemen(data[0], xy,                 MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.y = MutateKelemen(data[1], zw,                 MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.z = MutateKelemen(data[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.w = MutateKelemen(data[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f); // 
+  }
+  
+  data[0] = rands.x;
+  data[1] = rands.y;
+  data[2] = rands.z;
+  data[3] = rands.w;
+
+  return rands;
+#else
+  return float4(data[0], data[1], data[2], data[3]);
+#endif
+}
+
+float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
+{
+  float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
+#if LAZY_EVALUATION  
+  float4 rands = rndFloat4_Pseudo(a_gen);
+  
+  if(m_allLargeSteps[tid] == 0)
+  {
+    const float2 xy = float2(rands.x, rands.y);
+    const float2 zw = float2(rands.z, rands.w);
+    const float4 r2 = rndFloat4_Pseudo(a_gen);
+    rands.x = MutateKelemen(data[0], xy,                 MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.y = MutateKelemen(data[1], zw,                 MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.z = MutateKelemen(data[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f); // 
+    rands.w = MutateKelemen(data[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f); // 
+  }
+
+  data[0] = rands.x;
+  data[1] = rands.y;
+  data[2] = rands.z;
+  data[3] = rands.w;
+
+  return rands;
+#else
+  return float4(data[0], data[1], data[2], data[3]);
+#endif  
+}
+
+float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
+{ 
+  float* data   = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
+#if LAZY_EVALUATION  
+  float2 rndVal = rndFloat2_Pseudo(a_gen);
+  
+  if(m_allLargeSteps[tid] == 0)
+  {
+    float2 copy = rndVal;
+    rndVal.x = MutateKelemen(data[a_layer], copy, MUTATE_COEFF_BSDF, 1024.0f);
+  }
+ 
+  data[a_layer] = rndVal.x;
+  return rndVal.x;
+#else
+  return data[a_layer];
+#endif   
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
+                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                       float4* accumColor,    float4* accumuThoroughput,
+                                       RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY) // 
+{
+  if(tid >= m_maxThreadId)
+    return;
+
+  *accumColor        = make_float4(0,0,0,0);
+  *accumuThoroughput = make_float4(1,1,1,1);
+  *rayFlags          = 0;
+  *misData           = makeInitialMisData();
+  
+  ///////////////////////////////////////////////////////////////////////////////////// begin change
+  const uint rgIndex = tid % uint(m_randomGens.size());
+  RandomGen genLocal = m_randomGens[rgIndex];
+
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+
+  uint x = uint(pixelOffsets.x*float(m_winWidth));
+  uint y = uint(pixelOffsets.y*float(m_winHeight));
+  
+  if(x >= uint(m_winWidth-1))
+    x = uint(m_winWidth-1);
+  if(y >= uint(m_winHeight-1))
+    y = uint(m_winHeight-1);
+
+  (*pX) = int(x);
+  (*pY) = int(y);
+
+  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
+  float3 rayPos = float3(0,0,0);
+  ///////////////////////////////////////////////////////////////////////////////////// end change
+
+  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  
+  float tmp = 0.0f;
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+  {
+    float u = GetRandomNumbersSpec(tid, &genLocal);
+    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
+    tmp = u;
+  }
+  else
+  {
+    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
+    for (uint32_t i = 0; i < sample_sz; ++i) 
+      (*wavelengths)[i] = 0.0f;
+  }
+
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
+ 
+  *rayPosAndNear = to_float4(rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  *gen           = genLocal;
+}
+
+float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
+{
+  float4 accumColor, accumThroughput;
+  float4 rayPosAndNear, rayDirAndFar;
+  float4 wavelengths;
+  RandomGen gen; 
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, pX, pY);
+
+  for(uint depth = 0; depth < m_traceDepth; depth++) 
+  {
+    float4   shadeColor, hitPart1, hitPart2, hitPart3;
+    uint instId;
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    if(isDeadRay(rayFlags))
+      break;
+    
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+                             depth, &gen, &shadeColor);
+
+    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+
+    if(isDeadRay(rayFlags))
+      break;
+  }
+
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
+
+  return accumColor*m_exposureMult;
+}
+
+static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB(!!!)
+{
+  return std::max(0.333334f*(color.x + color.y + color.z), 0.0f);
+}
+
 uint32_t AlignedSize(uint32_t a_size, uint32_t a_alignment)
 {
   if (a_size % a_alignment == 0)
@@ -254,6 +334,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   m_maxThreadId = maxThreads;
   m_randomGens.resize(maxThreads);
   m_allRands.resize(maxThreads*m_randsPerThread);
+  m_allLargeSteps.resize(maxThreads);
 
   const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
@@ -287,16 +368,24 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     int xScr = 0, yScr = 0;
     std::vector<float> xVec(m_traceDepth*RandsPerThread());
     float* xNew = m_allRands.data() + m_randsPerThread*tid; //(m_traceDepth*RandsPerThread());
-
+    
+  #if LAZY_EVALUATION==0  
     for(size_t i=0;i<xVec.size();i++)
       xVec[i] = rndFloat1_Pseudo(&gen2);
-
     for(size_t i=0;i<xVec.size();i++) // eval F(xVec)
       xNew[i] = xVec[i];
+  #else
+    m_allLargeSteps[tid] = 1; // [lazy evaluation]: evaluate large step inside PathTraceF 
+  #endif
 
     float4 yColor = PathTraceF(tid, &xScr, &yScr);
     float  y      = contribFunc(yColor);
-   
+    
+  #if LAZY_EVALUATION
+    for(size_t i=0;i<xVec.size();i++) // [lazy evaluation]: save initial state
+      xVec[i] = xNew[i];
+  #endif
+
     // (2) Markov Chain
     //
     size_t accept     = 0;
@@ -310,21 +399,36 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       const float plarge     = 0.25f;                         // 25% of large step;
       const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
       
-      if (isLargeStep)                                        // large step
+    #if LAZY_EVALUATION
+      m_allLargeSteps[tid] = isLargeStep ? 1 : 0;             // pass step type to intergator for lazy evaluation
+    #else
+      if (isLargeStep)                                      // large step
       {
-        for(size_t i=0;i<xVec.size();i++)
-          xNew[i] = rndFloat1_Pseudo(&gen2);
+        for(size_t i=0;i<xVec.size();i+=4) {
+          const float4 r1 = rndFloat4_Pseudo(&gen2);
+          xNew[i+0] = r1.x;
+          xNew[i+1] = r1.y;
+          xNew[i+2] = r1.z;
+          xNew[i+3] = r1.w;
+        }
       }
       else
       {
-        xNew[0] = MutateKelemen(xOld[0], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
-        xNew[1] = MutateKelemen(xOld[1], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+        const float4 r1 = rndFloat4_Pseudo(&gen2);
+        const float4 r2 = rndFloat4_Pseudo(&gen2);
+        
+        xNew[0] = MutateKelemen(xOld[0], float2(r1.x, r1.y), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
+        xNew[1] = MutateKelemen(xOld[1], float2(r1.z, r1.w), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
         xNew[2] = MutateKelemen(xOld[2], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
         xNew[3] = MutateKelemen(xOld[3], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
        
-        for(size_t i = 4; i < xVec.size();i++) 
-          xNew[i] = MutateKelemen(xOld[i], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);
+        for(size_t i = 4; i < xVec.size(); i+=2) { 
+          const float4 r1 = rndFloat4_Pseudo(&gen2);
+          xNew[i+0] = MutateKelemen(xOld[i+0], float2(r1.x, r1.y), MUTATE_COEFF_BSDF, 1024.0f);
+          xNew[i+1] = MutateKelemen(xOld[i+1], float2(r1.z, r1.w), MUTATE_COEFF_BSDF, 1024.0f);
+        }
       }
+    #endif
 
       float  yOld      = y;
       float4 yOldColor = yColor;
@@ -340,19 +444,33 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
       if (p <= a) // accept 
       { 
+      #if LAZY_EVALUATION==0
         for(size_t i=0;i<xVec.size();i++)
           xVec[i] = xNew[i];
+      #endif
         y      = yNew;
         yColor = yNewColor;
         xScr   = xScrNew;
         yScr   = yScrNew;
         accept++;
+
+      #if LAZY_EVALUATION
+        // [lazy evaluation]: save new state
+        for(size_t i=0;i<xVec.size();i++) 
+          xVec[i] = xNew[i];
+      #endif
       }
       else        // reject
       {
         //x      = x;
         //y      = y;
         //yColor = yColor;
+
+      #if LAZY_EVALUATION
+        // [lazy evaluation]: restore previous state
+        for(size_t i=0;i<xVec.size();i++) // save initial state
+          xNew[i] = xVec[i];
+      #endif
       }
 
       if(isLargeStep)
