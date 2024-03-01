@@ -48,7 +48,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   FrReflRefr result = {0, 0};
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-  if (precompFlag == 0u || true)
+  if (precompFlag == 0u)
   {
     if (layers == 2)
     {
