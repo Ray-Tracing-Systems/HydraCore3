@@ -407,7 +407,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       auto xOld = xVec;
 
       const float plarge     = 0.33f;                           // 33% for large step;
-      const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
+      const bool isLargeStep = true; // (rndFloat1_Pseudo(&gen1) < plarge);
       
       std::vector<float> xNew(xOld.size());
       {
@@ -428,7 +428,17 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   
       float4 yNewColor = F(xNew, tid, &xScrNew, &yScrNew);
       float  yNew      = contribFunc(yNewColor);
-  
+      
+      //{
+      //  const int offset = yScrNew*m_winWidth + xScrNew;
+      //  #pragma omp atomic
+      //  out_color[offset*4+0] += yNewColor.x;
+      //  #pragma omp atomic
+      //  out_color[offset*4+1] += yNewColor.y;
+      //  #pragma omp atomic
+      //  out_color[offset*4+2] += yNewColor.z;
+      //}
+      
       float a = (yOld == 0.0f) ? 1.0f : std::min(1.0f, yNew / yOld);
       float p = rndFloat1_Pseudo(&gen1);
 
@@ -480,6 +490,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
         #pragma omp atomic
         out_color[offset*4+2] += contribAtY.z;
       }
+      
 
       progress.Update();
     }
@@ -500,7 +511,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     }
     actualBrightness /= double(pixelsNum);
   }
-
+  
   const float normConst = float(a_passNum)*float(avgBrightnessOut/actualBrightness);
   for(uint i=0;i<pixelsNum*4;i++)
     out_color[i] *= normConst;
