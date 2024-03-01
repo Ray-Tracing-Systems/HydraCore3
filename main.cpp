@@ -10,6 +10,7 @@
 
 float4x4 ReadMatrixFromString(const std::string& str);
 std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
+std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
@@ -95,6 +96,12 @@ int main(int argc, const char** argv) // common hydra main
 
   int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
   bool qmcIsEnabled  = args.hasOption("--qmc");
+  bool mltIsEnabled  = false;
+  if(integratorType == "mlt" || integratorType == "kmlt" || integratorType == "kelemen_mlt")
+  {
+    mltIsEnabled   = true;
+    integratorType = "mispt"; 
+  }
 
   float4x4 look_at;
   auto override_camera_pos = args.hasOption("-look_at");
@@ -181,6 +188,8 @@ int main(int argc, const char** argv) // common hydra main
   {
     if(qmcIsEnabled)
       pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    else if(mltIsEnabled)
+      pImpl = CreateIntegratorKMLT(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
     else
       pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   }

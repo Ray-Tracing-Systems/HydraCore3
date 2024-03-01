@@ -161,6 +161,7 @@ set(CORE_SRC
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
+        mlt/integrator_kmlt.cpp
         mlt/integrator_qmc.cpp
         mlt/rnd_qmc.cpp
         mi_materials.cpp
