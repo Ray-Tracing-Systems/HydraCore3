@@ -287,8 +287,8 @@ std::vector<float> MutatePrimarySpace(const std::vector<float>& v2, RandomGen* p
 {
   std::vector<float> res(v2.size());
 
-  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
-  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*2.0f, 1024.0f); // screen 
+  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*2.0f, 1024.0f); // screen
   res[2] = MutateKelemen(v2[2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
   res[3] = MutateKelemen(v2[3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
 
@@ -317,7 +317,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   m_allXY.resize(maxThreads);
   m_randomGens.resize(maxThreads);
 
-  const size_t samplesPerPass = size_t(pixelsNum)*size_t(a_passNum) / maxThreads;
+  const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
   ConsoleProgressBar progress(pixelsNum*a_passNum);
   progress.Start();
@@ -361,7 +361,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     {
       auto xOld = xVec;
 
-      const float plarge     = 0.33f;                           // 33% for large step;
+      const float plarge     = 0.25f;                           // 25% of large step;
       const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
       
       std::vector<float> xNew(xOld.size());
