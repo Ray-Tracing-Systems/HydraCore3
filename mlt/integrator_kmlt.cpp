@@ -53,37 +53,36 @@ public:
 
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  return float4(m_allRandomNumbers[tid*RandsPerThread() + 0],
-                m_allRandomNumbers[tid*RandsPerThread() + 1],
-                m_allRandomNumbers[tid*RandsPerThread() + 2],
-                m_allRandomNumbers[tid*RandsPerThread() + 3]);
+  const uint offset = tid*RandsPerThread();
+  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
 }
 
 float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  return m_allRandomNumbers[tid*RandsPerThread() + 4]; 
+  const uint offset = tid*RandsPerThread();
+  return m_allRandomNumbers[offset + 4]; 
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
-  return float4(m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 0],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 1],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 2],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID + 3]);
+  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
+  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  return float4(m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 0],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 1],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 2],
-                m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID + 3]);
+  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
+  return float4(m_allRandomNumbers[offset + 0], m_allRandomNumbers[offset + 1], m_allRandomNumbers[offset + 2], m_allRandomNumbers[offset + 3]);
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
-  return m_allRandomNumbers[tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID + a_layer];
+  const uint offset = tid*RandsPerThread() + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
+  return m_allRandomNumbers[offset + a_layer];
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                        float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
@@ -231,37 +230,6 @@ void IntegratorKMLT::kernel_ContributeToImage(uint tid, const uint* rayFlags, ui
 
   float4 colorRes  = m_exposureMult * to_float4(rgb, 1.0f);
   m_allColors[tid] = colorRes;
-
-  // /////////////////////////////////////////////////////////////////////////////// change, add atomics
-  // if(channels == 1)
-  // {
-  //   const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-  //   #pragma omp atomic
-  //   out_color[y*m_winWidth+x] += mono;
-  // }
-  // else if(channels <= 4)
-  // { 
-  //   #pragma omp atomic
-  //   out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
-  //   #pragma omp atomic
-  //   out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
-  //   #pragma omp atomic
-  //   out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
-  // }
-  // else
-  // {
-  //   auto waves = (*wavelengths);
-  //   auto color = (*a_accumColor)*m_exposureMult;
-  //   for(int i=0;i<4;i++) {
-  //     const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
-  //     const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
-  //     const int offsetPixel = int(y)*m_winWidth + int(x);
-  //     const int offsetLayer = channelId*m_winWidth*m_winHeight;
-  //     #pragma omp atomic
-  //     out_color[offsetLayer + offsetPixel] += color[i];
-  //   }
-  // }
-  // /////////////////////////////////////////////////////////////////////////////// end change, atomics
 }
 
 float4 IntegratorKMLT::F(const std::vector<float>& xVal, uint tid, int*pX, int* pY)
@@ -319,27 +287,13 @@ std::vector<float> MutatePrimarySpace(const std::vector<float>& v2, RandomGen* p
 {
   std::vector<float> res(v2.size());
 
-  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); 
-  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f);
-  res[2] = MutateKelemen(v2[2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-  res[3] = MutateKelemen(v2[3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-  res[4] = MutateKelemen(v2[4], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
+  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
+  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+  res[2] = MutateKelemen(v2[2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+  res[3] = MutateKelemen(v2[3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
 
-  for(int bounce=0; bounce < bounceNum; bounce++) 
-  {
-    const uint matIndex = IntegratorKMLT::BOUNCE_START + bounce*IntegratorKMLT::PER_BOUNCE + IntegratorKMLT::MATS_ID;
-    const uint ltgIndex = IntegratorKMLT::BOUNCE_START + bounce*IntegratorKMLT::PER_BOUNCE + IntegratorKMLT::LGHT_ID;
-    
-    res[matIndex+0] = MutateKelemen(v2[matIndex+0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[matIndex+1] = MutateKelemen(v2[matIndex+1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[matIndex+2] = MutateKelemen(v2[matIndex+2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[matIndex+3] = MutateKelemen(v2[matIndex+3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-
-    res[ltgIndex+0] = MutateKelemen(v2[ltgIndex+0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[ltgIndex+1] = MutateKelemen(v2[ltgIndex+1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[ltgIndex+2] = MutateKelemen(v2[ltgIndex+2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-    res[ltgIndex+3] = MutateKelemen(v2[ltgIndex+3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-  }
+  for(size_t i = 4; i < v2.size();i++) 
+    res[i] = MutateKelemen(v2[i], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
 
   return res;
 }
@@ -408,7 +362,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       auto xOld = xVec;
 
       const float plarge     = 0.33f;                           // 33% for large step;
-      const bool isLargeStep = true; // (rndFloat1_Pseudo(&gen1) < plarge);
+      const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
       
       std::vector<float> xNew(xOld.size());
       {
