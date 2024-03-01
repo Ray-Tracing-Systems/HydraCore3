@@ -39,7 +39,6 @@ public:
   inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
 
   std::vector<float>    m_allRands;
-  std::vector<int>      m_allLargeSteps;
   uint                  m_randsPerThread = 0;
 };
 
@@ -84,127 +83,34 @@ static inline float MutateKelemen(float valueX, float2 rands, float p2, float p1
   return valueX;
 }
 
-#define LAZY_EVALUATION 0
-
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
   float* data  = m_allRands.data() + tid*m_randsPerThread;
-#if LAZY_EVALUATION  
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  
-  if(m_allLargeSteps[tid] == 0)
-  {
-    const float2 xy = float2(rands.x, rands.y);
-    const float2 zw = float2(rands.z, rands.w);
-    rands.x = MutateKelemen(data[0], xy, MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
-    rands.y = MutateKelemen(data[1], zw, MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
-    //rands.z = MutateKelemen(data[2], rndFloat2_Pseudo(a_gen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
-    //rands.w = MutateKelemen(data[3], rndFloat2_Pseudo(a_gen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
-  }
-
-  data[0] = rands.x;
-  data[1] = rands.y;
-  //data[2] = rands.z;
-  //data[3] = rands.w;
-
-  return rands;
-#else
   return float4(data[0], data[1], data[2], data[3]);
-#endif
 }
 
 float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
   float* data   = m_allRands.data() + tid*m_randsPerThread;
-#if LAZY_EVALUATION  
-  float2 rndVal = rndFloat2_Pseudo(a_gen);
-  
-  if(m_allLargeSteps[tid] == 0)
-  {
-    float2 copy = rndVal;
-    rndVal.x = MutateKelemen(data[4], copy, MUTATE_COEFF_BSDF, 1024.0f);
-  }
-
-  data[4] = rndVal.x;
-  return rndVal.x; 
-#else
   return data[4]; 
-#endif
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
   float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
-#if LAZY_EVALUATION  
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  
-  if(m_allLargeSteps[tid] == 0)
-  {
-    const float2 xy = float2(rands.x, rands.y);
-    const float2 zw = float2(rands.z, rands.w);
-    const float4 r2 = rndFloat4_Pseudo(a_gen);
-    rands.x = MutateKelemen(data[0], xy,                 MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.y = MutateKelemen(data[1], zw,                 MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.z = MutateKelemen(data[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.w = MutateKelemen(data[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f); // 
-  }
-  
-  data[0] = rands.x;
-  data[1] = rands.y;
-  data[2] = rands.z;
-  data[3] = rands.w;
-
-  return rands;
-#else
   return float4(data[0], data[1], data[2], data[3]);
-#endif
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
   float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
-#if LAZY_EVALUATION  
-  float4 rands = rndFloat4_Pseudo(a_gen);
-  
-  if(m_allLargeSteps[tid] == 0)
-  {
-    const float2 xy = float2(rands.x, rands.y);
-    const float2 zw = float2(rands.z, rands.w);
-    const float4 r2 = rndFloat4_Pseudo(a_gen);
-    rands.x = MutateKelemen(data[0], xy,                 MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.y = MutateKelemen(data[1], zw,                 MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.z = MutateKelemen(data[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f); // 
-    rands.w = MutateKelemen(data[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f); // 
-  }
-
-  data[0] = rands.x;
-  data[1] = rands.y;
-  data[2] = rands.z;
-  data[3] = rands.w;
-
-  return rands;
-#else
   return float4(data[0], data[1], data[2], data[3]);
-#endif  
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
   float* data   = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
-#if LAZY_EVALUATION  
-  float2 rndVal = rndFloat2_Pseudo(a_gen);
-  
-  if(m_allLargeSteps[tid] == 0)
-  {
-    float2 copy = rndVal;
-    rndVal.x = MutateKelemen(data[a_layer], copy, MUTATE_COEFF_BSDF, 1024.0f);
-  }
- 
-  data[a_layer] = rndVal.x;
-  return rndVal.x;
-#else
   return data[a_layer];
-#endif   
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -334,7 +240,6 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   m_maxThreadId = maxThreads;
   m_randomGens.resize(maxThreads);
   m_allRands.resize(maxThreads*m_randsPerThread);
-  m_allLargeSteps.resize(maxThreads);
 
   const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
@@ -369,22 +274,14 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     std::vector<float> xVec(m_randsPerThread);
     float* xNew = m_allRands.data() + m_randsPerThread*tid; 
     
-  #if LAZY_EVALUATION==0  
+
     for(size_t i=0;i<xVec.size();i++)
       xVec[i] = rndFloat1_Pseudo(&gen2);
     for(size_t i=0;i<xVec.size();i++) // eval F(xVec)
       xNew[i] = xVec[i];
-  #else
-    m_allLargeSteps[tid] = 1; // [lazy evaluation]: evaluate large step inside PathTraceF 
-  #endif
 
     float4 yColor = PathTraceF(tid, &xScr, &yScr);
     float  y      = contribFunc(yColor);
-    
-  #if LAZY_EVALUATION
-    for(size_t i=0;i<xVec.size();i++) // [lazy evaluation]: save initial state
-      xVec[i] = xNew[i];
-  #endif
 
     // (2) Markov Chain
     //
@@ -395,11 +292,8 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     for(size_t i=0;i<samplesPerPass;i++) 
     {
       const float plarge     = 0.25f;                         // 25% of large step;
-      const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
-      
-    #if LAZY_EVALUATION
-      m_allLargeSteps[tid] = isLargeStep ? 1 : 0;           // pass step type to intergator for lazy evaluation
-    #else
+      const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);  
+  
       if (isLargeStep)                                      // large step
       {
         for(size_t i=0;i<xVec.size();i+=4) {
@@ -426,7 +320,6 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
           xNew[i+1] = MutateKelemen(xVec[i+1], float2(r1.z, r1.w), MUTATE_COEFF_BSDF, 1024.0f);
         }
       }
-    #endif
 
       float  yOld      = y;
       float4 yOldColor = yColor;
@@ -455,11 +348,6 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
         //x      = x;
         //y      = y;
         //yColor = yColor;
-
-      #if LAZY_EVALUATION
-        for(size_t i=0;i<xVec.size();i++) // restore previous state
-          xNew[i] = xVec[i];
-      #endif
       }
 
       if(isLargeStep)
