@@ -329,7 +329,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   }
   #endif
 
-  m_randsPerThread = AlignedSize(RandsPerThread()*m_traceDepth*maxThreads, uint32_t(16)); 
+  m_randsPerThread = AlignedSize(RandsPerThread(), uint32_t(16)); 
 
   m_maxThreadId = maxThreads;
   m_randomGens.resize(maxThreads);
@@ -345,7 +345,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   double avgBrightnessOut = 0.0f;
   float  avgAcceptanceRate = 0.0f;
 
-  std::cout << "[IntegratorKMLT]: state size = " << m_traceDepth*RandsPerThread() << std::endl;
+  std::cout << "[IntegratorKMLT]: state size = " << m_randsPerThread << std::endl;
 
   #ifndef _DEBUG
   #pragma omp parallel 
@@ -366,8 +366,8 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     // (1) Initial State
     //
     int xScr = 0, yScr = 0;
-    std::vector<float> xVec(m_traceDepth*RandsPerThread());
-    float* xNew = m_allRands.data() + m_randsPerThread*tid; //(m_traceDepth*RandsPerThread());
+    std::vector<float> xVec(m_randsPerThread);
+    float* xNew = m_allRands.data() + m_randsPerThread*tid; 
     
   #if LAZY_EVALUATION==0  
     for(size_t i=0;i<xVec.size();i++)
