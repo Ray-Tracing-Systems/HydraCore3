@@ -394,13 +394,11 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
     for(size_t i=0;i<samplesPerPass;i++) 
     {
-      auto xOld = xVec;
-
       const float plarge     = 0.25f;                         // 25% of large step;
       const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
       
     #if LAZY_EVALUATION
-      m_allLargeSteps[tid] = isLargeStep ? 1 : 0;             // pass step type to intergator for lazy evaluation
+      m_allLargeSteps[tid] = isLargeStep ? 1 : 0;           // pass step type to intergator for lazy evaluation
     #else
       if (isLargeStep)                                      // large step
       {
@@ -417,15 +415,15 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
         const float4 r1 = rndFloat4_Pseudo(&gen2);
         const float4 r2 = rndFloat4_Pseudo(&gen2);
 
-        xNew[0] = MutateKelemen(xOld[0], float2(r1.x, r1.y), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
-        xNew[1] = MutateKelemen(xOld[1], float2(r1.z, r1.w), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
-        xNew[2] = MutateKelemen(xOld[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f);        // lens
-        xNew[3] = MutateKelemen(xOld[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+        xNew[0] = MutateKelemen(xVec[0], float2(r1.x, r1.y), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
+        xNew[1] = MutateKelemen(xVec[1], float2(r1.z, r1.w), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+        xNew[2] = MutateKelemen(xVec[2], float2(r2.x, r2.y), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+        xNew[3] = MutateKelemen(xVec[3], float2(r2.z, r2.w), MUTATE_COEFF_BSDF, 1024.0f);        // lens
        
         for(size_t i = 4; i < xVec.size(); i+=2) { 
           const float4 r1 = rndFloat4_Pseudo(&gen2);
-          xNew[i+0] = MutateKelemen(xOld[i+0], float2(r1.x, r1.y), MUTATE_COEFF_BSDF, 1024.0f);
-          xNew[i+1] = MutateKelemen(xOld[i+1], float2(r1.z, r1.w), MUTATE_COEFF_BSDF, 1024.0f);
+          xNew[i+0] = MutateKelemen(xVec[i+0], float2(r1.x, r1.y), MUTATE_COEFF_BSDF, 1024.0f);
+          xNew[i+1] = MutateKelemen(xVec[i+1], float2(r1.z, r1.w), MUTATE_COEFF_BSDF, 1024.0f);
         }
       }
     #endif
@@ -444,21 +442,13 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
       if (p <= a) // accept 
       { 
-      #if LAZY_EVALUATION==0
         for(size_t i=0;i<xVec.size();i++)
           xVec[i] = xNew[i];
-      #endif
         y      = yNew;
         yColor = yNewColor;
         xScr   = xScrNew;
         yScr   = yScrNew;
         accept++;
-
-      #if LAZY_EVALUATION
-        // [lazy evaluation]: save new state
-        for(size_t i=0;i<xVec.size();i++) 
-          xVec[i] = xNew[i];
-      #endif
       }
       else        // reject
       {
@@ -467,8 +457,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
         //yColor = yColor;
 
       #if LAZY_EVALUATION
-        // [lazy evaluation]: restore previous state
-        for(size_t i=0;i<xVec.size();i++) // save initial state
+        for(size_t i=0;i<xVec.size();i++) // restore previous state
           xNew[i] = xVec[i];
       #endif
       }
