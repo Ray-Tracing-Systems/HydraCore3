@@ -25,12 +25,10 @@ public:
                             float4* accumColor,    float4* accumuThoroughput,
                             RandomGen* gen, uint* rayFlags, MisData* misData) override;
 
-  void   kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen,
-                                  const uint* in_pakedXY, const float4* wavelengths, float* out_color) override;
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
   
-  float4 F(const std::vector<float>& xVal, uint tid, int*pX, int* pY);
+  float4 PathTraceF(uint tid, int*pX, int* pY);
 
   static constexpr uint LGHT_ID      = 0;
   static constexpr uint MATS_ID      = 4;
@@ -40,9 +38,8 @@ public:
   
   inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
 
-  std::vector<float4>  m_allColors;
-  std::vector<int2>    m_allXY;
-  std::vector<const float*> m_allPtrs;
+  std::vector<float> m_allRands;
+  uint               m_randsPerThread = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,31 +50,31 @@ public:
 
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  const float* data = m_allPtrs[tid];
+  const float* data = m_allRands.data() + tid*m_randsPerThread;
   return float4(data[0], data[1], data[2], data[3]);
 }
 
 float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  const float* data = m_allPtrs[tid];
+  const float* data = m_allRands.data() + tid*m_randsPerThread;
   return data[4]; 
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
-  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
+  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
   return float4(data[0], data[1], data[2], data[3]);
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
+  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
   return float4(data[0], data[1], data[2], data[3]);
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
-  const float* data = m_allPtrs[tid] + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
+  const float* data = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
   return data[a_layer];
 }
 
@@ -110,8 +107,6 @@ void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY,
     x = uint(m_winWidth-1);
   if(y >= uint(m_winHeight-1))
     y = uint(m_winHeight-1);
-  
-  m_allXY[tid] = int2(x,y);
 
   float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -140,105 +135,54 @@ void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *gen           = genLocal;
 }
 
-void IntegratorKMLT::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen,
-                                              const uint* in_pakedXY, const float4* wavelengths, float* out_color)
+float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
 {
-  
-  if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
-    return;
-  
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, const_cast<RandomGen*>(gen));
-  const uint   rgenIndex    = tid % uint(m_randomGens.size()); ////////////////// change
-  m_randomGens[rgenIndex]   = *gen;
-  if(m_disableImageContrib !=0)
-    return;
-  
-  /////////////////////////////////////////////////////////////////////////////// change
-  uint x = uint(pixelOffsets.x*float(m_winWidth));
-  uint y = uint(pixelOffsets.y*float(m_winHeight));
-  
-  if(x >= uint(m_winWidth-1))
-    x = uint(m_winWidth-1);
-  if(y >= uint(m_winHeight-1))
-    y = uint(m_winHeight-1);
-  /////////////////////////////////////////////////////////////////////////////// change   
+  float4 accumColor, accumThroughput;
+  float4 rayPosAndNear, rayDirAndFar;
+  float4 wavelengths;
+  RandomGen gen; 
+  MisData   mis;
+  uint      rayFlags;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
 
-  float4 specSamples = *a_accumColor; 
-  float4 tmpVal      = specSamples*m_camRespoceRGB;
-  float3 rgb         = to_float3(tmpVal);
-  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
+  for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
-    float4 waves = *wavelengths;
+    float4   shadeColor, hitPart1, hitPart2, hitPart3;
+    uint instId;
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    if(isDeadRay(rayFlags))
+      break;
     
-    if(m_camResponseSpectrumId[0] < 0)
-    {
-      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(),
-                                       terminateWavelngths(*rayFlags));
-      rgb = XYZToRGB(xyz);
-    }
-    else
-    {
-      float4 responceX, responceY, responceZ;
-      {
-        int specId = m_camResponseSpectrumId[0];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceX = float4(1,1,1,1);
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+                             depth, &gen, &shadeColor);
 
-        specId = m_camResponseSpectrumId[1];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceY = responceX;
+    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
-        specId = m_camResponseSpectrumId[2];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceZ = responceY;
-      }
-
-      float3 xyz = float3(0,0,0);
-      for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
-        xyz.x += specSamples[i]*responceX[i];
-        xyz.y += specSamples[i]*responceY[i];
-        xyz.z += specSamples[i]*responceZ[i]; 
-      } 
-
-      if(m_camResponseType == CAM_RESPONCE_XYZ)
-        rgb = XYZToRGB(xyz);
-      else
-        rgb = xyz;
-    }
+    if(isDeadRay(rayFlags))
+      break;
   }
 
-  float4 colorRes  = m_exposureMult * to_float4(rgb, 1.0f);
-  m_allColors[tid] = colorRes;
-}
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
 
-float4 IntegratorKMLT::F(const std::vector<float>& xVal, uint tid, int*pX, int* pY)
-{
-  m_allPtrs[tid] = xVal.data();
-  PathTrace(tid, 4, nullptr);
-  (*pX) = m_allXY[tid].x;
-  (*pY) = m_allXY[tid].y;
-  return m_allColors[tid];
+  {
+    const float4 pixelOffsets = GetRandomNumbersLens(tid, nullptr);
+  
+    /////////////////////////////////////////////////////////////////////////////// change
+    uint x = uint(pixelOffsets.x*float(m_winWidth));
+    uint y = uint(pixelOffsets.y*float(m_winHeight));
+    
+    if(x >= uint(m_winWidth-1))
+      x = uint(m_winWidth-1);
+    if(y >= uint(m_winHeight-1))
+      y = uint(m_winHeight-1);
+    /////////////////////////////////////////////////////////////////////////////// change   
+  
+    (*pX) = x;
+    (*pY) = y;
+  }
+
+  return accumColor*m_exposureMult;
 }
 
 static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB(!!!)
@@ -281,19 +225,15 @@ static inline float MutateKelemen(float valueX, float2 rands, float p2, float p1
   return valueX;
 }
 
-std::vector<float> MutatePrimarySpace(const std::vector<float>& v2, RandomGen* pGen, int bounceNum)
+uint32_t AlignedSize(uint32_t a_size, uint32_t a_alignment)
 {
-  std::vector<float> res(v2.size());
-
-  res[0] = MutateKelemen(v2[0], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*2.0f, 1024.0f); // screen 
-  res[1] = MutateKelemen(v2[1], rndFloat2_Pseudo(pGen), MUTATE_COEFF_SCREEN*2.0f, 1024.0f); // screen
-  res[2] = MutateKelemen(v2[2], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
-  res[3] = MutateKelemen(v2[3], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);        // lens
-
-  for(size_t i = 4; i < v2.size();i++) 
-    res[i] = MutateKelemen(v2[i], rndFloat2_Pseudo(pGen), MUTATE_COEFF_BSDF, 1024.0f);
-
-  return res;
+  if (a_size % a_alignment == 0)
+    return a_size;
+  else
+  {
+    uint32_t sizeCut = a_size - (a_size % a_alignment);
+    return sizeCut + a_alignment;
+  }
 }
 
 void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
@@ -309,11 +249,11 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   }
   #endif
 
+  m_randsPerThread = AlignedSize(RandsPerThread()*m_traceDepth*maxThreads, uint32_t(16)); 
+
   m_maxThreadId = maxThreads;
-  m_allColors.resize(maxThreads);
-  m_allXY.resize(maxThreads);
   m_randomGens.resize(maxThreads);
-  m_allPtrs.resize(maxThreads);
+  m_allRands.resize(maxThreads*m_randsPerThread);
 
   const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
@@ -324,16 +264,19 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   double avgBrightnessOut = 0.0f;
   float  avgAcceptanceRate = 0.0f;
 
+  std::cout << "[IntegratorKMLT]: state size = " << m_traceDepth*RandsPerThread() << std::endl;
+
   #ifndef _DEBUG
-  #pragma omp parallel
+  #pragma omp parallel 
+  //#pragma omp parallel for schedule(static)
+  //for(uint tid=0;tid<maxThreads;tid++)
   #endif
   {
     int tid = omp_get_thread_num();
     
-    const int NRandomisation = (clock() % 9) + (clock() % 4) + 1;
     RandomGen gen1 = RandomGenInit(tid*7 + 1);
     RandomGen gen2 = RandomGenInit(tid);
-    for (int i = 0; i < NRandomisation; i++) 
+    for (int i = 0; i < 10 + tid % 17; i++) 
     {
       NextState(&gen1);
       NextState(&gen2);
@@ -343,10 +286,15 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     //
     int xScr = 0, yScr = 0;
     std::vector<float> xVec(m_traceDepth*RandsPerThread());
+    float* xNew = m_allRands.data() + m_randsPerThread*tid; //(m_traceDepth*RandsPerThread());
+
     for(size_t i=0;i<xVec.size();i++)
       xVec[i] = rndFloat1_Pseudo(&gen2);
 
-    float4 yColor = F(xVec, tid, &xScr, &yScr);
+    for(size_t i=0;i<xVec.size();i++) // eval F(xVec)
+      xNew[i] = xVec[i];
+
+    float4 yColor = PathTraceF(tid, &xScr, &yScr);
     float  y      = contribFunc(yColor);
    
     // (2) Markov Chain
@@ -359,18 +307,23 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
     {
       auto xOld = xVec;
 
-      const float plarge     = 0.25f;                           // 25% of large step;
+      const float plarge     = 0.25f;                         // 25% of large step;
       const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);
       
-      std::vector<float> xNew(xOld.size());
+      if (isLargeStep)                                        // large step
       {
-        if (isLargeStep)                                        // large step
-        {
-          for(size_t i=0;i<xNew.size();i++)
-            xNew[i] = rndFloat1_Pseudo(&gen2);
-        }
-        else
-          xNew = MutatePrimarySpace(xOld, &gen2, m_traceDepth); // small step
+        for(size_t i=0;i<xVec.size();i++)
+          xNew[i] = rndFloat1_Pseudo(&gen2);
+      }
+      else
+      {
+        xNew[0] = MutateKelemen(xOld[0], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
+        xNew[1] = MutateKelemen(xOld[1], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+        xNew[2] = MutateKelemen(xOld[2], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+        xNew[3] = MutateKelemen(xOld[3], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
+       
+        for(size_t i = 4; i < xVec.size();i++) 
+          xNew[i] = MutateKelemen(xOld[i], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);
       }
 
       float  yOld      = y;
@@ -379,25 +332,16 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       int xScrOld = xScr, yScrOld = yScr;
       int xScrNew = 0,    yScrNew = 0;
   
-      float4 yNewColor = F(xNew, tid, &xScrNew, &yScrNew);
+      float4 yNewColor = PathTraceF(tid, &xScrNew, &yScrNew); // eval F(xNew)
       float  yNew      = contribFunc(yNewColor);
-      
-      //{
-      //  const int offset = yScrNew*m_winWidth + xScrNew;
-      //  #pragma omp atomic
-      //  out_color[offset*4+0] += yNewColor.x;
-      //  #pragma omp atomic
-      //  out_color[offset*4+1] += yNewColor.y;
-      //  #pragma omp atomic
-      //  out_color[offset*4+2] += yNewColor.z;
-      //}
       
       float a = (yOld == 0.0f) ? 1.0f : std::min(1.0f, yNew / yOld);
       float p = rndFloat1_Pseudo(&gen1);
 
       if (p <= a) // accept 
-      {
-        xVec   = xNew;
+      { 
+        for(size_t i=0;i<xVec.size();i++)
+          xVec[i] = xNew[i];
         y      = yNew;
         yColor = yNewColor;
         xScr   = xScrNew;
