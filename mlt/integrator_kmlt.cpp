@@ -416,9 +416,9 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       {
         const float4 r1 = rndFloat4_Pseudo(&gen2);
         const float4 r2 = rndFloat4_Pseudo(&gen2);
-        
-        xNew[0] = MutateKelemen(xOld[0], float2(r1.x, r1.y), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
-        xNew[1] = MutateKelemen(xOld[1], float2(r1.z, r1.w), MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
+
+        xNew[0] = MutateKelemen(xOld[0], float2(r1.x, r1.y),      MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen 
+        xNew[1] = MutateKelemen(xOld[1], float2(r1.z, r1.w),      MUTATE_COEFF_SCREEN*1.0f, 1024.0f); // screen
         xNew[2] = MutateKelemen(xOld[2], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
         xNew[3] = MutateKelemen(xOld[3], rndFloat2_Pseudo(&gen2), MUTATE_COEFF_BSDF, 1024.0f);        // lens
        
