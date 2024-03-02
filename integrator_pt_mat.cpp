@@ -203,11 +203,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
       uint t_offset = as_uint(m_materials[currMatId].data[FILM_THICKNESS_OFFSET]);
       uint layers = as_uint(m_materials[currMatId].data[FILM_LAYERS_COUNT]);
 
-      complex m_films_ior[FILM_LAYERS_MAX + 1];
-      m_films_ior[0] = complex(m_materials[currMatId].data[FILM_ETA_EXT]);
+      IORVector m_films_ior;
+      m_films_ior.value[0] = complex(m_materials[currMatId].data[FILM_ETA_EXT]);
       for (uint layer = 0; layer < layers; layer++)
       {
-        m_films_ior[layer + 1] = complex(
+        m_films_ior.value[layer + 1] = complex(
           SampleFilmsSpectrum(currMatId, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layer)[0],
           SampleFilmsSpectrum(currMatId, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layer)[0]
         );
@@ -405,11 +405,11 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         {
           uint t_offset = as_uint(m_materials[currMat.id].data[FILM_THICKNESS_OFFSET]);
           uint layers = as_uint(m_materials[currMat.id].data[FILM_LAYERS_COUNT]);
-          complex m_films_ior[FILM_LAYERS_MAX + 1];
-          m_films_ior[0] = complex(m_materials[currMat.id].data[FILM_ETA_EXT]);
+          IORVector m_films_ior;
+          m_films_ior.value[0] = complex(m_materials[currMat.id].data[FILM_ETA_EXT]);
           for (uint layer = 0; layer < layers; layer++)
           {
-            m_films_ior[layer + 1] = complex(
+            m_films_ior.value[layer + 1] = complex(
               SampleFilmsSpectrum(currMat.id, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layer)[0],
               SampleFilmsSpectrum(currMat.id, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layer)[0]
             );

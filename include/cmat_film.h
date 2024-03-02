@@ -5,7 +5,7 @@
 #include "../spectrum.h"
 #include <iostream>
 
-static inline void filmSmoothSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
+static inline void filmSmoothSampleAndEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
         const float* precomputed_data)
 {
@@ -36,7 +36,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
 
   float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
 
-  float ior = a_ior[layers].re / extIOR;
+  float ior = a_ior.value[layers].re / extIOR;
 
   float4 fr = FrDielectricDetailedV2(wi.z, ior);
 
@@ -98,7 +98,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
   R = result.refl;
   T = result.refr;
 
-  if (a_ior[layers].im > 0.001)
+  if (a_ior.value[layers].im > 0.001)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
     pRes->val = float4(R);
@@ -125,7 +125,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const co
       pRes->pdf = T / (R + T);
       pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
       pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
-      pRes->ior = (_extIOR == a_ior[layers].re) ? extIOR : a_ior[layers].re;
+      pRes->ior = (_extIOR == a_ior.value[layers].re) ? extIOR : a_ior.value[layers].re;
     }
   }
   pRes->val /= std::max(std::abs(dot(pRes->dir, n)), 1e-6f);
@@ -139,7 +139,7 @@ static void filmSmoothEval(const Material* a_materials, const float4 eta_1, cons
   pRes->pdf = 0.0f;
 }
 
-static inline void filmRoughSampleAndEval(const Material* a_materials, const complex* a_ior, const float* thickness,
+static inline void filmRoughSampleAndEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed)
 {
     const float extIOR = a_materials[0].data[FILM_ETA_EXT];
@@ -184,7 +184,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
 
   float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
 
-  float ior = a_ior[layers].re / extIOR;
+  float ior = a_ior.value[layers].re / extIOR;
 
   float4 fr = FrDielectricDetailedV2(dot(wo, wm), ior);
 
@@ -220,7 +220,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
   R = result.refl;
   T = result.refr;
 
-  if (a_ior[layers].im > 0.001)
+  if (a_ior.value[layers].im > 0.001)
+  if (false)
   {
     float3 wi = reflect((-1.0f) * wo, wm);
     if (wi.z * wo.z < 0.f)
@@ -283,16 +284,17 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const com
       }
       pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
       pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
-      pRes->ior = (_extIOR == a_ior[layers].re) ? extIOR : a_ior[layers].re;
+      pRes->ior = (_extIOR == a_ior.value[layers].re) ? extIOR : a_ior.value[layers].re;
     }
   }
 }
 
 
-static void filmRoughEval(const Material* a_materials, const complex* a_ior, const float* thickness,
+static void filmRoughEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* precomputed)
 {
-  if (a_ior[layers].im < 0.001)
+  if (a_ior.value[layers].im < 0.001)
+  if (false)
   {
     return;
   }
@@ -327,7 +329,7 @@ static void filmRoughEval(const Material* a_materials, const complex* a_ior, con
   }
 
   float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
-  float ior = a_ior[layers].re / extIOR;
+  float ior = a_ior.value[layers].re / extIOR;
   
   float R;
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
