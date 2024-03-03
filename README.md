@@ -58,3 +58,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
    * read [testing script doc](testing/testing_doc.md)
 5) Add you feature to specitication in specification: 'HydraAPI-tests/doc/doc_hydra_standart/hydra_spec.tex' 
 
+# Documentation
+
+* [User Guide](user_guide.md)
+* [Input scene format (materials)](hydra_xml_materials.md)
