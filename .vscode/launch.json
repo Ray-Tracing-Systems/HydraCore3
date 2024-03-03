@@ -203,7 +203,7 @@
                  //"-integrator", "prt", 
                  "-width", "1024",
                  "-height", "1024",
-                 "-spp", "256",
+                 "-spp", "64",
                  "-grad", "1",
                  "-out", "z_render.bmp"],
         "stopAtEntry": false,

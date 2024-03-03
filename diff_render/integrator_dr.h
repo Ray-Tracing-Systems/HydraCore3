@@ -82,10 +82,10 @@ public:
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags,
                         const float* dparams);
 
-  void kernel_SampleLightSource(uint tid, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                const uint* rayFlags, uint bounce, float4* out_shadeColor, 
-                                const float* drands, const float* dparams);
+  float4 kernel_SampleLightSource(uint tid, uint cpuThreadId, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
+                                  const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                  const uint* rayFlags, uint bounce, 
+                                  const float* drands, const float* dparams);
   
   void kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, const uint* in_instId,
                          const float4* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar, const float4* wavelengths,
