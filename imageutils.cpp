@@ -223,6 +223,14 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
   return true;
 }
 
+bool SaveImage4fByExtension(const float* data, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
+{
+  auto pixelData = FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma);
+  auto tmp = LiteImage::Image2D<uint32_t>(width, height, pixelData.data());
+  
+  return LiteImage::SaveImage(outfilename, tmp);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

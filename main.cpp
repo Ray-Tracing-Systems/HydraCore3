@@ -362,9 +362,18 @@ int main(int argc, const char** argv) // common hydra main
     
     const float normConst = 1.0f/float(PASS_NUMBER);
     if(saveHDR)
+    {
       SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst);
+    }
     else
+    {
+#ifdef USE_STB_IMAGE
+      SaveImage4fByExtension(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
+#else
       SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
+#endif
+    }
+      
   }
 
   return 0;
