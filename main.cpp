@@ -101,7 +101,8 @@ int main(int argc, const char** argv) // common hydra main
   {
     mltIsEnabled   = true;
     integratorType = "mispt"; 
-    fbLayer = "split_direct_indirect";
+    if(fbLayer == "color")
+      fbLayer = "split_direct_indirect";
   }
 
   float4x4 look_at;

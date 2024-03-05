@@ -246,6 +246,8 @@ uint32_t AlignedSize(uint32_t a_size, uint32_t a_alignment)
   }
 }
 
+bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst, float a_gamma);
+
 void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
 {
   if(m_renderLayer == FB_DIRECT)
@@ -271,17 +273,20 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   std::cout << "[IntegratorKMLT]: state size = " << m_randsPerThread << std::endl;
   std::cout.flush();
 
+  /////
+  //std::vector<float> m_omcImage(pixelsNum*4);
+  //std::fill(m_omcImage.begin(), m_omcImage.end(), 0.0f);
+
   ConsoleProgressBar progress(pixelsNum*a_passNum);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
   
-  double avgBrightnessOut = 0.0f;
+  double avgBrightnessOut  = 0.0f;
   float  avgAcceptanceRate = 0.0f;
+  const float plarge       = 0.25f;                         // 25% of large step;
 
   #ifndef _DEBUG
-  #pragma omp parallel 
-  //#pragma omp parallel for schedule(static)
-  //for(uint tid=0;tid<maxThreads;tid++)
+  #pragma omp parallel default(shared)
   #endif
   {
     int tid = omp_get_thread_num();
@@ -317,7 +322,6 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
     for(size_t i=0;i<samplesPerPass;i++) 
     {
-      const float plarge     = 0.25f;                         // 25% of large step;
       const bool isLargeStep = (rndFloat1_Pseudo(&gen1) < plarge);  
   
       if (isLargeStep)                                      // large step
@@ -384,8 +388,32 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
       // (5) contrib to image
       //
-      float3 contribAtX = to_float3(yOldColor)*(1.0f / std::max(yOld, 1e-6f))*(1.0f - a);
-      float3 contribAtY = to_float3(yNewColor)*(1.0f / std::max(yNew, 1e-6f))*a;
+      float w1 = 1.0f;
+      float w2 = 1.0f;
+      //if(largeSteps >= 256*256) // enable Kelemen MIS
+      //{
+      //  float avgB = float(accumBrightness / double(largeSteps));
+      //  if(isLargeStep)
+      //  {
+      //    const float INewDivB  = contribFunc(yNewColor)/avgB;
+      //    const float wLarge    = 10.0f*plarge;
+      //    w1 = INewDivB/(INewDivB + wLarge);
+      //    w2 = wLarge/(INewDivB + wLarge);
+      //    
+      //    { 
+      //      const int offset = yScrNew*m_winWidth + xScrNew;
+      //      #pragma omp atomic
+      //      m_omcImage[offset*4+0] += yNewColor.x*w2;
+      //      #pragma omp atomic
+      //      m_omcImage[offset*4+1] += yNewColor.y*w2;
+      //      #pragma omp atomic
+      //      m_omcImage[offset*4+2] += yNewColor.z*w2;
+      //    }
+      //  }
+      //}
+      
+      float3 contribAtY = w1*to_float3(yNewColor)*(1.0f / std::max(yNew, 1e-6f))*a;
+      float3 contribAtX = w1*to_float3(yOldColor)*(1.0f / std::max(yOld, 1e-6f))*(1.0f - a);
 
       if (dot(contribAtX, contribAtX) > 1e-12f)
       { 
@@ -425,8 +453,14 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   avgBrightnessOut  = avgBrightnessOut  / double(m_maxThreadId);
   avgAcceptanceRate = avgAcceptanceRate / float(pixelsNum*a_passNum);
 
+  std::cout << "[IntegratorKMLT]: average brightness      = " << std::fixed << std::setprecision(2) << avgBrightnessOut << std::endl;
   std::cout << "[IntegratorKMLT]: average acceptance rate = " << std::fixed << std::setprecision(2) << 100.0f*avgAcceptanceRate << "%" << std::endl;
   std::cout.flush();
+
+  //{
+  //  const float normConstOMC = float(m_winWidth*m_winHeight)/(float(a_passNum)*plarge);
+  //  SaveImage4fToBMP(m_omcImage.data(), m_winWidth, m_winHeight, "z_out_omc.bmp", normConstOMC, 2.4f);
+  //}
 
   double actualBrightness = 0.0;
   {
@@ -440,7 +474,10 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   
   const float normConst = float(a_passNum)*float(avgBrightnessOut/actualBrightness);
   for(uint i=0;i<pixelsNum*channels;i++)
-    out_color[i] *= normConst;
+    out_color[i] = out_color[i]*normConst; // + m_omcImage[i]*(1.0f/plarge);
+  
+  //for(uint i=0;i<pixelsNum*channels;i++)
+  //  out_color[i] = m_omcImage[i]*(1.0f/plarge);
 
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
