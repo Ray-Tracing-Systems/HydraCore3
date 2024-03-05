@@ -1,15 +1,14 @@
-#include "integrator_pt.h"
-#include <memory>
-#include <limits>
-#include <omp.h>
+#include "integrator_qmc.h"
 
+#include <omp.h>
+#include <iomanip>
 #include "utils.h" // for progress bar
 
-class IntegratorKMLT : public Integrator
+class IntegratorKMLT : public IntegratorQMC
 {
 public:
 
-  IntegratorKMLT(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
+  IntegratorKMLT(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : IntegratorQMC(a_maxThreads, a_spectral_mode, a_features)
   {
 
   }
@@ -20,10 +19,10 @@ public:
   float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce) override;
   float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) override;
 
-  void   kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                            float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                            float4* accumColor,    float4* accumuThoroughput,
-                            RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY);
+  void   kernel_InitEyeRay(uint tid, const uint* packedXY, 
+                           float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                           float4* accumColor,    float4* accumuThoroughput,
+                           RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY);
 
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
@@ -85,38 +84,63 @@ static inline float MutateKelemen(float valueX, float2 rands, float p2, float p1
 
 float4 IntegratorKMLT::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
 { 
-  float* data  = m_allRands.data() + tid*m_randsPerThread;
-  return float4(data[0], data[1], data[2], data[3]);
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersLens(tid, a_gen);
+  else
+  {
+    float* data  = m_allRands.data() + tid*m_randsPerThread;
+    return float4(data[0], data[1], data[2], data[3]);
+  }
 }
 
 float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  float* data   = m_allRands.data() + tid*m_randsPerThread;
-  return data[4]; 
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersSpec(tid, a_gen);
+  else
+  {
+    float* data = m_allRands.data() + tid*m_randsPerThread;
+    return data[4]; 
+  }
 }
 
 float4 IntegratorKMLT::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
-  float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
-  return float4(data[0], data[1], data[2], data[3]);
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersMats(tid, a_gen, a_bounce);
+  else
+  {
+    float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + MATS_ID;
+    return float4(data[0], data[1], data[2], data[3]);
+  }
 }
 
 float4 IntegratorKMLT::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
 {
-  float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
-  return float4(data[0], data[1], data[2], data[3]);
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersLgts(tid, a_gen, a_bounce);
+  else
+  {
+    float* data  = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + LGHT_ID;
+    return float4(data[0], data[1], data[2], data[3]);
+  }
 }
 
 float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) 
 { 
-  float* data   = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
-  return data[a_layer];
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersMatB(tid, a_gen, a_bounce, a_layer);
+  else
+  {
+    float* data   = m_allRands.data() + tid*m_randsPerThread + BOUNCE_START + a_bounce*PER_BOUNCE + BLND_ID;
+    return data[a_layer];
+  }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void IntegratorKMLT::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
+void IntegratorKMLT::kernel_InitEyeRay(uint tid, const uint* packedXY, 
                                        float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                        float4* accumColor,    float4* accumuThoroughput,
                                        RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY) // 
@@ -181,7 +205,7 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, pX, pY);
+  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, pX, pY);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -224,7 +248,8 @@ uint32_t AlignedSize(uint32_t a_size, uint32_t a_alignment)
 
 void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
 {
-  this->SetFrameBufferLayer(FB_INDIRECT);
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::PathTraceBlock(pixelsNum, channels, out_color, a_passNum);
   
   uint maxThreads = 1;
   #ifndef _DEBUG
@@ -243,14 +268,15 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 
   const size_t samplesPerPass = (size_t(pixelsNum)*size_t(a_passNum)) / size_t(maxThreads);
 
+  std::cout << "[IntegratorKMLT]: state size = " << m_randsPerThread << std::endl;
+  std::cout.flush();
+
   ConsoleProgressBar progress(pixelsNum*a_passNum);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
   
   double avgBrightnessOut = 0.0f;
   float  avgAcceptanceRate = 0.0f;
-
-  std::cout << "[IntegratorKMLT]: state size = " << m_randsPerThread << std::endl;
 
   #ifndef _DEBUG
   #pragma omp parallel 
@@ -399,7 +425,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   avgBrightnessOut  = avgBrightnessOut  / double(m_maxThreadId);
   avgAcceptanceRate = avgAcceptanceRate / float(pixelsNum*a_passNum);
 
-  std::cout << "[IntegratorKMLT]: acceptance rate = " << avgAcceptanceRate << std::endl;
+  std::cout << "[IntegratorKMLT]: average acceptance rate = " << std::fixed << std::setprecision(2) << 100.0f*avgAcceptanceRate << "%" << std::endl;
   std::cout.flush();
 
   double actualBrightness = 0.0;
