@@ -211,7 +211,7 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
