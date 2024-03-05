@@ -444,7 +444,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == plasticMatTypeStr)
     {
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
-                                m_spec_values, m_spec_offset_sz);
+                                m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+                                loadedSpectralTextures);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
     else if(mat_type == dielectricMatTypeStr)

@@ -133,6 +133,35 @@ float4 GetColorFromNode(const pugi::xml_node& a_node, bool is_spectral_mode)
   }
 }
 
+void LoadSpectralTextures(const uint32_t specId,
+                          const std::vector<TextureInfo> &texturesInfo,
+                          std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                          std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                          std::vector<uint2> &spec_tex_ids_wavelengths,
+                          const std::vector<uint2> &spec_tex_offset_sz, 
+                          std::set<uint32_t> &loadedSpectralTextures)
+{
+  auto textures_sz = spec_tex_offset_sz[specId].y;
+  auto offset = spec_tex_offset_sz[specId].x;
+  if(textures_sz > 0 && loadedSpectralTextures.count(specId) == 0)
+  {
+    for(uint32_t i = 0; i < textures_sz; ++i)
+    {
+      uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
+
+      //TODO: put sampler somewhere in XML
+      HydraSampler sampler;
+      sampler.inputGamma = 1.0f;
+      sampler.texId = xml_tex_id;
+
+      const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, texturesInfo, sampler, texCache, textures);
+      spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
+    }
+    loadedSpectralTextures.insert(specId);
+  }
+}
+
+
 Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
@@ -512,24 +541,8 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
 
     if(is_spectral_mode)
     {
-      auto textures_sz = spec_tex_offset_sz[specId].y;
-      auto offset = spec_tex_offset_sz[specId].x;
-      if(textures_sz > 0 && loadedSpectralTextures.count(specId) == 0)
-      {
-        for(uint32_t i = 0; i < textures_sz; ++i)
-        {
-          uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
-
-          //TODO: put sampler somewhere in XML
-          HydraSampler sampler;
-          sampler.inputGamma = 1.0f;
-          sampler.texId = xml_tex_id;
-
-          const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, texturesInfo, sampler, texCache, textures);
-          spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
-        }
-        loadedSpectralTextures.insert(specId);
-      }
+      LoadSpectralTextures(specId, texturesInfo, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
+                           loadedSpectralTextures);
     }
   }
 
@@ -644,7 +657,8 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
                              const std::vector<float> &spectra,
-                             const std::vector<uint2> &spec_offsets)
+                             const std::vector<uint2> &spec_offsets, std::vector<uint2> &spec_tex_ids_wavelengths,
+                             const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -669,6 +683,12 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
     specId = GetSpectrumIdFromNode(nodeColor);
     mat.spdid[0] = specId;
+
+    if(is_spectral_mode)
+    {
+      LoadSpectralTextures(specId, texturesInfo, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
+                           loadedSpectralTextures);
+    }
   }
 
   float internal_ior = hydra_xml::readval1f(materialNode.child(L"int_ior"), 1.49f);
@@ -691,16 +711,12 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
   if(is_spectral_mode && specId != 0xFFFFFFFF)
   {
     const auto offsets = spec_offsets[specId];
-    spectrum.reserve(offsets.y);
-    //for(size_t i = offsets.x; i < offsets.x + offsets.y; ++i)
-    //{
-    //  if(wavelengths[i] >= LAMBDA_MIN && wavelengths[i] <= LAMBDA_MAX)
-    //  {
-    //    spectrum.push_back(spectra[i]);
-    //  }
-    //}
-
-    std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+    if(offsets.x != 0xFFFFFFFF)
+    {
+      spectrum.reserve(offsets.y);
+      
+      std::copy(spectra.begin() + offsets.x, spectra.begin() + offsets.x + offsets.y, std::back_inserter(spectrum));
+    }
   }
 
   float4 diffuse_reflectance = mat.colors[PLASTIC_COLOR];

@@ -48,11 +48,15 @@ float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavele
   const uint specId = m_materials[matId].spdid[paramSpecId];
   if(specId < 0xFFFFFFFF)
   {
-    const uint2 data  = m_spec_offset_sz[specId];
-    const uint offset = data.x;
-    const uint size   = data.y;
+    const uint2 data   = m_spec_offset_sz[specId];
+    const uint  offset = data.x;
+    const uint  size   = data.y;
     
-    if(size == 0)
+    if(size > 0) // sample SPD
+    {
+      res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    }
+    else // check if spectrum is represented as textures
     {
       const uint2 tex_data  = m_spec_tex_offset_sz[specId];
       const uint tex_offset = tex_data.x;
@@ -70,7 +74,7 @@ float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavele
 
           uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data() + tex_offset, tex_size, a_wavelengths[i]);
 
-          uint32_t texID1 = m_spec_tex_ids_wavelengths[tex_offset + o].x;
+          uint32_t texID1 = m_spec_tex_ids_wavelengths[tex_offset + o + 0].x;
           uint32_t texID2 = m_spec_tex_ids_wavelengths[tex_offset + o + 1].x;
 
           const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], texCoords);
@@ -82,17 +86,9 @@ float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavele
                     
           float4 outColor = lerp(texColor1, texColor2, t);
 
-          // if(std::isinf(outColor.x) || std::isnan(outColor.x) || outColor.x < 0)
-          //   std::cout << t << " " << outColor.x << std::endl;
-          
           res[i] = outColor.x;
         }
       }
-    }
-    else
-    {
-      //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
-      res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
     }
   }
 
