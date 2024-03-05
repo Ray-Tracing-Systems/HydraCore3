@@ -389,25 +389,23 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
       // (5) contrib to image
       //
       float w1 = 1.0f;
-      float w2 = 1.0f;
+      //float w2 = 1.0f;
       //if(largeSteps >= 256*256) // enable Kelemen MIS
       //{
       //  float avgB = float(accumBrightness / double(largeSteps));
       //  if(isLargeStep)
       //  {
       //    const float INewDivB  = contribFunc(yNewColor)/avgB;
-      //    const float wLarge    = 10.0f*plarge;
-      //    w1 = INewDivB/(INewDivB + wLarge);
-      //    w2 = wLarge/(INewDivB + wLarge);
-      //    
+      //    w1 = (1.0f/plarge)*INewDivB/(INewDivB + plarge);
+      //    w2 = ((1.0f/plarge)/(1.0f-plarge))*plarge/(INewDivB + plarge);
       //    { 
       //      const int offset = yScrNew*m_winWidth + xScrNew;
       //      #pragma omp atomic
-      //      m_omcImage[offset*4+0] += yNewColor.x*w2;
+      //      out_color[offset*4+0] += yNewColor.x*w2;
       //      #pragma omp atomic
-      //      m_omcImage[offset*4+1] += yNewColor.y*w2;
+      //      out_color[offset*4+1] += yNewColor.y*w2;
       //      #pragma omp atomic
-      //      m_omcImage[offset*4+2] += yNewColor.z*w2;
+      //      out_color[offset*4+2] += yNewColor.z*w2;
       //    }
       //  }
       //}
@@ -458,7 +456,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   std::cout.flush();
 
   //{
-  //  const float normConstOMC = float(m_winWidth*m_winHeight)/(float(a_passNum)*plarge);
+  //  const float normConstOMC = 1.0f/float(a_passNum);
   //  SaveImage4fToBMP(m_omcImage.data(), m_winWidth, m_winHeight, "z_out_omc.bmp", normConstOMC, 2.4f);
   //}
 
@@ -474,7 +472,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
   
   const float normConst = float(a_passNum)*float(avgBrightnessOut/actualBrightness);
   for(uint i=0;i<pixelsNum*channels;i++)
-    out_color[i] = out_color[i]*normConst; // + m_omcImage[i]*(1.0f/plarge);
+    out_color[i] = out_color[i]*normConst; // + m_omcImage[i];
   
   //for(uint i=0;i<pixelsNum*channels;i++)
   //  out_color[i] = m_omcImage[i]*(1.0f/plarge);
