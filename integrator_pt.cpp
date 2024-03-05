@@ -258,8 +258,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
-
-  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounce); 
+  
+  const int bounceTmp = int(bounce);
+  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounceTmp); 
   const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
   RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write whole float4 ?
 
