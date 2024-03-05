@@ -39,9 +39,9 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
   return res;
 }
 
-float4 Integrator::SampleMatParamSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords)
+float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords)
 {  
-  float4 res = float4(m_materials[matId].data[paramId]);
+  float4 res = m_materials[matId].colors[paramId];
   if(a_wavelengths[0] == 0.0f)
     return res;
 
