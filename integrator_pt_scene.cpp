@@ -523,6 +523,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
 
+    m_camTargetDist = length(float3(cam.lookAt) - float3(cam.pos));
+    m_camLensRadius = 0.0f;
+    if(cam.node.child(L"dof_lens_radius") != nullptr)
+      m_camLensRadius = hydra_xml::readval1f(cam.node.child(L"dof_lens_radius"));
+
     auto sensorNode = cam.node.child(L"sensor");
     if(sensorNode != nullptr)
     {

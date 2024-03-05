@@ -3,7 +3,10 @@
 
 float  IntegratorQMC::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  return rndFloat1_Pseudo(a_gen); 
+  if(m_spectral_mode != 0)
+    return qmc::rndFloat(tid, 4, m_qmcTable[0]);
+  else
+    return rndFloat1_Pseudo(a_gen); 
 }
 
 float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
@@ -26,9 +29,9 @@ float4 IntegratorQMC::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bou
 {
   float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  rndId   = qmc::rndFloat(tid, 4, m_qmcTable[0]);
-  rands.x = qmc::rndFloat(tid, 5, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 6, m_qmcTable[0]);
+  rndId   = qmc::rndFloat(tid, 5, m_qmcTable[0]);
+  rands.x = qmc::rndFloat(tid, 6, m_qmcTable[0]);
+  rands.y = qmc::rndFloat(tid, 7, m_qmcTable[0]);
   return float4(rands.x, rands.y, rands.z, rndId);
 }
 

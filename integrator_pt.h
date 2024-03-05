@@ -244,7 +244,8 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
-  float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
+  float m_camTargetDist = 0.0f;
+  float m_camLensRadius = 0.0f;
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
   std::vector<Material>         m_materials;  

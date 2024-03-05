@@ -61,6 +61,16 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
 
+  if (m_camLensRadius > 0.0f)
+  {
+    const float tFocus         = m_camTargetDist / (-rayDir.z);
+    const float3 focusPosition = rayPos + rayDir*tFocus;
+    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    rayPos.x += xy.x;
+    rayPos.y += xy.y;
+    rayDir = normalize(focusPosition - rayPos);
+  }
+
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   float tmp = 0.0f;
