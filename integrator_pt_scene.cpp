@@ -15,6 +15,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_FOUR_TEXTURES  : return "4TEX";
     case KSPEC_LIGHT_IES          : return "LGT_IES";
     case KSPEC_LIGHT_ENV          : return "LGT_ENV";
+    case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
 
     case KSPEC_BLEND_STACK_SIZE   :
     {
@@ -199,6 +200,16 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
   g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
+
+
+  for(auto inst : g_lastScene.InstancesGeom())
+  {
+    if(inst.hasMotion)
+    {
+      features[KSPEC_MOTION_BLUR] = 1;
+      break;
+    }
+  }
 
   (*pSceneInfo) = g_lastSceneInfo;
   return features;
@@ -623,15 +634,41 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       #endif
       inst.instId = realInstId;
     }
-    m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
+
+    if(inst.hasMotion) 
+    {
+      LiteMath::float4x4 movement[2] = {inst.matrix, inst.matrix_motion};
+      m_pAccelStruct->AddInstance(inst.geomId, movement, 2);
+      m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] = 1;
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix_motion)));
+    }
+    else
+    {
+      m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix)));
+    }
+
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
+    
     m_remapInst.push_back(inst.rmapId);
 
     m_instIdToLightInstId[inst.instId] = inst.lightInstId;
     realInstId++;
   }
 
-  m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
+  if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 0)
+  {
+    m_normMatrices2.clear();
+    m_normMatrices2.resize(0);
+  }
+
+  uint32_t build_options = BUILD_HIGH;
+  if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 1)
+  {
+    build_options |= MOTION_BLUR;
+  }
+
+  m_pAccelStruct->CommitScene(build_options); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
   
   // (4) load remap lists and put all of the to the flat data structure
   // 

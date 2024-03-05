@@ -193,12 +193,12 @@
     },
 
     {
-        "name": "CPU(test_35)",
+        "name": "GPU(test_35)",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", 
-                 "-in", "scenes/test_035/statex_00001.xml",
+                 "-in", "scenes/test_035/motion_test.xml",
                  "-integrator", "mispt",
                  //"-integrator", "prt", 
                  "-width", "1024",
@@ -221,16 +221,16 @@
     },
 
     {
-        "name": "CPU(test_102)",
+        "name": "CPU(test_103)",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
+        "program": "${workspaceFolder}/bin-debug/hydra",
         "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_102/statex_00001.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_103/statex_00001.xml",
                  "-integrator", "mispt",
                  "-width", "512",
                  "-height", "512",
-                 "-spp", "256",
+                 "-spp", "1",
                  "-fb_layer", "split_direct_indirect",
                  "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_102/z_render.bmp"],
         "stopAtEntry": false,
@@ -246,6 +246,34 @@
             }
         ]
     },
+
+    {
+        "name": "test_103",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_103/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "256",
+                 "-fb_layer", "color",
+                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_103/z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
 
     {
         "name": "CPU(test_248)",
@@ -336,14 +364,14 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu", "--spectral",
-                "-in", "../Hydra3Tests/Tests/Spectral-cornell/0006/Spectral-diffuse-sphere-hydra3.xml",
+        "args": ["--cpu", 
+                //  "-in", "/media/vs/data/repos/chimera-mk2/resources/scenes/motion_test/"
+                 "-in", "scenes/test_035/motion_test.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "128",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_CPU_2.bmp"],
+                 "-out", "OUT_MOTION_CPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -363,13 +391,12 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--cpu", "--spectral",
-                "-in", "../Hydra3Tests/Tests/Spectral-cornell/0006/Spectral-diffuse-texture-hydra3.xml",
+        "args": ["--cpu",
+                 "-in", "scenes/test_035/motion_test.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "4",
-                 "-scn_dir", "../Hydra3Tests",
                  "-out", "DEBUG.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -390,14 +417,13 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu", "--spectral",
-                "-in", "../Hydra3Tests/Tests/Spectral-cornell/0006/Spectral-diffuse-sphere-hydra3.xml",
+        "args": ["--gpu",
+                "-in", "scenes/test_035/motion_test.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "128",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_MIS.exr"],
+                 "-out", "OUT_MOTION_GPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -411,19 +437,20 @@
             }
         ]
     },
+
     {
-        "name": "GPU Debug",
+        "name": "GPU Debug Motion Blur",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-debug/hydra",
-        "args": ["--gpu", "--spectral",
-                 "-in", "../Hydra3Tests/Tests/Spectral-cornell/0006/Spectral-diffuse-sphere-hydra3.xml",
+        "args": ["--gpu", 
+                //  "-in", "/media/vs/data/repos/chimera-mk2/resources/scenes/motion_test/"
+                 "-in", "scenes/test_035/motion_test.xml",
                  "-integrator", "mispt", 
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "128",
-                 "-scn_dir", "../Hydra3Tests",
-                 "-out", "OUT_MIS.exr"],
+                 "-out", "OUT_MOTION_GPU.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -437,6 +464,7 @@
             }
         ]
     },
+
     {
         "name": "CPU(GLTF_TEX)",
         "type": "cppdbg",

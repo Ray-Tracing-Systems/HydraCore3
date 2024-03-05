@@ -108,7 +108,7 @@ public:
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
+                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, RandomGen* a_gen);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
@@ -269,9 +269,12 @@ public:
   float4x4                      m_worldViewInv;
 
   std::vector<RandomGen>        m_randomGens;
-  std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices;  ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices2; ///< per instance normal matrix for motion end point (used when motion blur is enabled)
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
+
+  int m_motionBlur = 0;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
@@ -347,7 +350,9 @@ public:
   static constexpr uint32_t KSPEC_LIGHT_IES           = 12;
   static constexpr uint32_t KSPEC_LIGHT_ENV           = 13;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 14; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;
+
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 15; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
