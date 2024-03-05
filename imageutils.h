@@ -6,6 +6,7 @@
 #include <string>
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 
 #if defined(_WIN32)
 #ifndef NOMINMAX
