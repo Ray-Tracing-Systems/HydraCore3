@@ -235,6 +235,7 @@
         "args": ["--cpu", 
                  "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_304/statex_00001.xml",
                  "-integrator", "mispt",
+                 "--qmc",
                  "-width", "512",
                  "-height", "512",
                  "-spp", "16",

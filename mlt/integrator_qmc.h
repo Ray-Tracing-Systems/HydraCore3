@@ -31,4 +31,7 @@ public:
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
   unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
+
+  int qmcMatOffset();
+  int qmcLgtOffset();
 };

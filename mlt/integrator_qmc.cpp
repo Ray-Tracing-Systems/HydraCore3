@@ -1,12 +1,33 @@
 #include "integrator_qmc.h"
 #include "utils.h" // for progress bar
 
+int IntegratorQMC::qmcMatOffset()
+{
+  if(m_camLensRadius > 0.0f && m_spectral_mode != 0)
+    return 5; // (0,1): pixel id; (2,3): lens; (4): spd; (5,6): mat; (7,8,9): light.
+  else if(m_camLensRadius > 0.0f && m_spectral_mode == 0)
+    return 4; // (0,1): pixel id; (2,3): lens; (4,5): mat; (6,7,8): light.
+  else if(m_camLensRadius == 0.0f && m_spectral_mode != 0)
+    return 2; // (0,1): pixel id; (2,3): mat; (4): spd; (5,6,7): light.
+  else
+    return 2; // (0,1): pixel id; (2,3): mat; (4,5,6): light.
+}
+
+int IntegratorQMC::qmcLgtOffset()
+{
+  if(m_camLensRadius > 0.0f && m_spectral_mode != 0)
+    return 7; // (0,1): pixel id; (2,3): lens; (4): spd; (5,6): mat; (7,8,9): light.
+  else if(m_camLensRadius > 0.0f && m_spectral_mode == 0)
+    return 6; // (0,1): pixel id; (2,3): lens; (4,5): mat; (6,7,8): light.
+  else if(m_camLensRadius == 0.0f && m_spectral_mode != 0)
+    return 5; // (0,1): pixel id; (2,3): mat; (4): spd; (5,6,7): light.
+  else
+    return 4; // (0,1): pixel id; (2,3): mat; (4,5,6): light.
+}
+
 float  IntegratorQMC::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  if(m_spectral_mode != 0)
-    return qmc::rndFloat(tid, 4, m_qmcTable[0]);
-  else
-    return rndFloat1_Pseudo(a_gen); 
+  return qmc::rndFloat(tid, 4, m_qmcTable[0]);
 }
 
 float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
@@ -14,14 +35,22 @@ float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen)
   float4 rands = rndFloat4_Pseudo(a_gen);
   rands.x = qmc::rndFloat(tid, 0, m_qmcTable[0]);
   rands.y = qmc::rndFloat(tid, 1, m_qmcTable[0]);
+  if(m_camLensRadius > 0.0f)
+  {
+    rands.z = qmc::rndFloat(tid, 2, m_qmcTable[0]);
+    rands.w = qmc::rndFloat(tid, 3, m_qmcTable[0]);
+  }
   return rands; 
 }
 
 float4 IntegratorQMC::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
   float4 rands = rndFloat4_Pseudo(a_gen);
-  rands.x = qmc::rndFloat(tid, 2, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 3, m_qmcTable[0]);
+  if(a_bounce == 0)
+  {
+    rands.x = qmc::rndFloat(tid, qmcMatOffset() + 0, m_qmcTable[0]);
+    rands.y = qmc::rndFloat(tid, qmcMatOffset() + 1, m_qmcTable[0]);
+  }
   return rands; 
 }
 
@@ -29,9 +58,12 @@ float4 IntegratorQMC::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bou
 {
   float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  rndId   = qmc::rndFloat(tid, 5, m_qmcTable[0]);
-  rands.x = qmc::rndFloat(tid, 6, m_qmcTable[0]);
-  rands.y = qmc::rndFloat(tid, 7, m_qmcTable[0]);
+  if(a_bounce == 0)
+  {
+    rands.x = qmc::rndFloat(tid, qmcLgtOffset() + 0, m_qmcTable[0]);
+    rands.y = qmc::rndFloat(tid, qmcLgtOffset() + 1, m_qmcTable[0]);
+    rndId   = qmc::rndFloat(tid, qmcLgtOffset() + 2, m_qmcTable[0]);
+  }
   return float4(rands.x, rands.y, rands.z, rndId);
 }
 
@@ -62,6 +94,16 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
   ///////////////////////////////////////////////////////////////////////////////////// end change
+
+  if (m_camLensRadius > 0.0f)
+  {
+    const float tFocus         = m_camTargetDist / (-rayDir.z);
+    const float3 focusPosition = rayPos + rayDir*tFocus;
+    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    rayPos.x += xy.x;
+    rayPos.y += xy.y;
+    rayDir = normalize(focusPosition - rayPos);
+  }
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
