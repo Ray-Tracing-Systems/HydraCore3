@@ -426,7 +426,7 @@ void Integrator::RayTrace(uint tid, uint channels, float* out_color)
 {
   float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
-  uint      rayFlags = 0;
+  uint   rayFlags = 0;
   kernel_InitEyeRay3(tid, m_packedXY.data(), 
                      &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &rayFlags);
 
@@ -434,7 +434,8 @@ void Integrator::RayTrace(uint tid, uint channels, float* out_color)
   {
     float4 hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    RandomGen dummy;
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &dummy);
     if(isDeadRay(rayFlags))
       break;
 

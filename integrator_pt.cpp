@@ -42,11 +42,6 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   const uint y = (XY & 0xFFFF0000) >> 16;
   const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
 
-  if(x == 237 && y == 512 - 109 - 1)
-  {
-    int a = 2;
-  }
-
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
@@ -117,7 +112,8 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
 
 void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
+                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, 
+                                  RandomGen* a_gen)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -128,7 +124,13 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
 
-  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
+  float time = 0.0f;
+  if(m_normMatrices2.size() > 0) 
+  {
+    time  = rndFloat1_Pseudo(a_gen); 
+  }
+
+  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
 
   if(hit.geomId != uint32_t(-1))
@@ -171,15 +173,28 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
     // transform surface point with matrix and flip normal if needed
     //
-    hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    hitTang                = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
-    const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm                = flipNorm * hitNorm;
-    hitTang                = flipNorm * hitTang; // do we need this ??
+    hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
+    hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
+
+    if(m_normMatrices2.size() > 0)
+    {
+      float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
+      float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
+
+      hitNorm = lerp(hitNorm, hitNorm2, time);
+      hitTang = lerp(hitTang, hitTang2, time);
+    }
+
+    hitNorm = normalize(hitNorm);
+    hitTang = normalize(hitTang);
     
+    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+    hitNorm              = flipNorm * hitNorm;
+    hitTang              = flipNorm * hitTang; // do we need this ??
+
     if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
-
+    
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
@@ -235,8 +250,13 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
+
+  float time = 0.0f;
+  if(m_normMatrices2.size() > 0) 
+    time  = rndFloat1_Pseudo(a_gen); 
+
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
-  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f)); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
 
   if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
@@ -591,7 +611,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
@@ -622,7 +642,7 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
@@ -657,7 +677,7 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
     if(isDeadRay(rayFlags))
       break;
     
