@@ -173,25 +173,28 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
     // transform surface point with matrix and flip normal if needed
     //
-    float3 hitNorm1 = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    float3 hitTang1 = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
+    hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
+    hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
 
     if(m_normMatrices2.size() > 0)
     {
-      float3 hitNorm2 = normalize(mul3x3(m_normMatrices2[hit.instId], hitNorm));
-      float3 hitTang2 = normalize(mul3x3(m_normMatrices2[hit.instId], hitTang));
+      float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
+      float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
 
-      hitNorm = lerp(hitNorm1, hitNorm2, time);
-      hitTang = lerp(hitTang1, hitTang2, time);
+      hitNorm = lerp(hitNorm, hitNorm2, time);
+      hitTang = lerp(hitTang, hitTang2, time);
     }
 
-    const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm                = flipNorm * hitNorm;
-    hitTang                = flipNorm * hitTang; // do we need this ??
+    hitNorm = normalize(hitNorm);
+    hitTang = normalize(hitTang);
     
+    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+    hitNorm              = flipNorm * hitNorm;
+    hitTang              = flipNorm * hitTang; // do we need this ??
+
     if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
-
+    
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
