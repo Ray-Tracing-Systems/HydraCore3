@@ -539,7 +539,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
     auto specId  = GetSpectrumIdFromNode(nodeColor);
     mat.spdid[0] = specId;
 
-    if(is_spectral_mode)
+    if(is_spectral_mode && specId != 0xFFFFFFFF)
     {
       LoadSpectralTextures(specId, texturesInfo, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
@@ -684,7 +684,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
     specId = GetSpectrumIdFromNode(nodeColor);
     mat.spdid[0] = specId;
 
-    if(is_spectral_mode)
+    if(is_spectral_mode && specId != 0xFFFFFFFF)
     {
       LoadSpectralTextures(specId, texturesInfo, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
