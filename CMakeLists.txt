@@ -73,7 +73,8 @@ endif()
 include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
 include_directories(SYSTEM "external/tinyexr"
                     "external/volk"
-                    "external/LiteMath")
+                    "external/LiteMath"
+                    "external/LiteMath/external")
 include_directories("external"
                     "external/vkutils"
                     "external/CrossRT")
