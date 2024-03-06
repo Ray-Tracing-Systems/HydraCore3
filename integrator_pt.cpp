@@ -65,6 +65,8 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
   {
     res.rayPos = rayPos;
     res.rayDir = rayDir;
+    res.x      = x;
+    res.y      = y;
     if(m_normMatrices2.size() != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)

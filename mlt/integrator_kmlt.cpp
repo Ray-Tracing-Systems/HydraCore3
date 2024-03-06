@@ -153,53 +153,70 @@ void IntegratorKMLT::kernel_InitEyeRay(uint tid, const uint* packedXY,
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
   
-  ///////////////////////////////////////////////////////////////////////////////////// begin change
-  const uint rgIndex = tid % uint(m_randomGens.size());
-  RandomGen genLocal = m_randomGens[rgIndex];
+  RandomGen genLocal = m_randomGens[RandomGenId(tid)];
 
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
-
-  uint x = uint(pixelOffsets.x*float(m_winWidth));
-  uint y = uint(pixelOffsets.y*float(m_winHeight));
+  EyeRayData r = SampleCameraRay(&genLocal, tid);
   
-  if(x >= uint(m_winWidth-1))
-    x = uint(m_winWidth-1);
-  if(y >= uint(m_winHeight-1))
-    y = uint(m_winHeight-1);
-
-  (*pX) = int(x);
-  (*pY) = int(y);
-
-  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
-  float3 rayPos = float3(0,0,0);
-  ///////////////////////////////////////////////////////////////////////////////////// end change
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
-  
-  float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = GetRandomNumbersSpec(tid, &genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
+    *wavelengths = SampleWavelengths(r.waveSam, LAMBDA_MIN, LAMBDA_MAX);
   else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
+    *wavelengths = float4(0.0f);
 
-  if(m_normMatrices2.size() != 0)
-    *time = GetRandomNumbersTime(tid, &genLocal);
-  else
-    *time = 0.0f;  
-
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
+  *time = r.timeSam;
  
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  transform_ray3f(m_worldViewInv, &r.rayPos, &r.rayDir);
+
+  *rayPosAndNear = to_float4(r.rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(r.rayDir, FLT_MAX);
   *gen           = genLocal;
+
+  (*pX) = int(r.x);
+  (*pY) = int(r.y);
+  
+  //const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+  //
+  //uint x = uint(pixelOffsets.x*float(m_winWidth));
+  //uint y = uint(pixelOffsets.y*float(m_winHeight));
+  //
+  //if(x >= uint(m_winWidth-1))
+  //  x = uint(m_winWidth-1);
+  //if(y >= uint(m_winHeight-1))
+  //  y = uint(m_winHeight-1);
+  //
+  //(*pX) = int(x);
+  //(*pY) = int(y);
+  //
+  //float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
+  //float3 rayPos = float3(0,0,0);
+  /////////////////////////////////////////////////////////////////////////////////////// end change
+  //
+  //transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  //
+  //float tmp = 0.0f;
+  //if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+  //{
+  //  float u = GetRandomNumbersSpec(tid, &genLocal);
+  //  *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
+  //  tmp = u;
+  //}
+  //else
+  //{
+  //  const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
+  //  for (uint32_t i = 0; i < sample_sz; ++i) 
+  //    (*wavelengths)[i] = 0.0f;
+  //}
+  //
+  //if(m_normMatrices2.size() != 0)
+  //  *time = GetRandomNumbersTime(tid, &genLocal);
+  //else
+  //  *time = 0.0f;  
+  //
+  //RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
+   //
+  //*rayPosAndNear = to_float4(rayPos, 0.0f);
+  //*rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  //*gen           = genLocal;
+
 }
 
 float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)

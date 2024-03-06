@@ -207,11 +207,22 @@ Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
       rayPos = float3(-1,-1,-1)*rayPos;
     }
   }
+  
+  /////////////////////////////////////////////////////
+  uint x = uint(pixelOffsets.x*float(m_winWidth));
+  uint y = uint(pixelOffsets.y*float(m_winHeight));
+  if(x >= uint(m_winWidth-1))
+    x = uint(m_winWidth-1);
+  if(y >= uint(m_winHeight-1))
+    y = uint(m_winHeight-1);
+  /////////////////////////////////////////////////////
 
   EyeRayData res;
   {
     res.rayPos = rayPos;
     res.rayDir = rayDir;
+    res.x      = x;
+    res.y      = y;
     if(m_normMatrices2.size() != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
@@ -239,7 +250,6 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
   /////////////////////////////////////////////////////////////////////////////// change
   uint x = uint(pixelOffsets.x*float(m_winWidth));
   uint y = uint(pixelOffsets.y*float(m_winHeight));
-  
   if(x >= uint(m_winWidth-1))
     x = uint(m_winWidth-1);
   if(y >= uint(m_winHeight-1))

@@ -386,6 +386,8 @@ public:
     float  timeSam;
     float  waveSam;
     float  cosTheta; // cos with sensor plane
+    uint   x;        // screen x coord
+    uint   y;        // screen y coord
   };
 
   virtual EyeRayData SampleCameraRay(RandomGen* pGen, uint tid);
