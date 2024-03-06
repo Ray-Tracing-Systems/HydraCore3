@@ -1,33 +1,89 @@
 #include "integrator_qmc.h"
 #include "utils.h" // for progress bar
 
-int IntegratorQMC::qmcMatOffset()
-{
-  if(m_camLensRadius > 0.0f && m_spectral_mode != 0)
-    return 5; // (0,1): pixel id; (2,3): lens; (4): spd; (5,6): mat; (7,8,9): light.
-  else if(m_camLensRadius > 0.0f && m_spectral_mode == 0)
-    return 4; // (0,1): pixel id; (2,3): lens; (4,5): mat; (6,7,8): light.
-  else if(m_camLensRadius == 0.0f && m_spectral_mode != 0)
-    return 2; // (0,1): pixel id; (2,3): mat; (4): spd; (5,6,7): light.
-  else
-    return 2; // (0,1): pixel id; (2,3): mat; (4,5,6): light.
-}
+#include <cassert>
 
-int IntegratorQMC::qmcLgtOffset()
+void IntegratorQMC::SetQmcVariantOffsets()
 {
-  if(m_camLensRadius > 0.0f && m_spectral_mode != 0)
-    return 7; // (0,1): pixel id; (2,3): lens; (4): spd; (5,6): mat; (7,8,9): light.
-  else if(m_camLensRadius > 0.0f && m_spectral_mode == 0)
-    return 6; // (0,1): pixel id; (2,3): lens; (4,5): mat; (6,7,8): light.
-  else if(m_camLensRadius == 0.0f && m_spectral_mode != 0)
-    return 5; // (0,1): pixel id; (2,3): mat; (4): spd; (5,6,7): light.
-  else
-    return 4; // (0,1): pixel id; (2,3): mat; (4,5,6): light.
+  const bool dof    = (m_camLensRadius > 0.0f);
+  const bool spd    = (m_spectral_mode != 0);
+  const bool motion = (m_normMatrices2.size() != 0);
+
+  assert(qmc::QRNG_DIMENSIONS >= 11); // code of this function assume >= 11 dimentions
+
+  if(dof && spd && motion) // (0,1): pixel id; (2,3): lens; (4,5): spd and motion; (6,7): mat; (8,9,10): light.
+  {
+    m_qmcMotionDim = 4;
+    m_qmcSpdDim    = 5;
+    m_qmcMatDim    = 0; // 6; // may set to zero to enable OMC here
+    m_qmcLgtDim    = 0; // 8; // may set to zero to enable OMC here
+  }
+  else if(dof && spd)    // (0,1): pixel id; (2,3): lens; (4): spd; (5,6): mat; (7,8,9): light.
+  {
+    m_qmcMotionDim = 0;
+    m_qmcSpdDim    = 4;
+    m_qmcMatDim    = 5;
+    m_qmcLgtDim    = 7;
+  }
+  else if(spd && motion) // (0,1): pixel id; (2,3): motion and spd; (4,5): mat; (6,7,8): light.
+  {
+    m_qmcMotionDim = 2;
+    m_qmcSpdDim    = 3;
+    m_qmcMatDim    = 4;
+    m_qmcLgtDim    = 6;
+
+  }
+  else if(dof && motion) // (0,1): pixel id; (2,3): lens; (4): motion; (5,6): mat; (7,8,9): light.
+  {
+    m_qmcMotionDim = 4;
+    m_qmcSpdDim    = 0;
+    m_qmcMatDim    = 5; // may set to zero to enable OMC here
+    m_qmcLgtDim    = 7; // may set to zero to enable OMC here
+  }
+  else if(dof)  // (0,1): pixel id; (2,3): lens; (4,5): mat; (6,7,8): light.
+  {
+    m_qmcMotionDim = 0;
+    m_qmcSpdDim    = 0;
+    m_qmcMatDim    = 4;
+    m_qmcLgtDim    = 6;
+  }
+  else if(spd)  // (0,1): pixel id; (2,3): mat; (4) : spd; (5,6,7): light.
+  {
+    m_qmcMotionDim = 0;
+    m_qmcSpdDim    = 4;
+    m_qmcMatDim    = 2;
+    m_qmcLgtDim    = 5;
+  }
+  else if(motion) // (0,1): pixel id; (2,3): mat; (4) : motion; (5,6,7): light.
+  {
+    m_qmcMotionDim = 4;
+    m_qmcSpdDim    = 0;
+    m_qmcMatDim    = 2;
+    m_qmcLgtDim    = 5;
+  }
+  else // (0,1): pixel id; (2,3): mat; (4,5,6): light.
+  {
+    m_qmcMotionDim = 0;
+    m_qmcSpdDim    = 0;
+    m_qmcMatDim    = 2;
+    m_qmcLgtDim    = 4;
+  }
 }
 
 float  IntegratorQMC::GetRandomNumbersSpec(uint tid, RandomGen* a_gen) 
 { 
-  return qmc::rndFloat(tid, 4, m_qmcTable[0]);
+  if(m_qmcSpdDim != 0)
+    return qmc::rndFloat(tid, m_qmcSpdDim, m_qmcTable[0]);
+  else 
+    return rndFloat1_Pseudo(a_gen);
+}
+
+float  IntegratorQMC::GetRandomNumbersTime(uint tid, RandomGen* a_gen) 
+{ 
+  if(m_qmcMotionDim != 0)
+    return qmc::rndFloat(tid, m_qmcMotionDim, m_qmcTable[0]);
+  else
+    return rndFloat1_Pseudo(a_gen);
 }
 
 float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen) 
@@ -46,10 +102,10 @@ float4 IntegratorQMC::GetRandomNumbersLens(uint tid, RandomGen* a_gen)
 float4 IntegratorQMC::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) 
 { 
   float4 rands = rndFloat4_Pseudo(a_gen);
-  if(a_bounce == 0)
+  if(a_bounce == 0 && m_qmcMatDim != 0)
   {
-    rands.x = qmc::rndFloat(tid, qmcMatOffset() + 0, m_qmcTable[0]);
-    rands.y = qmc::rndFloat(tid, qmcMatOffset() + 1, m_qmcTable[0]);
+    rands.x = qmc::rndFloat(tid, m_qmcMatDim + 0, m_qmcTable[0]);
+    rands.y = qmc::rndFloat(tid, m_qmcMatDim + 1, m_qmcTable[0]);
   }
   return rands; 
 }
@@ -58,11 +114,11 @@ float4 IntegratorQMC::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bou
 {
   float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
   float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  if(a_bounce == 0)
+  if(a_bounce == 0 && m_qmcLgtDim != 0)
   {
-    rands.x = qmc::rndFloat(tid, qmcLgtOffset() + 0, m_qmcTable[0]);
-    rands.y = qmc::rndFloat(tid, qmcLgtOffset() + 1, m_qmcTable[0]);
-    rndId   = qmc::rndFloat(tid, qmcLgtOffset() + 2, m_qmcTable[0]);
+    rands.x = qmc::rndFloat(tid, m_qmcLgtDim + 0, m_qmcTable[0]);
+    rands.y = qmc::rndFloat(tid, m_qmcLgtDim + 1, m_qmcTable[0]);
+    rndId   = qmc::rndFloat(tid, m_qmcLgtDim + 2, m_qmcTable[0]);
   }
   return float4(rands.x, rands.y, rands.z, rndId);
 }
@@ -260,6 +316,8 @@ void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_col
   using IndexType = unsigned; // or int
   const size_t samplesNum = std::min<size_t>(size_t(std::numeric_limits<IndexType>::max()), size_t(pixelsNum)*size_t(a_passNum));
   m_maxThreadId = uint(samplesNum);
+
+  SetQmcVariantOffsets();
 
   std::cout << "[IntegratorQMC]: max spp = " << samplesNum/pixelsNum << std::endl;
   std::cout.flush();

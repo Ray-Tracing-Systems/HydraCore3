@@ -16,6 +16,7 @@ public:
   }
 
   float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
+  float  GetRandomNumbersTime(uint tid, RandomGen* a_gen) override;
   float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen) override;
   float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) override;
   float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce) override;
@@ -34,4 +35,10 @@ public:
 
   int qmcMatOffset();
   int qmcLgtOffset();
+  
+  void SetQmcVariantOffsets();
+  uint m_qmcMatDim = 0;
+  uint m_qmcLgtDim = 0;
+  uint m_qmcSpdDim = 0;
+  uint m_qmcMotionDim = 0;
 };
