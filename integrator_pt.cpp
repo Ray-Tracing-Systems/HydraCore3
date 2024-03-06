@@ -22,6 +22,7 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 float  Integrator::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float  Integrator::GetRandomNumbersTime(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
 float4 Integrator::GetRandomNumbersLens(uint tid, RandomGen* a_gen)               { return rndFloat4_Pseudo(a_gen); }
 float4 Integrator::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
 float4 Integrator::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
@@ -40,7 +41,7 @@ float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce,
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                    float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                    float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
+                                   RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
 {
   if(tid >= m_maxThreadId)
     return;
@@ -96,7 +97,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
 void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
-                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
+                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -132,13 +133,13 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  *time          = rayDirData.time;
   *gen           = m_randomGens[tid];
 }
 
 
-void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, 
-                                  RandomGen* a_gen)
+void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
+                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -148,12 +149,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
-
-  float time = 0.0f;
-  if(m_normMatrices2.size() > 0) 
-  {
-    time  = rndFloat1_Pseudo(a_gen); 
-  }
+  const float  time   = *a_time;
 
   const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
@@ -630,13 +626,15 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -661,13 +659,15 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -695,14 +695,15 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
+  float     time;
   kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
-                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths);
+                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths, &time);
   
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &time);
     if(isDeadRay(rayFlags))
       break;
     

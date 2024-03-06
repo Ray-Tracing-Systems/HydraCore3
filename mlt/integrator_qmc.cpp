@@ -75,7 +75,7 @@ float IntegratorQMC::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_boun
 void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                        float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                        float4* accumColor,    float4* accumuThoroughput,
-                                       RandomGen* gen, uint* rayFlags, MisData* misData) // 
+                                       RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
 {
   if(tid >= m_maxThreadId)
     return;

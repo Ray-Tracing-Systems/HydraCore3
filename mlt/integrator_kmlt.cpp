@@ -22,7 +22,7 @@ public:
   void   kernel_InitEyeRay(uint tid, const uint* packedXY, 
                            float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                            float4* accumColor,    float4* accumuThoroughput,
-                           RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY);
+                           RandomGen* gen, uint* rayFlags, MisData* misData, float* time, int* pX, int* pY);
 
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
@@ -143,7 +143,7 @@ float IntegratorKMLT::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bou
 void IntegratorKMLT::kernel_InitEyeRay(uint tid, const uint* packedXY, 
                                        float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                        float4* accumColor,    float4* accumuThoroughput,
-                                       RandomGen* gen, uint* rayFlags, MisData* misData, int* pX, int* pY) // 
+                                       RandomGen* gen, uint* rayFlags, MisData* misData, float* time, int* pX, int* pY) // 
 {
   if(tid >= m_maxThreadId)
     return;
@@ -205,7 +205,8 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, pX, pY);
+  float     time;
+  kernel_InitEyeRay(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time, pX, pY);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {

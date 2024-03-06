@@ -95,20 +95,20 @@ public:
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
   virtual void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
-                                  float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
+                                  float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
 
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
   void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
-                                  RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
+                                  RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time);
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
 
-  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, RandomGen* a_gen);
+  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
+                        float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
 
@@ -372,6 +372,7 @@ public:
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
 
   virtual float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen);
+  virtual float  GetRandomNumbersTime(uint tid, RandomGen* a_gen);
   virtual float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen);
   virtual float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce);
   virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
