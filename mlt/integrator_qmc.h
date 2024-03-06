@@ -6,14 +6,19 @@
 #include <memory>
 #include <limits>
 
+struct LensElementInterface  // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further
+{
+  float curvatureRadius;
+  float thickness;
+  float eta;
+  float apertureRadius;
+};
+
 class IntegratorQMC : public Integrator
 {
 public:
 
-  IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
-  {
-    qmc::init(m_qmcTable);
-  }
+  IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features);
 
   float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
   float  GetRandomNumbersTime(uint tid, RandomGen* a_gen) override;
@@ -31,9 +36,27 @@ public:
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
   unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
   
-  void SetQmcVariantOffsets();
+  void EnableQMC();
   uint m_qmcMatDim = 0;
   uint m_qmcLgtDim = 0;
   uint m_qmcSpdDim = 0;
   uint m_qmcMotionDim = 0;
+  uint m_qmcDofDim = 0;
+  
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further // 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+  uint m_enableOpticSim = 1;
+  std::vector<LensElementInterface> lines;
+  float2 m_physSize;
+  float  m_diagonal;
+  float  m_aspect;
+
+  inline float LensRearZ()      const { return lines[0].thickness; }
+  inline float LensRearRadius() const { return lines[0].apertureRadius; }         
+
+  bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
+                                 float *t, float3 *n) const;
+
+  bool TraceLensesFromFilm(float3& rayPos, float3& rayDir) const;
 };
