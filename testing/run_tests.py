@@ -182,6 +182,10 @@ class REQ_HP(REQ):
 
 reqs = []
 
+reqs.append( REQ_H2("dof_tst", ["test_304"], integrators = ["mispt", "shadowpt"], imsize = (512,256)) )
+
+'''
+
 reqs.append( REQ_H2("mat_mirror",           ["test_102"], integrators = ["naivept","mispt"]) )
 reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
 reqs.append( REQ_H2("mat_texture_matrices", ["test_110"]) )
@@ -344,6 +348,7 @@ reqs.append( REQ_HX("mat_smooth_glass", [PATH_TO_HYDRA3_SCENS + "/Tests/Glass/00
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0002/Images/Glass_rough-0_cornell_mitsuba.png",
                                          PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/Images/quartz-prism-rough-0-cornell-mitsuba.png"],
                                          imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"]))
+'''
 
 '''
 reqs.append( REQ_HP("perf_test", [PATH_TO_HYDRA2_TESTS + "/tests_f/test_102/statex_00001.xml",  
