@@ -194,6 +194,7 @@ void IntegratorKMLT::kernel_InitEyeRay(uint tid, const uint* packedXY,
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  *time          = GetRandomNumbersTime(tid, &genLocal);
   *gen           = genLocal;
 }
 
@@ -212,11 +213,12 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,

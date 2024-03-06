@@ -234,7 +234,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
                                           const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                          const uint* rayFlags, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
+                                          const uint* rayFlags, const float* a_time, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -272,9 +272,9 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
-  float time = 0.0f;
-  if(m_normMatrices2.size() > 0) 
-    time  = rndFloat1_Pseudo(a_gen); 
+  float time = *a_time;
+  if(m_normMatrices2.size() == 0) 
+    time  = 0.0f; 
 
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
   const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
@@ -671,7 +671,7 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
@@ -703,11 +703,12 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &time);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, 
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor, &rayPosAndNear, &rayDirAndFar,

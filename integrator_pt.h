@@ -120,8 +120,8 @@ public:
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
-                                const uint* rayFlags, uint bounce,
+                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                const uint* rayFlags, const float* a_time, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
