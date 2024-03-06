@@ -525,9 +525,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     m_camTargetDist = length(float3(cam.lookAt) - float3(cam.pos));
     m_camLensRadius = 0.0f;
-    if(cam.node.child(L"dof_lens_radius") != nullptr)
-      m_camLensRadius = hydra_xml::readval1f(cam.node.child(L"dof_lens_radius"));
-
+    {
+      int enable_dof = 0;
+      if(cam.node.child(L"enable_dof") != nullptr)
+        enable_dof = hydra_xml::readval1i(cam.node.child(L"enable_dof"));
+      if(cam.node.child(L"dof_lens_radius") != nullptr && enable_dof != 0)
+        m_camLensRadius = hydra_xml::readval1f(cam.node.child(L"dof_lens_radius"));
+    }
+    
     auto sensorNode = cam.node.child(L"sensor");
     if(sensorNode != nullptr)
     {
