@@ -121,6 +121,11 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
       (*wavelengths)[i] = 0.0f;
   }
 
+  if(m_normMatrices2.size() != 0)
+    *time = GetRandomNumbersTime(tid, &genLocal);
+  else
+    *time = 0.0f;  
+
   RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);

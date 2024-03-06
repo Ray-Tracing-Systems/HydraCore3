@@ -88,6 +88,11 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
       (*wavelengths)[i] = 0.0f;
   }
 
+  if(m_normMatrices2.size() != 0)
+    *time = GetRandomNumbersTime(tid, &genLocal);
+  else
+    *time = 0.0f;  
+
   RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);
@@ -273,9 +278,6 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
   float time = *a_time;
-  if(m_normMatrices2.size() == 0) 
-    time  = 0.0f; 
-
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
   const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
