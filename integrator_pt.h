@@ -94,8 +94,8 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
-                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
+  virtual void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
+                                  float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
 
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
@@ -129,8 +129,8 @@ public:
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
-  void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                const float4* wavelengths, float* out_color);
+  virtual void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
+                                        const float4* wavelengths, float* out_color);
 
   void kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, 
                                 float* out_color);
@@ -230,12 +230,12 @@ public:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
-  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  uint32_t BlendSampleAndEval(uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
@@ -244,7 +244,6 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
-  float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
   std::vector<Material>         m_materials;  
@@ -301,6 +300,8 @@ public:
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
   float m_exposureMult   = 1.0f;
+  float m_camLensRadius = 0.0f;
+  float m_camTargetDist = 0.0f;
   
   /// @brief ////////////////////////////////////////////////////// cam variables
   static constexpr int CAM_RESPONCE_XYZ = 0;
@@ -369,6 +370,12 @@ public:
   virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
+
+  virtual float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer);
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   uint m_disableImageContrib = 0;

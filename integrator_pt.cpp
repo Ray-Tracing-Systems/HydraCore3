@@ -21,6 +21,21 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float  Integrator::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLens(uint tid, RandomGen* a_gen)               { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
+{
+  const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  return float4(rands.x, rands.y, rands.z, rndId);
+}
+
+float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
                                    float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
@@ -40,18 +55,28 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
-  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
   float3 rayPos = float3(0,0,0);
+  
+  if (m_camLensRadius > 0.0f)
+  {
+    const float tFocus         = m_camTargetDist / (-rayDir.z);
+    const float3 focusPosition = rayPos + rayDir*tFocus;
+    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    rayPos.x += xy.x;
+    rayPos.y += xy.y;
+    rayDir = normalize(focusPosition - rayPos);
+  }
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
   float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
   {
-    float u = rndFloat1_Pseudo(&genLocal);
+    float u = GetRandomNumbersSpec(tid, &genLocal);
     *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
     tmp = u;
   }
@@ -62,7 +87,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
       (*wavelengths)[i] = 0.0f;
   }
 
-  RecordPixelRndIfNeeded(pixelOffsets, tmp);
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
  
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
@@ -233,10 +258,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
-
-  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
+  
+  const int bounceTmp = int(bounce); 
+  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounceTmp); 
+  const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
   RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
 
   if(lightId < 0) // no lights or invalid light id
@@ -372,7 +397,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const uint bounceTmp    = bounce;
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
