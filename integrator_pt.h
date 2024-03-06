@@ -378,6 +378,17 @@ public:
   virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
   virtual float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer);
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  struct EyeRayData
+  {
+    float3 rayPos;
+    float3 rayDir;
+    float  timeSam;
+    float  waveSam;
+    float  cosTheta; // cos with sensor plane
+  };
+
+  virtual EyeRayData SampleCameraRay(RandomGen* pGen, uint tid);
 
   uint m_disableImageContrib = 0;
 

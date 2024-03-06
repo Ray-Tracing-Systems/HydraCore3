@@ -37,26 +37,13 @@ float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce,
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                   float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
+Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
 {
-  if(tid >= m_maxThreadId)
-    return;
+  const uint XY = m_packedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  *accumColor        = make_float4(0,0,0,0);
-  *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
-  *rayFlags          = 0;
-  *misData           = makeInitialMisData();
-
-  const uint XY = packedXY[tid];
-
-  const uint x = (XY & 0x0000FFFF);
-  const uint y = (XY & 0xFFFF0000) >> 16;
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
                                       (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
@@ -72,31 +59,50 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
     rayDir = normalize(focusPosition - rayPos);
   }
 
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  EyeRayData res;
+  {
+    res.rayPos = rayPos;
+    res.rayDir = rayDir;
+    if(m_normMatrices2.size() != 0)
+      res.timeSam = GetRandomNumbersTime(tid, pGen);
+    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+      res.waveSam = GetRandomNumbersSpec(tid, pGen);
+    res.cosTheta = 1.0f;
+  }
   
-  float tmp = 0.0f;
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
+
+  return res;
+}
+
+
+void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
+                                    float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                    float4* accumColor,    float4* accumuThoroughput,
+                                    RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
+{
+  if(tid >= m_maxThreadId)
+    return;
+
+  *accumColor        = make_float4(0,0,0,0);
+  *accumuThoroughput = make_float4(1,1,1,1);
+  RandomGen genLocal = m_randomGens[tid];
+  *rayFlags          = 0;
+  *misData           = makeInitialMisData();
+
+  EyeRayData r = SampleCameraRay(&genLocal, tid);
+  
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = GetRandomNumbersSpec(tid, &genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
+    *wavelengths = SampleWavelengths(r.waveSam, LAMBDA_MIN, LAMBDA_MAX);
   else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
+    *wavelengths = float4(0.0f);
 
-  if(m_normMatrices2.size() != 0)
-    *time = GetRandomNumbersTime(tid, &genLocal);
-  else
-    *time = 0.0f;  
-
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
+  *time = r.timeSam;
  
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  transform_ray3f(m_worldViewInv, &r.rayPos, &r.rayDir);
+
+  *rayPosAndNear = to_float4(r.rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(r.rayDir, FLT_MAX);
   *gen           = genLocal;
 }
 
