@@ -94,7 +94,7 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  virtual void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
+  virtual void kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                                   float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
 
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
@@ -389,6 +389,7 @@ public:
   };
 
   virtual EyeRayData SampleCameraRay(RandomGen* pGen, uint tid);
+  virtual uint       RandomGenId(uint tid);
 
   uint m_disableImageContrib = 0;
 

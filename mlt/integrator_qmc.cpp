@@ -128,28 +128,13 @@ float IntegratorQMC::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_boun
   return rndFloat1_Pseudo(a_gen); 
 }
 
-void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                       float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                       float4* accumColor,    float4* accumuThoroughput,
-                                       RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
+uint IntegratorQMC::RandomGenId(uint tid) { return tid % uint(m_randomGens.size()); }
+
+Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
 {
-  if(tid >= m_maxThreadId)
-    return;
-
-  *accumColor        = make_float4(0,0,0,0);
-  *accumuThoroughput = make_float4(1,1,1,1);
-  *rayFlags          = 0;
-  *misData           = makeInitialMisData();
-  
-  ///////////////////////////////////////////////////////////////////////////////////// begin change
-  const uint rgIndex = tid % uint(m_randomGens.size());
-  RandomGen genLocal = m_randomGens[rgIndex];
-
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
-
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
   float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
   float3 rayPos = float3(0,0,0);
-  ///////////////////////////////////////////////////////////////////////////////////// end change
 
   if (m_camLensRadius > 0.0f)
   {
@@ -161,32 +146,20 @@ void IntegratorQMC::kernel_InitEyeRay2(uint tid, const uint* packedXY,
     rayDir = normalize(focusPosition - rayPos);
   }
 
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  EyeRayData res;
+  {
+    res.rayPos = rayPos;
+    res.rayDir = rayDir;
+    if(m_normMatrices2.size() != 0)
+      res.timeSam = GetRandomNumbersTime(tid, pGen);
+    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+      res.waveSam = GetRandomNumbersSpec(tid, pGen);
+    res.cosTheta = 1.0f;
+  }
   
-  float tmp = 0.0f;
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = GetRandomNumbersSpec(tid, &genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
-  else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
 
-  if(m_normMatrices2.size() != 0)
-    *time = GetRandomNumbersTime(tid, &genLocal);
-  else
-    *time = 0.0f;  
-
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
- 
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = genLocal;
+  return res;
 }
 
 void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen,
@@ -197,8 +170,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
     return;
   
   const float4 pixelOffsets = GetRandomNumbersLens(tid, const_cast<RandomGen*>(gen));
-  const uint   rgenIndex    = tid % uint(m_randomGens.size()); ////////////////// change
-  m_randomGens[rgenIndex]   = *gen;
+  m_randomGens[RandomGenId(tid)] = *gen;
   if(m_disableImageContrib !=0)
     return;
   
@@ -308,7 +280,7 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
       out_color[offsetLayer + offsetPixel] += color[i];
     }
   }
-   /////////////////////////////////////////////////////////////////////////////// end change, atomics
+  /////////////////////////////////////////////////////////////////////////////// end change, atomics
 }
 
 void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)

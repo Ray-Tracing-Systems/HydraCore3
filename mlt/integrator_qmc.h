@@ -22,19 +22,14 @@ public:
   float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce) override;
   float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) override;
 
-  void   kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                            float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                            float4* accumColor,    float4* accumuThoroughput,
-                            RandomGen* gen, uint* rayFlags, MisData* misData, float* time) override;
+  EyeRayData SampleCameraRay(RandomGen* pGen, uint tid) override;
+  uint       RandomGenId(uint tid) override;
 
   void   kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen,
                                   const uint* in_pakedXY, const float4* wavelengths, float* out_color) override;
 
   void   PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum) override;
   unsigned int m_qmcTable[qmc::QRNG_DIMENSIONS][qmc::QRNG_RESOLUTION];
-
-  int qmcMatOffset();
-  int qmcLgtOffset();
   
   void SetQmcVariantOffsets();
   uint m_qmcMatDim = 0;
