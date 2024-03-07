@@ -292,6 +292,7 @@ public:
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   float4 m_camRespoceRGB = float4(1,1,1,1);
+  float3 SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uint32_t rayFlags);
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
