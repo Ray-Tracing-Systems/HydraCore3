@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <filesystem>
+#include <optional>
 #include "LiteMath.h"
 #include "include/cglobals.h"
 #include <spectral/spec/spectrum.h>
@@ -11,17 +12,22 @@
 using namespace LiteMath;
 #endif
 
+constexpr uint32_t INVALID_SPECTRUM_ID = 0xFFFFFFFF;
+
 #ifndef KERNEL_SLICER
+
 struct Spectrum
 {
   float Sample(float lambda) const;
   //std::vector<float> Resample(int channels, float lambdaOffs = 0.0f);
-  std::vector<float> ResampleUniform();
+  std::vector<float> ResampleUniform() const;
 
   spec::ISpectrum::ptr spectrum;
-  uint32_t id = 0;
+  uint32_t id = INVALID_SPECTRUM_ID;
 };
 #endif
+
+std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
 inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 
 {

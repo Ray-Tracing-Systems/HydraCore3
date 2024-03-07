@@ -17,12 +17,15 @@ using cmesh4::SimpleMesh;
 #include <optional>
 #include <fstream>
 #include <filesystem>
+#include <variant>
 
 #include "Image2d.h"
 using LiteImage::Image2D;
 using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
+
+struct ResourceContext;
 
 struct TextureInfo
 {
@@ -73,28 +76,78 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes);
 std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy();
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma = false);
 
-struct SpectrumInfo
+class SpectrumLoader
 {
-  std::wstring path;   
-  uint32_t id;
+public:
+  SpectrumLoader(const std::wstring &str, uint32_t spec_id)
+    : data{str}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+  SpectrumLoader(const spec::vec3 &v, uint32_t spec_id)
+    : data{v}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+
+  SpectrumLoader(const SpectrumLoader &other) = delete;
+  SpectrumLoader &operator=(const SpectrumLoader &other) = delete;
+
+  SpectrumLoader(SpectrumLoader &&other)
+    : data{std::move(other.data)}, spec_id{other.spec_id}, spectrum{std::move(other.spectrum)}, not_loaded{other.not_loaded} {}
+  SpectrumLoader &operator=(SpectrumLoader &&other)
+  {
+    data = std::move(other.data);
+    std::swap(spec_id, other.spec_id);
+    spectrum = std::move(other.spectrum);
+    std::swap(not_loaded, other.not_loaded);
+  }
+
+  const std::optional<Spectrum> &load() const;
+
+private:
+  std::variant<spec::vec3, std::wstring> data;
+  uint32_t spec_id;
+  mutable std::optional<Spectrum> spectrum;
+  mutable bool not_loaded;
 };
 
-struct ResourceContext
+
+
+class ColorHolder
 {
-  std::vector<SpectrumInfo> spectra;
-  std::vector<TextureInfo> textures;
+  const std::variant<uint32_t, float4> value;
+public:
+  ColorHolder(uint32_t spec_id)
+    : value{spec_id} {}
+  ColorHolder(const float4& rgb)
+    : value{rgb} {}
+
+  bool isSpectrum() const
+  {
+    return std::holds_alternative<uint32_t>(value);
+  }
+
+  bool isRGB() const
+  {
+    return std::holds_alternative<float4>(value);
+  }
+
+  uint32_t getSpectrumId() const
+  {
+    return std::get<uint32_t>(value);
+  }
+
+  float4 getRGB() const
+  {
+    return std::get<float4>(value);
+  }
+
 };
 
-Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
+const std::optional<Spectrum> &LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumLoader> &spectraInfo);
 
-std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo);
 uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const ResourceContext &resources,
+std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, ResourceContext &resources,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                       std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
@@ -102,53 +155,55 @@ std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const Resource
                                                   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                   std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
-float4 GetColorFromNode(const pugi::xml_node& a_node, const ResourceContext &resources, bool is_spectral_mode);
+float4 GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources);
 
-Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources, bool is_spectral_mode);
+
+
+Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              bool is_spectral_mode);
 
-Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                  bool is_spectral_mode);
 
-Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                     std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                     bool is_spectral_mode);
 
-Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              std::vector<uint2> &spec_tex_ids_wavelengths,
                              const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures,
                              bool is_spectral_mode);
 
-Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material LoadDielectricMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                 std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                                 bool is_spectral_mode);
 
 
-Material LoadBlendMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material LoadBlendMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                            std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                            std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
 float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex);
 
-Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const ResourceContext &resources,
+Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext &resources,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
-                             const std::vector<float> &spectra,
-                             const std::vector<uint2> &spec_offsets, std::vector<uint2> &spec_tex_ids_wavelengths,
+                             std::vector<uint2> &spec_tex_ids_wavelengths,
                              const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures);
 
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
-                                    const ResourceContext &resources, 
+                                    ResourceContext &resources, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures);
 
@@ -157,3 +212,14 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);
 //std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 //bool                  Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir);
+
+
+
+struct ResourceContext
+{ 
+  std::vector<SpectrumLoader> spectraInfo;
+  std::vector<TextureInfo> texturesInfo;
+
+
+
+};

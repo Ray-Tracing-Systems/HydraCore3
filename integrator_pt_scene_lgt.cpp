@@ -3,7 +3,7 @@
 std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
 
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
-                                    const ResourceContext &resources, 
+                                    ResourceContext &resources, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     std::vector< std::shared_ptr<ICombinedImageSampler> >& a_textures)
 {
@@ -17,9 +17,17 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   if (power == 0.0f) power = lightInst.lightNode.child(L"intensity").child(L"multiplier").attribute(L"val").as_float();
   if (power == 0.0f) power = 1.0f;
 
-  float4 color     = GetColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), resources, a_spectral_mode != 0);
+
+  ColorHolder var_color = GetVariableColorFromNode(lightInst.lightNode.child(L"intensity").child(L"color"), resources, a_spectral_mode);
+  float4 color;
+  uint32_t lightSpecId = INVALID_SPECTRUM_ID;
+  if(var_color.isRGB()) {
+    color = var_color.getRGB();
+  }
+  else {
+    lightSpecId = var_color.getSpectrumId();
+  }
   auto matrix      = lightInst.matrix;
-  auto lightSpecId = GetSpectrumIdFromNode(lightInst.lightNode.child(L"intensity").child(L"color"));  
 
   LightSource lightSource{};
   lightSource.specId   = lightSpecId;
@@ -152,7 +160,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
         lightSource.iesMatrix   = mWorldViewProj; 
         if(projNode.child(L"texture") != nullptr)
         {
-          const auto& [samplerProj, texIdProj] = LoadTextureFromNode(projNode, texturesInfo, texCache, a_textures); 
+          const auto& [samplerProj, texIdProj] = LoadTextureFromNode(projNode, resources, texCache, a_textures); 
 
           lightSource.flags |= LIGHT_FLAG_PROJECTIVE;
           lightSource.texId = texIdProj; // to process -1 correctly

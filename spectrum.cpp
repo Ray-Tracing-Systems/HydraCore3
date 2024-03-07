@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 #include <spectral/spec/spectral_util.h>
+#include <iostream>
 
-
-std::vector<float> Spectrum::ResampleUniform()
+std::vector<float> Spectrum::ResampleUniform() const
 {
   std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN));
   for(unsigned c = 0; c < res.size(); c++)
@@ -18,14 +18,19 @@ float Spectrum::Sample(float lambda) const
   return spectrum->get_or_interpolate(lambda);
 }
 
-Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
+std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
   Spectrum res;
+  spec::ISpectrum::csptr illum;
+  std::cerr << path.string() << std::endl;
 
-  spec::util::load(path, res.spectrum);
-  res.id = spec_id;
-
-  return res;
+  if(spec::util::load_spectrum(path.string(), res.spectrum, illum)) {
+    res.id = spec_id;
+    return res;
+  }
+  else {
+    return {};
+  }
 }
 
 constexpr uint32_t nCIESamples = 471;

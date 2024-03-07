@@ -1,6 +1,7 @@
 #include "integrator_pt_scene.h"
 
 #include <spectral/spec/basic_spectrum.h>
+#include <spectral/upsample/upsamplers.h>
 
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
@@ -49,6 +50,7 @@ static const std::wstring dielectricMatTypeStr     {L"dielectric"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
+  ResourceContext temporaryContext{};
   if(pSceneInfo == nullptr)
   {
     std::cout << "[Integrator::PreliminarySceneAnalysis]: nullptr pSceneInfo" << std::endl;
@@ -85,8 +87,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     {
       float4 transpColor = float4(0, 0, 0, 0);
       auto nodeTransp = materialNode.child(L"transparency");
-      if (nodeTransp != nullptr && !pSceneInfo->spectral)
-        transpColor = GetColorFromNode(nodeTransp.child(L"color"), {}, false);// if spectral color then not transparent
+      if (nodeTransp != nullptr)
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), temporaryContext);// if spectral color then not transparent
   
       if(LiteMath::length3f(transpColor) > 1e-5f)
         features[KSPEC_MAT_TYPE_GLASS] = 1;
@@ -234,6 +236,30 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
 void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
 
+namespace {
+
+  void PushDummySpectrum(std::vector<float> &spec_values, std::vector<uint2> &spec_offsets)
+  {
+    Spectrum uniform1;
+    uniform1.id = 0;
+
+    spec::BasicSpectrum *sp = new spec::BasicSpectrum();
+
+    sp->set(200.0f, 1.0f);
+    sp->set(400.0f, 1.0f);
+    sp->set(600.0f, 1.0f);
+    sp->set(800.0f, 1.0f);
+
+    uniform1.spectrum.reset(sp);
+    auto specValsUniform = uniform1.ResampleUniform();
+    
+    uint32_t offset = uint32_t(spec_values.size());
+    std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(spec_values));
+    spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+  }
+
+}
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   LoadSceneBegin();
@@ -271,18 +297,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   ResourceContext resources{};
 
-  resources.textures.resize(0);
-  resources.textures.reserve(100);
+  resources.texturesInfo.resize(0);
+  resources.texturesInfo.reserve(100);
 
-  #ifdef WIN32
-  size_t endPos = scenePathStr.find_last_of("\\");
-  if(endPos == std::string::npos)
-    endPos = scenePathStr.find_last_of("/");
-  #else
-  size_t endPos = scenePathStr.find_last_of('/');
-  #endif
 
-  const std::string sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+
+  const std::filesystem::path sceneFolder = (sceneDirStr == "") ? std::filesystem::path(scenePathStr).parent_path() : std::filesystem::path(sceneDirStr);
 
   //// (0) load textures info
   //
@@ -291,9 +311,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     TextureInfo tex;
 
     if (texNode.attribute(L"loc").empty())
-      tex.path = std::wstring(texNode.attribute(L"path").as_string());
+      tex.path = (sceneFolder / texNode.attribute(L"path").as_string()).wstring();
     else
-      tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+      tex.path = (sceneFolder / texNode.attribute(L"loc").as_string()).wstring();
+
     
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
@@ -303,7 +324,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
       texturesInfo.push_back(tex);
     }
-    resources.textures.push_back(tex);
+    resources.texturesInfo.push_back(tex);
   }
 
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> texCache;
@@ -314,67 +335,37 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_textures.push_back(MakeWhiteDummy());
 
 
-  resources.spectra.reserve(100);
-  if(m_spectral_mode != 0)
-  {  
-    for(auto specNode : scene.SpectraNodes())
+  resources.spectraInfo.reserve(100);
+  for(auto specNode : scene.SpectraNodes())
+  {
+    auto spec_id   = specNode.attribute(L"id").as_uint();
+
+    auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+    if(refs_attr && m_spectral_mode) //might need to remove later
     {
-      auto spec_id   = specNode.attribute(L"id").as_uint();
+      auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 
-      auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-      if(refs_attr)
+ //     assert(lambda_ref_ids.size() % 2 == 0); ???
+
+      size_t tex_spec_sz = lambda_ref_ids.size() / 2;
+
+      uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
+      for(size_t idx = 0; idx < tex_spec_sz; ++idx)
       {
-        auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
-
-        assert(lambda_ref_ids.size() % 2 == 0);
-
-        size_t tex_spec_sz = lambda_ref_ids.size() / 2;
-
-        uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
-        for(size_t idx = 0; idx < tex_spec_sz; ++idx)
-        {
-          m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
-        }
-        
-        m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-        m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+        m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
       }
-      else
-      {
-        auto spec_path = std::filesystem::path(sceneFolder);
-        spec_path.append(specNode.attribute(L"loc").as_string());
-
-        auto spec = LoadSPDFromFile(spec_path, spec_id);
-        auto specValsUniform = spec.ResampleUniform();
-        
-        uint32_t offset = uint32_t(m_spec_values.size());
-        std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-
-        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
-        m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
-      }
-
-    }
-
-    // if no spectra are loaded add uniform 1.0 spectrum
-    if(resources.spectra.empty())
-    {
-      Spectrum uniform1;
-      uniform1.id = 0;
-
-      spec::BasicSpectrum *sp = new spec::BasicSpectrum();
-
-      sp->set(200.0f, 1.0f);
-      sp->set(400.0f, 1.0f);
-      sp->set(600.0f, 1.0f);
-      sp->set(800.0f, 1.0f);
-
-      uniform1.spectrum.reset(sp);
-      auto specValsUniform = uniform1.ResampleUniform();
       
-      uint32_t offset = uint32_t(m_spec_values.size());
-      std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+      m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
+      m_spec_offset_sz.push_back(uint2{INVALID_SPECTRUM_ID, 0});
+    }
+    else
+    {
+      auto spec_path = std::filesystem::path(sceneFolder);
+      spec_path.append(specNode.attribute(L"loc").as_string());
+
+      std::wstring wstr = spec_path.wstring();
+
+      resources.spectraInfo.push_back({wstr, spec_id});
     }
   }
 
@@ -388,7 +379,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
-    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, resources, texCache, m_textures);                                
+    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder, m_spectral_mode, resources, texCache, m_textures);                                
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
@@ -416,7 +407,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       
       if(lightSource.texId != uint(-1))
       {
-        auto info         = resources.textures[lightSource.texId];
+        auto info         = resources.texturesInfo[lightSource.texId];
         addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
         m_envEnableSam    = addToLightSources ? 1 : 0;
   
@@ -493,7 +484,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == plasticMatTypeStr)
     {
       mat = LoadPlasticMaterial(materialNode, resources, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
-                                m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+                                m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
@@ -618,7 +609,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
             break;
         }
 
-        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), resources, false);
+        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), resources);
         m_camRespoceRGB.w = 1.0f;
       }
     }
@@ -636,7 +627,32 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     break; // take first cam
   }
 
-  
+
+  //Load found spectra
+  if(m_spectral_mode) {
+    for(const auto &specInfo : resources.spectraInfo)
+    {
+      const auto &spec = specInfo.load();
+
+      if(spec) {
+        auto specValsUniform = spec->ResampleUniform();
+
+        uint32_t offset = uint32_t(m_spec_values.size());
+        std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
+        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+      }
+      else {
+        PushDummySpectrum(m_spec_values, m_spec_offset_sz);
+      }
+    }
+
+    // if no spectra are loaded add uniform 1.0 spectrum
+    if(resources.spectraInfo.empty())
+    {
+      PushDummySpectrum(m_spec_values, m_spec_offset_sz);
+    }
+  }
+
   //// (2) load meshes
   //
   m_matIdOffsets.reserve(1024);
