@@ -255,6 +255,64 @@
     },
 
     {
+        "name": "ORB2/L1.3(SPEC)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", "--spectral",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraCore3/scenes/orb2/L1.3_cornell_box_hydra_spec/scene_hydra3.xml",
+                 "-integrator", "kmlt",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "256",
+                 //"--qmc",
+                 "-fb_layer", "color",
+                 "-out", "z_out_kmlt_256.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "ORB2/SPEC_GLASS",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraCore3/scenes/orb2/SPEC_GLASS/scene_hydra3.xml",
+                 "-integrator", "kmlt",
+                 "--spectral",
+                 "-scn_dir", "scenes/orb2",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "64",
+                 //"--qmc",
+                 "-fb_layer", "color",
+                 "-out", "z_out_kmlt_16.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "CPU Release",
         "type": "cppdbg",
         "request": "launch",
