@@ -108,7 +108,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
-float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir)
+float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   
@@ -120,7 +120,7 @@ float4 Integrator::LightIntensity(uint a_lightId, const float4* a_wavelengths, f
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, *a_wavelengths, size);
+    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
   lightColor *= m_lights[a_lightId].mult;
   

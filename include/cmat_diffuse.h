@@ -14,7 +14,7 @@ static inline void diffuseSampleAndEval(const Material* a_materials, float4 a_re
   const float  lambertVal = lambertEvalBSDF(lambertDir, v, n);
 
   pRes->dir   = lambertDir;
-  pRes->val   = lambertVal * a_reflSpec;
+  pRes->val   = lambertVal * a_reflSpec * color;
   pRes->pdf   = lambertPdf;
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
         
@@ -24,8 +24,8 @@ static inline void diffuseSampleAndEval(const Material* a_materials, float4 a_re
 }
 
 
-static void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
-                        float4 color, BsdfEval* res)
+static inline void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
+                               float4 color, BsdfEval* res)
 {
   const uint cflags = a_materials[0].cflags;
  
@@ -35,6 +35,6 @@ static void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l
   if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
     lambertVal *= orennayarFunc(l, v, n, a_materials[0].data[DIFFUSE_ROUGHNESS]);
 
-  res->val = lambertVal * a_reflSpec; 
+  res->val = lambertVal * a_reflSpec * color; 
   res->pdf = lambertPdf; 
 }
