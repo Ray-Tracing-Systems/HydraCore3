@@ -108,7 +108,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
   return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
-float4 Integrator::LightIntensity(uint a_lightId, const float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir)
+float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   float4 lightColor = m_lights[a_lightId].intensity;  
   

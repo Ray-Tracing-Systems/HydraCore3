@@ -315,7 +315,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       misWeight = 0.0f;
       
     
-    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
+    const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -371,7 +371,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = LightIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
