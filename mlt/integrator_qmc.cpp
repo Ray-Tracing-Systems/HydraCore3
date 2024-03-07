@@ -223,6 +223,8 @@ Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
     res.rayDir = rayDir;
     res.x      = x;
     res.y      = y;
+    res.timeSam = 0.0f;
+    res.waveSam = 1.0f;
     if(m_normMatrices2.size() != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)

@@ -45,6 +45,11 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
+  //if(x == 252 && y == 512-96-1)
+  //{
+  //  int a = 2;
+  //}
+
   const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
 
   float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
@@ -67,6 +72,8 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     res.rayDir = rayDir;
     res.x      = x;
     res.y      = y;
+    res.timeSam = 0.0f;
+    res.waveSam = 1.0f;
     if(m_normMatrices2.size() != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
