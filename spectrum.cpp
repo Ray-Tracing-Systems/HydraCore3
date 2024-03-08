@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// unused
+
 float Spectrum::Sample(float lambda) const
 {
   if (wavelengths.empty() || lambda < wavelengths.front() || lambda > wavelengths.back())
@@ -42,7 +42,7 @@ float Spectrum::Sample(float lambda) const
 std::vector<float> Spectrum::ResampleUniform()
 {
   std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN + 1));
-  for(int c=0;c<res.size();c++)
+  for(uint32_t c = 0; c < res.size(); ++c)
     res[c] = Sample(LAMBDA_MIN + float(c));
   return res;
 }

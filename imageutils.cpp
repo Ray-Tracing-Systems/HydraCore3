@@ -223,6 +223,14 @@ bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfi
   return true;
 }
 
+bool SaveImage4fByExtension(const float* data, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
+{
+  auto pixelData = FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma);
+  auto tmp = LiteImage::Image2D<uint32_t>(width, height, pixelData.data());
+  
+  return LiteImage::SaveImage(outfilename, tmp);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -236,8 +244,10 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
   int ret = LoadEXR(&out, &width, &height, infilename, &err);
   if (ret != TINYEXR_SUCCESS) {
     if (err) {
-      fprintf(stderr, "[LoadImage4fFromEXR] : %s\n", err);
-      std::cerr << "[LoadImage4fFromEXR] : " << err << std::endl;
+      fprintf(stderr, "[LoadImage1fFromEXR] : %s\n", err);
+      std::cerr << "[LoadImage1fFromEXR] : " << err;
+      std::cerr << " from path : " << infilename << std::endl;
+      
       delete err;
     }
     return std::vector<float>();

@@ -197,9 +197,10 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
       const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0);
+      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, DIFFUSE_COLOR, 0, tc);
       if(m_spectral_mode == 0)
         reflSpec *= color;
+      
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
     }
     break;
@@ -207,7 +208,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     if(KSPEC_MAT_TYPE_PLASTIC != 0)
     {
       const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
+      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, PLASTIC_COLOR, 0, tc);
+      // float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
       if(m_spectral_mode == 0)
         reflSpec *= color;
 
@@ -366,9 +368,9 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
         const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0);
+        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, DIFFUSE_COLOR, 0, tc);
         if(m_spectral_mode == 0)
-          reflSpec *= color;
+          reflSpec *= color;        
         diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc,  &currVal);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
@@ -379,7 +381,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
+        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, PLASTIC_COLOR, 0, tc);
+        // float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
         if(m_spectral_mode == 0)
           reflSpec *= color;
         const uint precomp_id = m_materials[currMat.id].datai[0];

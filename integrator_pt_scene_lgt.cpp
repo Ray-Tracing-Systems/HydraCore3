@@ -184,7 +184,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
 
 static std::vector<float> PrefixSumm(const std::vector<float>& a_vec)
 {
-  double accum = 0.0f;
+  double accum = 0.0;
   std::vector<float> avgBAccum(a_vec.size() + 1);
   for (size_t i = 0; i < a_vec.size(); i++)
   {
@@ -201,7 +201,7 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
   
   int tableW = pTex->width();
   int tableH = pTex->height();
-  const float2 whInv(1.0f/tableW, 1.0f/tableH);
+  const float2 whInv(1.0f / float(tableW), 1.0f / float(tableH));
   std::vector<float> lumImage(tableW*tableH);
         
   float avg = 0.0f;

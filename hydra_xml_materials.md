@@ -91,7 +91,7 @@ Examples:
 ### Conductor
 
 Models conductive materials with complex Fresnel IOR: eta (refractive index) and k (extinction coefficient). 
-Should be used in *spectral* rendering mode (pass `--spectral` in command line).
+Generally, should be used in *spectral* rendering mode (pass `--spectral` in command line). In RGB mode you can use *reflectance* parameter to specify color (not physically correct).
 
 Spectra can be found, for example, [here](https://refractiveindex.info/)
 
@@ -103,6 +103,7 @@ Spectra can be found, for example, [here](https://refractiveindex.info/)
 | alpha_v  | `val` - microfacet roughness in v direction, possible values - 1 float | no | no |
 | eta  | `val` - refractive index, possible values - 1 float | no | yes |
 | k  | `val` - extinction coefficient, possible values - 1 float | no | yes |
+| reflectance  | `val` - color multiplier, used in RGB mode to set color, no effect in spectral mode, not physically correct, possible values - 3 floats | no | no |
 
 Examples:
 
@@ -132,6 +133,14 @@ Examples:
     </alpha>
     <eta val="1.5" />
     <k val="1.0" />
+  </material>
+  <material id="3" name="conductor_rgb_mode" type="rough_conductor">
+    <bsdf type="ggx" />
+    <alpha_u val="0.1" />
+    <alpha_v val="0.1" />
+    <eta val="1.5" />
+    <k val="1.0" />
+    <reflectance val ="1.0 0.782 0.344" />
   </material>
 </materials_lib>
 ```

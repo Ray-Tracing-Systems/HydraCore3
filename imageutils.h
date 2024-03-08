@@ -30,3 +30,5 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH);
 std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 float* LoadImage4fFromEXRUnsafe(const char* infilename, int* pW, int* pH);
 
+bool SaveImage4fByExtension(const float* data, int width, int height, const char* outfilename, float a_normConst  = 1.0f, float a_gamm = 2.2f) ;
+

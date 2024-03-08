@@ -5,6 +5,11 @@ option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
 
+option(USE_STB_IMAGE "Enable STB image " ON)
+if(USE_STB_IMAGE)
+  add_definitions(-DUSE_STB_IMAGE)
+endif()
+
 if(USE_ENZYME)
   set(CLANG_VERSION "17" CACHE STRING "clang and LLVM version to use")
   set(CMAKE_C_COMPILER   "/usr/bin/clang-${CLANG_VERSION}")   # $ export CC=/usr/bin/clang-17
@@ -68,8 +73,8 @@ endif()
 include_directories(SYSTEM ${Vulkan_INCLUDE_DIR})
 include_directories(SYSTEM "external/tinyexr"
                     "external/volk"
-                    "external/LiteMath")
-
+                    "external/LiteMath"
+                    "external/LiteMath/external")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     "external"
                     "external/vkutils"

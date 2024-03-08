@@ -339,6 +339,10 @@ public:
 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
+
+  std::vector<uint2> m_spec_tex_ids_wavelengths;
+  std::vector<uint2> m_spec_tex_offset_sz;
+
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;
@@ -347,6 +351,7 @@ public:
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+  float4 SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords);
 
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;

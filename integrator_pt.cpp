@@ -318,7 +318,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
     const bool isDirectLight = !hasNonSpecular(currRayFlags);
     if((m_renderLayer == FB_DIRECT   && !isDirectLight) || 
-        m_renderLayer == FB_INDIRECT && isDirectLight) // skip some number of bounces if this is set
+       (m_renderLayer == FB_INDIRECT && isDirectLight)) // skip some number of bounces if this is set
       misWeight = 0.0f;
       
     

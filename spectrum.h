@@ -23,18 +23,34 @@ struct Spectrum
 };
 #endif
 
-inline size_t BinarySearch(const float* array, size_t array_sz, float val) 
+inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 
 {
   int32_t last = (int32_t)array_sz - 2, first = 1;
   while (last > 0) 
   {
-    size_t half = (size_t)last >> 1, 
+    uint32_t half = (uint32_t)last >> 1, 
     middle = first + half;
     bool predResult = array[middle] <= val;
     first = predResult ? int32_t(middle + 1) : first;
     last = predResult ? last - int32_t(half + 1) : int32_t(half);
   }
-  return (size_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
+  return (uint32_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
+}
+
+
+// temporary?
+inline uint32_t BinarySearchU2(const uint2* array, uint32_t array_sz, float val) 
+{
+  int32_t last = (int32_t)array_sz - 2, first = 1;
+  while (last > 0) 
+  {
+    uint32_t half = (uint32_t)last >> 1, 
+    middle = first + half;
+    bool predResult = float(array[middle].y) <= val;
+    first = predResult ? int(middle + 1) : first;
+    last = predResult ? last - int(half + 1) : int(half);
+  }
+  return (uint32_t)clamp(int(first - 1), 0, int(array_sz - 2));
 }
 
 // "stratified" sample wavelengths in [a, b] with random number u
@@ -92,11 +108,20 @@ static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_
   const int4 index1 = int4(min(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)), float4(WAVESN - 1)));   
   const int4 index2 = min(index1 + int4(1), int4(WAVESN-1));
 
+  // const float4 mask = {index1.x >= WAVESN ? 0 : 1, index1.y >= WAVESN ? 0 : 1, index1.z >= WAVESN ? 0 : 1, index1.w >= WAVESN ? 0 : 1};
+  
+
   const float4 x1 = float4(LAMBDA_MIN) + float4(index1);
   const float4 y1 = float4(a_spec_values[index1[0]], a_spec_values[index1[1]], a_spec_values[index1[2]], a_spec_values[index1[3]]); // TODO: reorder mem access for better cache: (index1[0], index2[0])
   const float4 y2 = float4(a_spec_values[index2[0]], a_spec_values[index2[1]], a_spec_values[index2[2]], a_spec_values[index2[3]]); // TODO: reorder mem access for better cache: (index1[1], index2[1])
 
-  return y1 + (a_wavelengths - x1) * (y2 - y1);
+  auto res = (y1 + (a_wavelengths - x1) * (y2 - y1));
+  // if(std::isinf(res.x) || std::isnan(res.x) || res.x < 0)
+  // {
+  //   int a = 2;
+  // }
+
+  return res;
 }
 
 //static inline float4 SampleCIE(const float4 &lambda, const float* cie, float a = LAMBDA_MIN, float b = LAMBDA_MAX)
@@ -132,7 +157,7 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   if(terminate_waves)
   {
     pdf[0] /= SPECTRUM_SAMPLE_SZ;
-    for(int i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
+    for(uint32_t i = 1; i < SPECTRUM_SAMPLE_SZ; ++i)
     {
       pdf[i] = 0.0f;
     }
