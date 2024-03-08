@@ -195,8 +195,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     g_lastSceneInfo.memGeom += byteSize;
   }
 
-  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024*256;
-  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024*256;
+  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024u * 256u;
+  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024u * 256u;
 
   g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
   g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex

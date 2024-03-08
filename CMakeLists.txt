@@ -75,7 +75,8 @@ include_directories(SYSTEM "external/tinyexr"
                     "external/volk"
                     "external/LiteMath"
                     "external/LiteMath/external")
-include_directories("external"
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}
+                    "external"
                     "external/vkutils"
                     "external/CrossRT")
 

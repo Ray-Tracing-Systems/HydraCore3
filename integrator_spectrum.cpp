@@ -65,8 +65,8 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
       {
         for(int i = 0; i < 4; ++i)
         {
-          if (a_wavelengths[i] < m_spec_tex_ids_wavelengths[tex_offset].y ||
-              a_wavelengths[i] > m_spec_tex_ids_wavelengths[tex_offset + tex_size - 1].y)
+          if (a_wavelengths[i] < float(m_spec_tex_ids_wavelengths[tex_offset].y) ||
+              a_wavelengths[i] > float(m_spec_tex_ids_wavelengths[tex_offset + tex_size - 1].y) )
           {
             res[i] = 0.0f;
             continue;
@@ -82,7 +82,7 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
           const float4 texColor2 = m_textures[texID2]->sample(texCoordT);
   
           float t = (a_wavelengths[i] - m_spec_tex_ids_wavelengths[tex_offset + o].y) / 
-                    (m_spec_tex_ids_wavelengths[tex_offset + o + 1].y - m_spec_tex_ids_wavelengths[tex_offset + o].y );
+                    float(m_spec_tex_ids_wavelengths[tex_offset + o + 1].y - m_spec_tex_ids_wavelengths[tex_offset + o].y );
                     
           float4 outColor = lerp(texColor1, texColor2, t);
 

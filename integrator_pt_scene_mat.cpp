@@ -639,7 +639,7 @@ float4 image2D_average(const std::shared_ptr<ICombinedImageSampler> &tex)
   uint32_t channels = tex->bpp() / sizeof(float);
   for(size_t i = 0; i < tex_sz / channels; ++i)
   {  
-    for(size_t j = 0; j < channels; ++i)
+    for(size_t j = 0; j < channels; ++j)
     {
       res.M[j] += ptr[i * channels + j];
     }
@@ -698,7 +698,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
   }
 
   float internal_ior = hydra_xml::readval1f(materialNode.child(L"int_ior"), 1.49f);
-  float external_ior = hydra_xml::readval1f(materialNode.child(L"ext_ior"), 1.000277);
+  float external_ior = hydra_xml::readval1f(materialNode.child(L"ext_ior"), 1.000277f);
 
   mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
 
