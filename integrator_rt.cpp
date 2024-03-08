@@ -434,8 +434,9 @@ void Integrator::RayTrace(uint tid, uint channels, float* out_color)
   {
     float4 hitPart1, hitPart2, hitPart3;
     uint instId;
-    RandomGen dummy;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &dummy);
+    float time = 0.0f;
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
 

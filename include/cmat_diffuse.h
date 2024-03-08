@@ -6,7 +6,7 @@
 
 
 static inline void diffuseSampleAndEval(const Material* a_materials, float4 a_reflSpec, float4 rands, float3 v, 
-                                        float3 n, float2 tc, float4 color, BsdfSample* pRes)
+                                        float3 n, float2 tc, BsdfSample* pRes)
 {
   const uint   cflags     = a_materials[0].cflags;
   const float3 lambertDir = lambertSample(float2(rands.x, rands.y), v, n);
@@ -24,8 +24,7 @@ static inline void diffuseSampleAndEval(const Material* a_materials, float4 a_re
 }
 
 
-static void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
-                        float4 color, BsdfEval* res)
+static inline void diffuseEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, BsdfEval* res)
 {
   const uint cflags = a_materials[0].cflags;
  

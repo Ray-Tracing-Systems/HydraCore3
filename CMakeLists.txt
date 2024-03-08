@@ -141,7 +141,6 @@ else()
 endif()
 
 if(CAM_PLUGIN)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   set(MAIN_FILES ${CAM_MAIN}
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
@@ -165,6 +164,9 @@ set(CORE_SRC
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
         integrator_spectrum.cpp
+        mlt/integrator_qmc.cpp
+        mlt/integrator_kmlt.cpp
+        mlt/rnd_qmc.cpp
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp

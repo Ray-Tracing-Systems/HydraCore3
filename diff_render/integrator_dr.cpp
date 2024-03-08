@@ -251,7 +251,9 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint bounce, f
     {
       const float4 color       = texColor;
       const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0, dparams);
-      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
+      if(m_spectral_mode == 0)
+        reflSpec *= color;
+      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
     }
     break;
     case MAT_TYPE_PLASTIC:
@@ -471,8 +473,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                      float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+void IntegratorDR::kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
                                       float4* accumColor,    float4* accumuThoroughput,
                                       uint* rayFlags, MisData* misData, 
                                       const float* drands, const float* dparams) // 
@@ -485,7 +486,7 @@ void IntegratorDR::kernel_InitEyeRay2(uint tid, const uint* packedXY,
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
-  const uint XY = packedXY[tid];
+  const uint XY = m_packedXY[tid];
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
@@ -1479,7 +1480,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
   float4 wavelengths; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &rayFlags, &mis, drands, dparams);
+  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &rayFlags, &mis, drands, dparams);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {

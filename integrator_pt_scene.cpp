@@ -352,9 +352,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // (1) load lights
   //
+  std::vector<uint32_t> oldLightIdToNewLightId(scene.GetInstancesNum(), uint32_t(-1));
+
   m_instIdToLightInstId.resize(scene.GetInstancesNum(), -1);
   m_pdfLightData.resize(0);
-
+  
+  uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
     auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
@@ -404,6 +407,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       else
         addToLightSources = false;
     }
+    
+    if(addToLightSources)
+      oldLightIdToNewLightId[oldLightId] = uint32_t(m_lights.size());
+    oldLightId++;
 
     if(addToLightSources)
       m_lights.push_back(lightSource);
@@ -437,7 +444,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
@@ -550,6 +557,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
 
+    m_camTargetDist = length(float3(cam.lookAt) - float3(cam.pos));
+    m_camLensRadius = 0.0f;
+    {
+      int enable_dof = 0;
+      if(cam.node.child(L"enable_dof") != nullptr)
+        enable_dof = hydra_xml::readval1i(cam.node.child(L"enable_dof"));
+      if(cam.node.child(L"dof_lens_radius") != nullptr && enable_dof != 0)
+        m_camLensRadius = hydra_xml::readval1f(cam.node.child(L"dof_lens_radius"));
+    }
+    
     auto sensorNode = cam.node.child(L"sensor");
     if(sensorNode != nullptr)
     {
@@ -651,8 +668,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
     
     m_remapInst.push_back(inst.rmapId);
-
-    m_instIdToLightInstId[inst.instId] = inst.lightInstId;
+    
+    if(inst.lightInstId != uint32_t(-1))
+      m_instIdToLightInstId[inst.instId] = oldLightIdToNewLightId[inst.lightInstId];
+    else
+      m_instIdToLightInstId[inst.instId] = inst.lightInstId;
     realInstId++;
   }
 

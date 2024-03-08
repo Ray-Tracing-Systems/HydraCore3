@@ -21,57 +21,104 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float  Integrator::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float  Integrator::GetRandomNumbersTime(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLens(uint tid, RandomGen* a_gen)               { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
+{
+  const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  return float4(rands.x, rands.y, rands.z, rndId);
+}
 
-void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                   float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
+float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint Integrator::RandomGenId(uint tid) { return tid; }
+
+Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
+{
+  const uint XY = m_packedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  //if(x == 252 && y == 512-96-1)
+  //{
+  //  int a = 2;
+  //}
+
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
+
+  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
+                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
+  float3 rayPos = float3(0,0,0);
+  
+  if (m_camLensRadius > 0.0f)
+  {
+    const float tFocus         = m_camTargetDist / (-rayDir.z);
+    const float3 focusPosition = rayPos + rayDir*tFocus;
+    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    rayPos.x += xy.x;
+    rayPos.y += xy.y;
+    rayDir = normalize(focusPosition - rayPos);
+  }
+
+  EyeRayData res;
+  {
+    res.rayPos = rayPos;
+    res.rayDir = rayDir;
+    res.x      = x;
+    res.y      = y;
+    res.timeSam = 0.0f;
+    res.waveSam = 1.0f;
+    if(m_normMatrices2.size() != 0)
+      res.timeSam = GetRandomNumbersTime(tid, pGen);
+    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+      res.waveSam = GetRandomNumbersSpec(tid, pGen);
+    res.cosTheta = 1.0f;
+  }
+  
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
+
+  return res;
+}
+
+
+void Integrator::kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                    float4* accumColor,    float4* accumuThoroughput,
+                                    RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
 {
   if(tid >= m_maxThreadId)
     return;
 
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
+  RandomGen genLocal = m_randomGens[RandomGenId(tid)];
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
-  const uint XY = packedXY[tid];
-
-  const uint x = (XY & 0x0000FFFF);
-  const uint y = (XY & 0xFFFF0000) >> 16;
-  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
-
-  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
-                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
-  float3 rayPos = float3(0,0,0);
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  EyeRayData r = SampleCameraRay(&genLocal, tid);
   
-  float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = rndFloat1_Pseudo(&genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
+    *wavelengths = SampleWavelengths(r.waveSam, LAMBDA_MIN, LAMBDA_MAX);
   else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
+    *wavelengths = float4(0.0f);
 
-  RecordPixelRndIfNeeded(pixelOffsets, tmp);
+  *time = r.timeSam;
  
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  transform_ray3f(m_worldViewInv, &r.rayPos, &r.rayDir);
+
+  *rayPosAndNear = to_float4(r.rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(r.rayDir, FLT_MAX);
   *gen           = genLocal;
 }
 
 void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
-                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
+                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -107,13 +154,13 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = m_randomGens[tid];
+  *time          = rayDirData.time;
+  *gen           = m_randomGens[RandomGenId(tid)];
 }
 
 
-void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
-                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags, 
-                                  RandomGen* a_gen)
+void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
+                                  float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -123,12 +170,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
-
-  float time = 0.0f;
-  if(m_normMatrices2.size() > 0) 
-  {
-    time  = rndFloat1_Pseudo(a_gen); 
-  }
+  const float  time   = *a_time;
 
   const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
@@ -213,7 +255,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
                                           const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                          const uint* rayFlags, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
+                                          const uint* rayFlags, const float* a_time, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -233,10 +275,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
-
-  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
+  
+  const int bounceTmp = int(bounce); 
+  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounceTmp); 
+  const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
   RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
 
   if(lightId < 0) // no lights or invalid light id
@@ -251,10 +293,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
 
-  float time = 0.0f;
-  if(m_normMatrices2.size() > 0) 
-    time  = rndFloat1_Pseudo(a_gen); 
-
+  float time = *a_time;
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
   const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
@@ -283,7 +322,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
       misWeight = 0.0f;
       
     
-    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
+    const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -339,7 +378,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = LightIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
@@ -372,7 +411,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const uint bounceTmp    = bounce;
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
@@ -468,7 +507,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
     return;
   
-  m_randomGens[tid] = *gen;
+  m_randomGens[RandomGenId(tid)] = *gen;
   if(m_disableImageContrib !=0)
     return;
 
@@ -591,7 +630,7 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
   else if(channels == 1)
     out_color[tid] += color[0];
 
-  m_randomGens[tid] = *gen;
+  m_randomGens[RandomGenId(tid)] = *gen;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -605,13 +644,15 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -636,17 +677,19 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
@@ -670,18 +713,20 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
+  float     time;
   kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
-                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths);
+                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths, &time);
   
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags, &gen);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, 
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor, &rayPosAndNear, &rayDirAndFar,

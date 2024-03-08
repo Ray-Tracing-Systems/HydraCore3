@@ -9,6 +9,7 @@ static inline void conductorSmoothSampleAndEval(const Material* a_materials, con
                                                 float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
+  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
@@ -21,7 +22,7 @@ static inline void conductorSmoothSampleAndEval(const Material* a_materials, con
     val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
   }
   
-  pRes->val = val; 
+  pRes->val = val * rgb_reflectance; 
   pRes->dir = dir;
   pRes->pdf = pdf;
   pRes->flags = RAY_EVENT_S;
@@ -65,6 +66,8 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
   if(v.z == 0)
     return;
 
+  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
+
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
@@ -91,7 +94,7 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
     val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
   }
 
-  pRes->val   = val; 
+  pRes->val   = val * rgb_reflectance; 
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
@@ -104,6 +107,8 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
 {
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+
+  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
 
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);
@@ -126,7 +131,7 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
     val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
   }
 
-  pRes->val = val;
+  pRes->val = val * rgb_reflectance;
 
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
