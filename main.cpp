@@ -18,6 +18,12 @@ std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spe
 //std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
 
+#ifdef USE_STB_IMAGE
+  #define SaveLDRImageM SaveImage4fByExtension
+#else
+  #define SaveLDRImageM SaveImage4fToBMP
+#endif
+
 int main(int argc, const char** argv) // common hydra main
 {
   #ifndef NDEBUG
@@ -268,7 +274,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + ".bmp";
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
       }
     } // end if enableNaivePT
 
@@ -293,7 +299,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + ".bmp";
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
       }
     } // end if enableShadowPT
 
@@ -322,7 +328,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + ".bmp";
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
       }
     } // end if (enableMISPT)
 
@@ -361,7 +367,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + ".bmp";
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
       }
     } // end if(enableRT || enablePRT)
     
@@ -379,18 +385,9 @@ int main(int argc, const char** argv) // common hydra main
     
     const float normConst = 1.0f/float(PASS_NUMBER);
     if(saveHDR)
-    {
       SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst);
-    }
     else
-    {
-#ifdef USE_STB_IMAGE
-      SaveImage4fByExtension(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
-#else
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
-#endif
-    }
-      
+      SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
   }
 
   return 0;

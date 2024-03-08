@@ -185,49 +185,66 @@ inline float linearToSRGB(float l)
     return 1.055f * std::pow(l, 1.0f/2.4f) - 0.055f;
 }
 
+void FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma, std::vector<uint32_t>& pixelData, bool a_flip)
+{
+  if(std::abs(a_gamma - 2.4f) < 1e-5f) 
+  {
+    #pragma omp parallel for if (width*height > 512*512)
+    for(int y=0;y<height;y++) // flip image and extract pixel data
+    {
+      int offset1 = y*width;
+      int offset2 = a_flip ? (height-y-1)*width : offset1;
+      for (int x = 0; x < width; x++)
+      {
+        float color[4];
+        color[0]     = linearToSRGB(clamp(rgb[4*(offset1+x) + 0]*a_normConst, 0.0f, 1.0f));
+        color[1]     = linearToSRGB(clamp(rgb[4*(offset1+x) + 1]*a_normConst, 0.0f, 1.0f));
+        color[2]     = linearToSRGB(clamp(rgb[4*(offset1+x) + 2]*a_normConst, 0.0f, 1.0f));
+        color[3]     = 1.0f;
+        pixelData[offset2 + x] = RealColorToUint32(color);
+      }
+    }
+  }
+  else 
+  {
+    const float invGamma  = 1.0f/a_gamma;
+    
+    #pragma omp parallel for if (width*height > 512*512)
+    for(int y=0;y<height;y++) // flip image and extract pixel data
+    {
+      int offset1 = y*width;
+      int offset2 = a_flip ? (height-y-1)*width : offset1;
+      for (int x = 0; x < width; x++)
+      {
+        float color[4];
+        color[0]     = clamp(std::pow(rgb[4*(offset1+x) + 0]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[1]     = clamp(std::pow(rgb[4*(offset1+x) + 1]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[2]     = clamp(std::pow(rgb[4*(offset1+x) + 2]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[3]     = 1.0f;
+        pixelData[offset2 + x] = RealColorToUint32(color);
+      }
+    }
+  }
+}
 
-std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma)
+std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma, bool a_flip)
 {
   std::vector<uint32_t> pixelData(width*height);
-  if(std::abs(a_gamma - 2.4f) < 1e-5f) {
-    for(int i=0;i<width*height;i++)
-    {
-      float color[4];
-      color[0]     = linearToSRGB(clamp(rgb[4*i+0]*a_normConst, 0.0f, 1.0f));
-      color[1]     = linearToSRGB(clamp(rgb[4*i+1]*a_normConst, 0.0f, 1.0f));
-      color[2]     = linearToSRGB(clamp(rgb[4*i+2]*a_normConst, 0.0f, 1.0f));
-      color[3]     = 1.0f;
-      pixelData[i] = RealColorToUint32(color);
-    }
-  }
-  else {
-    const float invGamma  = 1.0f/a_gamma;
-    for(int i=0;i<width*height;i++)
-    {
-      float color[4];
-      color[0]     = clamp(std::pow(rgb[4*i+0]*a_normConst, invGamma), 0.0f, 1.0f);
-      color[1]     = clamp(std::pow(rgb[4*i+1]*a_normConst, invGamma), 0.0f, 1.0f);
-      color[2]     = clamp(std::pow(rgb[4*i+2]*a_normConst, invGamma), 0.0f, 1.0f);
-      color[3]     = 1.0f;
-      pixelData[i] = RealColorToUint32(color);
-    }
-  }
+  FrameBufferColorToLDRImage(rgb, width, height, a_normConst, a_gamma, pixelData, a_flip);
   return pixelData;
 }
 
-
 bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
 {
-  auto pixelData = FrameBufferColorToLDRImage(rgb,width,height,a_normConst,a_gamma);
+  auto pixelData = FrameBufferColorToLDRImage(rgb, width, height, a_normConst, a_gamma, false);
   LiteImage::SaveBMP(outfilename, pixelData.data(), width, height);
   return true;
 }
 
 bool SaveImage4fByExtension(const float* data, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
 {
-  auto pixelData = FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma);
-  auto tmp = LiteImage::Image2D<uint32_t>(width, height, pixelData.data());
-  
+  LiteImage::Image2D<uint32_t> tmp(width, height);
+  FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma, const_cast< std::vector<uint32_t>& >(tmp.vector()), true); 
   return LiteImage::SaveImage(outfilename, tmp);
 }
 

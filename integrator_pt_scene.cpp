@@ -594,7 +594,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_camRespoceRGB.w = 1.0f;
       }
     }
-
+    
+    m_enableOpticSim = 0;
     auto opticNode = cam.node.child(L"optical_system");
     if(opticNode != opticNode)
       opticNode = cam.node.child(L"optics");
