@@ -299,7 +299,7 @@ if __name__ == '__main__':
                         PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0003/Images/PlasticRough-05_sphere_mitsuba-nonlinear.png",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Plastic-rough-cornell/0005/Images/PlasticRough-texture-sphere-mitsuba.png",
                       ],
-                      imsize = [(1024, 1024) for i in range(5)],
+                      imsize = [(1024, 1024) for i in range(7)],
                       naivemul = 4))
 
   reqs.append( REQ_HX("spectral",
