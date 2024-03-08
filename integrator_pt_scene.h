@@ -106,7 +106,8 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                                    bool is_spectral_mode);
 
 Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
