@@ -14,6 +14,7 @@ public:
   }
 
   float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
+  float  GetRandomNumbersTime(uint tid, RandomGen* a_gen) override;
   float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen) override;
   float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) override;
   float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce) override;
@@ -29,11 +30,12 @@ public:
   
   float4 PathTraceF(uint tid, int*pX, int* pY);
 
+  static constexpr uint BOUNCE_START = 6;
   static constexpr uint LGHT_ID      = 0;
   static constexpr uint MATS_ID      = 4;
   static constexpr uint BLND_ID      = 8;
   static constexpr uint PER_BOUNCE   = 10;
-  static constexpr uint BOUNCE_START = 5;
+
   
   inline uint RandsPerThread() const { return PER_BOUNCE*m_traceDepth + BOUNCE_START; }
 
@@ -101,6 +103,17 @@ float  IntegratorKMLT::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)
   {
     float* data = m_allRands.data() + tid*m_randsPerThread;
     return data[4]; 
+  }
+}
+
+float  IntegratorKMLT::GetRandomNumbersTime(uint tid, RandomGen* a_gen)
+{
+  if(m_renderLayer == FB_DIRECT)
+    return IntegratorQMC::GetRandomNumbersTime(tid, a_gen);
+  else
+  {
+    float* data = m_allRands.data() + tid*m_randsPerThread;
+    return data[5]; 
   }
 }
 
@@ -172,51 +185,6 @@ void IntegratorKMLT::kernel_InitEyeRay(uint tid, const uint* packedXY,
 
   (*pX) = int(r.x);
   (*pY) = int(r.y);
-  
-  //const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
-  //
-  //uint x = uint(pixelOffsets.x*float(m_winWidth));
-  //uint y = uint(pixelOffsets.y*float(m_winHeight));
-  //
-  //if(x >= uint(m_winWidth-1))
-  //  x = uint(m_winWidth-1);
-  //if(y >= uint(m_winHeight-1))
-  //  y = uint(m_winHeight-1);
-  //
-  //(*pX) = int(x);
-  //(*pY) = int(y);
-  //
-  //float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
-  //float3 rayPos = float3(0,0,0);
-  /////////////////////////////////////////////////////////////////////////////////////// end change
-  //
-  //transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
-  //
-  //float tmp = 0.0f;
-  //if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  //{
-  //  float u = GetRandomNumbersSpec(tid, &genLocal);
-  //  *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-  //  tmp = u;
-  //}
-  //else
-  //{
-  //  const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-  //  for (uint32_t i = 0; i < sample_sz; ++i) 
-  //    (*wavelengths)[i] = 0.0f;
-  //}
-  //
-  //if(m_normMatrices2.size() != 0)
-  //  *time = GetRandomNumbersTime(tid, &genLocal);
-  //else
-  //  *time = 0.0f;  
-  //
-  //RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), tmp);
-   //
-  //*rayPosAndNear = to_float4(rayPos, 0.0f);
-  //*rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  //*gen           = genLocal;
-
 }
 
 float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
@@ -250,11 +218,16 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
+  
+  // change
+  //
+  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
+    accumColor = to_float4(SpectralCamRespoceToRGB(accumColor, wavelengths, rayFlags), 0.0f);
 
   return accumColor*m_exposureMult;
 }
 
-static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB(!!!)
+static inline float contribFunc(float4 color) // WORKS ONLY FOR RGB, sectral to RGB must be done earlier
 {
   return std::max(0.333334f*(color.x + color.y + color.z), 0.0f);
 }
