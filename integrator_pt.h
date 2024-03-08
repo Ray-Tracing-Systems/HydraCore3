@@ -300,15 +300,32 @@ public:
   uint  m_envLightId     = uint(-1);
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
+
+  /// @brief ////////////////////////////////////////////////////// cam variables
   float m_exposureMult   = 1.0f;
   float m_camLensRadius = 0.0f;
   float m_camTargetDist = 0.0f;
-  
-  /// @brief ////////////////////////////////////////////////////// cam variables
   static constexpr int CAM_RESPONCE_XYZ = 0;
   static constexpr int CAM_RESPONCE_RGB = 1;
   int   m_camResponseSpectrumId[3] = {-1, -1, -1};
   int   m_camResponseType = CAM_RESPONCE_XYZ; // 0 -- XYZ, 1 -- RGB
+
+  /// @brief ////////////////////////////////////////////////////// optics sim
+  
+  struct LensElementInterface 
+  {
+    float curvatureRadius;
+    float thickness;
+    float eta;
+    float apertureRadius;
+  };
+
+  uint m_enableOpticSim = 0;
+  std::vector<LensElementInterface> lines;
+  float2 m_physSize;
+  float  m_diagonal;
+  float  m_aspect;
+
   /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;

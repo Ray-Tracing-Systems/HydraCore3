@@ -215,6 +215,9 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   return features;
 }
 
+
+void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   LoadSceneBegin();
@@ -565,6 +568,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
     }
 
+    auto opticNode = cam.node.child(L"optical_system");
+    if(opticNode != opticNode)
+      opticNode = cam.node.child(L"optics");
+    if(opticNode != nullptr) {
+      m_enableOpticSim = 1;
+      LoadOpticsFromNode(this, opticNode);
+    }
+
     break; // take first cam
   }
 
@@ -721,4 +732,59 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   LoadSceneEnd();
   return true;
+}
+
+void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
+{
+  self->m_aspect = float(self->m_winWidth/self->m_winHeight);
+  
+  float scale = 1.0f;
+  if(opticalSys.attribute(L"scale") != nullptr)
+    scale = opticalSys.attribute(L"scale").as_float();
+
+  self->m_diagonal = opticalSys.attribute(L"sensor_diagonal").as_float();
+  //CalcPhysSize();
+  self->m_physSize.x = 2.0f*std::sqrt(self->m_diagonal * self->m_diagonal / (1.0f + self->m_aspect * self->m_aspect));
+  self->m_physSize.y = self->m_aspect * self->m_physSize.x;
+
+  struct LensElementInterfaceWithId 
+  {
+    Integrator::LensElementInterface lensElement;
+    int id;
+  };
+
+  std::vector<LensElementInterfaceWithId> ids;
+  int currId = 0;
+  for(auto line : opticalSys.children(L"line"))
+  {
+    Integrator::LensElementInterface layer;
+    int id = currId;
+    if(line.attribute(L"id") != nullptr)
+      id = line.attribute(L"id").as_int();
+    layer.curvatureRadius = scale*line.attribute(L"curvature_radius").as_float();
+    layer.thickness       = scale*line.attribute(L"thickness").as_float();
+    layer.eta             = line.attribute(L"ior").as_float();
+    if(line.attribute(L"semi_diameter") != nullptr)
+      layer.apertureRadius  = scale*line.attribute(L"semi_diameter").as_float();
+    else if(line.attribute(L"aperture_radius") != nullptr)
+      layer.apertureRadius  = scale*1.0f*line.attribute(L"aperture_radius").as_float();
+    
+    LensElementInterfaceWithId layer2;
+    layer2.lensElement = layer;
+    layer2.id          = id;
+    ids.push_back(layer2);
+    currId++;
+  }
+  
+  // you may sort 'lines' by 'ids' if you want 
+  //
+  std::wstring order = opticalSys.attribute(L"order").as_string();
+  if(order == L"scene_to_sensor")
+    std::sort(ids.begin(), ids.end(), [](const auto& a, const auto& b) { return a.id > b.id; });
+  else
+    std::sort(ids.begin(), ids.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
+
+  self->lines.resize(ids.size());
+  for(size_t i=0;i<ids.size(); i++)
+    self->lines[i] = ids[i].lensElement;
 }

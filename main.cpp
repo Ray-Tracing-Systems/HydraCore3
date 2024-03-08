@@ -188,10 +188,10 @@ int main(int argc, const char** argv) // common hydra main
   else
   #endif
   {
-    if(qmcIsEnabled)
-      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
-    else if(mltIsEnabled)
+    if(mltIsEnabled)
       pImpl = CreateIntegratorKMLT(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    else if(qmcIsEnabled)
+      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
     else
       pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
   }

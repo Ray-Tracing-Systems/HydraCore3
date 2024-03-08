@@ -6,14 +6,6 @@
 #include <memory>
 #include <limits>
 
-struct LensElementInterface  // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further
-{
-  float curvatureRadius;
-  float thickness;
-  float eta;
-  float apertureRadius;
-};
-
 class IntegratorQMC : public Integrator
 {
 public:
@@ -43,15 +35,6 @@ public:
   uint m_qmcMotionDim = 0;
   uint m_qmcDofDim = 0;
   
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further // 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-  uint m_enableOpticSim = 0;
-  std::vector<LensElementInterface> lines;
-  float2 m_physSize;
-  float  m_diagonal;
-  float  m_aspect;
-
   inline float LensRearZ()      const { return lines[0].thickness; }
   inline float LensRearRadius() const { return lines[0].apertureRadius; }         
 

@@ -6,36 +6,6 @@
 IntegratorQMC:: IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
 {
   qmc::init(m_qmcTable);
-  
-  // TODO: move this to LoadScene
-  //
-
-  // init optic parameters
-  //
-  lines = {
-    { .curvatureRadius=0.0302249007f,  .thickness=0.00083350006f, .eta=1.62f,        .apertureRadius=0.0151700005f},   // 0
-    { .curvatureRadius=0.0113931f,     .thickness=0.00741360011f, .eta=1.0f,         .apertureRadius=0.0103400005f},   // 1
-    { .curvatureRadius=0.0752018988f,  .thickness=0.00106540008f, .eta=1.63900006f,  .apertureRadius=0.00889999978f}, // 2
-    { .curvatureRadius=0.00833490025f,  .thickness=0.0111549003f,   .eta=1.0f,         .apertureRadius=0.00671000034f},
-    { .curvatureRadius=0.00958819967f,  .thickness=0.00200540014f,  .eta=1.65400004f,  .apertureRadius=0.00451000035f},
-    { .curvatureRadius=0.0438676998f,   .thickness=0.00538950041f,  .eta=1.0f,         .apertureRadius=0.00407000026f},
-    { .curvatureRadius=0.0f,            .thickness=0.00141630007f,  .eta=0.0f,         .apertureRadius=0.00275000022f},
-    { .curvatureRadius=0.0294541009f,   .thickness=0.00219339994f,  .eta=1.51699996f,  .apertureRadius=0.00298000011f},
-    { .curvatureRadius=-0.00522650033f, .thickness=0.000971400063f, .eta=1.80499995f,  .apertureRadius=0.00292000012f},
-    { .curvatureRadius=-0.0142884003f,  .thickness=6.27000045e-05f, .eta=1.0f,         .apertureRadius=0.00298000011f},
-    { .curvatureRadius=-0.0223726016f,  .thickness=0.000940000056f, .eta=1.67299998f,  .apertureRadius=0.00298000011f},
-    { .curvatureRadius=-0.0150404004f,  .thickness=0.0233591795f,   .eta=1.0f,         .apertureRadius=0.00326000014f},
-  };
-
-  std::reverse(lines.begin(), lines.end()); // if you need this ...  
-
-  m_diagonal = 0.035f;
-  m_aspect   = 1.0f;
-
-  // CalcPhysSize();
-  //
-  m_physSize.x = 2.0f*std::sqrt(m_diagonal * m_diagonal / (1.0f + m_aspect * m_aspect));
-  m_physSize.y = m_aspect * m_physSize.x;
 }
 
 void IntegratorQMC::EnableQMC()
