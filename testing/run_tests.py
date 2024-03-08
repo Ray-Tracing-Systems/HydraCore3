@@ -184,10 +184,10 @@ if __name__ == '__main__':
                       default='../../HydraAPI-tests')
   parser.add_argument('-h3', '--hydra3-tests', action="store", help="path to hydra3 tests",
                       default='../../comparisonrender')
-  parser.add_argument('--cpu', help="run tests on cpu", default=False)
+  parser.add_argument('--cpu', help="run tests on cpu", action='store_true')
 
   args = parser.parse_args()
-  print(args)
+
   TEST_CPU             = args.cpu
   PATH_TO_HYDRA2_TESTS = os.path.abspath(args.hydra2_tests)
   PATH_TO_HYDRA3_SCENS = os.path.abspath(args.hydra3_tests)
