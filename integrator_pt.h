@@ -326,6 +326,14 @@ public:
   float  m_diagonal;
   float  m_aspect;
 
+  inline float LensRearZ()      const { return lines[0].thickness; }
+  inline float LensRearRadius() const { return lines[0].apertureRadius; }         
+
+  bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
+                                 float *t, float3 *n) const;
+
+  bool TraceLensesFromFilm(float3& rayPos, float3& rayDir) const;
+
   /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;
@@ -369,9 +377,10 @@ public:
   static constexpr uint32_t KSPEC_LIGHT_IES           = 12;
   static constexpr uint32_t KSPEC_LIGHT_ENV           = 13;
 
-  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
+  static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 15; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 16; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

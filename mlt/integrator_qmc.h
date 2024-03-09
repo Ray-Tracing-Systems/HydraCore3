@@ -34,12 +34,4 @@ public:
   uint m_qmcSpdDim = 0;
   uint m_qmcMotionDim = 0;
   uint m_qmcDofDim = 0;
-  
-  inline float LensRearZ()      const { return lines[0].thickness; }
-  inline float LensRearRadius() const { return lines[0].apertureRadius; }         
-
-  bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
-                                 float *t, float3 *n) const;
-
-  bool TraceLensesFromFilm(float3& rayPos, float3& rayDir) const;
 };

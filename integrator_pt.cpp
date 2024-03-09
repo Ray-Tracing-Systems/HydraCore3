@@ -52,8 +52,10 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
 
   const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
 
-  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
-                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
+  const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
+  const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
+
+  float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);
   
   if (m_camLensRadius > 0.0f)
@@ -64,6 +66,31 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     rayPos.x += xy.x;
     rayPos.y += xy.y;
     rayDir = normalize(focusPosition - rayPos);
+  }
+  else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0) // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further  
+  {
+    const float2 xy = 0.25f*m_physSize*float2(2.0f*xCoordNormalized - 1.0f, 2.0f*yCoordNormalized - 1.0f);
+    
+    rayPos = float3(xy.x, xy.y, 0);
+    
+    const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
+    const float3 ray_dirF = normalize(shootTo - rayPos);
+    
+    float cosTheta = std::abs(ray_dirF.z);
+    rayDir         = ray_dirF;
+    bool success   = TraceLensesFromFilm(rayPos, rayDir);
+    
+    if (!success) 
+    {
+      rayPos = float3(0,-10000000.0,0.0); // shoot ray under the floor
+      rayDir = float3(0,-1,0);
+    }
+    else
+    {
+      rayDir = float3(-1,-1,-1)*normalize(rayDir);
+      rayPos = float3(-1,-1,-1)*rayPos;
+    }
   }
 
   EyeRayData res;
@@ -683,4 +710,140 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   //////////////////////////////////////////////////// same as for PathTrace
 
   kernel_CopyColorToOutput(tid, channels, &accumColor, &gen, out_color);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
+  // Find quadratic discriminant
+  double discrim = (double)B * (double)B - 4. * (double)A * (double)C;
+  if (discrim < 0.) 
+    return false;
+  double rootDiscrim = std::sqrt(discrim);
+  float floatRootDiscrim   = float(rootDiscrim);
+  // Compute quadratic _t_ values
+  float q;
+  if ((float)B < 0)
+      q = -.5 * (B - floatRootDiscrim);
+  else
+      q = -.5 * (B + floatRootDiscrim);
+  *t0 = q / A;
+  *t1 = C / q;
+  if ((float)*t0 > (float)*t1) 
+  {
+    // std::swap(*t0, *t1);
+    float temp = *t0;
+    *t0 = *t1;
+    *t1 = temp;
+  }
+  return true;
+}
+
+static inline bool Refract(const float3 wi, const float3 n, float eta, float3 *wt) {
+  // Compute $\cos \theta_\roman{t}$ using Snell's law
+  float cosThetaI  = dot(n, wi);
+  float sin2ThetaI = std::max(float(0), float(1.0f - cosThetaI * cosThetaI));
+  float sin2ThetaT = eta * eta * sin2ThetaI;
+  // Handle total internal reflection for transmission
+  if (sin2ThetaT >= 1) return false;
+  float cosThetaT = std::sqrt(1 - sin2ThetaT);
+  *wt = eta * (-1.0f)*wi + (eta * cosThetaI - cosThetaT) * n;
+  return true;
+}
+
+static inline float3 faceforward(const float3 n, const float3 v) { return (dot(n, v) < 0.f) ? (-1.0f)*n : n; }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool Integrator::IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
+                                              float *t, float3 *n) const
+{
+  // Compute _t0_ and _t1_ for ray--element intersection
+  const float3 o = rayPos - float3(0, 0, zCenter);
+  const float  A = rayDir.x * rayDir.x + rayDir.y * rayDir.y + rayDir.z * rayDir.z;
+  const float  B = 2 * (rayDir.x * o.x + rayDir.y * o.y + rayDir.z * o.z);
+  const float  C = o.x * o.x + o.y * o.y + o.z * o.z - radius * radius;
+  float  t0, t1;
+  if (!Quadratic(A, B, C, &t0, &t1)) 
+    return false;
+  
+  // Select intersection $t$ based on ray direction and element curvature
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
+  *t = useCloserT ? std::min(t0, t1) : std::max(t0, t1);
+  if (*t < 0.0f) 
+    return false;
+  
+  // Compute surface normal of element at ray intersection point
+  *n = normalize(o + (*t)*rayDir);
+  *n = faceforward(*n, -1.0f*rayDir);
+  return true;
+}
+
+bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) const
+{
+  float elementZ = 0;
+  // Transform _rCamera_ from camera to lens system space
+  // 
+  float3 rayPosLens = float3(inoutRayPos.x, inoutRayPos.y, -inoutRayPos.z);
+  float3 rayDirLens = float3(inoutRayDir.x, inoutRayDir.y, -inoutRayDir.z);
+
+  for(int i=0; i<lines.size(); i++)
+  {
+    const auto element = lines[i];                                  
+    // Update ray from film accounting for interaction with _element_
+    elementZ -= element.thickness;
+    
+    // Compute intersection of ray with lens element
+    float t;
+    float3 n;
+    bool isStop = (element.curvatureRadius == 0.0f);
+    if (isStop) 
+    {
+      // The refracted ray computed in the previous lens element
+      // interface may be pointed towards film plane(+z) in some
+      // extreme situations; in such cases, 't' becomes negative.
+      if (rayDirLens.z >= 0.0f) 
+        return false;
+      t = (elementZ - rayPosLens.z) / rayDirLens.z;
+    } 
+    else 
+    {
+      const float radius  = element.curvatureRadius;
+      const float zCenter = elementZ + element.curvatureRadius;
+      if (!IntersectSphericalElement(radius, zCenter, rayPosLens, rayDirLens, &t, &n))
+        return false;
+    }
+
+    // Test intersection point against element aperture
+    const float3 pHit = rayPosLens + t*rayDirLens;
+    const float r2    = pHit.x * pHit.x + pHit.y * pHit.y;
+    if (r2 > element.apertureRadius * element.apertureRadius) 
+      return false;
+    
+    rayPosLens = pHit;
+    // Update ray path for from-scene element interface interaction
+    if (!isStop) 
+    {
+      float3 wt;
+      float etaI = lines[i+0].eta;                                                      
+      float etaT = (i == lines.size()-1) ? 1.0f : lines[i+1].eta;
+      if(etaT == 0.0f)
+        etaT = 1.0f;                                                          
+      if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, &wt))
+        return false;
+      rayDirLens = wt;
+    }
+
+  }
+
+  // Transform _rLens_ from lens system space back to camera space
+  //
+  inoutRayPos = float3(rayPosLens.x, rayPosLens.y, -rayPosLens.z);
+  inoutRayDir = float3(rayDirLens.x, rayDirLens.y, -rayDirLens.z);
+  return true;  
 }

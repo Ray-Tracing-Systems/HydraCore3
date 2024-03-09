@@ -379,7 +379,7 @@ if __name__ == '__main__':
                                     PATH_TO_HYDRA2_TESTS + "/tests_images/test_102/z2_gpumispt.bmp"],
                                     [(1024,1024), (1024,1024), (1024,1024)]))
 
-    '''
+  '''
 
   Log().set_workdir(".")
   Log().info("PATH_TO_TESTS = {}".format(PATH_TO_HYDRA2_TESTS))

@@ -16,7 +16,8 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_LIGHT_IES          : return "LGT_IES";
     case KSPEC_LIGHT_ENV          : return "LGT_ENV";
     case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
-
+    case KSPEC_OPTIC_SIM          : return "KSPEC_OPTIC_SIM";
+    
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
@@ -147,6 +148,16 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     g_lastSceneInfo.width  = settings.width;
     g_lastSceneInfo.height = settings.height;
     break; //take first render settings
+  }
+
+  for(auto cam : g_lastScene.Cameras())
+  {
+    auto opticNode = cam.node.child(L"optical_system");
+    if(opticNode != opticNode)
+      opticNode = cam.node.child(L"optics");
+    if(opticNode != nullptr)
+      features[KSPEC_OPTIC_SIM] = 1;
+    break;
   }
 
   g_lastScenePath = scenePathStr;
@@ -601,6 +612,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       opticNode = cam.node.child(L"optics");
     if(opticNode != nullptr) {
       m_enableOpticSim = 1;
+      m_actualFeatures[KSPEC_OPTIC_SIM] = 1;
       LoadOpticsFromNode(this, opticNode);
     }
 
