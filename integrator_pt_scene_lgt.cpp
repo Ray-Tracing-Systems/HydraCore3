@@ -140,8 +140,8 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
         float znear = hydra_xml::readval1f(projNode.child(L"nearClipPlane"));
         float zfar  = hydra_xml::readval1f(projNode.child(L"farClipPlane"));
    
-        float3 lookAtO = hydra_xml::readval3f(projNode.child(L"look_at"));
-        float3 upO     = hydra_xml::readval3f(projNode.child(L"up"));
+        float3 lookAtO = float3(0,-1,0);
+        float3 upO     = float3(0,0,1);
         
         float3 lookAtT = lightInst.matrix * lookAtO;
         float3 upT     = rot*upO;

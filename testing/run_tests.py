@@ -226,6 +226,8 @@ if __name__ == '__main__':
 
   reqs.append( REQ_H2("lgt_env", ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )
 
+  reqs.append( REQ_H2("lgt_spot", ["test_225", "test_249"], integrators = ["mispt"]) )
+
   reqs.append( REQ_H2("geo_dof_tst", ["test_304"], integrators = ["mispt", "shadowpt"], imsize = (512,256)) )
 
   reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
