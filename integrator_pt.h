@@ -73,6 +73,23 @@ public:
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
                               const RayDirAndT* in_rayDirAndFar  [[size("tid*channels")]],
                               float*            out_color        [[size("tid*channels")]]);
+  
+  struct GBufferPixel
+  {
+    float   depth;
+    float   norm[3];
+    float   texc[2];
+    float   rgba[4];
+    float   shadow;
+    float   coverage;
+    int32_t matId;
+    int32_t objId;
+    int32_t instId;
+  };
+
+  virtual void EvalGBuffer(uint tidX, uint tidY, GBufferPixel* out_gbuffer);
+  virtual void EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* out_gbuffer);
+  virtual void EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
@@ -437,6 +454,8 @@ public:
   virtual void _ProgressBarDone();
   float m_currProgress    = 0.0f;
   float m_currProgressOld = 0.0f;
+
+  std::vector<float2> m_qmcHammersley;
 };
 
 #endif
