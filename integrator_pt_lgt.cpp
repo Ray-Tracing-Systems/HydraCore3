@@ -148,18 +148,14 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
     float cos_theta = std::max(-dot(a_rayDir, norm), 0.0f);
     lightColor *= mylocalsmoothstep(cos2, cos1, cos_theta);
 
-    if((m_lights[a_lightId].flags & LIGHT_FLAG_PROJECTIVE) != 0 && texId != uint(-1))
+    if(KSPEC_LIGHT_PROJECTIVE != 0 && (m_lights[a_lightId].flags & LIGHT_FLAG_PROJECTIVE) != 0 && texId != uint(-1))
     {
       const float4x4 mat             = m_lights[a_lightId].iesMatrix;
       const float4 posLightClipSpace = mat*to_float4(a_rayPos, 1.0f); // 
       const float3 posLightSpaceNDC  = to_float3(posLightClipSpace)/posLightClipSpace.w;                         // perspective division
       const float2 shadowTexCoord    = float2(posLightSpaceNDC.x, posLightSpaceNDC.y)*0.5f + float2(0.5f, 0.5f); // just shift coords from [-1,1] to [0,1]  
-      //const bool  outOfView          = (shadowTexCoord.x < 0.0001f || shadowTexCoord.x > 0.9999f || shadowTexCoord.y < 0.0001f || shadowTexCoord.y > 0.9999f);
-      //if(!outOfView)
-      {
-        const float4 texColor        = m_textures[texId]->sample(shadowTexCoord);
-        lightColor *= texColor;
-      }
+      const float4 texColor          = m_textures[texId]->sample(shadowTexCoord);
+      lightColor *= texColor;
     }
   }
   else if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))

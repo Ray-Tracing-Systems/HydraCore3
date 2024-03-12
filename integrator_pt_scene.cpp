@@ -16,7 +16,8 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_LIGHT_IES          : return "LGT_IES";
     case KSPEC_LIGHT_ENV          : return "LGT_ENV";
     case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
-    case KSPEC_OPTIC_SIM          : return "KSPEC_OPTIC_SIM";
+    case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
+    case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
     
     case KSPEC_BLEND_STACK_SIZE   :
     {
@@ -141,6 +142,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       if(texNode != nullptr)
         features[KSPEC_LIGHT_ENV] = 1;
     }
+    else if(lightInst.lightNode.child(L"projective") != nullptr)
+      features[KSPEC_LIGHT_PROJECTIVE] = 1;
   }
 
   for(auto settings : g_lastScene.Settings())
@@ -378,6 +381,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
+
+    if((lightSource.flags & LIGHT_FLAG_PROJECTIVE) != 0)
+      m_actualFeatures[Integrator::KSPEC_LIGHT_PROJECTIVE] = 1;
 
     bool addToLightSources = true;             // don't sample LDR, perez or simple colored env lights
     if(lightSource.geomType == LIGHT_GEOM_ENV) // just account for them in implicit strategy
