@@ -121,6 +121,15 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     lightSource.pdfA      = 1.0f;
     lightSource.size      = float2(0,0);
     lightSource.matrix    = float4x4{};
+    if(ldist == L"spot")
+    {
+      const float angle1 = hydra_xml::readval1f(lightInst.lightNode.child(L"falloff_angle"));
+      const float angle2 = hydra_xml::readval1f(lightInst.lightNode.child(L"falloff_angle2"));
+  
+      lightSource.lightCos2 = std::cos(0.5f*DEG_TO_RAD*angle1); 
+      lightSource.lightCos1 = std::cos(0.5f*DEG_TO_RAD*angle2); 
+      lightSource.distType  = LIGHT_DIST_SPOT;
+    }
   }
     
   auto iesNode = lightInst.lightNode.child(L"ies");

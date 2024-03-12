@@ -144,18 +144,18 @@
     
 
     {
-        "name": "test_103",
+        "name": "test_225",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_103/statex_00001.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_225/statex_00001.xml",
                  "-integrator", "mispt",
                  "-width", "512",
                  "-height", "512",
                  "-spp", "64",
                  "-fb_layer", "color",
-                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_103/z_render.bmp"],
+                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_225/z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

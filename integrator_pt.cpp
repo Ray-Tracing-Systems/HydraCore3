@@ -45,10 +45,10 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  //if(x == 252 && y == 512-96-1)
-  //{
-  //  int a = 2;
-  //}
+  if(x == 256 && y == 256)
+  {
+    int a = 2;
+  }
 
   const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
 
