@@ -154,8 +154,12 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
       const float4 posLightClipSpace = mat*to_float4(a_rayPos, 1.0f); // 
       const float3 posLightSpaceNDC  = to_float3(posLightClipSpace)/posLightClipSpace.w;                         // perspective division
       const float2 shadowTexCoord    = float2(posLightSpaceNDC.x, posLightSpaceNDC.y)*0.5f + float2(0.5f, 0.5f); // just shift coords from [-1,1] to [0,1]  
-      const float4 texColor          = m_textures[texId]->sample(shadowTexCoord);
-      lightColor *= texColor;
+      //const bool  outOfView          = (shadowTexCoord.x < 0.0001f || shadowTexCoord.x > 0.9999f || shadowTexCoord.y < 0.0001f || shadowTexCoord.y > 0.9999f);
+      //if(!outOfView)
+      {
+        const float4 texColor        = m_textures[texId]->sample(shadowTexCoord);
+        lightColor *= texColor;
+      }
     }
   }
   else if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
