@@ -149,7 +149,7 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
-                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_225/statex_00001.xml",
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_f/test_225/statex_00002.xml",
                  "-integrator", "mispt",
                  "-width", "512",
                  "-height", "512",

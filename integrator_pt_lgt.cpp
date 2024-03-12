@@ -92,9 +92,7 @@ float Integrator::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 r
 
     case LIGHT_GEOM_POINT:
     {
-      if(m_lights[a_lightId].distType == LIGHT_DIST_OMNI || m_lights[a_lightId].distType == LIGHT_DIST_SPOT)
-        cosVal = 1.0f;
-      else
+      if(m_lights[a_lightId].distType == LIGHT_DIST_LAMBERT)
         cosVal = std::max(cosValTmp, 0.0f);
     };
     break;
@@ -141,14 +139,6 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
   // get environment color
   //
   const uint texId = m_lights[a_lightId].texId;
-  if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
-  {
-    float sintheta = 0.0f;
-    const float2 texCoord  = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
-    const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0, m_lights[a_lightId].samplerRow1, texCoord);
-    const float4 texColor  = m_textures[texId]->sample(texCoordT);
-    lightColor *= texColor;
-  }
 
   if(m_lights[a_lightId].distType == LIGHT_DIST_SPOT) // areaSpotLightAttenuation
   {
@@ -157,6 +147,24 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
     float3 norm     = to_float3(m_lights[a_lightId].norm);
     float cos_theta = std::max(-dot(a_rayDir, norm), 0.0f);
     lightColor *= mylocalsmoothstep(cos2, cos1, cos_theta);
+
+    if((m_lights[a_lightId].flags & LIGHT_FLAG_PROJECTIVE) != 0 && texId != uint(-1))
+    {
+      const float4x4 mat             = m_lights[a_lightId].iesMatrix;
+      const float4 posLightClipSpace = mat*to_float4(a_rayPos, 1.0f); // 
+      const float3 posLightSpaceNDC  = to_float3(posLightClipSpace)/posLightClipSpace.w;                         // perspective division
+      const float2 shadowTexCoord    = float2(posLightSpaceNDC.x, posLightSpaceNDC.y)*0.5f + float2(0.5f, 0.5f); // just shift coords from [-1,1] to [0,1]  
+      const float4 texColor          = m_textures[texId]->sample(shadowTexCoord);
+      lightColor *= texColor;
+    }
+  }
+  else if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
+  {
+    float sintheta = 0.0f;
+    const float2 texCoord  = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
+    const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0, m_lights[a_lightId].samplerRow1, texCoord);
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
+    lightColor *= texColor;
   }
 
   return lightColor;

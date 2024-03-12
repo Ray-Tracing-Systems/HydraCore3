@@ -14,6 +14,7 @@ static constexpr uint LIGHT_DIST_OMNI    = 1;
 static constexpr uint LIGHT_DIST_SPOT    = 2;
 
 static constexpr uint LIGHT_FLAG_POINT_AREA = 1;
+static constexpr uint LIGHT_FLAG_PROJECTIVE = 2;
 
 struct LightSource
 {
