@@ -88,7 +88,7 @@ public:
   };
 
   virtual void EvalGBuffer(uint tidX, uint tidY, GBufferPixel* out_gbuffer);
-  virtual void EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* out_gbuffer);
+  virtual void EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* samples, GBufferPixel* out_gbuffer);
   virtual void EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
@@ -120,6 +120,9 @@ public:
   void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
                                   RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time);
+
+  void kernel_InitEyeRayGB(uint tidX, uint tidY, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);  
+  void kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, const float2* bars, GBufferPixel* out_gbuffer);                                 
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
