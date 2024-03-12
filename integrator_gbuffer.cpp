@@ -119,6 +119,7 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
   const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
   const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
   const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
+
   const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
   const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
   float2 hitTexCoord = float2(data1.w, data2.w);
@@ -148,6 +149,7 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
   out_gbuffer[tidY].rgba[0] = color[0];
   out_gbuffer[tidY].rgba[1] = color[1];
   out_gbuffer[tidY].rgba[2] = color[2];
+  out_gbuffer[tidY].rgba[3] = color[3];
   
   out_gbuffer[tidY].objId  = hit.geomId;
   out_gbuffer[tidY].instId = hit.instId;
@@ -176,6 +178,7 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
 
   const float fw = float(m_winWidth);
   const float fh = float(m_winHeight);
+  float4 summColor = float4(0.0f);
 
   for (int i = 0; i < tidY; i++)
   {
@@ -191,6 +194,7 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
   
     coverage *= (1.0f / (float)tidY);
     samples[i].coverage = coverage;
+    summColor  += float4(samples[i].rgba[0], samples[i].rgba[1], samples[i].rgba[2],  samples[i].rgba[3]);
   
     if (diff < minDiff)
     {
@@ -199,7 +203,14 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
     }
   }
   
+  const float4 avgColor = summColor*(1.0f / (float)tidY);
+
   out_gbuffer[tidX] = samples[minDiffId];
+
+  out_gbuffer[tidX].rgba[0] = avgColor[0];
+  out_gbuffer[tidX].rgba[1] = avgColor[1];
+  out_gbuffer[tidX].rgba[2] = avgColor[2];
+  out_gbuffer[tidX].rgba[3] = avgColor[3];
 }
 
 void Integrator::EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer)
