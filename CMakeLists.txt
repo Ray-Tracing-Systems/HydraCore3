@@ -164,6 +164,7 @@ set(CORE_SRC
         integrator_pt_scene_mat.cpp
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
+        integrator_gbuffer.cpp
         integrator_spectrum.cpp
         mlt/integrator_qmc.cpp
         mlt/integrator_kmlt.cpp
@@ -171,6 +172,7 @@ set(CORE_SRC
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp
+        imageutils_gbuffer.cpp
         utils.cpp
         ies_parser/ies_render.cpp)
 

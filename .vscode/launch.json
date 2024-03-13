@@ -141,6 +141,34 @@
             }
         ]
     },
+
+    {
+        "name": "test_37",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--cpu", 
+                 "-in", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests/test_037/statex_00001.xml",
+                 "-integrator", "mispt",
+                 "-width", "1024",
+                 "-height", "768",
+                 "-spp", "1",
+                 "-fb_layer", "color",
+                 "-evalgbuffer", "1",
+                 "-out", "/home/frol/PROG/HydraRepos/HydraAPI-tests/tests_images/test_037/z_render.png"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     
 
     {
