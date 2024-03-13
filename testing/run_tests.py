@@ -105,6 +105,59 @@ class REQ_H2(REQ):
           if PSNR < 35.0: (color,message) = (Fore.RED, "[FAILED]") 
           Log().print_colored_text("  {}: PSNR({}, CPU/GPU) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color) 
 
+class REQ_H2GBuff(REQ):
+  def __init__(self, name, tests, imsize = (512,512), integrators = ["mispt"], naivemul = 4):
+    self.name   = name
+    self.tests  = tests
+    self.imsize = imsize
+    self.integs = integrators
+    self.naivem = naivemul
+    self.times  = []
+
+  def run(req, test_name, args, image_ref, outp, inregrator):
+    try:
+      res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      output  = res.stdout.decode('utf-8')
+      
+      all_pairs = [("w_ref2.png", "z_rend2.png", "normal"),
+                   ("w_ref3.png", "z_rend3.png", "texcol"),
+                   ("w_ref5.png", "z_rend5.png", "matid"),
+                   ("w_ref6.png", "z_rend6.png", "instid"),
+                   ("w_ref7.png", "z_rend7.png", "objid")]
+                   
+      for trio in all_pairs:
+        image_ref1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + trio[0], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        image_our1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + trio[1], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        PSNR       = cv2.PSNR(image_ref1,image_our1)
+        color     = Fore.GREEN
+        message   = "[PASSED]"
+        if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
+        if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
+        Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(trio[2]),PSNR), color = color)
+
+    except Exception as e:
+      Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
+      return
+    if res.returncode != 0:
+      Log().status_info("{}: launch, returncode = {}".format(test_name,res.returncode), status=Status.FAILED)
+      Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
+      return
+
+  def test(req, gpu_id=0):
+    for test_name in req.tests: 
+      image_ref = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/w_ref.png", cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      full = PATH_TO_HYDRA2_TESTS + "/tests/" + test_name + "/statex_00001.xml"
+      devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
+      for dev_type in devices:
+        Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
+        for inregrator in req.integs:
+          outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/z_rend.png"
+          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+          args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
+          args = args + ["--cpu", "-evalgbuffer", "1"]
+          req.run(test_name, args, image_ref, outp, inregrator)
+
+
 class REQ_HX(REQ):
   def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], integrators = ["naivept","shadowpt","mispt"], naivemul = 4, is_spectral = False, auxArgs = []):
     self.name   = name
@@ -193,6 +246,7 @@ if __name__ == '__main__':
   PATH_TO_HYDRA3_SCENS = os.path.abspath(args.hydra3_tests)
 
   reqs = []
+  
 
   reqs.append( REQ_H2("mat_mirror",           ["test_102"], integrators = ["naivept","mispt"]) )
   reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
@@ -229,6 +283,8 @@ if __name__ == '__main__':
   reqs.append( REQ_H2("lgt_spot", ["test_225", "test_249"], integrators = ["mispt"]) )
 
   reqs.append( REQ_H2("geo_dof_tst", ["test_304"], integrators = ["mispt", "shadowpt"], imsize = (512,256)) )
+
+  reqs.append( REQ_H2GBuff("gbuffer", ["test_037"], imsize = (1024,768)) )
 
   reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                               PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",
