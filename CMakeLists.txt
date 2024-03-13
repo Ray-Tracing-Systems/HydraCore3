@@ -172,6 +172,7 @@ set(CORE_SRC
         mi_materials.cpp
         spectrum.cpp
         imageutils.cpp
+        imageutils_gbuffer.cpp
         utils.cpp
         ies_parser/ies_render.cpp)
 
