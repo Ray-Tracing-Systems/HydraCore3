@@ -555,18 +555,18 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   
-  if(channels == 1)
-  {
-    const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-    out_color[y*m_winWidth+x] += mono;
-  }
-  else if(channels <= 4)
+  if(channels <= 4)
   {
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
     out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
   }
-  else
+  else if(channels == 1) // monochromatic spectral
+  {
+    // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    out_color[y * m_winWidth + x] += ((*a_accumColor) * m_exposureMult).x;
+  } 
+  else // always spectral rendering
   {
     auto waves = (*wavelengths);
     auto color = (*a_accumColor)*m_exposureMult;
