@@ -105,9 +105,13 @@ int main(int argc, const char** argv) // common hydra main
   }
 
   bool evalGBuffer = false; 
-  if(args.hasOption("-evalgbuffer")) 
-    evalGBuffer = (args.getOptionValue<int>("-evalgbuffer") != 0);
-
+  {
+    if(args.hasOption("-evalgbuffer")) 
+      evalGBuffer = (args.getOptionValue<int>("-evalgbuffer") != 0);
+    if(fbLayer == "gbuffer")
+      evalGBuffer = true;
+  }
+  
   int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
   bool qmcIsEnabled  = args.hasOption("--qmc");
   bool mltIsEnabled  = false;
@@ -163,7 +167,7 @@ int main(int argc, const char** argv) // common hydra main
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
 
-  bool onGPU = args.hasOption("--gpu");
+  bool onGPU = args.hasOption("--gpu") && !evalGBuffer;
   #ifdef USE_VULKAN
   if(onGPU)
   {
@@ -240,19 +244,7 @@ int main(int argc, const char** argv) // common hydra main
     pImpl->EvalGBuffer(FB_WIDTH*FB_HEIGHT, gbuffer.data());
     
     SaveGBufferImages(imageOutClean, imageOutFiExt, gbuffer, realColor, FB_WIDTH, FB_HEIGHT);
-    //std::fill(realColor.begin(), realColor.end(), 0.0f);
-    //for(size_t i=0;i<gbuffer.size();i++)
-    //{
-    //  realColor[i*4+0] = gbuffer[i].rgba[0];
-    //  realColor[i*4+1] = gbuffer[i].rgba[1];
-    //  realColor[i*4+2] = gbuffer[i].rgba[2];
-    //  realColor[i*4+3] = gbuffer[i].rgba[3]; 
-    //}
-    //
-    //auto nameColor = imageOutClean + "_texcolor" + "." + imageOutFiExt; 
-    //SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, nameColor.c_str(), 1.0f, gamma);
-
-    std::fill(realColor.begin(), realColor.end(), 0.0f);
+    return 0;
   }
 
   std::vector<uint32_t> fbLayers = {Integrator::FB_COLOR};

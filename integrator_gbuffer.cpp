@@ -165,7 +165,9 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
   const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hitTexCoord);
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
 
-  const float3 color     = mdata.w > 0.0f ? clamp(float3(mdata.w,mdata.w,mdata.w), 0.0f, 1.0f) : to_float3(mdata*texColor);
+  float3 color = to_float3(mdata*texColor);
+  if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
+    color = float3(0,0,0);
 
   out_gbuffer[tidY].depth   = hit.t;
   out_gbuffer[tidY].norm[0] = hitNorm[0];
