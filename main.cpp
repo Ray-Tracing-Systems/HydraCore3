@@ -230,9 +230,9 @@ int main(int argc, const char** argv) // common hydra main
 
   if(evalGBuffer)
   {
-    std::cout << "[main]: EvalGBufferBlock() ... " << std::endl;
+    std::cout << "[main]: EvalGBuffer() ... " << std::endl;
     std::vector<Integrator::GBufferPixel> gbuffer(FB_WIDTH*FB_HEIGHT);
-    pImpl->EvalGBufferBlock(FB_WIDTH*FB_HEIGHT, gbuffer.data());
+    pImpl->EvalGBuffer(FB_WIDTH*FB_HEIGHT, gbuffer.data());
     
     std::fill(realColor.begin(), realColor.end(), 0.0f);
     for(size_t i=0;i<gbuffer.size();i++)

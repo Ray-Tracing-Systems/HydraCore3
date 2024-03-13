@@ -41,6 +41,7 @@ public:
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    InitDataForGbuffer();
   }
 
   virtual ~Integrator() { m_pAccelStruct = nullptr; }
@@ -87,9 +88,11 @@ public:
     int32_t instId;
   };
 
-  virtual void EvalGBuffer(uint tidX, uint tidY, GBufferPixel* out_gbuffer);
-  virtual void EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* samples, GBufferPixel* out_gbuffer);
-  virtual void EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer);
+  virtual void EvalGBuffer(uint blockId, uint localId, GBufferPixel* out_gbuffer);
+  virtual void GBufferReduction(uint blockId, uint blockSize, GBufferPixel* samples, GBufferPixel* out_gbuffer);
+
+  virtual void EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer);
+  virtual void kernelBE1D_EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
@@ -457,8 +460,10 @@ public:
   virtual void _ProgressBarDone();
   float m_currProgress    = 0.0f;
   float m_currProgressOld = 0.0f;
-
+  
+  static constexpr uint GBUFFER_SAMPLES = 16;
   std::vector<float2> m_qmcHammersley;
+  virtual void InitDataForGbuffer();
 };
 
 #endif

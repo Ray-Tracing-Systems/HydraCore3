@@ -22,6 +22,16 @@ void PlaneHammersley(float *result, int n)
   }
 }
 
+void Integrator::InitDataForGbuffer()
+{
+  m_qmcHammersley.resize(GBUFFER_SAMPLES);                 // TODO: move to class constructor sms like that
+  PlaneHammersley(&m_qmcHammersley[0].x, GBUFFER_SAMPLES); //
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline float projectedPixelSize(float dist, float FOV, float w, float h)
 {
@@ -29,7 +39,7 @@ static inline float projectedPixelSize(float dist, float FOV, float w, float h)
   float ppy = (FOV / h)*dist;
 
   if (dist > 0.0f)
-    return 2.0f*fmax(ppx, ppy);
+    return 2.0f*std::max(ppx, ppy);
   else
     return 1000.0f;
 }
@@ -77,8 +87,6 @@ static inline float gbuffDiffObj(const Integrator::GBufferPixel& s1, const Integ
   const float matDiff = (s1.matId  == s2.matId) ? 0.0f : 1.0f;
   return objDiff + matDiff;
 }
-
-static constexpr uint GBUFFER_SAMPLES = 16;
 
 void Integrator::kernel_InitEyeRayGB(uint tidX, uint tidY, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar) // TODO: refactor and insert here more sophisticated cam sampling
 {
@@ -180,19 +188,19 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
   out_gbuffer[tidY].shadow   = 0.0f; // not implemented
 }
 
-void Integrator::EvalGBuffer(uint tidX, uint tidY, GBufferPixel* out_gbuffer)
+void Integrator::EvalGBuffer(uint blockId, uint localId, GBufferPixel* out_gbuffer)
 {
   float4 rayPosAndNear, rayDirAndFar;
-  kernel_InitEyeRayGB(tidX, tidY, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
+  kernel_InitEyeRayGB(blockId, localId, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar);
 
   Lite_Hit hit; 
   float2   baricentrics; 
-  kernel_RayTrace(tidX, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics);
+  kernel_RayTrace(blockId, &rayPosAndNear, &rayDirAndFar, &hit, &baricentrics); // blockId or blockId*256 + localId ?
   
-  kernel_GetRayGBuff(tidX, tidY, &hit, &baricentrics, out_gbuffer);
+  kernel_GetRayGBuff(blockId, localId, &hit, &baricentrics, out_gbuffer);
 }
 
-void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* samples, GBufferPixel* out_gbuffer)
+void Integrator::GBufferReduction(uint blockId, uint blockSize, GBufferPixel* samples, GBufferPixel* out_gbuffer)
 {
   float minDiff   = 100000000.0f; 
   int   minDiffId = 0;
@@ -201,11 +209,11 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
   const float fh = float(m_winHeight);
   float4 summColor = float4(0.0f);
 
-  for (int i = 0; i < tidY; i++)
+  for (int i = 0; i < blockSize; i++)
   {
     float diff     = 0.0f;
     float coverage = 0.0f;
-    for (int j = 0; j < tidY; j++)
+    for (int j = 0; j < blockSize; j++)
     {
       const float thisDiff = gbuffDiff(samples[i], samples[j], DEG_TO_RAD*90.0f, fw, fh);
       diff += thisDiff;
@@ -213,7 +221,7 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
         coverage += 1.0f;
     }
   
-    coverage *= (1.0f / (float)tidY);
+    coverage *= (1.0f / (float)blockSize);
     samples[i].coverage = coverage;
     summColor  += float4(samples[i].rgba[0], samples[i].rgba[1], samples[i].rgba[2],  samples[i].rgba[3]);
   
@@ -224,9 +232,9 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
     }
   }
   
-  const float4 avgColor = summColor*(1.0f / (float)tidY);
+  const float4 avgColor = summColor*(1.0f / (float)blockSize);
 
-  const uint XY = m_packedXY[tidX];
+  const uint XY = m_packedXY[blockId];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
   
@@ -238,20 +246,23 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
   out_gbuffer[offset].rgba[3] = avgColor[3];
 }
 
-void Integrator::EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer)
+void Integrator::kernelBE1D_EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer)
 {
-  m_qmcHammersley.resize(GBUFFER_SAMPLES);                 // TODO: move to class constructor sms like that
-  PlaneHammersley(&m_qmcHammersley[0].x, GBUFFER_SAMPLES); //
-
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for(int i = 0; i < tidX; ++i) 
+  for(int blockId = 0; blockId < int(blockNum); blockId++) 
   {
     GBufferPixel blockData[GBUFFER_SAMPLES]; 
-    for(int j = 0; j < GBUFFER_SAMPLES; ++j)
-      EvalGBuffer(i,j,blockData);
     
-    EvalGBufferReduction(i, GBUFFER_SAMPLES, blockData, out_gbuffer);
+    for(int localId = 0; localId < GBUFFER_SAMPLES; localId++)
+      EvalGBuffer(blockId, localId, blockData);
+
+    GBufferReduction(blockId, GBUFFER_SAMPLES, blockData, out_gbuffer);
   }
+}
+
+void Integrator::EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer)
+{
+  kernelBE1D_EvalGBuffer(blockNum, out_gbuffer);
 }
