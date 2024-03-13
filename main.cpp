@@ -100,6 +100,10 @@ int main(int argc, const char** argv) // common hydra main
       gamma = args.getOptionValue<float>("-gamma");
   }
 
+  bool evalGBuffer = false; 
+  if(args.hasOption("-evalgbuffer")) 
+    evalGBuffer = (args.getOptionValue<int>("-evalgbuffer") != 0);
+
   int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
   bool qmcIsEnabled  = args.hasOption("--qmc");
   bool mltIsEnabled  = false;
@@ -223,6 +227,26 @@ int main(int argc, const char** argv) // common hydra main
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl;
   pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
+
+  if(evalGBuffer)
+  {
+    std::cout << "[main]: EvalGBufferBlock() ... " << std::endl;
+    std::vector<Integrator::GBufferPixel> gbuffer(FB_WIDTH*FB_HEIGHT);
+    pImpl->EvalGBufferBlock(FB_WIDTH*FB_HEIGHT, gbuffer.data());
+    
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
+    for(size_t i=0;i<gbuffer.size();i++)
+    {
+      realColor[i*4+0] = gbuffer[i].rgba[0];
+      realColor[i*4+1] = gbuffer[i].rgba[1];
+      realColor[i*4+2] = gbuffer[i].rgba[2];
+      realColor[i*4+3] = gbuffer[i].rgba[3]; 
+    }
+    
+    auto nameColor = imageOutClean + "_texcolor.png"; 
+    SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, nameColor.c_str(), 1.0f, gamma);
+    std::fill(realColor.begin(), realColor.end(), 0.0f);
+  }
 
   std::vector<uint32_t> fbLayers = {Integrator::FB_COLOR};
   std::vector<float> directLightCopy;

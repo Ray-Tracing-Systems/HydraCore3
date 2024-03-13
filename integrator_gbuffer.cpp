@@ -107,7 +107,28 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
 
   const Lite_Hit hit = *pHit;
   if(hit.geomId == -1)
+  {
+    out_gbuffer[tidY].depth   = 0.0f;
+    out_gbuffer[tidY].norm[0] = 0.0f;
+    out_gbuffer[tidY].norm[1] = 0.0f;
+    out_gbuffer[tidY].norm[2] = 1.0f;
+  
+    out_gbuffer[tidY].texc[0] = 0.0f;
+    out_gbuffer[tidY].texc[1] = 0.0f;
+  
+    out_gbuffer[tidY].rgba[0] = 0.0f;
+    out_gbuffer[tidY].rgba[1] = 0.0f;
+    out_gbuffer[tidY].rgba[2] = 0.0f;
+    out_gbuffer[tidY].rgba[3] = 0.0f;
+    
+    out_gbuffer[tidY].objId  = uint(-1);
+    out_gbuffer[tidY].instId = uint(-1);
+    out_gbuffer[tidY].matId  = uint(-1);
+  
+    out_gbuffer[tidY].coverage = 0.0f;
+    out_gbuffer[tidY].shadow   = 0.0f; // not implemented
     return;
+  }
 
   const uint32_t matId  = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
   const float4 mdata    = m_materials[matId].colors[GLTF_COLOR_BASE];
@@ -205,12 +226,16 @@ void Integrator::EvalGBufferReduction(uint tidX, uint tidY, GBufferPixel* sample
   
   const float4 avgColor = summColor*(1.0f / (float)tidY);
 
-  out_gbuffer[tidX] = samples[minDiffId];
-
-  out_gbuffer[tidX].rgba[0] = avgColor[0];
-  out_gbuffer[tidX].rgba[1] = avgColor[1];
-  out_gbuffer[tidX].rgba[2] = avgColor[2];
-  out_gbuffer[tidX].rgba[3] = avgColor[3];
+  const uint XY = m_packedXY[tidX];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+  const uint offset   = y*m_winWidth + x;
+  out_gbuffer[offset] = samples[minDiffId];
+  out_gbuffer[offset].rgba[0] = avgColor[0];
+  out_gbuffer[offset].rgba[1] = avgColor[1];
+  out_gbuffer[offset].rgba[2] = avgColor[2];
+  out_gbuffer[offset].rgba[3] = avgColor[3];
 }
 
 void Integrator::EvalGBufferBlock(uint tidX, GBufferPixel* out_gbuffer)
