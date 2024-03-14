@@ -31,7 +31,7 @@ void SaveGBufferImages(const std::string& imageOutClean, const std::string& imag
   }
 
   auto nameColorNorm = imageOutClean + "2" + "." + imageOutFiExt; 
-  SaveLDRImageM(tmp.data(), width, height, nameColorNorm.c_str(), 1.0f, 1.0f);
+  SaveLDRImageM(tmp.data(), width, height, 4, nameColorNorm.c_str(), 1.0f, 1.0f);
 
   // diffuse color
   //
@@ -45,7 +45,7 @@ void SaveGBufferImages(const std::string& imageOutClean, const std::string& imag
   }
   
   auto nameColorTex = imageOutClean + "3" + "." + imageOutFiExt; 
-  SaveLDRImageM(tmp.data(), width, height, nameColorTex.c_str(), 1.0f, 2.4f);
+  SaveLDRImageM(tmp.data(), width, height, 4, nameColorTex.c_str(), 1.0f, 2.4f);
 
   // depth buffer
   std::fill(tmp.begin(), tmp.end(), 0.0f);
@@ -68,7 +68,7 @@ void SaveGBufferImages(const std::string& imageOutClean, const std::string& imag
   }
 
   auto nameColorDepth = imageOutClean + "4" + "." + imageOutFiExt; 
-  SaveLDRImageM(tmp.data(), width, height, nameColorDepth.c_str(), 1.0f, 1.0f);
+  SaveLDRImageM(tmp.data(), width, height, 4, nameColorDepth.c_str(), 1.0f, 1.0f);
 
   //Next: matId, onjId, instId
 

@@ -99,6 +99,7 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   image.height       = height;
   image.num_channels = channels;
 
+  
   header.num_channels          = channels;
   header.channels              = channelsVec.data();
   header.pixel_types           = auxIntData.data();
@@ -107,19 +108,31 @@ bool SaveImage3DToEXR(const float* data, int width, int height, int channels, co
   constexpr float IMG_LAMBDA_MIN = 360.0f;
   constexpr float IMG_LAMBDA_MAX = 830.0f;
 
-  for (int i = 0; i < channels; i++) {
-    const float t0     = float(i)/float(channels);
-    const float t1     = float(i+1)/float(channels);
-    const float lamdba0 = IMG_LAMBDA_MIN + t0*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
-    const float lamdba1 = IMG_LAMBDA_MIN + t1*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
-    std::stringstream strout;
-    strout << int(lamdba0) << "-" << int(lamdba1)-1 << ".Y";
-    std::string tmp = strout.str();
-    //std::cout << tmp.c_str() << std::endl;
-    memset (header.channels[i].name, 0, 256);
-    strncpy(header.channels[i].name, tmp.c_str(), 255);
-    header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
-    header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+  if(channels == 1)
+  {
+    std::string name = "Y";
+    memset (header.channels[0].name, 0, 256);
+    strncpy(header.channels[0].name, name.c_str(), 255);
+    header.pixel_types[0]           = TINYEXR_PIXELTYPE_FLOAT; 
+    header.requested_pixel_types[0] = TINYEXR_PIXELTYPE_FLOAT; 
+  }
+  else
+  {
+    for (int i = 0; i < channels; i++) 
+    {
+      const float t0     = float(i)/float(channels);
+      const float t1     = float(i+1)/float(channels);
+      const float lamdba0 = IMG_LAMBDA_MIN + t0*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+      const float lamdba1 = IMG_LAMBDA_MIN + t1*(IMG_LAMBDA_MAX - IMG_LAMBDA_MIN);
+      std::stringstream strout;
+      strout << int(lamdba0) << "-" << int(lamdba1)-1 << ".Y";
+      std::string tmp = strout.str();
+      //std::cout << tmp.c_str() << std::endl;
+      memset (header.channels[i].name, 0, 256);
+      strncpy(header.channels[i].name, tmp.c_str(), 255);
+      header.pixel_types[i]           = TINYEXR_PIXELTYPE_FLOAT; // pixel type of input image
+      header.requested_pixel_types[i] = TINYEXR_PIXELTYPE_FLOAT; // pixel type of output image to be stored in .EXR
+    }
   }
  
   const char* err = nullptr; 
@@ -227,6 +240,48 @@ void FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a
   }
 }
 
+void MonoFrameBufferToLDRImage(const float* mono, int width, int height, float a_normConst, float a_gamma, std::vector<uint32_t>& pixelData, bool a_flip)
+{
+  if(std::abs(a_gamma - 2.4f) < 1e-5f) 
+  {
+    #pragma omp parallel for if (width*height > 512*512)
+    for(int y=0;y<height;y++) // flip image and extract pixel data
+    {
+      int offset1 = y*width;
+      int offset2 = a_flip ? (height-y-1)*width : offset1;
+      for (int x = 0; x < width; x++)
+      {
+        float color[4];
+        color[0]     = linearToSRGB(clamp(mono[(offset1+x)]*a_normConst, 0.0f, 1.0f));
+        color[1]     = linearToSRGB(clamp(mono[(offset1+x)]*a_normConst, 0.0f, 1.0f));
+        color[2]     = linearToSRGB(clamp(mono[(offset1+x)]*a_normConst, 0.0f, 1.0f));
+        color[3]     = 1.0f;
+        pixelData[offset2 + x] = RealColorToUint32(color);
+      }
+    }
+  }
+  else 
+  {
+    const float invGamma  = 1.0f/a_gamma;
+    
+    #pragma omp parallel for if (width*height > 512*512)
+    for(int y=0;y<height;y++) // flip image and extract pixel data
+    {
+      int offset1 = y*width;
+      int offset2 = a_flip ? (height-y-1)*width : offset1;
+      for (int x = 0; x < width; x++)
+      {
+        float color[4];
+        color[0]     = clamp(std::pow(mono[(offset1+x)]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[1]     = clamp(std::pow(mono[(offset1+x)]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[2]     = clamp(std::pow(mono[(offset1+x)]*a_normConst, invGamma), 0.0f, 1.0f);
+        color[3]     = 1.0f;
+        pixelData[offset2 + x] = RealColorToUint32(color);
+      }
+    }
+  }
+}
+
 std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma, bool a_flip)
 {
   std::vector<uint32_t> pixelData(width*height);
@@ -234,17 +289,24 @@ std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, in
   return pixelData;
 }
 
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
+bool SaveImage4fToBMP(const float* rgb, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma) 
 {
   auto pixelData = FrameBufferColorToLDRImage(rgb, width, height, a_normConst, a_gamma, false);
   LiteImage::SaveBMP(outfilename, pixelData.data(), width, height);
   return true;
 }
 
-bool SaveImage4fByExtension(const float* data, int width, int height, const char* outfilename, float a_normConst, float a_gamma) 
+bool SaveImage4fByExtension(const float* data, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma) 
 {
   LiteImage::Image2D<uint32_t> tmp(width, height);
-  FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma, const_cast< std::vector<uint32_t>& >(tmp.vector()), true); 
+  if(channels == 1)
+  {
+    MonoFrameBufferToLDRImage(data, width, height, a_normConst, a_gamma, const_cast< std::vector<uint32_t>& >(tmp.vector()), true); 
+  }
+  else
+  {
+    FrameBufferColorToLDRImage(data, width, height, a_normConst, a_gamma, const_cast< std::vector<uint32_t>& >(tmp.vector()), true); 
+  }
   return LiteImage::SaveImage(outfilename, tmp);
 }
 

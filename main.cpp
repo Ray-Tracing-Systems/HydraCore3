@@ -297,7 +297,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if enableNaivePT
 
@@ -322,7 +322,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if enableShadowPT
 
@@ -351,7 +351,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if (enableMISPT)
 
@@ -390,7 +390,7 @@ int main(int argc, const char** argv) // common hydra main
       {
         const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConstRT, gamma);
       }
     } // end if(enableRT || enablePRT)
     
@@ -410,7 +410,7 @@ int main(int argc, const char** argv) // common hydra main
     if(saveHDR)
       SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst);
     else
-      SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
+      SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst, gamma);
   }
 
   return 0;
