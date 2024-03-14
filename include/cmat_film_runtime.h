@@ -158,17 +158,17 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const IO
     w *= FILM_LENGTH_RES - 1;
     theta *= FILM_ANGLE_RES - 1;
     uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
-    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
     float alpha = w - float(index1);
     float beta = theta - float(index2);
 
-    float v0 = lerp(precomputed_data[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed_data[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    float v1 = lerp(precomputed_data[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed_data[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    float v0 = lerp(precomputed_data[refl_offset + index1 * FILM_ANGLE_RES + index2], precomputed_data[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
+    float v1 = lerp(precomputed_data[refl_offset + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
     result.refl = lerp(v0, v1, beta);
 
-    v0 = lerp(precomputed_data[refr_offset + index1 * FILM_LENGTH_RES + index2], precomputed_data[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    v1 = lerp(precomputed_data[refr_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed_data[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    v0 = lerp(precomputed_data[refr_offset + index1 * FILM_ANGLE_RES + index2], precomputed_data[refr_offset + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
+    v1 = lerp(precomputed_data[refr_offset + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refr_offset + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
     result.refr = lerp(v0, v1, beta);
   }
   R = result.refl;
@@ -383,17 +383,17 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const IOR
     w *= FILM_LENGTH_RES - 1;
     theta *= FILM_ANGLE_RES - 1;
     uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
-    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
     float alpha = w - float(index1);
     float beta = theta - float(index2);
 
-    float v0 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    float v1 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    float v0 = lerp(precomputed[refl_offset + index1 * FILM_ANGLE_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
+    float v1 = lerp(precomputed[refl_offset + index1 * FILM_ANGLE_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
     result.refl = lerp(v0, v1, beta);
 
-    v0 = lerp(precomputed[refr_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    v1 = lerp(precomputed[refr_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refr_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    v0 = lerp(precomputed[refr_offset + index1 * FILM_ANGLE_RES + index2], precomputed[refr_offset + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
+    v1 = lerp(precomputed[refr_offset + index1 * FILM_ANGLE_RES + index2 + 1], precomputed[refr_offset + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
     result.refr = lerp(v0, v1, beta);
   }
   R = result.refl;
@@ -616,13 +616,13 @@ static void filmRoughEval(const Material* a_materials, const IORVector a_ior, co
     w *= FILM_LENGTH_RES - 1;
     theta *= FILM_ANGLE_RES - 1;
     uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
-    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_LENGTH_RES - 2));
+    uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
     float alpha = w - float(index1);
     float beta = theta - float(index2);
 
-    float v0 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2], alpha);
-    float v1 = lerp(precomputed[refl_offset + index1 * FILM_LENGTH_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_LENGTH_RES + index2 + 1], alpha);
+    float v0 = lerp(precomputed[refl_offset + index1 * FILM_ANGLE_RES + index2], precomputed[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
+    float v1 = lerp(precomputed[refl_offset + index1 * FILM_ANGLE_RES + index2 + 1], precomputed[refl_offset + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
     R = lerp(v0, v1, beta);
   }
 
