@@ -69,17 +69,18 @@ class REQ:
       return
 
 class REQ_H2(REQ):
-  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4):
+  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4, imname = "w_ref.png"):
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
     self.integs = integrators
     self.naivem = naivemul
+    self.image_name = imname
     self.times  = []
 
   def test(req, gpu_id=0):
     for test_name in req.tests: 
-      image_ref = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/w_ref.png", cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      image_ref = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + req.image_name, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
       full = PATH_TO_HYDRA2_TESTS + "/tests_f/" + test_name + "/statex_00001.xml"
       devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
       for dev_type in devices:
@@ -157,9 +158,70 @@ class REQ_H2GBuff(REQ):
           args = args + ["--cpu", "-evalgbuffer", "1"]
           req.run(test_name, args, image_ref, outp, inregrator)
 
+class REQ_H2Spectral(REQ):
+  def __init__(self, name, tests, wavelengths, compare_hdr = False, imsize = (512,512), integrators = ["mispt"], naivemul = 4):
+    self.name   = name
+    self.tests  = tests
+    self.imsize = imsize
+    self.integs = integrators
+    self.naivem = naivemul
+    self.wavelengths = wavelengths
+    self.hdr = compare_hdr
+    self.times  = []
+
+  def run(req, test_name, args, wave):
+    try:
+      res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+      if req.hdr:
+        image_names = (f"{wave}nm.exr", f"h3_{wave}nm.exr")
+      else:
+        image_names = (f"{wave}nm.png", f"h3_{wave}nm.png")
+
+      image_ref1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + image_names[0], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      image_our1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + image_names[1], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+      PSNR       = cv2.PSNR(image_ref1,image_our1)
+      color     = Fore.GREEN
+      message   = "[PASSED]"
+      if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]")
+      if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]")
+      Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message, alignIntegratorName(f"{wave} nm"), PSNR), color = color)
+
+    except Exception as e:
+      Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
+      return
+    if res.returncode != 0:
+      Log().status_info("{}: launch, returncode = {}".format(test_name,res.returncode), status=Status.FAILED)
+      Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
+      return
+
+  def test(req, gpu_id=0):
+    for test_name in req.tests:
+      for idx, wave in enumerate(req.wavelengths): 
+        full = PATH_TO_HYDRA2_TESTS + "/tests/" + test_name + f"/statex_{idx + 1:05d}.xml"
+        devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
+        for dev_type in devices:
+          Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
+          for inregrator in req.integs:
+            name = f"/h3_{wave}nm.exr" if req.hdr else f"/h3_{wave}nm.png"
+            outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + name
+            args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+            args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
+            args = args + ["--gpu", "-channels", "1"]
+            args = args + ["--" + dev_type]
+            req.run(test_name, args, wave)
+
 
 class REQ_HX(REQ):
-  def __init__(self, name, scn_path, ref_path, imsize = [(1024,1024)], integrators = ["naivept","shadowpt","mispt"], naivemul = 4, is_spectral = False, auxArgs = []):
+  def __init__(self, name, scn_path, ref_path, imsize=None, integrators=None, naivemul = 4, is_spectral = False,
+               auxArgs=None):
+    if auxArgs is None:
+      auxArgs = []
+    if integrators is None:
+      integrators = ["naivept", "shadowpt", "mispt"]
+    if imsize is None:
+      imsize = list([(1024, 1024)])
+
     self.name   = name
     self.scn_path = scn_path
     self.ref_path = ref_path
@@ -180,7 +242,7 @@ class REQ_HX(REQ):
       for dev_type in devices:
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
         for inregrator in req.integs:
-          outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + ".bmp"
+          outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + os.path.splitext(imgp)[1]
           args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
@@ -285,6 +347,25 @@ if __name__ == '__main__':
   reqs.append( REQ_H2("geo_dof_tst", ["test_304"], integrators = ["mispt", "shadowpt"], imsize = (512,256)) )
 
   reqs.append( REQ_H2GBuff("gbuffer", ["test_037"], imsize = (1024,768)) )
+
+  reqs.append( REQ_H2Spectral("cornell1_mono", ["test_601_cornell_spectral_2"], [x for x in range(400, 701, 40)], imsize=(512, 512)))
+  reqs.append( REQ_H2Spectral("macbeth_mono", ["test_602_macbeth"], [x for x in range(400, 701, 10)], imsize=(1280, 720)))
+
+  reqs.append( REQ_HX("hydra2-spectral",
+                      [
+                        PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0001/spectral-macbeth-hydra3.xml",
+                        PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0004/spectral-cornell-hydra3.xml",
+                        PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0005/spectral-texture-hydra3.xml",
+                        PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0006/spectral-cornell-hydra3.xml",
+                      ],
+                      [
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_602_macbeth/z_out.exr",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_601_cornell_spectral_2/z_out.exr",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_603_texture_1/z_out.exr",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_612_cornell_spectral_3/z_out.exr",
+                      ],
+                      imsize = [(1280, 720), (512, 512), (512, 512), (512, 512)],
+                      naivemul = 16, integrators = ["mispt"], is_spectral = True))
 
   reqs.append( REQ_HX("geo_inst_remap_list", [PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00001.xml",
                                               PATH_TO_HYDRA2_TESTS + "/tests/test_078/statex_00002.xml",

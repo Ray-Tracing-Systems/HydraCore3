@@ -153,6 +153,8 @@ void LoadSpectralTextures(const uint32_t specId,
       HydraSampler sampler;
       sampler.inputGamma = 1.0f;
       sampler.texId = xml_tex_id;
+      sampler.sampler.addressU = Sampler::AddressMode::CLAMP;
+      sampler.sampler.addressV = Sampler::AddressMode::CLAMP;
 
       const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, texturesInfo, sampler, texCache, textures);
       spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
