@@ -370,10 +370,10 @@ if __name__ == '__main__':
                         PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0006/spectral-cornell-hydra3.xml",
                       ],
                       [
-                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_602_macbeth/z_out.png",
-                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_601_cornell_spectral_2/z_out.png",
-                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_603_texture_1/z_out.png",
-                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_612_cornell_spectral_3/z_out.png",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_602_macbeth/w_ref.png",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_601_cornell_spectral_2/w_ref.png",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_603_texture_1/w_ref.png",
+                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_612_cornell_spectral_3/w_ref.png",
                       ],
                       imsize = [(1280, 720), (512, 512), (512, 512), (512, 512)],
                       naivemul = 16, integrators = ["mispt"], is_spectral = True))
