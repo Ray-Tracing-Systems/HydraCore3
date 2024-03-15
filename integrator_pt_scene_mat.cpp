@@ -1,6 +1,8 @@
 #include "integrator_pt_scene.h"
 #include <spectral/spec/conversions.h>
 #include <spectral/upsample/upsamplers.h>
+#include <unordered_map>
+
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
   if(a_mode == L"clamp")
@@ -168,17 +170,29 @@ float4 GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources
 
 ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources, bool is_spectral_mode)
 { 
+
+  static std::unordered_map<spec::vec3, uint32_t> spec_cache;
   if(is_spectral_mode) {
     uint32_t spec_id = GetSpectrumIdFromNode(a_node);
     if(spec_id != INVALID_SPECTRUM_ID) {
       return {spec_id};
     }
     else {//Register new spectrum
-      std::cerr << "Creating new spectrum" << std::endl;
       float4 color = GetColorFromNode(a_node, resources);
-      uint32_t spec_id = resources.spectraInfo.size();
-      resources.spectraInfo.push_back({spec::vec3(color[0], color[1], color[2]), spec_id});
-      return {spec_id};
+      spec::vec3 rgb{color[0], color[1], color[2]};
+      auto it = spec_cache.find(rgb);
+      if(it != spec_cache.end()) {
+        std::cerr << "Reusing spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
+        return {it->second};
+      }
+      else {
+        std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
+        uint32_t spec_id = resources.spectraInfo.size();
+        std::cerr << "ID = " << spec_id << std::endl;
+        resources.spectraInfo.push_back({rgb, spec_id});
+        spec_cache[rgb] = spec_id;
+        return {spec_id};
+      }
     }
   }
   else {
@@ -346,7 +360,15 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   if(materialNode.attribute(L"light_id") != nullptr || nodeEmiss != nullptr)
   {
     auto nodeEmissColor = nodeEmiss.child(L"color");
-    color               = GetColorFromNode(nodeEmissColor, resources);
+
+    auto var_color = GetVariableColorFromNode(nodeEmissColor, resources, is_spectral_mode);
+    if(var_color.isRGB()) {
+        color = var_color.getRGB();
+    }
+    else {
+      mat.spdid[0] = var_color.getSpectrumId();
+      std::cerr << "Mat specid = " << mat.spdid[0] << std::endl; 
+    }
     is_emission_color = (materialNode.attribute(L"light_id") != nullptr) || (length(color) > 1e-5f );
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, resources, texCache, textures);
@@ -361,8 +383,8 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
     else
       mat.lightId = uint(materialNode.attribute(L"light_id").as_int());  // for correct process of "-1"
 
-    auto specId  = GetSpectrumIdFromNode(nodeEmissColor);  
-    mat.spdid[0] = specId;
+    //auto specId  = GetSpectrumIdFromNode(nodeEmissColor);  
+   // mat.spdid[0] = specId;
     mat.mtype    = MAT_TYPE_LIGHT_SOURCE;
 
     auto colorMultNode = nodeEmissColor.child(L"multiplier");
@@ -531,7 +553,7 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
     alpha_u = nodeAlphaU.attribute(L"val").as_float();
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
-  
+
   auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
   auto etaSpecId = GetSpectrumIdFromNode(materialNode.child(L"eta"));
   auto k         = materialNode.child(L"k").attribute(L"val").as_float();
@@ -604,7 +626,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext
     mat.row1 [0]  = sampler.row1;
     mat.texid[0]  = texID;
 
-    if(is_spectral_mode && mat.spdid[0] != INVALID_SPECTRUM_ID)
+    if(is_spectral_mode && mat.spdid[0] < resources.loadedSpectrumCount)
     {
       LoadSpectralTextures(mat.spdid[0], resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
@@ -735,7 +757,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
 
   auto nodeColor = materialNode.child(L"reflectance");
   uint32_t specId = INVALID_SPECTRUM_ID;
-  if(nodeColor != nullptr)
+  if(nodeColor)
   {
     ColorHolder color = GetVariableColorFromNode(nodeColor, resources, is_spectral_mode);
 
@@ -751,10 +773,10 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
     mat.row1 [0]  = sampler.row1;
     mat.texid[0]  = texID;
 
-    specId = GetSpectrumIdFromNode(nodeColor);
-    mat.spdid[0] = specId;
+  //  specId = GetSpectrumIdFromNode(nodeColor);
+   // mat.spdid[0] = specId;
 
-    if(is_spectral_mode && specId != INVALID_SPECTRUM_ID)
+    if(is_spectral_mode && specId < resources.loadedSpectrumCount)
     {
       LoadSpectralTextures(specId, resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
@@ -787,16 +809,16 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
       spectrum = spec->ResampleUniform();
     }
     else {
-      //use dummy spectra
+      std::cerr << "Using dummy spectrum" << std::endl;
       Spectrum uniform1;
       uniform1.id = 0;
 
-      spec::BasicSpectrum *sp = new spec::BasicSpectrum();
-
-      sp->set(200.0f, 1.0f);
-      sp->set(400.0f, 1.0f);
-      sp->set(600.0f, 1.0f);
-      sp->set(800.0f, 1.0f);
+      spec::BasicSpectrum *sp = new spec::BasicSpectrum{
+        {200.0f, 1.0f},
+        {400.0f, 1.0f},
+        {600.0f, 1.0f},
+        {800.0f, 1.0f}
+      };
 
       uniform1.spectrum.reset(sp);
       auto specValsUniform = uniform1.ResampleUniform();

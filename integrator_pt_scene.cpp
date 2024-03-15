@@ -243,12 +243,12 @@ namespace {
     Spectrum uniform1;
     uniform1.id = 0;
 
-    spec::BasicSpectrum *sp = new spec::BasicSpectrum();
-
-    sp->set(200.0f, 1.0f);
-    sp->set(400.0f, 1.0f);
-    sp->set(600.0f, 1.0f);
-    sp->set(800.0f, 1.0f);
+    spec::BasicSpectrum *sp = new spec::BasicSpectrum{
+      {200.0f, 1.0f},
+      {400.0f, 1.0f},
+      {600.0f, 1.0f},
+      {800.0f, 1.0f}
+    };
 
     uniform1.spectrum.reset(sp);
     auto specValsUniform = uniform1.ResampleUniform();
@@ -334,14 +334,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_textures.reserve(256);
   m_textures.push_back(MakeWhiteDummy());
 
-
+  resources.loadedSpectrumCount = 0u;
   resources.spectraInfo.reserve(100);
   for(auto specNode : scene.SpectraNodes())
   {
     auto spec_id   = specNode.attribute(L"id").as_uint();
 
     auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-    if(refs_attr && m_spectral_mode) //might need to remove later
+    if(refs_attr) //might need to remove later
     {
       auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 
@@ -366,6 +366,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       std::wstring wstr = spec_path.wstring();
 
       resources.spectraInfo.push_back({wstr, spec_id});
+      resources.loadedSpectrumCount += 1;
     }
   }
 

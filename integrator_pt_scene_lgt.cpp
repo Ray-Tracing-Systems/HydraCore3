@@ -26,6 +26,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   }
   else {
     lightSpecId = var_color.getSpectrumId();
+    std::cerr << "Light specid = " << lightSpecId << std::endl; 
   }
   auto matrix      = lightInst.matrix;
 

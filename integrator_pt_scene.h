@@ -219,7 +219,7 @@ struct ResourceContext
 { 
   std::vector<SpectrumLoader> spectraInfo;
   std::vector<TextureInfo> texturesInfo;
-
+  uint32_t loadedSpectrumCount;
 
 
 };
