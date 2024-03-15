@@ -15,11 +15,20 @@ void IntegratorQMC::EnableQMC()
   const bool motion = (m_normMatrices2.size() != 0);
 
   assert(qmc::QRNG_DIMENSIONS >= 11); // code of this function assume >= 11 dimentions
+  
+  // QMC for: (optics, spd, time)
+  //
+  //m_qmcDofDim    = 2;
+  //m_qmcSpdDim    = 4;
+  //m_qmcMotionDim = 5;
+  //m_qmcMatDim    = 0; 
+  //m_qmcLgtDim    = 0; 
+  //return;
 
   if(dof && spd && motion) // (0,1): pixel id; (2,3): lens; (4,5): spd and motion; (6,7): mat; (8,9,10): light.
   {
-    m_qmcMotionDim = 4;
-    m_qmcSpdDim    = 5;
+    m_qmcMotionDim = 5;
+    m_qmcSpdDim    = 4;
     m_qmcMatDim    = 0; // 6; // may set to zero to enable OMC here
     m_qmcLgtDim    = 0; // 8; // may set to zero to enable OMC here
   }
