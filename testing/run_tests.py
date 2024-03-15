@@ -187,6 +187,8 @@ class REQ_H2Spectral(REQ):
       if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]")
       Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message, alignIntegratorName(f"{wave} nm"), PSNR), color = color)
 
+      return PSNR
+
     except Exception as e:
       Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
       return
@@ -197,6 +199,7 @@ class REQ_H2Spectral(REQ):
 
   def test(req, gpu_id=0):
     for test_name in req.tests:
+      PSNR_avg = {}
       for idx, wave in enumerate(req.wavelengths): 
         full = PATH_TO_HYDRA2_TESTS + "/tests/" + test_name + f"/statex_{idx + 1:05d}.xml"
         devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
@@ -209,7 +212,15 @@ class REQ_H2Spectral(REQ):
             args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
             args = args + ["--gpu", "-channels", "1"]
             args = args + ["--" + dev_type]
-            req.run(test_name, args, wave)
+            psnr_val = req.run(test_name, args, wave)
+
+            name = f"{dev_type} {inregrator}"
+            if PSNR_avg.get(name, "") == "":
+              PSNR_avg[name] = psnr_val
+            else:
+              PSNR_avg[name] += psnr_val
+      for name, psnr in PSNR_avg.items():
+        Log().info(f"  {name} average PSNR = {psnr / len(req.wavelengths)}")
 
 
 class REQ_HX(REQ):
