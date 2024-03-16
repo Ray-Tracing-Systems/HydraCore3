@@ -106,10 +106,10 @@ uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoad
   }
   else {
     float multiplier = LiteMath::hmax(color);
-    uint32_t spec_id = loaders.size();
+    uint32_t spec_id = uint32_t(loaders.size());
     std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
     std::cerr << "ID = " << spec_id << std::endl;
-    if(multiplier == 1.0f) {
+    if(multiplier <= 1.0f) {
       loaders.push_back({rgb, spec_id});
       spec_cache[rgb] = spec_id;
     }
