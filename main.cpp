@@ -9,12 +9,23 @@
 #include "mi_materials.h"
 
 float4x4 ReadMatrixFromString(const std::string& str);
+std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
+std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
 #include "integrator_pt_generated.h" // advanced way
 //std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
+
+#ifdef USE_STB_IMAGE
+  #define SaveLDRImageM SaveImage4fByExtension
+#else
+  #define SaveLDRImageM SaveImage4fToBMP
+#endif
+
+void SaveGBufferImages(const std::string& imageOutClean, const std::string& imageOutFiExt, 
+                       const std::vector<Integrator::GBufferPixel>& gbuffer, std::vector<float>& tmp, uint width, uint height);
 
 int main(int argc, const char** argv) // common hydra main
 {
@@ -73,7 +84,8 @@ int main(int argc, const char** argv) // common hydra main
                        imageOut.find(".image4f") != std::string::npos ||
                        imageOut.find(".image3d1f") != std::string::npos;
 
-  const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of("."));
+  const std::string imageOutClean = imageOut.substr(0, imageOut.find_last_of(".")); // "image.png" ==> "image"
+  const std::string imageOutFiExt = imageOut.substr(imageOut.find_last_of(".")+1);  // "image.png" ==> ".png"
 
   if(args.hasOption("-integrator"))
     integratorType = args.getOptionValue<std::string>("-integrator");
@@ -92,7 +104,24 @@ int main(int argc, const char** argv) // common hydra main
       gamma = args.getOptionValue<float>("-gamma");
   }
 
-  int spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  bool evalGBuffer = false; 
+  {
+    if(args.hasOption("-evalgbuffer")) 
+      evalGBuffer = (args.getOptionValue<int>("-evalgbuffer") != 0);
+    if(fbLayer == "gbuffer")
+      evalGBuffer = true;
+  }
+  
+  int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  bool qmcIsEnabled  = args.hasOption("--qmc");
+  bool mltIsEnabled  = false;
+  if(integratorType == "mlt" || integratorType == "kmlt" || integratorType == "kelemen_mlt")
+  {
+    mltIsEnabled   = true;
+    integratorType = "mispt"; 
+    if(fbLayer == "color")
+      fbLayer = "split_direct_indirect";
+  }
 
   float4x4 look_at;
   auto override_camera_pos = args.hasOption("-look_at");
@@ -138,7 +167,7 @@ int main(int argc, const char** argv) // common hydra main
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
 
-  bool onGPU = args.hasOption("--gpu");
+  bool onGPU = args.hasOption("--gpu") && !evalGBuffer;
   #ifdef USE_VULKAN
   if(onGPU)
   {
@@ -176,8 +205,14 @@ int main(int argc, const char** argv) // common hydra main
   }
   else
   #endif
-    pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
-
+  {
+    if(mltIsEnabled)
+      pImpl = CreateIntegratorKMLT(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    else if(qmcIsEnabled)
+      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    else
+      pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+  }
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -200,6 +235,17 @@ int main(int argc, const char** argv) // common hydra main
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl;
   pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
+
+  if(evalGBuffer)
+  {
+    std::cout << "[main]: EvalGBuffer() ... " << std::endl;
+
+    std::vector<Integrator::GBufferPixel> gbuffer(FB_WIDTH*FB_HEIGHT);
+    pImpl->EvalGBuffer(FB_WIDTH*FB_HEIGHT, gbuffer.data());
+    
+    SaveGBufferImages(imageOutClean, imageOutFiExt, gbuffer, realColor, FB_WIDTH, FB_HEIGHT);
+    return 0;
+  }
 
   std::vector<uint32_t> fbLayers = {Integrator::FB_COLOR};
   std::vector<float> directLightCopy;
@@ -243,15 +289,15 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + ".exr";
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + ".bmp";
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_naivept" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if enableNaivePT
 
@@ -268,15 +314,15 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + ".exr";
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + ".bmp";
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if enableShadowPT
 
@@ -297,15 +343,15 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + ".exr";
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + ".bmp";
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
     } // end if (enableMISPT)
 
@@ -336,15 +382,15 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + ".exr";
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + ".bmp";
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConstRT, gamma);
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConstRT, gamma);
       }
     } // end if(enableRT || enablePRT)
     
@@ -364,7 +410,7 @@ int main(int argc, const char** argv) // common hydra main
     if(saveHDR)
       SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst);
     else
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, imageOut.c_str(), normConst, gamma);
+      SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst, gamma);
   }
 
   return 0;

@@ -11,12 +11,12 @@
 #include "CamTableLens.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false);
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+bool SaveImage4fToBMP(const float* rgb, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
 
 #include "vk_context.h"
 #include "vk_buffers.h"
 
-#include "integrator_pt1_generated.h"              // advanced way of woking with hydra
+#include "integrator_pt_generated.h"              // advanced way of woking with hydra
 #include "cam_plugin/CamPinHole_pinhole_gpu.h"     // same way for camera plugins
 #include "cam_plugin/CamTableLens_tablelens_gpu.h" // same way for camera plugins
 
@@ -279,7 +279,7 @@ int main(int argc, const char** argv)
   if(saveHDR) 
     SaveImage4fToEXR(realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, true);
   else
-    SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, imageOut.c_str(), normConst, gamma);
+    SaveImage4fToBMP(realColor.data(), WIN_WIDTH, WIN_HEIGHT, 4, imageOut.c_str(), normConst, gamma);
   
   return 0;
 }

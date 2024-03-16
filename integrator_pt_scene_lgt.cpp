@@ -121,6 +121,44 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     lightSource.pdfA      = 1.0f;
     lightSource.size      = float2(0,0);
     lightSource.matrix    = float4x4{};
+    if(ldist == L"spot")
+    {
+      const float angle1 = hydra_xml::readval1f(lightInst.lightNode.child(L"falloff_angle"));
+      const float angle2 = hydra_xml::readval1f(lightInst.lightNode.child(L"falloff_angle2"));
+  
+      lightSource.lightCos2 = std::cos(0.5f*DEG_TO_RAD*angle1); 
+      lightSource.lightCos1 = std::cos(0.5f*DEG_TO_RAD*angle2); 
+      lightSource.distType  = LIGHT_DIST_SPOT;
+      
+      auto projNode = lightInst.lightNode.child(L"projective");
+      if(projNode != nullptr)
+      {
+        auto rot =  lightInst.matrix;
+        rot.set_col(3, float4(0,0,0,1));
+
+        float fov   = hydra_xml::readval1f(projNode.child(L"fov"));
+        float znear = hydra_xml::readval1f(projNode.child(L"nearClipPlane"));
+        float zfar  = hydra_xml::readval1f(projNode.child(L"farClipPlane"));
+   
+        float3 lookAtO = float3(0,-1,0);
+        float3 upO     = float3(0,0,1);
+        
+        float3 lookAtT = lightInst.matrix * lookAtO;
+        float3 upT     = rot*upO;
+
+        float4x4 mProj   = LiteMath::perspectiveMatrix(fov, 1.0f, znear, zfar);
+        float4x4 mLookAt = LiteMath::lookAt(to_float3(lightSource.pos), lookAtT, upT);
+        float4x4 mWorldViewProj = mProj*mLookAt;
+        lightSource.iesMatrix   = mWorldViewProj; 
+        if(projNode.child(L"texture") != nullptr)
+        {
+          const auto& [samplerProj, texIdProj] = LoadTextureFromNode(projNode, texturesInfo, texCache, a_textures); 
+
+          lightSource.flags |= LIGHT_FLAG_PROJECTIVE;
+          lightSource.texId = texIdProj; // to process -1 correctly
+        }
+      }
+    }
   }
     
   auto iesNode = lightInst.lightNode.child(L"ies");
@@ -184,7 +222,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
 
 static std::vector<float> PrefixSumm(const std::vector<float>& a_vec)
 {
-  double accum = 0.0f;
+  double accum = 0.0;
   std::vector<float> avgBAccum(a_vec.size() + 1);
   for (size_t i = 0; i < a_vec.size(); i++)
   {
@@ -201,7 +239,7 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
   
   int tableW = pTex->width();
   int tableH = pTex->height();
-  const float2 whInv(1.0f/tableW, 1.0f/tableH);
+  const float2 whInv(1.0f / float(tableW), 1.0f / float(tableH));
   std::vector<float> lumImage(tableW*tableH);
         
   float avg = 0.0f;

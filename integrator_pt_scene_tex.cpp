@@ -119,3 +119,20 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
 
   return {sampler, p->second};
 }
+
+std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureInfo> &texturesInfo, const HydraSampler& sampler,
+                                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
+{
+  auto p = texCache.find(sampler);
+  if(p == texCache.end())
+  {
+    texCache[sampler] = uint(textures.size());
+    bool disableGamma = true;
+
+    textures.push_back(LoadTextureAndMakeCombined(texturesInfo[texId], sampler.sampler, disableGamma));
+    p = texCache.find(sampler);
+  }
+
+  return {sampler, p->second};
+}

@@ -16,7 +16,10 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_FOUR_TEXTURES  : return "4TEX";
     case KSPEC_LIGHT_IES          : return "LGT_IES";
     case KSPEC_LIGHT_ENV          : return "LGT_ENV";
-
+    case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
+    case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
+    case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
+    
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
@@ -145,6 +148,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       if(texNode != nullptr)
         features[KSPEC_LIGHT_ENV] = 1;
     }
+    else if(lightInst.lightNode.child(L"projective") != nullptr)
+      features[KSPEC_LIGHT_PROJECTIVE] = 1;
   }
 
   for(auto settings : g_lastScene.Settings())
@@ -152,6 +157,16 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     g_lastSceneInfo.width  = settings.width;
     g_lastSceneInfo.height = settings.height;
     break; //take first render settings
+  }
+
+  for(auto cam : g_lastScene.Cameras())
+  {
+    auto opticNode = cam.node.child(L"optical_system");
+    if(opticNode != opticNode)
+      opticNode = cam.node.child(L"optics");
+    if(opticNode != nullptr)
+      features[KSPEC_OPTIC_SIM] = 1;
+    break;
   }
 
   g_lastScenePath = scenePathStr;
@@ -200,15 +215,28 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     g_lastSceneInfo.memGeom += byteSize;
   }
 
-  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024*256;
-  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024*256;
+  g_lastSceneInfo.maxTotalVertices     = maxTotalVertices   + 1024u * 256u;
+  g_lastSceneInfo.maxTotalPrimitives   = maxTotalPrimitives + 1024u * 256u;
 
   g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
   g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
 
+
+  for(auto inst : g_lastScene.InstancesGeom())
+  {
+    if(inst.hasMotion)
+    {
+      features[KSPEC_MOTION_BLUR] = 1;
+      break;
+    }
+  }
+
   (*pSceneInfo) = g_lastSceneInfo;
   return features;
 }
+
+
+void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
 
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
@@ -268,7 +296,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     if (texNode.attribute(L"loc").empty())
       tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"path").as_string();
     else
-      tex.path   = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+      tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
     
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
@@ -287,27 +315,51 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_textures.reserve(256);
   m_textures.push_back(MakeWhiteDummy());
 
-  std::vector<SpectrumInfo> spectraInfo;
-  spectraInfo.reserve(100);
+  // std::vector<SpectrumInfo> spectraInfo;
+  // spectraInfo.reserve(100);
   if(m_spectral_mode != 0)
   {  
     for(auto specNode : scene.SpectraNodes())
     {
       auto spec_id   = specNode.attribute(L"id").as_uint();
-      auto spec_path = std::filesystem::path(sceneFolder);
-      spec_path.append(specNode.attribute(L"loc").as_string());
 
-      auto spec = LoadSPDFromFile(spec_path, spec_id);
-      auto specValsUniform = spec.ResampleUniform();
-      
-      uint32_t offset = uint32_t(m_spec_values.size());
-      std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-      m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+      auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+      if(refs_attr)
+      {
+        auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
+
+        assert(lambda_ref_ids.size() % 2 == 0);
+
+        size_t tex_spec_sz = lambda_ref_ids.size() / 2;
+
+        uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
+        for(size_t idx = 0; idx < tex_spec_sz; ++idx)
+        {
+          m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
+        }
+        
+        m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
+        m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      }
+      else
+      {
+        auto spec_path = std::filesystem::path(sceneFolder);
+        spec_path.append(specNode.attribute(L"loc").as_string());
+
+        auto spec = LoadSPDFromFile(spec_path, spec_id);
+        auto specValsUniform = spec.ResampleUniform();
+        
+        uint32_t offset = uint32_t(m_spec_values.size());
+        std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
+
+        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+        m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      }
 
     }
 
     // if no spectra are loaded add uniform 1.0 spectrum
-    if(spectraInfo.empty())
+    if(m_spec_offset_sz.empty())
     {
       Spectrum uniform1;
       uniform1.id = 0;
@@ -323,15 +375,21 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // (1) load lights
   //
+  std::vector<uint32_t> oldLightIdToNewLightId(scene.GetInstancesNum(), uint32_t(-1));
+
   m_instIdToLightInstId.resize(scene.GetInstancesNum(), -1);
   m_pdfLightData.resize(0);
-
+  
+  uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
     auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
+
+    if((lightSource.flags & LIGHT_FLAG_PROJECTIVE) != 0)
+      m_actualFeatures[Integrator::KSPEC_LIGHT_PROJECTIVE] = 1;
 
     bool addToLightSources = true;             // don't sample LDR, perez or simple colored env lights
     if(lightSource.geomType == LIGHT_GEOM_ENV) // just account for them in implicit strategy
@@ -375,6 +433,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       else
         addToLightSources = false;
     }
+    
+    if(addToLightSources)
+      oldLightIdToNewLightId[oldLightId] = uint32_t(m_lights.size());
+    oldLightId++;
 
     if(addToLightSources)
       m_lights.push_back(lightSource);
@@ -385,6 +447,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_materials.resize(0);
   m_materials.reserve(100);
 
+  std::set<uint32_t> loadedSpectralTextures = {};
   for(auto materialNode : scene.MaterialNodes())
   {
     Material mat = {};
@@ -407,7 +470,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     else if (mat_type == thinFilmMatTypeStr)
@@ -418,7 +481,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+                                loadedSpectralTextures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     else if(mat_type == blendMatTypeStr)
@@ -430,7 +494,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == plasticMatTypeStr)
     {
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
-                                m_spec_values, m_spec_offset_sz);
+                                m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+                                loadedSpectralTextures);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
     else if(mat_type == dielectricMatTypeStr)
@@ -524,6 +589,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_projInv      = inverse4x4(proj);
     m_worldViewInv = inverse4x4(worldView);
 
+    m_camTargetDist = length(float3(cam.lookAt) - float3(cam.pos));
+    m_camLensRadius = 0.0f;
+    {
+      int enable_dof = 0;
+      if(cam.node.child(L"enable_dof") != nullptr)
+        enable_dof = hydra_xml::readval1i(cam.node.child(L"enable_dof"));
+      if(cam.node.child(L"dof_lens_radius") != nullptr && enable_dof != 0)
+        m_camLensRadius = hydra_xml::readval1f(cam.node.child(L"dof_lens_radius"));
+    }
+    
     auto sensorNode = cam.node.child(L"sensor");
     if(sensorNode != nullptr)
     {
@@ -547,6 +622,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), false);
         m_camRespoceRGB.w = 1.0f;
       }
+    }
+    
+    m_enableOpticSim = 0;
+    auto opticNode = cam.node.child(L"optical_system");
+    if(opticNode != opticNode)
+      opticNode = cam.node.child(L"optics");
+    if(opticNode != nullptr) {
+      m_enableOpticSim = 1;
+      m_actualFeatures[KSPEC_OPTIC_SIM] = 1;
+      LoadOpticsFromNode(this, opticNode);
     }
 
     break; // take first cam
@@ -608,15 +693,44 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       #endif
       inst.instId = realInstId;
     }
-    m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
-    m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
-    m_remapInst.push_back(inst.rmapId);
 
-    m_instIdToLightInstId[inst.instId] = inst.lightInstId;
+    if(inst.hasMotion) 
+    {
+      LiteMath::float4x4 movement[2] = {inst.matrix, inst.matrix_motion};
+      m_pAccelStruct->AddInstance(inst.geomId, movement, 2);
+      m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] = 1;
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix_motion)));
+    }
+    else
+    {
+      m_pAccelStruct->AddInstance(inst.geomId, inst.matrix);
+      m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix)));
+    }
+
+    m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
+    
+    m_remapInst.push_back(inst.rmapId);
+    
+    if(inst.lightInstId != uint32_t(-1))
+      m_instIdToLightInstId[inst.instId] = oldLightIdToNewLightId[inst.lightInstId];
+    else
+      m_instIdToLightInstId[inst.instId] = inst.lightInstId;
     realInstId++;
   }
 
-  m_pAccelStruct->CommitScene(); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
+  if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 0)
+  {
+    m_normMatrices2.clear();
+    m_normMatrices2.resize(0);
+  }
+
+  uint32_t build_options = BUILD_HIGH;
+  if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 1)
+  {
+    build_options |= MOTION_BLUR;
+  }
+
+  m_pAccelStruct->CommitScene(build_options); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
   
   // (4) load remap lists and put all of the to the flat data structure
   // 
@@ -676,4 +790,59 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   LoadSceneEnd();
   return true;
+}
+
+void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
+{
+  self->m_aspect = float(self->m_winWidth/self->m_winHeight);
+  
+  float scale = 1.0f;
+  if(opticalSys.attribute(L"scale") != nullptr)
+    scale = opticalSys.attribute(L"scale").as_float();
+
+  self->m_diagonal = opticalSys.attribute(L"sensor_diagonal").as_float();
+  //CalcPhysSize();
+  self->m_physSize.x = 2.0f*std::sqrt(self->m_diagonal * self->m_diagonal / (1.0f + self->m_aspect * self->m_aspect));
+  self->m_physSize.y = self->m_aspect * self->m_physSize.x;
+
+  struct LensElementInterfaceWithId 
+  {
+    Integrator::LensElementInterface lensElement;
+    int id;
+  };
+
+  std::vector<LensElementInterfaceWithId> ids;
+  int currId = 0;
+  for(auto line : opticalSys.children(L"line"))
+  {
+    Integrator::LensElementInterface layer;
+    int id = currId;
+    if(line.attribute(L"id") != nullptr)
+      id = line.attribute(L"id").as_int();
+    layer.curvatureRadius = scale*line.attribute(L"curvature_radius").as_float();
+    layer.thickness       = scale*line.attribute(L"thickness").as_float();
+    layer.eta             = line.attribute(L"ior").as_float();
+    if(line.attribute(L"semi_diameter") != nullptr)
+      layer.apertureRadius  = scale*line.attribute(L"semi_diameter").as_float();
+    else if(line.attribute(L"aperture_radius") != nullptr)
+      layer.apertureRadius  = scale*1.0f*line.attribute(L"aperture_radius").as_float();
+    
+    LensElementInterfaceWithId layer2;
+    layer2.lensElement = layer;
+    layer2.id          = id;
+    ids.push_back(layer2);
+    currId++;
+  }
+  
+  // you may sort 'lines' by 'ids' if you want 
+  //
+  std::wstring order = opticalSys.attribute(L"order").as_string();
+  if(order == L"scene_to_sensor")
+    std::sort(ids.begin(), ids.end(), [](const auto& a, const auto& b) { return a.id > b.id; });
+  else
+    std::sort(ids.begin(), ids.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
+
+  self->lines.resize(ids.size());
+  for(size_t i=0;i<ids.size(); i++)
+    self->lines[i] = ids[i].lensElement;
 }

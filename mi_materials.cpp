@@ -381,7 +381,6 @@ namespace mi
   {
     CoatPrecomputed res;
     float eta = int_ior / ext_ior;
-    float inv_eta_2 = 1.f / (eta * eta);
 
     uint32_t sz = is_spectral ? 4 : 3;
 
@@ -392,12 +391,16 @@ namespace mi
       d_mean += diffuse_reflectance.M[i];
       s_mean += specular_reflectance.M[i];
     }
+    
     d_mean /= sz;
     s_mean /= sz;
 
     if(is_spectral)
     {
-      d_mean = spectrum_mean(reflectance_spectrum);
+      if(reflectance_spectrum.size() > 0)
+        d_mean= spectrum_mean(reflectance_spectrum);
+      else
+        d_mean = 0.5f;
     }
 
     res.specular_sampling_weight = s_mean / (d_mean + s_mean);

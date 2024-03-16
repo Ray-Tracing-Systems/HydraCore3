@@ -41,6 +41,7 @@ public:
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    InitDataForGbuffer();
   }
 
   virtual ~Integrator() { m_pAccelStruct = nullptr; }
@@ -73,6 +74,25 @@ public:
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
                               const RayDirAndT* in_rayDirAndFar  [[size("tid*channels")]],
                               float*            out_color        [[size("tid*channels")]]);
+  
+  struct GBufferPixel
+  {
+    float   depth;
+    float   norm[3];
+    float   texc[2];
+    float   rgba[4];
+    float   shadow;
+    float   coverage;
+    int32_t matId;
+    int32_t objId;
+    int32_t instId;
+  };
+
+  virtual void EvalGBuffer(uint blockId, uint localId, GBufferPixel* out_gbuffer);
+  virtual void GBufferReduction(uint blockId, uint blockSize, GBufferPixel* samples, GBufferPixel* out_gbuffer);
+
+  virtual void EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer);
+  virtual void kernelBE1D_EvalGBuffer(uint blockNum, GBufferPixel* out_gbuffer);
 
   virtual void PackXYBlock(uint tidX, uint tidY, uint a_passNum);
   virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
@@ -94,20 +114,23 @@ public:
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
 
   void kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);        // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
-  void kernel_InitEyeRay2(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
-                          float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData);
+  virtual void kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
+                                  float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
 
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 
   void kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
-                                  RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths);
+                                  RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time);
+
+  void kernel_InitEyeRayGB(uint tidX, uint tidY, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);  
+  void kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, const float2* bars, GBufferPixel* out_gbuffer);                                 
 
   bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
 
-  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
+  void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
                         float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags);
 
   void kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const float2* bars, const uint* in_pakedXY, float* out_color);
@@ -120,8 +143,8 @@ public:
                         float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumThoroughput, uint* rayFlags);
 
   void kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths, 
-                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
-                                const uint* rayFlags, uint bounce,
+                                const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                const uint* rayFlags, const float* a_time, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
   void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
@@ -129,8 +152,8 @@ public:
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
-  void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
-                                const float4* wavelengths, float* out_color);
+  virtual void kernel_ContributeToImage(uint tid, const uint* rayFlags, uint channels, const float4* a_accumColor, const RandomGen* gen, const uint* in_pakedXY, 
+                                        const float4* wavelengths, float* out_color);
 
   void kernel_CopyColorToOutput(uint tid, uint channels, const float4* a_accumColor, const RandomGen* gen, 
                                 float* out_color);
@@ -211,7 +234,7 @@ public:
 
   LightSample LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint);
   float LightPdfSelectRev(int a_lightId);
-  float4 LightIntensity(uint a_lightId, const float4* a_wavelengths, float3 a_rayPos, float3 a_rayDir);
+  float4 LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir);
 
   /**
   \brief offset reflected ray position by epsilon;
@@ -230,12 +253,12 @@ public:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                    MisData* a_misPrev, const uint a_currRayFlags);
                                     
   BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
-  uint32_t BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+  uint32_t BlendSampleAndEval(uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes);
 
   MatIdWeightPair BlendEval(MatIdWeight a_mat, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc);
@@ -244,7 +267,6 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
-  float3 m_camPos = float3(0.0f, 0.85f, 4.5f);
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
   std::vector<Material>         m_materials;  
@@ -269,9 +291,12 @@ public:
   float4x4                      m_worldViewInv;
 
   std::vector<RandomGen>        m_randomGens;
-  std::vector<float4x4>         m_normMatrices; ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices;  ///< per instance normal matrix, local to world
+  std::vector<float4x4>         m_normMatrices2; ///< per instance normal matrix for motion end point (used when motion blur is enabled)
 
   std::shared_ptr<ISceneObject> m_pAccelStruct = nullptr;
+
+  int m_motionBlur = 0;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
@@ -290,6 +315,7 @@ public:
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   float4 m_camRespoceRGB = float4(1,1,1,1);
+  float3 SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uint32_t rayFlags);
 
   uint  m_intergatorType = INTEGRATOR_STUPID_PT;
   int   m_spectral_mode  = 0;
@@ -297,13 +323,40 @@ public:
   uint  m_envLightId     = uint(-1);
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
-  float m_exposureMult   = 1.0f;
-  
+
   /// @brief ////////////////////////////////////////////////////// cam variables
+  float m_exposureMult   = 1.0f;
+  float m_camLensRadius = 0.0f;
+  float m_camTargetDist = 0.0f;
   static constexpr int CAM_RESPONCE_XYZ = 0;
   static constexpr int CAM_RESPONCE_RGB = 1;
   int   m_camResponseSpectrumId[3] = {-1, -1, -1};
   int   m_camResponseType = CAM_RESPONCE_XYZ; // 0 -- XYZ, 1 -- RGB
+
+  /// @brief ////////////////////////////////////////////////////// optics sim
+  
+  struct LensElementInterface 
+  {
+    float curvatureRadius;
+    float thickness;
+    float eta;
+    float apertureRadius;
+  };
+
+  uint m_enableOpticSim = 0;
+  std::vector<LensElementInterface> lines;
+  float2 m_physSize;
+  float  m_diagonal;
+  float  m_aspect;
+
+  inline float LensRearZ()      const { return lines[0].thickness; }
+  inline float LensRearRadius() const { return lines[0].apertureRadius; }         
+
+  bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
+                                 float *t, float3 *n) const;
+
+  bool TraceLensesFromFilm(float3& rayPos, float3& rayDir) const;
+
   /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;
@@ -317,6 +370,10 @@ public:
 
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
+
+  std::vector<uint2> m_spec_tex_ids_wavelengths;
+  std::vector<uint2> m_spec_tex_offset_sz;
+
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;
@@ -331,6 +388,7 @@ public:
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);
+  float4 SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords);
 
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;
@@ -349,7 +407,11 @@ public:
   static constexpr uint32_t KSPEC_LIGHT_IES           = 13;
   static constexpr uint32_t KSPEC_LIGHT_ENV           = 14;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 15; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
+  static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
+  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 16;
+
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 17; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -371,7 +433,28 @@ public:
   virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
+
+  virtual float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen);
+  virtual float  GetRandomNumbersTime(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersLens(uint tid, RandomGen* a_gen);
+  virtual float4 GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
+  virtual float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer);
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  struct EyeRayData
+  {
+    float3 rayPos;
+    float3 rayDir;
+    float  timeSam;
+    float  waveSam;
+    float  cosTheta; // cos with sensor plane
+    uint   x;        // screen x coord
+    uint   y;        // screen y coord
+  };
+
+  virtual EyeRayData SampleCameraRay(RandomGen* pGen, uint tid);
+  virtual uint       RandomGenId(uint tid);
 
   uint m_disableImageContrib = 0;
 
@@ -384,6 +467,10 @@ public:
   virtual void _ProgressBarDone();
   float m_currProgress    = 0.0f;
   float m_currProgressOld = 0.0f;
+  
+  static constexpr uint GBUFFER_SAMPLES = 16;
+  std::vector<float2> m_qmcHammersley;
+  virtual void InitDataForGbuffer();
 };
 
 #endif

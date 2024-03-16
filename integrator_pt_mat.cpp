@@ -20,7 +20,7 @@ using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
 
-uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSample* a_pRes)
 {
   const float2 texCoordT = mulRows2x4(m_materials[a_materialId].row0[0], m_materials[a_materialId].row1[0], tc);
@@ -33,7 +33,7 @@ uint32_t Integrator::BlendSampleAndEval(uint a_materialId, uint bounce, uint lay
   const uint matId2 = m_materials[a_materialId].datai[1];
 
   uint32_t selectedMatId = matId1;
-  const float select = rndFloat1_Pseudo(a_gen);
+  const float select = GetRandomNumbersMatB(tid, a_gen, int(bounce), int(layer));
   RecordBlendRndNeeded(bounce, layer, select);
 
   if(select < weight)
@@ -106,7 +106,7 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
   return normalize(inverse3x3(tangentTransform)*normalTS);
 }
 
-BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
   BsdfSample res;
@@ -124,7 +124,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
   uint     layer     = 0;
   while(KSPEC_MAT_TYPE_BLEND != 0 && mtype == MAT_TYPE_BLEND)
   {
-    currMatId = BlendSampleAndEval(currMatId, bounce, layer, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
+    currMatId = BlendSampleAndEval(currMatId, tid, bounce, layer, wavelengths, a_gen, v, n, tc, a_misPrev, &res);
     mtype     = m_materials[currMatId].mtype;
     layer++;
   }
@@ -144,7 +144,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
-  const float4 rands     = rndFloat4_Pseudo(a_gen);
+  const float4 rands     = GetRandomNumbersMats(tid, a_gen, int(bounce));
   const uint cflags      = m_materials[currMatId].cflags;
   RecordMatRndNeeded(bounce, rands);
 
@@ -231,16 +231,20 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint bounce, flo
     case MAT_TYPE_DIFFUSE:
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
-      const float4 color       = texColor;
-      const float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, DIFFUSE_COLOR, 0);
-      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, color, &res);
+      const float4 color = texColor;
+      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, DIFFUSE_COLOR, 0, tc);
+      if(m_spectral_mode == 0)
+        reflSpec *= color;
+      
+      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
     }
     break;
     case MAT_TYPE_PLASTIC:
     if(KSPEC_MAT_TYPE_PLASTIC != 0)
     {
       const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
+      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, PLASTIC_COLOR, 0, tc);
+      // float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
       if(m_spectral_mode == 0)
         reflSpec *= color;
 
@@ -428,10 +432,11 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_DIFFUSE:
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {
-        const float4 color    = texColor;
-        const float4 reflSpec = SampleMatColorParamSpectrum(currMat.id, wavelengths, DIFFUSE_COLOR, 0);
-
-        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, color, &currVal);
+        const float4 color = texColor;
+        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, DIFFUSE_COLOR, 0, tc);
+        if(m_spectral_mode == 0)
+          reflSpec *= color;        
+        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc,  &currVal);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
@@ -441,7 +446,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
+        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, PLASTIC_COLOR, 0, tc);
+        // float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
         if(m_spectral_mode == 0)
           reflSpec *= color;
         const uint precomp_id = m_materials[currMat.id].datai[0];

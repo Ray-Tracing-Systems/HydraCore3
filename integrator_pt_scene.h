@@ -92,6 +92,11 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                       std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
+
+std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureInfo> &texturesInfo, const HydraSampler& sampler,
+                                                  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                                  std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
+
 float4 GetColorFromNode(const pugi::xml_node& a_node, bool is_spectral_mode);
 
 Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
@@ -106,11 +111,14 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                                    bool is_spectral_mode);
 
 Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                             std::vector<uint2> &spec_tex_ids_wavelengths,
+                             const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures,
                              bool is_spectral_mode);
 
 Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
@@ -131,7 +139,8 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              std::vector<float> &precomputed_transmittance,
                              bool is_spectral_mode,
                              const std::vector<float> &spectra,
-                             const std::vector<uint2> &spec_offsets);
+                             const std::vector<uint2> &spec_offsets, std::vector<uint2> &spec_tex_ids_wavelengths,
+                             const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures);
 
 Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                               std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 

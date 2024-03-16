@@ -21,11 +21,102 @@ void Integrator::InitRandomGens(int a_maxThreads)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+float  Integrator::GetRandomNumbersSpec(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float  Integrator::GetRandomNumbersTime(uint tid, RandomGen* a_gen)               { return rndFloat1_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLens(uint tid, RandomGen* a_gen)               { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersMats(uint tid, RandomGen* a_gen, int a_bounce) { return rndFloat4_Pseudo(a_gen); }
+float4 Integrator::GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce)
+{
+  const float  rndId = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
+  return float4(rands.x, rands.y, rands.z, rndId);
+}
 
-void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY, 
-                                   float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                   float4* accumColor,    float4* accumuThoroughput,
-                                   RandomGen* gen, uint* rayFlags, MisData* misData) // 
+float Integrator::GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer) { return rndFloat1_Pseudo(a_gen); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint Integrator::RandomGenId(uint tid) { return tid; }
+
+Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
+{
+  const uint XY = m_packedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+
+  if(x == 256 && y == 256)
+  {
+    int a = 2;
+  }
+
+  const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
+
+  const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
+  const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
+
+  float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
+  float3 rayPos = float3(0,0,0);
+  
+  if (m_camLensRadius > 0.0f)
+  {
+    const float tFocus         = m_camTargetDist / (-rayDir.z);
+    const float3 focusPosition = rayPos + rayDir*tFocus;
+    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    rayPos.x += xy.x;
+    rayPos.y += xy.y;
+    rayDir = normalize(focusPosition - rayPos);
+  }
+  else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0) // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further  
+  {
+    const float2 xy = 0.25f*m_physSize*float2(2.0f*xCoordNormalized - 1.0f, 2.0f*yCoordNormalized - 1.0f);
+    
+    rayPos = float3(xy.x, xy.y, 0);
+    
+    const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
+    const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
+    const float3 ray_dirF = normalize(shootTo - rayPos);
+    
+    float cosTheta = std::abs(ray_dirF.z);
+    rayDir         = ray_dirF;
+    bool success   = TraceLensesFromFilm(rayPos, rayDir);
+    
+    if (!success) 
+    {
+      rayPos = float3(0,-10000000.0,0.0); // shoot ray under the floor
+      rayDir = float3(0,-1,0);
+    }
+    else
+    {
+      rayDir = float3(-1,-1,-1)*normalize(rayDir);
+      rayPos = float3(-1,-1,-1)*rayPos;
+    }
+  }
+
+  EyeRayData res;
+  {
+    res.rayPos = rayPos;
+    res.rayDir = rayDir;
+    res.x      = x;
+    res.y      = y;
+    res.timeSam = 0.0f;
+    res.waveSam = 1.0f;
+    if(m_normMatrices2.size() != 0)
+      res.timeSam = GetRandomNumbersTime(tid, pGen);
+    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+      res.waveSam = GetRandomNumbersSpec(tid, pGen);
+    res.cosTheta = 1.0f;
+  }
+  
+  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
+
+  return res;
+}
+
+
+void Integrator::kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                    float4* accumColor,    float4* accumuThoroughput,
+                                    RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
 {
 
   if(tid >= m_maxThreadId)
@@ -33,51 +124,29 @@ void Integrator::kernel_InitEyeRay2(uint tid, const uint* packedXY,
 
   *accumColor        = make_float4(0,0,0,0);
   *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[tid];
+  RandomGen genLocal = m_randomGens[RandomGenId(tid)];
   *rayFlags          = 0;
   *misData           = makeInitialMisData();
 
-  const uint XY = packedXY[tid];
-
-  const uint x = (XY & 0x0000FFFF);
-  const uint y = (XY & 0xFFFF0000) >> 16;
-  const float2 pixelOffsets = rndFloat2_Pseudo(&genLocal);
-
-  if(x == 237 && y == 512 - 109 - 1)
-  {
-    int a = 2;
-  }
-
-  float3 rayDir = EyeRayDirNormalized((float(x) + pixelOffsets.x)/float(m_winWidth), 
-                                      (float(y) + pixelOffsets.y)/float(m_winHeight), m_projInv);
-  float3 rayPos = float3(0,0,0);
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  EyeRayData r = SampleCameraRay(&genLocal, tid);
   
-  float tmp = 0.0f;
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    float u = rndFloat1_Pseudo(&genLocal);
-    *wavelengths = SampleWavelengths(u, LAMBDA_MIN, LAMBDA_MAX);
-    tmp = u;
-  }
+    *wavelengths = SampleWavelengths(r.waveSam, LAMBDA_MIN, LAMBDA_MAX);
   else
-  {
-    const uint32_t sample_sz = sizeof((*wavelengths).M) / sizeof((*wavelengths).M[0]);
-    for (uint32_t i = 0; i < sample_sz; ++i) 
-      (*wavelengths)[i] = 0.0f;
-  }
+    *wavelengths = float4(0.0f);
 
-  RecordPixelRndIfNeeded(pixelOffsets, tmp);
+  *time = r.timeSam;
  
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  transform_ray3f(m_worldViewInv, &r.rayPos, &r.rayDir);
+
+  *rayPosAndNear = to_float4(r.rayPos, 0.0f);
+  *rayDirAndFar  = to_float4(r.rayDir, FLT_MAX);
   *gen           = genLocal;
 }
 
 void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar,
                                             float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor, float4* accumuThoroughput, 
-                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths)
+                                            RandomGen* gen, uint* rayFlags, MisData* misData, float4* wavelengths, float* time)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -113,11 +182,12 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
 
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = m_randomGens[tid];
+  *time          = rayDirData.time;
+  *gen           = m_randomGens[RandomGenId(tid)];
 }
 
 
-void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar,
+void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
                                   float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
 {
   if(tid >= m_maxThreadId)
@@ -128,8 +198,9 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   const float4 rayPos = *rayPosAndNear;
   const float4 rayDir = *rayDirAndFar ;
+  const float  time   = *a_time;
 
-  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir);
+  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
 
   if(hit.geomId != uint32_t(-1))
@@ -172,15 +243,28 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
     // transform surface point with matrix and flip normal if needed
     //
-    hitNorm                = normalize(mul3x3(m_normMatrices[hit.instId], hitNorm));
-    hitTang                = normalize(mul3x3(m_normMatrices[hit.instId], hitTang));
-    const float flipNorm   = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm                = flipNorm * hitNorm;
-    hitTang                = flipNorm * hitTang; // do we need this ??
+    hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
+    hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
+
+    if(m_normMatrices2.size() > 0)
+    {
+      float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
+      float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
+
+      hitNorm = lerp(hitNorm, hitNorm2, time);
+      hitTang = lerp(hitTang, hitTang2, time);
+    }
+
+    hitNorm = normalize(hitNorm);
+    hitTang = normalize(hitTang);
     
+    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+    hitNorm              = flipNorm * hitNorm;
+    hitTang              = flipNorm * hitTang; // do we need this ??
+
     if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
     else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
-
+    
     const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
     const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
@@ -199,7 +283,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
 void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const float4* wavelengths,
                                           const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                          const uint* rayFlags, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
+                                          const uint* rayFlags, const float* a_time, uint bounce, RandomGen* a_gen, float4* out_shadeColor)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -219,10 +303,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   hit.norm = to_float3(data2);
   hit.tang = to_float3(*in_hitPart3);
   hit.uv   = float2(data1.w, data2.w);
-
-  const float4 rands = rndFloat4_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const float rndId  = rndFloat1_Pseudo(a_gen); // don't use single rndFloat4 (!!!)
-  const int lightId  = std::min(int(std::floor(rndId * float(m_lights.size()))), int(m_lights.size() - 1u));
+  
+  const int bounceTmp = int(bounce); 
+  const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounceTmp); 
+  const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
   RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
 
   if(lightId < 0) // no lights or invalid light id
@@ -236,8 +320,10 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
   const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
+
+  float time = *a_time;
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
-  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f)); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
 
   if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
@@ -260,11 +346,11 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
     const bool isDirectLight = !hasNonSpecular(currRayFlags);
     if((m_renderLayer == FB_DIRECT   && !isDirectLight) || 
-        m_renderLayer == FB_INDIRECT && isDirectLight) // skip some number of bounces if this is set
+       (m_renderLayer == FB_INDIRECT && isDirectLight)) // skip some number of bounces if this is set
       misWeight = 0.0f;
       
     
-    const float4 lightColor = LightIntensity(lightId, wavelengths, shadowRayPos, shadowRayDir);
+    const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
@@ -320,7 +406,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
       const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-      lightIntensity = LightIntensity(lightId, wavelengths, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
+      lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(*rayDirAndFar))*lightDirectionAtten;
     }
 
     float misWeight = 1.0f;
@@ -353,7 +439,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   }
   
   const uint bounceTmp    = bounce;
-  const BsdfSample matSam = MaterialSampleAndEval(matId, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
+  const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
   const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
@@ -449,7 +535,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
     return;
   
-  m_randomGens[tid] = *gen;
+  m_randomGens[RandomGenId(tid)] = *gen;
   if(m_disableImageContrib !=0)
     return;
 
@@ -460,87 +546,28 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   float4 specSamples = *a_accumColor; 
   float4 tmpVal      = specSamples*m_camRespoceRGB;
   float3 rgb         = to_float3(tmpVal);
+
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
-    float4 waves = *wavelengths;
-    
-    if(m_camResponseSpectrumId[0] < 0)
-    {
-      const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(),
-                                       terminateWavelngths(*rayFlags));
-      rgb = XYZToRGB(xyz);
-    }
-    else
-    {
-      float4 responceX, responceY, responceZ;
-      {
-        int specId = m_camResponseSpectrumId[0];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceX = float4(1,1,1,1);
-
-        specId = m_camResponseSpectrumId[1];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceY = responceX;
-
-        specId = m_camResponseSpectrumId[2];
-        if(specId >= 0)
-        {
-          const uint2 data  = m_spec_offset_sz[specId];
-          const uint offset = data.x;
-          const uint size   = data.y;
-          responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
-        }
-        else
-          responceZ = responceY;
-      }
-
-      float3 xyz = float3(0,0,0);
-      for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) {
-        xyz.x += specSamples[i]*responceX[i];
-        xyz.y += specSamples[i]*responceY[i];
-        xyz.z += specSamples[i]*responceZ[i]; 
-      } 
-
-      if(m_camResponseType == CAM_RESPONCE_XYZ)
-        rgb = XYZToRGB(xyz);
-      else
-        rgb = xyz;
-    }
+    const float4 waves   = *wavelengths;
+    const uint rayFlags2 = *rayFlags; 
+    rgb = SpectralCamRespoceToRGB(specSamples, waves, rayFlags2);
   }
 
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
-  //if(x == 415 && (y == 256-130-1))
-  //{
-  //  int a = 2;
-  //  //colorRes = float4(1,0,0,0);
-  //}
   
-  if(channels == 1)
+  if(channels == 1) // monochromatic spectral
   {
-    const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-    out_color[y*m_winWidth+x] += mono;
-  }
-  else if(channels <= 4)
+    // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    out_color[y * m_winWidth + x] += specSamples.x * m_exposureMult;
+  } 
+  else if(channels <= 4) 
   {
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
     out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
   }
-  else
+  else // always spectral rendering
   {
     auto waves = (*wavelengths);
     auto color = (*a_accumColor)*m_exposureMult;
@@ -572,7 +599,7 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
   else if(channels == 1)
     out_color[tid] += color[0];
 
-  m_randomGens[tid] = *gen;
+  m_randomGens[RandomGenId(tid)] = *gen;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -586,13 +613,15 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
@@ -617,17 +646,19 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
-  kernel_InitEyeRay2(tid, m_packedXY.data(), &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis);
+  float     time;
+  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4   shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags,
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
@@ -651,18 +682,20 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   RandomGen gen; 
   MisData   mis;
   uint      rayFlags;
+  float     time;
   kernel_InitEyeRayFromInput(tid, in_rayPosAndNear, in_rayDirAndFar, 
-                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths);
+                             &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &wavelengths, &time);
   
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
     float4 shadeColor, hitPart1, hitPart2, hitPart3;
     uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, 
+    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor, &rayPosAndNear, &rayDirAndFar,
@@ -678,4 +711,140 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
   //////////////////////////////////////////////////// same as for PathTrace
 
   kernel_CopyColorToOutput(tid, channels, &accumColor, &gen, out_color);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
+  // Find quadratic discriminant
+  double discrim = (double)B * (double)B - 4. * (double)A * (double)C;
+  if (discrim < 0.) 
+    return false;
+  double rootDiscrim = std::sqrt(discrim);
+  float floatRootDiscrim   = float(rootDiscrim);
+  // Compute quadratic _t_ values
+  float q;
+  if ((float)B < 0)
+      q = -.5 * (B - floatRootDiscrim);
+  else
+      q = -.5 * (B + floatRootDiscrim);
+  *t0 = q / A;
+  *t1 = C / q;
+  if ((float)*t0 > (float)*t1) 
+  {
+    // std::swap(*t0, *t1);
+    float temp = *t0;
+    *t0 = *t1;
+    *t1 = temp;
+  }
+  return true;
+}
+
+static inline bool Refract(const float3 wi, const float3 n, float eta, float3 *wt) {
+  // Compute $\cos \theta_\roman{t}$ using Snell's law
+  float cosThetaI  = dot(n, wi);
+  float sin2ThetaI = std::max(float(0), float(1.0f - cosThetaI * cosThetaI));
+  float sin2ThetaT = eta * eta * sin2ThetaI;
+  // Handle total internal reflection for transmission
+  if (sin2ThetaT >= 1) return false;
+  float cosThetaT = std::sqrt(1 - sin2ThetaT);
+  *wt = eta * (-1.0f)*wi + (eta * cosThetaI - cosThetaT) * n;
+  return true;
+}
+
+static inline float3 faceforward(const float3 n, const float3 v) { return (dot(n, v) < 0.f) ? (-1.0f)*n : n; }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool Integrator::IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
+                                              float *t, float3 *n) const
+{
+  // Compute _t0_ and _t1_ for ray--element intersection
+  const float3 o = rayPos - float3(0, 0, zCenter);
+  const float  A = rayDir.x * rayDir.x + rayDir.y * rayDir.y + rayDir.z * rayDir.z;
+  const float  B = 2 * (rayDir.x * o.x + rayDir.y * o.y + rayDir.z * o.z);
+  const float  C = o.x * o.x + o.y * o.y + o.z * o.z - radius * radius;
+  float  t0, t1;
+  if (!Quadratic(A, B, C, &t0, &t1)) 
+    return false;
+  
+  // Select intersection $t$ based on ray direction and element curvature
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
+  *t = useCloserT ? std::min(t0, t1) : std::max(t0, t1);
+  if (*t < 0.0f) 
+    return false;
+  
+  // Compute surface normal of element at ray intersection point
+  *n = normalize(o + (*t)*rayDir);
+  *n = faceforward(*n, -1.0f*rayDir);
+  return true;
+}
+
+bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) const
+{
+  float elementZ = 0;
+  // Transform _rCamera_ from camera to lens system space
+  // 
+  float3 rayPosLens = float3(inoutRayPos.x, inoutRayPos.y, -inoutRayPos.z);
+  float3 rayDirLens = float3(inoutRayDir.x, inoutRayDir.y, -inoutRayDir.z);
+
+  for(int i=0; i<lines.size(); i++)
+  {
+    const auto element = lines[i];                                  
+    // Update ray from film accounting for interaction with _element_
+    elementZ -= element.thickness;
+    
+    // Compute intersection of ray with lens element
+    float t;
+    float3 n;
+    bool isStop = (element.curvatureRadius == 0.0f);
+    if (isStop) 
+    {
+      // The refracted ray computed in the previous lens element
+      // interface may be pointed towards film plane(+z) in some
+      // extreme situations; in such cases, 't' becomes negative.
+      if (rayDirLens.z >= 0.0f) 
+        return false;
+      t = (elementZ - rayPosLens.z) / rayDirLens.z;
+    } 
+    else 
+    {
+      const float radius  = element.curvatureRadius;
+      const float zCenter = elementZ + element.curvatureRadius;
+      if (!IntersectSphericalElement(radius, zCenter, rayPosLens, rayDirLens, &t, &n))
+        return false;
+    }
+
+    // Test intersection point against element aperture
+    const float3 pHit = rayPosLens + t*rayDirLens;
+    const float r2    = pHit.x * pHit.x + pHit.y * pHit.y;
+    if (r2 > element.apertureRadius * element.apertureRadius) 
+      return false;
+    
+    rayPosLens = pHit;
+    // Update ray path for from-scene element interface interaction
+    if (!isStop) 
+    {
+      float3 wt;
+      float etaI = lines[i+0].eta;                                                      
+      float etaT = (i == lines.size()-1) ? 1.0f : lines[i+1].eta;
+      if(etaT == 0.0f)
+        etaT = 1.0f;                                                          
+      if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, &wt))
+        return false;
+      rayDirLens = wt;
+    }
+
+  }
+
+  // Transform _rLens_ from lens system space back to camera space
+  //
+  inoutRayPos = float3(rayPosLens.x, rayPosLens.y, -rayPosLens.z);
+  inoutRayDir = float3(rayDirLens.x, rayDirLens.y, -rayDirLens.z);
+  return true;  
 }

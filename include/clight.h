@@ -11,13 +11,15 @@ static constexpr uint LIGHT_GEOM_ENV    = 6;
 
 static constexpr uint LIGHT_DIST_LAMBERT = 0;
 static constexpr uint LIGHT_DIST_OMNI    = 1;
+static constexpr uint LIGHT_DIST_SPOT    = 2;
 
 static constexpr uint LIGHT_FLAG_POINT_AREA = 1;
+static constexpr uint LIGHT_FLAG_PROJECTIVE = 2;
 
 struct LightSource
 {
   float4x4 matrix;         ///<! translation in matrix is always (0,0,0,1)
-  float4x4 iesMatrix;      ///<! translation in matrix is always (0,0,0,1)
+  float4x4 iesMatrix;      ///<! translation in matrix is always (0,0,0,1), except projective light when it is used for light matrix ('mWorldLightProj')
 
   float4   samplerRow0;    ///<! texture sampler, row0
   float4   samplerRow1;    ///<! texture sampler, row1
@@ -45,7 +47,12 @@ struct LightSource
   uint     pdfTableSizeX;
   uint     pdfTableSizeY;
   uint     camBackTexId;
-  uint     dummy2;
+  float    lightCos1;
+  
+  float    lightCos2;
+  float    dummy1;
+  float    dummy2;
+  float    dummy3;
 };
 
 struct LightSample
@@ -208,4 +215,11 @@ static inline float evalMap2DPdf(float2 texCoordT, const float* intervals, const
   const float2 interval = make_float2(intervals[offset0], intervals[offset1]);
   
   return (interval.y - interval.x)*(fw*fh)/intervals[sizeX*sizeY];
+}
+
+static inline float mylocalsmoothstep(float edge0, float edge1, float x)
+{
+  float  tVal = (x - edge0) / (edge1 - edge0);
+  float  t    = std::min(std::max(tVal, 0.0f), 1.0f); 
+  return t * t * (3.0f - 2.0f * t);
 }
