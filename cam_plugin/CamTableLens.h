@@ -12,13 +12,6 @@ using LiteMath::float4x4;
 using LiteMath::float4;
 using LiteMath::float3;
 
-struct LensElementInterface 
-{
-  float curvatureRadius;
-  float thickness;
-  float eta;
-  float apertureRadius;
-};
 
 class CamTableLens : public ICamRaysAPI2
 {
@@ -67,6 +60,14 @@ protected:
   std::vector<float> m_cie_x;
   std::vector<float> m_cie_y;
   std::vector<float> m_cie_z;
+  
+  struct LensElementInterface 
+  {
+    float curvatureRadius;
+    float thickness;
+    float eta;
+    float apertureRadius;
+  };
 
   std::vector<LensElementInterface> lines;
   float2 m_physSize;
