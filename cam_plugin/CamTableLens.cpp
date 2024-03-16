@@ -301,7 +301,7 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float* in_colo
     if(m_spectral_mode != 0) // TODO: spectral framebuffer
     {
       float4 wavelengths = float4(m_storedWaves[tid]);                            
-      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data());
+      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), false);
       color = to_float4(XYZToRGB(xyz), 1.0f);
     }
 
