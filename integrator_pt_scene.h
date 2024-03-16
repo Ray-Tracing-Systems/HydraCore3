@@ -76,50 +76,26 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes);
 std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy();
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma = false);
 
-class SpectrumLoader
-{
-public:
-  SpectrumLoader(const std::wstring &str, uint32_t spec_id)
-    : data{str}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
-  SpectrumLoader(const spec::vec3 &v, uint32_t spec_id)
-    : data{v}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
-
-  SpectrumLoader(const SpectrumLoader &other) = delete;
-  SpectrumLoader &operator=(const SpectrumLoader &other) = delete;
-
-  SpectrumLoader(SpectrumLoader &&other)
-    : data{std::move(other.data)}, spec_id{other.spec_id}, spectrum{std::move(other.spectrum)}, not_loaded{other.not_loaded} {}
-  SpectrumLoader &operator=(SpectrumLoader &&other)
-  {
-    data = std::move(other.data);
-    std::swap(spec_id, other.spec_id);
-    spectrum = std::move(other.spectrum);
-    std::swap(not_loaded, other.not_loaded);
-  }
-
-  const std::optional<Spectrum> &load() const;
-
-private:
-  std::variant<spec::vec3, std::wstring> data;
-  uint32_t spec_id;
-  mutable std::optional<Spectrum> spectrum;
-  mutable bool not_loaded;
-};
-
-
 
 class ColorHolder
 {
   const std::variant<uint32_t, float4> value;
 public:
+  ColorHolder()
+    : value{INVALID_SPECTRUM_ID} {}
   ColorHolder(uint32_t spec_id)
     : value{spec_id} {}
   ColorHolder(const float4& rgb)
     : value{rgb} {}
 
+  operator bool() const
+  {
+    return !std::holds_alternative<uint32_t>(value) || std::get<uint32_t>(value) != INVALID_SPECTRUM_ID;
+  }
+
   bool isSpectrum() const
   {
-    return std::holds_alternative<uint32_t>(value);
+    return std::holds_alternative<uint32_t>(value) && std::get<uint32_t>(value) != INVALID_SPECTRUM_ID;
   }
 
   bool isRGB() const
@@ -139,7 +115,7 @@ public:
 
 };
 
-const std::optional<Spectrum> &LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumLoader> &spectraInfo);
+std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumLoader> &spectraInfo);
 
 uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node);
 
@@ -155,7 +131,7 @@ std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const Resource
                                                   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                   std::vector< std::shared_ptr<ICombinedImageSampler> > &textures);
 
-float4 GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources);
+std::optional<float4> GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources);
 
 ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources, bool is_spectral_mode);
 

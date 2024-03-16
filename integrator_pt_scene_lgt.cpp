@@ -24,7 +24,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   if(var_color.isRGB()) {
     color = var_color.getRGB();
   }
-  else {
+  else if(var_color) {
     lightSpecId = var_color.getSpectrumId();
     std::cerr << "Light specid = " << lightSpecId << std::endl; 
   }

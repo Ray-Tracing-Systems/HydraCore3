@@ -1,7 +1,6 @@
 #include "integrator_pt_scene.h"
-#include <spectral/spec/conversions.h>
-#include <spectral/upsample/upsamplers.h>
 #include <unordered_map>
+#include <spectral/spec/basic_spectrum.h>
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
@@ -87,26 +86,7 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const std::optional<Spectrum> &SpectrumLoader::load() const
-{
-  if(not_loaded) {
-
-    if(std::holds_alternative<std::wstring>(data)) {
-      std::wstring str = std::get<std::wstring>(data);
-     // std::cerr << "Extracting  " << str << std::endl;
-      spectrum = LoadSPDFromFile(str, spec_id);
-    }
-    else if(std::holds_alternative<spec::vec3>(data)) {
-      spectrum = std::make_optional<Spectrum>();
-      spectrum->id = spec_id;
-      spectrum->spectrum = spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(std::get<spec::vec3>(data)));
-    }
-    not_loaded = false;
-  }
-  return spectrum;
-}
-
-const std::optional<Spectrum> &LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumLoader> &spectraInfo)
+std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumLoader> &spectraInfo)
 {
   auto specNode = a_node.child(L"spectrum");
   if(specNode)
@@ -140,21 +120,20 @@ uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-float4 GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources)
+std::optional<float4> GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources)
 {
   auto val = hydra_xml::readvalVariant(a_node);
 
   auto node = a_node.child(L"spectrum");
   if(node) 
   {
-    const auto &sp_struct = LoadSpectrumFromNode(a_node, resources.spectraInfo);
+    const auto sp_struct = LoadSpectrumFromNode(a_node, resources.spectraInfo);
     if(!sp_struct) 
     {
       std::cerr << "Spectral value not found (LoadSpectrumFromNode)" << std::endl;
-      return {1.0f, 1.0f, 1.0f, 0.0f};
+      return {};
     }
-    spec::vec3 rgb = spec::xyz2rgb(spec::spectre2xyz(*(sp_struct->spectrum)));
-    return {rgb.x, rgb.y, rgb.z, 0.0f};
+    return DownsampleSpectrum(*sp_struct);
   }
 
   if(std::holds_alternative<float>(val))
@@ -166,39 +145,36 @@ float4 GetColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources
     float3 rgb = std::get<float3>(val);
     return to_float4(rgb, 0.0f);
   }
+  return {};
 }
 
 ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceContext &resources, bool is_spectral_mode)
 { 
-
-  static std::unordered_map<spec::vec3, uint32_t> spec_cache;
   if(is_spectral_mode) {
     uint32_t spec_id = GetSpectrumIdFromNode(a_node);
     if(spec_id != INVALID_SPECTRUM_ID) {
       return {spec_id};
     }
     else {//Register new spectrum
-      float4 color = GetColorFromNode(a_node, resources);
-      spec::vec3 rgb{color[0], color[1], color[2]};
-      auto it = spec_cache.find(rgb);
-      if(it != spec_cache.end()) {
-        std::cerr << "Reusing spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
-        return {it->second};
+      auto coloropt = GetColorFromNode(a_node, resources);
+      if(coloropt) {
+        return UpsampleSpectrumFromColor(*coloropt, resources.spectraInfo);
       }
-      else {
-        std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
-        uint32_t spec_id = resources.spectraInfo.size();
-        std::cerr << "ID = " << spec_id << std::endl;
-        resources.spectraInfo.push_back({rgb, spec_id});
-        spec_cache[rgb] = spec_id;
-        return {spec_id};
-      }
+      return {};
     }
   }
   else {
-    return {GetColorFromNode(a_node, resources)};
+    auto coloropt = GetColorFromNode(a_node, resources);
+    if(coloropt) {
+      return {*coloropt};
+    }
+    return {};
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
 void LoadSpectralTextures(const uint32_t specId,
@@ -259,7 +235,10 @@ Material ConvertGLTFMaterial(const pugi::xml_node& materialNode, ResourceContext
   if(materialNode != nullptr)
   {
     if(materialNode.child(L"color") != nullptr) {
-      baseColor = GetColorFromNode(materialNode.child(L"color"), resources);
+      auto baseColorOpt = GetColorFromNode(materialNode.child(L"color"), resources);
+      if(baseColorOpt) {
+        baseColor = *baseColorOpt;
+      }
       if(materialNode.child(L"color").child(L"texture") != nullptr) {
         const auto& [sampler, texID] = LoadTextureFromNode(materialNode.child(L"color"), resources, texCache, textures);
         mat.row0 [0] = sampler.row0;
@@ -349,7 +328,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   mat.colors[GLTF_COLOR_COAT]    = float4(1,1,1,1); 
   mat.colors[GLTF_COLOR_METAL]   = float4(0,0,0,0);  
   mat.lightId                    = uint(-1);
-  
+  mat.spdid[0]                   = INVALID_SPECTRUM_ID;
   auto nodeEmiss = materialNode.child(L"emission");
 
   // read Hydra or GLTF materials
@@ -365,7 +344,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
     if(var_color.isRGB()) {
         color = var_color.getRGB();
     }
-    else {
+    else if(var_color) {
       mat.spdid[0] = var_color.getSpectrumId();
       std::cerr << "Mat specid = " << mat.spdid[0] << std::endl; 
     }
@@ -401,7 +380,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   auto nodeDiffColor = materialNode.child(L"diffuse").child(L"color");
   if(nodeDiffColor != nullptr)
   {
-    color = GetColorFromNode(nodeDiffColor, resources);
+    color = GetColorFromNode(nodeDiffColor, resources).value_or(float4(1.0f));
     const auto& [diffSampler, texID] = LoadTextureFromNode(nodeDiffColor, resources, texCache, textures);
     
     mat.row0 [0] = diffSampler.row0;
@@ -415,7 +394,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   auto nodeRefl        = materialNode.child(L"reflectivity");
   if(nodeRefl != nullptr)
   {
-    reflColor       = GetColorFromNode(nodeRefl.child(L"color"), resources);
+    reflColor       = GetColorFromNode(nodeRefl.child(L"color"), resources).value_or(float4(0.0f));
     reflGlossiness  = hydra_xml::readval1f(nodeRefl.child(L"glossiness"));  
     fresnelIOR      = hydra_xml::readval1f(nodeRefl.child(L"fresnel_ior"));
   }
@@ -427,7 +406,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   auto nodeTransp = materialNode.child(L"transparency");
   if (nodeTransp != nullptr)
   {
-    transpColor      = GetColorFromNode(nodeTransp.child(L"color"), resources);
+    transpColor      = GetColorFromNode(nodeTransp.child(L"color"), resources).value_or(float4(0.0f));
     transpGlossiness = hydra_xml::readval1f(nodeTransp.child(L"glossiness"));
     transpIOR        = hydra_xml::readval1f(nodeTransp.child(L"ior"));
   }
@@ -554,6 +533,8 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
 
+  //auto var_color = GetVariableColorFromNode();
+
   auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
   auto etaSpecId = GetSpectrumIdFromNode(materialNode.child(L"eta"));
   auto k         = materialNode.child(L"k").attribute(L"val").as_float();
@@ -570,7 +551,7 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
   auto nodeColor = materialNode.child(L"reflectance");
   if(nodeColor != nullptr && !is_spectral_mode)
   {
-    mat.colors[CONDUCTOR_COLOR] = GetColorFromNode(nodeColor, resources);
+    mat.colors[CONDUCTOR_COLOR] = GetColorFromNode(nodeColor, resources).value_or(float4(1.0f));
   }
 
   return mat;
@@ -591,7 +572,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext
   mat.mtype    = MAT_TYPE_DIFFUSE;
   mat.lightId  = uint(-1);
   mat.texid[0] = 0;
-  mat.spdid[0] = uint(-1);
+  mat.spdid[0] = INVALID_SPECTRUM_ID;
   mat.data[DIFFUSE_ROUGHNESS] = 0.0f;
 
   static const std::wstring orenNayarNameStr {L"oren-nayar"};
@@ -616,7 +597,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext
     if(var_color.isRGB()) {
       mat.colors[DIFFUSE_COLOR] = var_color.getRGB();
     }
-    else {
+    else if(var_color){
       mat.spdid[0] = var_color.getSpectrumId();
     }
 
@@ -669,13 +650,13 @@ Material LoadDielectricMaterial(const pugi::xml_node& materialNode, ResourceCont
   auto nodeReflColor = materialNode.child(L"reflectance");
   if(nodeReflColor != nullptr)
   {
-    mat.colors[DIELECTRIC_COLOR_REFLECT] = GetColorFromNode(nodeReflColor, resources);
+    mat.colors[DIELECTRIC_COLOR_REFLECT] = GetColorFromNode(nodeReflColor, resources).value_or(float4(1.0f));
   }
 
   auto nodeTransColor = materialNode.child(L"transmittance");
   if(nodeTransColor != nullptr)
   {
-    mat.colors[DIELECTRIC_COLOR_TRANSMIT] = GetColorFromNode(nodeTransColor, resources);
+    mat.colors[DIELECTRIC_COLOR_TRANSMIT] = GetColorFromNode(nodeTransColor, resources).value_or(float4(1.0f));
   }
 
   return mat;
@@ -753,19 +734,19 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
   mat.lightId   = uint(-1);
   mat.nonlinear = 0;
   mat.texid[0]  = 0;
-  mat.spdid[0]  = uint(-1);
+  mat.spdid[0]  = INVALID_SPECTRUM_ID;
 
   auto nodeColor = materialNode.child(L"reflectance");
   uint32_t specId = INVALID_SPECTRUM_ID;
   if(nodeColor)
   {
-    ColorHolder color = GetVariableColorFromNode(nodeColor, resources, is_spectral_mode);
+    ColorHolder var_color = GetVariableColorFromNode(nodeColor, resources, is_spectral_mode);
 
-    if(color.isRGB()) {
-      mat.colors[PLASTIC_COLOR] = color.getRGB();
+    if(var_color.isRGB()) {
+      mat.colors[PLASTIC_COLOR] = var_color.getRGB();
     }
-    else {
-      mat.spdid[0] = color.getSpectrumId();
+    else if(var_color) {
+      mat.spdid[0] = var_color.getSpectrumId();
     }
     const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, resources, texCache, textures);
 

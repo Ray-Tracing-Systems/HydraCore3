@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <spectral/spec/spectral_util.h>
+#include <spectral/spec/conversions.h>
+#include <spectral/upsample/upsamplers.h>
 #include <iostream>
 
 std::vector<float> Spectrum::ResampleUniform() const
@@ -18,20 +20,70 @@ float Spectrum::Sample(float lambda) const
   return spectrum->get_or_interpolate(lambda);
 }
 
+
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
-  Spectrum res;
+  spec::ISpectrum::ptr sp;
   spec::ISpectrum::csptr illum;
   std::cerr << path.string() << std::endl;
 
-  if(spec::util::load_spectrum(path.string(), res.spectrum, illum)) {
-    res.id = spec_id;
+  if(spec::util::load_spectrum(path.string(), sp, illum)) {
+    Spectrum res {
+      .spectrum = std::move(sp),
+      .id = spec_id
+    };
     return res;
   }
   else {
     return {};
   }
 }
+
+const std::optional<Spectrum> &SpectrumLoader::load() const
+{
+  if(not_loaded) {
+
+    if(std::holds_alternative<std::wstring>(data)) {
+      std::wstring str = std::get<std::wstring>(data);
+     // std::cerr << "Extracting  " << str << std::endl;
+      spectrum = LoadSPDFromFile(str, spec_id);
+    }
+    else if(std::holds_alternative<spec::vec3>(data)) {
+      spectrum = std::make_optional<Spectrum>();
+      spectrum->id = spec_id;
+      spectrum->spectrum = spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(std::get<spec::vec3>(data)));
+    }
+    not_loaded = false;
+  }
+  return spectrum;
+}
+
+uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders)
+{
+  static std::unordered_map<spec::vec3, uint32_t> spec_cache;
+
+  spec::vec3 rgb{color[0], color[1], color[2]};
+  auto it = spec_cache.find(rgb);
+  if(it != spec_cache.end()) {
+    std::cerr << "Reusing spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
+    return it->second;
+  }
+  else {
+    std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
+    uint32_t spec_id = loaders.size();
+    std::cerr << "ID = " << spec_id << std::endl;
+    loaders.push_back({rgb, spec_id});
+    spec_cache[rgb] = spec_id;
+    return spec_id;
+  }
+}
+
+float4 DownsampleSpectrum(const Spectrum &st)
+{
+  spec::vec3 rgb = spec::xyz2rgb(spec::spectre2xyz(*(st.spectrum)));
+  return {rgb.x, rgb.y, rgb.z, 0.0f};
+}
+
 
 constexpr uint32_t nCIESamples = 471;
 const float CIE_lambda[nCIESamples] = {

@@ -88,7 +88,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       float4 transpColor = float4(0, 0, 0, 0);
       auto nodeTransp = materialNode.child(L"transparency");
       if (nodeTransp != nullptr)
-        transpColor = GetColorFromNode(nodeTransp.child(L"color"), temporaryContext);// if spectral color then not transparent
+        transpColor = GetColorFromNode(nodeTransp.child(L"color"), temporaryContext).value_or(float4(0.0f));// if spectral color then not transparent
   
       if(LiteMath::length3f(transpColor) > 1e-5f)
         features[KSPEC_MAT_TYPE_GLASS] = 1;
@@ -610,7 +610,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
             break;
         }
 
-        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), resources);
+        m_camRespoceRGB   = GetColorFromNode(responceNode.child(L"color"), resources).value_or(float4(1.0f));
         m_camRespoceRGB.w = 1.0f;
       }
     }

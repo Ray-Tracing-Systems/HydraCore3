@@ -4,6 +4,7 @@
 #include <vector>
 #include <filesystem>
 #include <optional>
+#include <variant>
 #include "LiteMath.h"
 #include "include/cglobals.h"
 #include <spectral/spec/spectrum.h>
@@ -22,12 +23,53 @@ struct Spectrum
   //std::vector<float> Resample(int channels, float lambdaOffs = 0.0f);
   std::vector<float> ResampleUniform() const;
 
-  spec::ISpectrum::ptr spectrum;
+  spec::ISpectrum::sptr spectrum;
   uint32_t id = INVALID_SPECTRUM_ID;
 };
 #endif
 
+extern const Spectrum DUMMY_UNIFORM_SPECTRUM; 
+
+class SpectrumLoader
+{
+public:
+  SpectrumLoader(const std::wstring &str, uint32_t spec_id)
+    : data{str}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+  SpectrumLoader(const spec::vec3 &v, uint32_t spec_id)
+    : data{v}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+
+  SpectrumLoader(const SpectrumLoader &other) = delete;
+  SpectrumLoader &operator=(const SpectrumLoader &other) = delete;
+
+  SpectrumLoader(SpectrumLoader &&other)
+    : data{std::move(other.data)}, spec_id{other.spec_id}, spectrum{std::move(other.spectrum)}, not_loaded{other.not_loaded} {}
+  SpectrumLoader &operator=(SpectrumLoader &&other)
+  {
+    data = std::move(other.data);
+    std::swap(spec_id, other.spec_id);
+    spectrum = std::move(other.spectrum);
+    std::swap(not_loaded, other.not_loaded);
+    return *this;
+  }
+
+  const std::optional<Spectrum> &load() const;
+
+  uint32_t id() const
+  {
+    return spec_id;
+  }
+
+private:
+  std::variant<spec::vec3, std::wstring> data;
+  uint32_t spec_id;
+  mutable std::optional<Spectrum> spectrum;
+  mutable bool not_loaded;
+};
+
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
+
+uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders);
+float4 DownsampleSpectrum(const Spectrum &st);
 
 inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 
 {
