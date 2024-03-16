@@ -33,26 +33,34 @@ extern const Spectrum DUMMY_UNIFORM_SPECTRUM;
 class SpectrumLoader
 {
 public:
+  SpectrumLoader()
+    : loader{}, spec_id{INVALID_SPECTRUM_ID}, spectrum{} {}
+  SpectrumLoader(spec::ISpectrum::ptr &&ptr, uint32_t spec_id)
+    : loader{new SimpleLoader(std::move(ptr))}, spec_id{spec_id}, spectrum{} {}
   SpectrumLoader(const std::wstring &str, uint32_t spec_id)
-    : data{str}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+    : loader{new FileLoader(str)}, spec_id{spec_id}, spectrum{} {}
   SpectrumLoader(const spec::vec3 &v, uint32_t spec_id)
-    : data{v}, spec_id{spec_id}, spectrum{}, not_loaded{true} {}
+    : loader{new UpsampleLoader(v)}, spec_id{spec_id}, spectrum{} {}
 
   SpectrumLoader(const SpectrumLoader &other) = delete;
   SpectrumLoader &operator=(const SpectrumLoader &other) = delete;
 
   SpectrumLoader(SpectrumLoader &&other)
-    : data{std::move(other.data)}, spec_id{other.spec_id}, spectrum{std::move(other.spectrum)}, not_loaded{other.not_loaded} {}
+    : loader{}, spec_id{}, spectrum{}
+  {
+    *this = std::move(other);
+  }
   SpectrumLoader &operator=(SpectrumLoader &&other)
   {
-    data = std::move(other.data);
+    std::swap(loader, other.loader);
     std::swap(spec_id, other.spec_id);
     spectrum = std::move(other.spectrum);
-    std::swap(not_loaded, other.not_loaded);
     return *this;
   }
 
-  const std::optional<Spectrum> &load() const;
+  ~SpectrumLoader() {delete loader;}
+
+  std::optional<Spectrum> &load() const;
 
   uint32_t id() const
   {
@@ -60,15 +68,44 @@ public:
   }
 
 private:
-  std::variant<spec::vec3, std::wstring> data;
+  struct ILoader
+  {
+    virtual void load(spec::ISpectrum::sptr &ptr) = 0;
+    virtual ~ILoader() = default;
+  };
+
+  struct FileLoader : public ILoader
+  {
+    std::wstring path;
+    FileLoader(const std::wstring &p) : path(p) {}
+    void load(spec::ISpectrum::sptr &ptr) override;
+  };
+
+  struct UpsampleLoader : public ILoader
+  {
+    spec::vec3 rgb;
+    UpsampleLoader(const spec::vec3 &p) : rgb(p) {}
+    void load(spec::ISpectrum::sptr &ptr) override;
+  };
+
+  struct SimpleLoader : public ILoader
+  {
+    spec::ISpectrum::ptr spectrum;
+    SimpleLoader(spec::ISpectrum::ptr &&ptr) : spectrum(std::move(ptr)) {}
+    void load(spec::ISpectrum::sptr &ptr) override;
+  };
+
+  mutable ILoader *loader;
   uint32_t spec_id;
   mutable std::optional<Spectrum> spectrum;
-  mutable bool not_loaded;
 };
+
+spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &color);
 
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
 uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders);
+
 float4 DownsampleSpectrum(const Spectrum &st);
 
 inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 

@@ -11,7 +11,7 @@ std::vector<float> Spectrum::ResampleUniform() const
 {
   std::vector<float> res(size_t(LAMBDA_MAX - LAMBDA_MIN));
   for(unsigned c = 0; c < res.size(); c++)
-    res[c] = spectrum->get_or_interpolate(static_cast<spec::Float>(LAMBDA_MIN + c));
+    res[c] = spectrum->get_or_interpolate(LAMBDA_MIN + spec::Float(c));
   return res;
 }
 
@@ -20,6 +20,10 @@ float Spectrum::Sample(float lambda) const
   return spectrum->get_or_interpolate(lambda);
 }
 
+spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &rgb)
+{
+  return spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(rgb));
+}
 
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
@@ -39,21 +43,36 @@ std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint3
   }
 }
 
-const std::optional<Spectrum> &SpectrumLoader::load() const
+void SpectrumLoader::FileLoader::load(spec::ISpectrum::sptr &ptr) 
 {
-  if(not_loaded) {
+  spec::ISpectrum::ptr sp;
+  spec::ISpectrum::csptr illum;
 
-    if(std::holds_alternative<std::wstring>(data)) {
-      std::wstring str = std::get<std::wstring>(data);
-     // std::cerr << "Extracting  " << str << std::endl;
-      spectrum = LoadSPDFromFile(str, spec_id);
+  spec::util::load_spectrum(std::string(path.begin(), path.end()), sp, illum);
+  ptr = std::move(sp);
+}
+
+void SpectrumLoader::UpsampleLoader::load(spec::ISpectrum::sptr &ptr) 
+{
+  ptr = UpsampleRaw(rgb);
+}
+
+void SpectrumLoader::SimpleLoader::load(spec::ISpectrum::sptr &ptr) 
+{
+  ptr = std::move(spectrum);
+}
+
+std::optional<Spectrum> &SpectrumLoader::load() const
+{
+  if(loader) {
+    Spectrum sp;
+    loader->load(sp.spectrum);
+    if(sp.spectrum) {
+      sp.id = spec_id;
+      spectrum = std::move(sp);
     }
-    else if(std::holds_alternative<spec::vec3>(data)) {
-      spectrum = std::make_optional<Spectrum>();
-      spectrum->id = spec_id;
-      spectrum->spectrum = spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(std::get<spec::vec3>(data)));
-    }
-    not_loaded = false;
+    delete loader;
+    loader = nullptr;
   }
   return spectrum;
 }

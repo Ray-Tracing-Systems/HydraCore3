@@ -1,6 +1,7 @@
 #include "integrator_pt_scene.h"
 #include <unordered_map>
 #include <spectral/spec/basic_spectrum.h>
+#include <spectral/spec/conversions.h>
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
@@ -533,13 +534,78 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
     alpha_v = nodeAlphaV.attribute(L"val").as_float();
   }
 
-  //auto var_color = GetVariableColorFromNode();
+  float eta       = materialNode.child(L"eta").attribute(L"val").as_float();
+  uint32_t etaSpecId = GetSpectrumIdFromNode(materialNode.child(L"eta"));
+  float k         = materialNode.child(L"k").attribute(L"val").as_float();
+  uint32_t kSpecId   = GetSpectrumIdFromNode(materialNode.child(L"k"));
 
-  auto eta       = materialNode.child(L"eta").attribute(L"val").as_float();
-  auto etaSpecId = GetSpectrumIdFromNode(materialNode.child(L"eta"));
-  auto k         = materialNode.child(L"k").attribute(L"val").as_float();
-  auto kSpecId   = GetSpectrumIdFromNode(materialNode.child(L"k"));
-  
+  auto nodeColor = materialNode.child(L"reflectance");
+  if(nodeColor)
+  {
+    if(!is_spectral_mode) {
+      mat.colors[CONDUCTOR_COLOR] = GetColorFromNode(nodeColor, resources).value_or(float4(1.0f));
+    }
+    else if(etaSpecId == INVALID_SPECTRUM_ID && kSpecId == INVALID_SPECTRUM_ID) {
+      auto coloropt = GetColorFromNode(nodeColor, resources);
+      if(coloropt) {
+
+        /* PREMP
+        float etaMp = eta > k ? 1.0f : eta / k;
+        float kMp = eta > k ? k / eta : 1.0f;
+
+
+        spec::ISpectrum::ptr etaupsampled = UpsampleRaw(spec::vec3(coloropt->x, coloropt->y, coloropt->z) * etaMp);
+        spec::ISpectrum::ptr kupsampled = UpsampleRaw(spec::vec3(coloropt->x, coloropt->y, coloropt->z) * kMp);
+
+        size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
+        spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
+        spec::BasicSpectrum *kspec = new spec::BasicSpectrum();
+        for(unsigned c = 0; c < count; c++) {
+          spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
+          auto p = spec::color2ior(etaupsampled->get_or_interpolate(lambda), kupsampled->get_or_interpolate(lambda));
+          etaspec->set(lambda, p.first);
+          kspec->set(lambda, p.second);
+        }
+        etaSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
+        kSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
+        */
+        
+        spec::ISpectrum::ptr upsampled = UpsampleRaw({coloropt->x, coloropt->y, coloropt->z});
+        size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
+        spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
+        spec::BasicSpectrum *kspec = new spec::BasicSpectrum();
+        for(unsigned c = 0; c < count; c++) {
+          spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
+          auto p = spec::color2ior(upsampled->get_or_interpolate(lambda));
+          etaspec->set(lambda, p.first);
+          kspec->set(lambda, p.second);
+        }
+        etaSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
+        kSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
+
+        /* POSTMP
+        size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
+        spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
+        spec::BasicSpectrum *kspec = new spec::BasicSpectrum();
+        for(unsigned c = 0; c < count; c++) {
+          spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
+          auto p = spec::color2ior(upsampled->get_or_interpolate(lambda) * eta, upsampled->get_or_interpolate(lambda) * k);
+          etaspec->set(lambda, p.first);
+          kspec->set(lambda, p.second);
+        }
+        etaSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
+        kSpecId = uint32_t(resources.spectraInfo.size());
+        resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
+        */
+      }
+    }
+  }
+
   mat.data[CONDUCTOR_ROUGH_U] = alpha_u;
   mat.data[CONDUCTOR_ROUGH_V] = alpha_v; 
   mat.data[CONDUCTOR_ETA]     = eta; 
@@ -547,12 +613,6 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
   
   mat.spdid[0] = etaSpecId;
   mat.spdid[1] = kSpecId;
-
-  auto nodeColor = materialNode.child(L"reflectance");
-  if(nodeColor != nullptr && !is_spectral_mode)
-  {
-    mat.colors[CONDUCTOR_COLOR] = GetColorFromNode(nodeColor, resources).value_or(float4(1.0f));
-  }
 
   return mat;
 }
