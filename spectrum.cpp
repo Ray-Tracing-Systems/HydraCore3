@@ -25,6 +25,18 @@ spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &rgb)
   return spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(rgb));
 }
 
+spec::ISpectrum::ptr UpsampleAndResample(const spec::vec3 &rgb, float multiplier)
+{
+  spec::ISpectrum::ptr upsampled = UpsampleRaw(rgb);
+  size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
+  spec::BasicSpectrum *spec = new spec::BasicSpectrum();
+  for(unsigned c = 0; c < count; c++) {
+    const spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
+    spec->set(lambda, upsampled->get_or_interpolate(lambda) * multiplier);
+  }
+  return spec::ISpectrum::ptr(spec);
+}
+
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id)
 {
   spec::ISpectrum::ptr sp;
@@ -77,10 +89,15 @@ std::optional<Spectrum> &SpectrumLoader::load() const
   return spectrum;
 }
 
+namespace {
+
+  std::unordered_map<spec::vec3, uint32_t> spec_cache;
+
+}
+
+
 uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders)
 {
-  static std::unordered_map<spec::vec3, uint32_t> spec_cache;
-
   spec::vec3 rgb{color[0], color[1], color[2]};
   auto it = spec_cache.find(rgb);
   if(it != spec_cache.end()) {
@@ -88,11 +105,19 @@ uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoad
     return it->second;
   }
   else {
-    std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
+    float multiplier = LiteMath::hmax(color);
     uint32_t spec_id = loaders.size();
+    std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
     std::cerr << "ID = " << spec_id << std::endl;
-    loaders.push_back({rgb, spec_id});
-    spec_cache[rgb] = spec_id;
+    if(multiplier == 1.0f) {
+      loaders.push_back({rgb, spec_id});
+      spec_cache[rgb] = spec_id;
+    }
+    else {
+      auto spec = UpsampleAndResample(rgb / multiplier, multiplier);
+      loaders.push_back({std::move(spec), spec_id});
+      spec_cache[rgb] = spec_id;
+    }
     return spec_id;
   }
 }

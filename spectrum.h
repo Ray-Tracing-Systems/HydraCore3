@@ -60,6 +60,7 @@ public:
 
   ~SpectrumLoader() {delete loader;}
 
+
   std::optional<Spectrum> &load() const;
 
   uint32_t id() const
@@ -101,6 +102,7 @@ private:
 };
 
 spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &color);
+spec::ISpectrum::ptr UpsampleAndResample(const spec::vec3 &rgb, float multiplier);
 
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
