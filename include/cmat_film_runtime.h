@@ -218,7 +218,7 @@ static void filmSmoothEval(const Material* a_materials, const float4 eta_1, cons
 static inline void filmRoughSampleAndEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed)
 {
-    const float extIOR = a_materials[0].data[FILM_ETA_EXT];
+  const float extIOR = a_materials[0].data[FILM_ETA_EXT];
 
   bool reversed = false;
   uint32_t refl_offset;
@@ -247,10 +247,13 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const IOR
   CoordinateSystemV2(n, &s, &t);
   float3 wo = float3(dot(v, s), dot(v, t), dot(v, n));
 
+  float ior = a_ior.value[layers].re / extIOR;
   if (reversed)
   {
     wo = -1 * wo;
+    ior = 1.f / ior;
   }
+
   const float4 wm_pdf = sample_visible_normal(wo, {rands.x, rands.y}, alpha);
   const float3 wm = to_float3(wm_pdf);
   if(wm_pdf.w == 0.0f) // not in the same hemisphere
@@ -259,8 +262,6 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const IOR
   }
 
   float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
-
-  float ior = a_ior.value[layers].re / extIOR;
 
   float4 fr = FrDielectricDetailedV2(dot(wo, wm), ior);
 
@@ -507,8 +508,13 @@ static void filmRoughEval(const Material* a_materials, const IORVector a_ior, co
     return;
   }
 
-  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
   float ior = a_ior.value[layers].re / extIOR;
+  if (reversed)
+  {
+    ior = 1.f / ior;
+  }
+
+  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
   
   float R;
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
