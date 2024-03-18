@@ -165,7 +165,15 @@ namespace hydra_xml
       if(meshNode != nullptr)
       {
         auto meshLoc = ws2s(std::wstring(meshNode.attribute(L"loc").as_string()));
-        meshLoc = m_libraryRootDir + "/" + meshLoc;
+        
+        if(meshLoc == std::string("unknown"))
+        {
+          meshLoc = ws2s(std::wstring(meshNode.attribute(L"path").as_string()));
+        }
+        else
+        {
+          meshLoc = m_libraryRootDir + "/" + meshLoc;
+        }
 
 #if not defined(__ANDROID__)
         std::ifstream checkMesh(meshLoc);

@@ -105,7 +105,16 @@ namespace hydra_xml
     { 
       auto attr    = m_iter->attribute(L"loc");
       auto meshLoc = ws2s(std::wstring(attr.as_string()));
-      return m_libraryRootDir + "/" + meshLoc;
+      if(meshLoc == std::string("unknown"))
+      {
+        attr    = m_iter->attribute(L"path");
+        meshLoc = ws2s(std::wstring(attr.as_string()));
+      }
+      else
+      {
+        meshLoc = m_libraryRootDir + "/" + meshLoc;
+      }
+      return meshLoc;
     }
   
 		const LocIterator& operator++() { ++m_iter; return *this; }
