@@ -385,6 +385,11 @@ public:
   std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
 
+  struct IORVector
+  {
+    complex value[FILM_LAYERS_MAX + 1];
+  };
+
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);

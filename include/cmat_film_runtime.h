@@ -5,7 +5,7 @@
 #include "../spectrum.h"
 #include <iostream>
 
-static inline void filmSmoothSampleAndEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
+static inline void filmSmoothSampleAndEval(const Material* a_materials, const Integrator::IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes,
         const float* precomputed_data)
 {
@@ -215,7 +215,7 @@ static void filmSmoothEval(const Material* a_materials, const float4 eta_1, cons
   pRes->pdf = 0.0f;
 }
 
-static inline void filmRoughSampleAndEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
+static inline void filmRoughSampleAndEval(const Material* a_materials, const Integrator::IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed)
 {
   const float extIOR = a_materials[0].data[FILM_ETA_EXT];
@@ -469,7 +469,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const IOR
 }
 
 
-static void filmRoughEval(const Material* a_materials, const IORVector a_ior, const float* thickness,
+static void filmRoughEval(const Material* a_materials, const Integrator::IORVector a_ior, const float* thickness,
         uint layers, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfEval* pRes, const float* precomputed)
 {
   if (a_ior.value[layers].im < 0.001)
