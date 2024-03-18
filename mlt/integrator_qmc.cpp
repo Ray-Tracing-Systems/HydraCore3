@@ -45,7 +45,6 @@ void IntegratorQMC::EnableQMC()
     m_qmcSpdDim    = 3;
     m_qmcMatDim    = 4;
     m_qmcLgtDim    = 6;
-
   }
   else if(dof && motion) // (0,1): pixel id; (2,3): lens; (4): motion; (5,6): mat; (7,8,9): light.
   {
