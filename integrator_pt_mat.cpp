@@ -108,13 +108,13 @@ float3 Integrator::BumpMapping(uint normalMapId, uint currMatId, float3 n, float
 BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
                                              MisData* a_misPrev, const uint a_currRayFlags)
 {
-  BsdfSample res {
-    .val   = float4(0, 0, 0, 0),
-    .pdf   = 1.0f,
-    .dir   = float3(0,1,0),
-    .ior   = 1.0f,
-    .flags = a_currRayFlags
-  };
+  BsdfSample res;
+  res.val   = float4(0, 0, 0, 0);
+  res.pdf   = 1.0f;
+  res.dir   = float3(0,1,0);
+  res.ior   = 1.0f;
+  res.flags = a_currRayFlags;
+  
 
   uint32_t currMatId = a_materialId;
   uint     mtype     = m_materials[currMatId].mtype;
