@@ -27,7 +27,7 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
     return res;
 
   const uint specId = m_materials[matId].spdid[paramSpecId];
-  if(specId != INVALID_SPECTRUM_ID)
+  if(specId != 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;

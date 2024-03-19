@@ -1,5 +1,6 @@
 #include "integrator_pt_scene.h"
 
+#include "spectrum_loader.h"
 #include <spectral/spec/basic_spectrum.h>
 #include <spectral/upsample/upsamplers.h>
 

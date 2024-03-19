@@ -1,4 +1,5 @@
 #include "spectrum.h"
+#include "spectrum_loader.h"
 #include <fstream>
 #include <string>
 #include <vector>

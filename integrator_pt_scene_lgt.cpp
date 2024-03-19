@@ -1,4 +1,5 @@
 #include "integrator_pt_scene.h"
+#include "spectrum_loader.h"
 
 std::vector<float> CreateSphericalTextureFromIES(const std::string& a_iesData, int* pW, int* pH);
 

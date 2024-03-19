@@ -8,6 +8,7 @@ using cmesh4::SimpleMesh;
 
 #include "mi_materials.h"
 #include "spectrum.h"
+#include "spectrum_loader.h"
 #include "LiteScene/hydraxml.h"
 
 #include <string>
@@ -196,6 +197,5 @@ struct ResourceContext
   std::vector<SpectrumLoader> spectraInfo;
   std::vector<TextureInfo> texturesInfo;
   uint32_t loadedSpectrumCount;
-
 
 };

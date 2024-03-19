@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <spectral/spec/basic_spectrum.h>
 #include <spectral/spec/conversions.h>
+#include "spectrum_loader.h"
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
