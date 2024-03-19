@@ -1,20 +1,20 @@
 #ifndef SPECTRUM_LOADER_H
 #define SPECTRUM_LOADER_H
 
-#include <vector>
-#include "LiteMath.h"
 #include "include/cglobals.h"
+#include <vector>
 #include <filesystem>
 #include <optional>
 #include <variant>
-#include <spectral/spec/spectrum.h>
+#include "LiteMath.h"
 #include <spectrum.h>
+#include <spectral/spec/spectrum.h>
 
 #ifndef __OPENCL_VERSION__
 using namespace LiteMath;
 #endif
 
-constexpr uint32_t INVALID_SPECTRUM_ID = 0xFFFFFFFF;
+//constexpr uint32_t INVALID_SPECTRUM_ID = 0xFFFFFFFF;
 
 struct Spectrum
 {

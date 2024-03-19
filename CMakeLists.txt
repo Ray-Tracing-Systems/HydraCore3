@@ -172,6 +172,7 @@ set(CORE_SRC
         mlt/rnd_qmc.cpp
         mi_materials.cpp
         spectrum.cpp
+        spectrum_loader.cpp
         imageutils.cpp
         imageutils_gbuffer.cpp
         utils.cpp
