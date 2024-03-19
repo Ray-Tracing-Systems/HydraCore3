@@ -54,13 +54,11 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     {
       if (!reversed)
       {
-        result.refl = FrFilmRefl(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]); 
-        result.refr = FrFilmRefr(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]); 
+        result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
       {
-        result.refl = FrFilmRefl(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]); 
-        result.refr = FrFilmRefr(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]); 
+        result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]);
       }
     }
     else if (layers > 2)
@@ -280,13 +278,11 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
     {
       if (!reversed)
       {
-        result.refl = FrFilmRefl(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]); 
-        result.refr = FrFilmRefr(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]); 
+        result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
       {
-        result.refl = FrFilmRefl(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]); 
-        result.refr = FrFilmRefr(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]); 
+        result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]);
       }
     }
     else if (layers > 2)
