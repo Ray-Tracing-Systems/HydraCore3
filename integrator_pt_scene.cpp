@@ -323,7 +323,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       const size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
-      texturesInfo.push_back(tex);
+      resources.texturesInfo.push_back(tex);
     }
     resources.texturesInfo.push_back(tex);
   }
