@@ -18,7 +18,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
   {
     n = -1 * n;
   }
-  if (dot(n, v) < 0.f)
+  if (dot(n, v) < 0.f && a_ior.value[layers].im < 0.001)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
@@ -29,6 +29,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     refl_offset = 0;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
+  reversed = false;
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
@@ -37,12 +38,6 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
   float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
 
   float ior = a_ior.value[layers].re / extIOR;
-
-  float4 fr = FrDielectricDetailedV2(wi.z, ior);
-
-  const float cosThetaT = fr.y;
-  const float eta_it = fr.z;
-  const float eta_ti = fr.w;  
   
   float R, T;
   FrReflRefr result = {0, 0};
@@ -194,6 +189,10 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     }
     else
     {
+      float4 fr = FrDielectricDetailedV2(wi.z, ior);
+      const float cosThetaT = fr.y;
+      const float eta_ti = fr.w;  
+
       float3 wo = refract(wi, cosThetaT, eta_ti);
       pRes->val = float4(T);
       pRes->pdf = T / (R + T);
@@ -226,7 +225,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
     n = -1 * n;
   }
 
-  if (dot(v, n) < 0.f)
+  if (dot(v, n) < 0.f && a_ior.value[layers].im < 0.001)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;
@@ -478,7 +477,7 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
   uint32_t refr_offset;
 
   bool reversed = false;
-  if (dot(v, n) < 0.f)
+  if (dot(v, n) < 0.f && a_ior.value[layers].im < 0.001)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * FILM_LENGTH_RES * 2;

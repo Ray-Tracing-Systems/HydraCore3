@@ -814,10 +814,8 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       FrReflRefr backward;
       if (layers == 2)
       {
-        forward.refl = FrFilmRefl(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength); 
-        forward.refr = FrFilmRefr(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength); 
-        backward.refl = FrFilmRefl(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength); 
-        backward.refr = FrFilmRefr(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength); 
+        forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
+        backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
       }
       else
       {
