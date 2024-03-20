@@ -119,7 +119,8 @@ static constexpr uint CONDUCTOR_ROUGH_U           = 0;
 static constexpr uint CONDUCTOR_ROUGH_V           = 1;
 static constexpr uint CONDUCTOR_ETA               = 2;
 static constexpr uint CONDUCTOR_K                 = 3;
-static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
+static constexpr uint CONDUCTOR_HAS_SQUARE_ROUGH  = 4;
+static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_HAS_SQUARE_ROUGH;
 
 // Plastic (mitsuba)
 // colors
@@ -131,7 +132,8 @@ static constexpr uint PLASTIC_ROUGHNESS           = 0;
 static constexpr uint PLASTIC_IOR_RATIO           = 1;
 static constexpr uint PLASTIC_SPEC_SAMPLE_WEIGHT  = 2;
 static constexpr uint PLASTIC_PRECOMP_REFLECTANCE = 3;
-static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_PRECOMP_REFLECTANCE;
+static constexpr uint PLASTIC_HAS_SQUARE_ROUGH    = 4;
+static constexpr uint PLASTIC_CUSTOM_LAST_IND     = PLASTIC_HAS_SQUARE_ROUGH;
 
 
 // Simple diffuse
@@ -153,8 +155,8 @@ static constexpr uint BLEND_WEIGHT          = 0;
 static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_WEIGHT;
 
 // The size is taken according to the largest indexes
-static constexpr uint COLOR_DATA_SIZE  = 4;  // std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
-static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
+static constexpr uint COLOR_DATA_SIZE  = 4; 
+static constexpr uint CUSTOM_DATA_SIZE = 12;
 
 struct Material
 {

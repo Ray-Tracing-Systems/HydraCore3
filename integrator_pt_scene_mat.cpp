@@ -483,13 +483,22 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   auto k         = materialNode.child(L"k").attribute(L"val").as_float();
   auto kSpecId   = GetSpectrumIdFromNode(materialNode.child(L"k"));
   
-  mat.data[CONDUCTOR_ROUGH_U] = alpha_u;
-  mat.data[CONDUCTOR_ROUGH_V] = alpha_v; 
-  mat.data[CONDUCTOR_ETA]     = eta; 
-  mat.data[CONDUCTOR_K]       = k;   
-  
-  mat.spdid[0] = etaSpecId;
-  mat.spdid[1] = kSpecId;
+  auto squareRoughOnNode    = materialNode.child(L"square_rough_on");
+  auto has_square_rough = squareRoughOnNode.attribute(L"val").as_bool();
+
+  if (has_square_rough)
+  {
+    alpha_u = alpha_u * alpha_u;
+    alpha_v = alpha_v * alpha_v;
+  }
+
+  mat.data[CONDUCTOR_ROUGH_U]          = alpha_u;
+  mat.data[CONDUCTOR_ROUGH_V]          = alpha_v; 
+  mat.data[CONDUCTOR_ETA]              = eta; 
+  mat.data[CONDUCTOR_K]                = k;   
+  mat.data[CONDUCTOR_HAS_SQUARE_ROUGH] = has_square_rough;
+  mat.spdid[0]                         = etaSpecId;
+  mat.spdid[1]                         = kSpecId;
 
   auto nodeColor = materialNode.child(L"reflectance");
   if(nodeColor != nullptr && !is_spectral_mode)
@@ -704,7 +713,14 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
   mat.data[PLASTIC_IOR_RATIO] = internal_ior / external_ior;
 
-  mat.data[PLASTIC_ROUGHNESS] = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+  auto squareRoughOnNode    = materialNode.child(L"square_rough_on");
+  auto has_square_roughness = squareRoughOnNode.attribute(L"val").as_bool();
+  auto roughness            = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+
+  if (has_square_roughness)
+    roughness = roughness * roughness;  
+
+  mat.data[PLASTIC_ROUGHNESS] = roughness;
 
   // dirty hack 
   if(mat.data[PLASTIC_ROUGHNESS] == 0.0f)

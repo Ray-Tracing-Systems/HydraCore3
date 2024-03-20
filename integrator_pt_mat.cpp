@@ -183,14 +183,16 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     case MAT_TYPE_CONDUCTOR:
     if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
     {
-      const float3 alphaTex = to_float3(texColor);    
       const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
       const float4 etaSpec  = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, 0);
       const float4 kSpec    = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K,   1);
       if(trEffectivelySmooth(alpha))
         conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
+      {        
+        const float3 alphaTex = m_materials[currMatId].data[CONDUCTOR_HAS_SQUARE_ROUGH] ? to_float3(texColor * texColor) : to_float3(texColor);
         conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
+      }
     }
     break;
     case MAT_TYPE_DIFFUSE:
@@ -350,13 +352,14 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_CONDUCTOR: 
       if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
       {
-        const float3 alphaTex  = to_float3(texColor);
         const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
 
         if(!trEffectivelySmooth(alpha))
         {
-          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
-          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
+          const float4 etaSpec  = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
+          const float4 kSpec    = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
+          const float3 alphaTex = m_materials[currMat.id].data[CONDUCTOR_HAS_SQUARE_ROUGH]? to_float3(texColor*texColor) : to_float3(texColor);
+                    
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
 
