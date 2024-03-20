@@ -66,8 +66,8 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
-        complex sinTheta = complex(1.0);
-        complex cosTheta = complex(1.0);
+        complex sinTheta;
+        complex cosTheta;
         for (uint i = 1; i <= layers; ++i)
         {
           sinTheta = sinThetaI * a_ior.value[0].re * a_ior.value[0].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
@@ -81,21 +81,21 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
         {
           complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
           complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
-          complex FrReflI = complex(1.f);
-          complex FrRefrI = complex(1.f);
-          for (uint i = layers - 2; i >= 0; --i)
+          complex FrReflI;
+          complex FrRefrI;
+          for (uint i = layers - 1; i > 0; --i)
           {
-            FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+            FrReflI = FrComplexRefl(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefrI = FrComplexRefr(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
 
-            FrRefl = FrRefl * exp(-a_phaseDiff[i].im) * complex(cos(a_phaseDiff[i].re), sin(a_phaseDiff[i].re));
+            FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
             complex denom = 1.f / (1 + FrReflI * FrRefl);
             FrRefr = FrRefr * denom;
             FrRefl = (FrReflI + FrRefl) * denom;
           }
           result.refl += complex_norm(FrRefl) / 2;
-          result.refr += complex_norm(FrRefr)/ 2;
+          result.refr += complex_norm(FrRefr) / 2;
         }
         result.refr *= getRefractionFactor(a_ior.value[layers].re / a_ior.value[0].re, cosThetaI);
       }
@@ -109,13 +109,13 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
         complex sinTheta = complex(1.0);
         complex cosTheta = complex(1.0);
-        for (uint i = layers - 1; i >= 0; --i)
+        for (uint i = layers; i > 0; --i)
         {
-          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
+          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i - 1].re, a_ior.value[i - 1].im) * a_ior.value[i - 1]);
           cosTheta = complex_sqrt(1.0f - sinTheta);
-          a_cosTheta[i] = cosTheta;
-          if (i > 0)
-            a_phaseDiff[i - 1] = filmPhaseDiff(cosTheta, a_ior.value[i], thickness[i - 1], a_wavelengths[0]);
+          a_cosTheta[i - 1] = cosTheta;
+          if (i > 1)
+            a_phaseDiff[i - 2] = filmPhaseDiff(cosTheta, a_ior.value[i - 1], thickness[i - 2], a_wavelengths[0]);
         }
         uint polarization[2] = {PolarizationS, PolarizationP};
         for (uint p = 0; p < 2; ++p)
@@ -311,13 +311,13 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
           complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
           complex FrReflI = complex(1.f);
           complex FrRefrI = complex(1.f);
-          for (uint i = layers - 2; i >= 0; --i)
+          for (uint i = layers - 1; i > 0; --i)
           {
-            FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+            FrReflI = FrComplexRefl(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefrI = FrComplexRefr(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
 
-            FrRefl = FrRefl * exp(-a_phaseDiff[i].im) * complex(cos(a_phaseDiff[i].re), sin(a_phaseDiff[i].re));
+            FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
             complex denom = 1.f / (1 + FrReflI * FrRefl);
             FrRefr = FrRefr * denom;
             FrRefl = (FrReflI + FrRefl) * denom;
@@ -337,13 +337,13 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
         complex sinTheta = complex(1.0);
         complex cosTheta = complex(1.0);
-        for (uint i = layers - 1; i >= 0; --i)
+        for (uint i = layers; i > 0; --i)
         {
-          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
+          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i - 1].re, a_ior.value[i - 1].im) * a_ior.value[i - 1]);
           cosTheta = complex_sqrt(1.0f - sinTheta);
-          a_cosTheta[i] = cosTheta;
-          if (i > 0)
-            a_phaseDiff[i - 1] = filmPhaseDiff(cosTheta, a_ior.value[i], thickness[i - 1], a_wavelengths[0]);
+          a_cosTheta[i - 1] = cosTheta;
+          if (i > 1)
+            a_phaseDiff[i - 2] = filmPhaseDiff(cosTheta, a_ior.value[i - 1], thickness[i - 2], a_wavelengths[0]);
         }
         uint polarization[2] = {PolarizationS, PolarizationP};
         for (uint p = 0; p < 2; ++p)
@@ -553,13 +553,13 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
           complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
           complex FrReflI = complex(1.f);
           complex FrRefrI = complex(1.f);
-          for (uint i = layers - 2; i >= 0; --i)
+          for (uint i = layers - 1; i > 0; --i)
           {
-            FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior.value[i], a_ior.value[i + 1], p);
-            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+            FrReflI = FrComplexRefl(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefrI = FrComplexRefr(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
+            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
 
-            FrRefl = FrRefl * exp(-a_phaseDiff[i].im) * complex(cos(a_phaseDiff[i].re), sin(a_phaseDiff[i].re));
+            FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
             complex denom = 1.f / (1 + FrReflI * FrRefl);
             FrRefr = FrRefr * denom;
             FrRefl = (FrReflI + FrRefl) * denom;
@@ -577,13 +577,13 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
         complex sinTheta = complex(1.0);
         complex cosTheta = complex(1.0);
-        for (uint i = layers - 1; i >= 0; --i)
+        for (uint i = layers; i > 0; --i)
         {
-          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
+          sinTheta = sinThetaI * a_ior.value[layers].re * a_ior.value[layers].re / (complex(a_ior.value[i - 1].re, a_ior.value[i - 1].im) * a_ior.value[i - 1]);
           cosTheta = complex_sqrt(1.0f - sinTheta);
-          a_cosTheta[i] = cosTheta;
-          if (i > 0)
-            a_phaseDiff[i - 1] = filmPhaseDiff(cosTheta, a_ior.value[i], thickness[i - 1], a_wavelengths[0]);
+          a_cosTheta[i - 1] = cosTheta;
+          if (i > 1)
+            a_phaseDiff[i - 2] = filmPhaseDiff(cosTheta, a_ior.value[i - 1], thickness[i - 2], a_wavelengths[0]);
         }
         uint polarization[2] = {PolarizationS, PolarizationP};
         for (uint p = 0; p < 2; ++p)

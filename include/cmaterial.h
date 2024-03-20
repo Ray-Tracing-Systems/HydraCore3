@@ -1153,8 +1153,8 @@ static inline FrReflRefr multFrFilm(float cosThetaI, const complex* a_ior, const
   a_cosTheta[0] = complex(cosThetaI);
 
   float sinThetaI = 1.0f - cosThetaI * cosThetaI;
-  complex sinTheta = complex(1.0);
-  complex cosTheta = complex(1.0);
+  complex sinTheta;
+  complex cosTheta;
   for (int i = 1; i <= layers; ++i)
   {
     sinTheta = sinThetaI * a_ior[0].re * a_ior[0].re / (a_ior[i] * a_ior[i]);
