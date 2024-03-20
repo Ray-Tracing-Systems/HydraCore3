@@ -283,7 +283,13 @@ void IntegratorQMC::kernel_ContributeToImage(uint tid, const uint* rayFlags, uin
 
 void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_color, uint a_passNum)
 {
+#ifdef WIN32
+  using IndexType = int;
+#else
   using IndexType = unsigned; // or int
+#endif // WIN32
+
+
   const size_t samplesNum = std::min<size_t>(size_t(std::numeric_limits<IndexType>::max()), size_t(pixelsNum)*size_t(a_passNum));
   m_maxThreadId = uint(samplesNum);
 
