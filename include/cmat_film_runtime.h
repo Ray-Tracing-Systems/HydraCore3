@@ -40,7 +40,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
   float ior = a_ior.value[layers].re / extIOR;
   
   float R, T;
-  FrReflRefr result = {0, 0};
+  FrReflRefr result = {0.f, 0.f};
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
   if (precompFlag == 0u)
@@ -267,7 +267,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
   const float eta_ti = fr.w;  
   
   float R, T;
-  FrReflRefr result;
+  FrReflRefr result = {0.f, 0.f};
 
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
 
