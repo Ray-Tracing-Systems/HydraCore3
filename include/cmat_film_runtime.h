@@ -294,8 +294,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
-        complex sinTheta = complex(1.0);
-        complex cosTheta = complex(1.0);
+        complex sinTheta;
+        complex cosTheta;
         for (uint i = 1; i <= layers; ++i)
         {
           sinTheta = sinThetaI * a_ior.value[0].re * a_ior.value[0].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
@@ -309,8 +309,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
         {
           complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
           complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
-          complex FrReflI = complex(1.f);
-          complex FrRefrI = complex(1.f);
+          complex FrReflI;
+          complex FrRefrI;
           for (uint i = layers - 1; i > 0; --i)
           {
             FrReflI = FrComplexRefl(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
@@ -323,7 +323,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
             FrRefl = (FrReflI + FrRefl) * denom;
           }
           result.refl += complex_norm(FrRefl) / 2;
-          result.refr += complex_norm(FrRefr)/ 2;
+          result.refr += complex_norm(FrRefr) / 2;
         }
         result.refr *= getRefractionFactor(a_ior.value[layers].re / a_ior.value[0].re, cosThetaI);
       }
@@ -511,9 +511,9 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
 
   float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
   
-  float R;
+  float R = 0.f;
   uint precompFlag = as_uint(a_materials[0].data[FILM_PRECOMP_FLAG]);
-   if (precompFlag == 0u)
+  if (precompFlag == 0u)
   {
     if (layers == 2)
     {
@@ -536,8 +536,8 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
-        complex sinTheta = complex(1.0);
-        complex cosTheta = complex(1.0);
+        complex sinTheta;
+        complex cosTheta;
         for (uint i = 1; i <= layers; ++i)
         {
           sinTheta = sinThetaI * a_ior.value[0].re * a_ior.value[0].re / (complex(a_ior.value[i].re, a_ior.value[i].im) * a_ior.value[i]);
@@ -551,17 +551,13 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
         {
           complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
           complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior.value[layers - 1], a_ior.value[layers], p);
-          complex FrReflI = complex(1.f);
-          complex FrRefrI = complex(1.f);
+          complex FrReflI;
+          complex FrRefrI;
           for (uint i = layers - 1; i > 0; --i)
           {
             FrReflI = FrComplexRefl(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
-            FrRefrI = FrComplexRefr(a_cosTheta[i - 1], a_cosTheta[i], a_ior.value[i - 1], a_ior.value[i], p);
-            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
-
             FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
             complex denom = 1.f / (1 + FrReflI * FrRefl);
-            FrRefr = FrRefr * denom;
             FrRefl = (FrReflI + FrRefl) * denom;
           }
           R += complex_norm(FrRefl) / 2;
@@ -595,12 +591,8 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
           for (uint i = 1; i < layers; ++i)
           {
             FrReflI = FrComplexRefl(a_cosTheta[i + 1], a_cosTheta[i], a_ior.value[i + 1], a_ior.value[i], p);
-            FrRefrI = FrComplexRefr(a_cosTheta[i + 1], a_cosTheta[i], a_ior.value[i + 1], a_ior.value[i], p);
-            FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
-
             FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
             complex denom = 1.f / (1 + FrReflI * FrRefl);
-            FrRefr = FrRefr * denom;
             FrRefl = (FrReflI + FrRefl) * denom;
           }
           R += complex_norm(FrRefl) / 2;
