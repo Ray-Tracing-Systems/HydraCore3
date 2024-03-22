@@ -37,14 +37,159 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--cpu", 
                  "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
-                 "-integrator", "mispt", 
-                 "--qmc",
+                 "-integrator", "misptlite", 
+                 //"--qmc",
                  "-width", "1024",
                  "-height", "1024",
                  "-spp", "64",
                  "-fb_layer", "color",
                  "-scn_dir", "../comparisonrender",
                  "-out", "Z_OUT_LAMBERT_RGB_CPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SpectralIOR",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",  "--spectral",
+                 "-in", "../comparisonrender/Tests/Spectral-cornell/0000/Spectral-ior-sphere-hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-fb_layer", "color",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/Z_OUT_LAMBERT_SPD_CPU.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "FirePlaceORB",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",  
+                 "-in", "../comparisonrender/Tests/ORB/fireplace_room_hydra/scene_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "16384",
+                 "-fb_layer", "color",
+                 //"-scn_dir", "../comparisonrender",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/z_out_fireplace_ref.png"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "SanMiguel",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",  
+                 "-in", "../comparisonrender/Tests/ORB/sanmiguel_hydra/scene_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "1024",
+                 "-fb_layer", "color",
+                 //"-scn_dir", "../comparisonrender",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/z_sanmiguel.png"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CornellGlassBunny",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral", 
+                 "-in", "../comparisonrender/Tests/ORB/Cornell_Glass_Bunny/cornell_bunny_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "3080",
+                 "-fb_layer", "color",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/z_cornell_bunny.png"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CornellHair1",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral", 
+                 "-in", "../comparisonrender/Tests/ORB/Cornell_Glass_Bunny/cornell_hairball_hydra3_reduced.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "3080",
+                 "-fb_layer", "color",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "/home/frol/PROG/HydraRepos/comparisonrender/z_cornell_hair.png"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

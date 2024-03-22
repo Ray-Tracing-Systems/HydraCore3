@@ -69,6 +69,7 @@ public:
   void RayTrace       (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! whitted ray tracing
   void NaivePathTrace (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! NaivePT
   void PathTrace      (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
+  void PathTraceLite  (uint tid, uint channels, float* out_color [[size("tid*channels")]]); ///<! MISPT and ShadowPT
 
   void PathTraceFromInputRays(uint tid, uint channels, 
                               const RayPosAndW* in_rayPosAndNear [[size("tid*channels")]], 
@@ -98,6 +99,7 @@ public:
   virtual void CastSingleRayBlock(uint tid, float* out_color, uint a_passNum);
   virtual void NaivePathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+  virtual void PathTraceLiteBlock(uint tid, uint channels, float* out_color, uint a_passNum);
   virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);

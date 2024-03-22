@@ -72,6 +72,24 @@ void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint 
   shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
+void Integrator::PathTraceLiteBlock(uint tid, uint channels, float* out_color, uint a_passNum)
+{
+  ConsoleProgressBar progress(tid);
+  progress.Start();
+  auto start = std::chrono::high_resolution_clock::now();
+  #ifndef _DEBUG
+  #pragma omp parallel for default(shared)
+  #endif
+  for (int i = 0; i < tid; ++i) {
+    for (int j = 0; j < a_passNum; ++j) {
+      PathTraceLite(uint(i), channels, out_color);
+    }
+    progress.Update();
+  }
+  progress.Done();
+  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+}
+
 void Integrator::RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum)
 {
   ConsoleProgressBar progress(tid);

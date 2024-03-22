@@ -6,6 +6,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
   {
     case KSPEC_MAT_TYPE_GLTF      : return "GLTF_LITE";
     case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
+    case KSPEC_MAT_TYPE_DIELECTRIC: return "DIELECTRIC";
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
     case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
@@ -29,6 +30,9 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     default:
     break;
   };
+
+  //std::cout << "UNKNOWN feature = " << a_featureId << std::endl;
+
   return "UNKNOWN";
 }
 

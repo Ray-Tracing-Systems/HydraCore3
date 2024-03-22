@@ -135,6 +135,7 @@ int main(int argc, const char** argv) // common hydra main
   const bool enableNaivePT  = (integratorType == "naivept" || integratorType == "all");
   const bool enableShadowPT = (integratorType == "shadowpt" || integratorType == "all");
   const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
+  const bool enableMISPTLite= (integratorType == "misptlite" || integratorType == "lite_pt" || integratorType == "lite");
   const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
   const bool enablePRT      = (integratorType == "primary" || integratorType == "prt");
 
@@ -194,6 +195,7 @@ int main(int argc, const char** argv) // common hydra main
     Integrator_Generated::EnabledPipelines().enablePackXYMega                 = true;  // always true for this main.cpp;
     Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
     Integrator_Generated::EnabledPipelines().enablePathTraceMega              = enableShadowPT || enableMISPT;
+    //Integrator_Generated::EnabledPipelines().enablePathTraceLiteMega          = enableMISPTLite;
     Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = enableNaivePT;
 
     // advanced way
@@ -340,6 +342,35 @@ int main(int argc, const char** argv) // common hydra main
       std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
       std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
       std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOut : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+      }
+    } // end if (enableMISPT)
+
+    if(enableMISPTLite)
+    {
+      std::cout << "[main]: PathTraceLiteBlock(MIS-PT) ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->PathTraceLiteBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+  
+      pImpl->GetExecutionTime("PathTraceLiteBlock", timings);
+      std::cout << "PathTraceLiteBlock(exec) = " << timings[0]              << " ms " << std::endl;
+      std::cout << "PathTraceLiteBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "PathTraceLiteBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
   
       if(saveHDR)
       {

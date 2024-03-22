@@ -157,6 +157,7 @@ set(CORE_SRC
         ${MAIN_FILES}
         integrator_rt.cpp
         integrator_pt.cpp
+        integrator_pt_lite.cpp
         integrator_pt_lgt.cpp
         integrator_pt_mat.cpp
         integrator_pt_host.cpp
