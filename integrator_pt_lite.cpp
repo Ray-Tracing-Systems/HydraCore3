@@ -10,33 +10,24 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-void Integrator::kernel_InitRayFlags(uint tid, uint* rayFlags) 
+void Integrator::kernel_InitRGen(uint tid, RandomGen* gen) 
 {
-  *rayFlags = 0;
+  *gen = m_randomGens[tid];
+  const float2 rands2 = rndFloat2_Pseudo(gen);
+  const float4 rands4 = rndFloat4_Pseudo(gen);
 }
 
 void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
 {
-  float4 accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
-  float4 wavelengths;
-  RandomGen gen; 
-  MisData   mis;
-  uint      rayFlags;
-  float     time;
-  kernel_InitRayFlags(tid, &rayFlags);
+  RandomGen gen;
+  kernel_InitRGen(tid, &gen);
   {
-    accumColor         = make_float4(0,0,0,0);
-    accumThroughput    = make_float4(1,1,1,1);
-    RandomGen genLocal = m_randomGens[tid];
-    rayFlags           = 0;
-    mis                = makeInitialMisData();
-    
     const uint XY = m_packedXY[tid];
     const uint x  = (XY & 0x0000FFFF);
     const uint y  = (XY & 0xFFFF0000) >> 16;
   
-    const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+    const float4 pixelOffsets = GetRandomNumbersLens(tid, &gen);
   
     const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
     const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
@@ -46,13 +37,16 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
   
     transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
   
-    wavelengths = float4(0.0f);
-    time = 0.0f;
-  
     rayPosAndNear = to_float4(rayPos, 0.0f);
     rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-    gen           = genLocal;
   }
+
+  float4 accumColor      = make_float4(0,0,0,0);
+  float4 accumThroughput = make_float4(1,1,1,1);
+  float4 wavelengths     = float4(0.0f);
+  MisData   mis          = makeInitialMisData();
+  float     time         = 0.0f;
+  uint      rayFlags     = 0;
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -133,10 +127,10 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
       hit.tang = to_float3(hitPart3);
       hit.uv   = float2(data1.w, data2.w);
       
-      const int lightId  = 0;
-      const float4 rands = rndFloat4_Pseudo(&gen);
+      const int lightId   = 0;
+      const float2 rands2 = rndFloat2_Pseudo(&gen);
     
-      const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos);
+      const LightSample lSam = areaLightSampleRev  (m_lights.data() + lightId, rands2);
       const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
     
       const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
@@ -147,14 +141,20 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
     
       if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
       {
-        const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
+        //const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
+        const float4 color      = m_materials[matId].colors[GLTF_COLOR_BASE];
+        const float4 bsdfVval   = lambertEvalBSDF(shadowRayDir, (-1.0f)*ray_dir, hit.norm)*color;
+        const float bsdfVpdf    = lambertEvalPDF (shadowRayDir, (-1.0f)*ray_dir, hit.norm);
         float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
         
-        float      lgtPdfW      = LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
-        float      misWeight    = misWeightHeuristic(lgtPdfW, bsdfV.pdf);        
+        //float      lgtPdfW      = LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
+        const float hitDist   = length(shadowRayPos - lSam.pos);
+        const float cosVal    = std::abs(dot(shadowRayDir, -1.0f*lSam.norm));
+        const float lgtPdfW   = PdfAtoW(m_lights[0].pdfA, hitDist, cosVal);
+        const float misWeight = misWeightHeuristic(lgtPdfW, bsdfVpdf);        
         
-        const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
-        shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
+        const float4 lightColor = m_lights[0].intensity*m_lights[0].mult; //LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
+        shadeColor = (lightColor * bsdfVval / lgtPdfW) * cosThetaOut * misWeight;
       }
       else
         shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
