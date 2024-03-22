@@ -119,6 +119,11 @@ public:
   virtual void kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths,
                                   float4* accumColor, float4* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
 
+  
+  void kernel_InitEyeRaySimple(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
+                                    float4* accumColor,    float4* accumuThoroughput,
+                                    RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
+
   void kernel_InitEyeRay3(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar, float4* accumColor,
                           float4* accumuThoroughput, uint* rayFlags);        
 

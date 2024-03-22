@@ -195,7 +195,7 @@ int main(int argc, const char** argv) // common hydra main
     Integrator_Generated::EnabledPipelines().enablePackXYMega                 = true;  // always true for this main.cpp;
     Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
     Integrator_Generated::EnabledPipelines().enablePathTraceMega              = enableShadowPT || enableMISPT;
-    //Integrator_Generated::EnabledPipelines().enablePathTraceLiteMega          = enableMISPTLite;
+    Integrator_Generated::EnabledPipelines().enablePathTraceLiteMega          = enableMISPTLite;
     Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = enableNaivePT;
 
     // advanced way
