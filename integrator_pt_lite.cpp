@@ -10,39 +10,9 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-void Integrator::kernel_InitEyeRaySimple(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, float4* wavelengths, 
-                                    float4* accumColor,    float4* accumuThoroughput,
-                                    RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
+void Integrator::kernel_InitRayFlags(uint tid, uint* rayFlags) 
 {
-  if(tid >= m_maxThreadId)
-    return;
-
-  *accumColor        = make_float4(0,0,0,0);
-  *accumuThoroughput = make_float4(1,1,1,1);
-  RandomGen genLocal = m_randomGens[RandomGenId(tid)];
-  *rayFlags          = 0;
-  *misData           = makeInitialMisData();
-  
-  const uint XY = m_packedXY[tid];
-  const uint x  = (XY & 0x0000FFFF);
-  const uint y  = (XY & 0xFFFF0000) >> 16;
-
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
-
-  const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
-  const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
-
-  float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
-  float3 rayPos = float3(0,0,0);
-
-  transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
-
-  *wavelengths = float4(0.0f);
-  *time = 0.0f;
-
-  *rayPosAndNear = to_float4(rayPos, 0.0f);
-  *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
-  *gen           = genLocal;
+  *rayFlags = 0;
 }
 
 void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
@@ -54,7 +24,35 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
   MisData   mis;
   uint      rayFlags;
   float     time;
-  kernel_InitEyeRaySimple(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  kernel_InitRayFlags(tid, &rayFlags);
+  {
+    accumColor         = make_float4(0,0,0,0);
+    accumThroughput    = make_float4(1,1,1,1);
+    RandomGen genLocal = m_randomGens[tid];
+    rayFlags           = 0;
+    mis                = makeInitialMisData();
+    
+    const uint XY = m_packedXY[tid];
+    const uint x  = (XY & 0x0000FFFF);
+    const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+    const float4 pixelOffsets = GetRandomNumbersLens(tid, &genLocal);
+  
+    const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
+    const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
+  
+    float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
+    float3 rayPos = float3(0,0,0);
+  
+    transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  
+    wavelengths = float4(0.0f);
+    time = 0.0f;
+  
+    rayPosAndNear = to_float4(rayPos, 0.0f);
+    rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+    gen           = genLocal;
+  }
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
