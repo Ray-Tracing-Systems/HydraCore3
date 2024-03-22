@@ -185,27 +185,16 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
         }
     
         float misWeight = 1.0f;
-        if(m_intergatorType == INTEGRATOR_MIS_PT) 
+        if(depth > 0 && lightId != 0xFFFFFFFF)
         {
-          if(depth > 0 && lightId != 0xFFFFFFFF)
-          {
-            //const float lgtPdf  = LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f);
-            const float hitDist   = length(ray_pos - surfHit.pos);
-            const float cosVal    = std::abs(dot(ray_dir, -1.0f*surfHit.norm));
-            const float lgtPdf    = PdfAtoW(m_lights[0].pdfA, hitDist, cosVal);
-
-            misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
-            if (prevPdfW <= 0.0f) // specular bounce
-              misWeight = 1.0f;
-          }
+          //const float lgtPdf  = LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f);
+          const float hitDist   = length(ray_pos - surfHit.pos);
+          const float cosVal    = std::abs(dot(ray_dir, -1.0f*surfHit.norm));
+          const float lgtPdf    = PdfAtoW(m_lights[0].pdfA, hitDist, cosVal);
+          misWeight             = misWeightHeuristic(prevPdfW, lgtPdf);
+          if (prevPdfW <= 0.0f) // specular bounce
+            misWeight = 1.0f;
         }
-        else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(rayFlags))
-          misWeight = 0.0f;
-        
-        const bool isDirectLight  = !hasNonSpecular(rayFlags);
-        const bool isFirstNonSpec = (rayFlags & RAY_FLAG_FIRST_NON_SPEC) != 0;
-        if(m_renderLayer == FB_INDIRECT && (isDirectLight || isFirstNonSpec))
-          misWeight = 0.0f;
     
         float4 currAccumColor      = accumColor;
         float4 currAccumThroughput = accumThroughput;

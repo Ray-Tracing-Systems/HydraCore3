@@ -37,7 +37,7 @@
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", 
                  "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
-                 "-integrator", "misptlite", 
+                 "-integrator", "mispt", 
                  //"--qmc",
                  "-width", "1024",
                  "-height", "1024",

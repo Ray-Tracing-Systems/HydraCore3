@@ -219,7 +219,6 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   g_lastSceneInfo.memGeom     += uint64_t(4*1024*1024); // reserve mem for geom
   g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
 
-
   for(auto inst : g_lastScene.InstancesGeom())
   {
     if(inst.hasMotion)
