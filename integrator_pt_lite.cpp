@@ -58,8 +58,8 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
-    float4   shadeColor, hitPart1, hitPart2, hitPart3;
-    uint instId;
+    float4 shadeColor, hitPart1, hitPart2, hitPart3;
+    uint   instId;
 
     //kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
     //                 &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
@@ -119,9 +119,49 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
-                             depth, &gen, &shadeColor);
-
+    //kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
+    //                         depth, &gen, &shadeColor);
+    {
+      const uint32_t matId = extractMatId(rayFlags);
+      const float3 ray_dir = to_float3(rayDirAndFar);
+      
+      const float4 data1  = hitPart1;
+      const float4 data2  = hitPart2;
+      const float4 lambda = wavelengths;
+    
+      SurfaceHit hit;
+      hit.pos  = to_float3(data1);
+      hit.norm = to_float3(data2);
+      hit.tang = to_float3(hitPart3);
+      hit.uv   = float2(data1.w, data2.w);
+      
+      const int lightId  = 0;
+      const float4 rands = rndFloat4_Pseudo(&gen);
+    
+      const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos);
+      const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
+    
+      const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
+      const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
+    
+      const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
+      const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), 0.0f); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+    
+      if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
+      {
+        const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
+        float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
+        
+        float      lgtPdfW      = LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
+        float      misWeight    = misWeightHeuristic(lgtPdfW, bsdfV.pdf);        
+        
+        const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
+        shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
+      }
+      else
+        shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
+    
     kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
@@ -130,14 +170,15 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
   }
 
   //kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-    //                    &accumColor);
+  //                      &accumColor);
   
   //kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
   {
+    m_randomGens[tid] = gen;
     const uint XY = m_packedXY[tid];
     const uint x  = (XY & 0x0000FFFF);
     const uint y  = (XY & 0xFFFF0000) >> 16;
-
+  
     float4 colorRes = m_exposureMult * accumColor;
     out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
     out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
