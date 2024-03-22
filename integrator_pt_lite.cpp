@@ -217,18 +217,18 @@ void Integrator::PathTraceLite(uint tid, uint channels, float* out_color)
       }
       else
       {
-        const uint bounceTmp    = depth;
-        const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, float4(1.0f), &gen, (-1.0f)*ray_dir, surfHit.norm, surfHit.tang, surfHit.uv, &mis, rayFlags);
-        //BsdfSample matSam;
-        //{
-        //  const float4 color = m_materials[matId].colors[GLTF_COLOR_BASE];
-        //  const float2 rands = rndFloat2_Pseudo(&gen);
-        //  matSam.dir            = lambertSample  (rands,      (-1.0f)*ray_dir, surfHit.norm);
-        //  matSam.pdf            = lambertEvalPDF (matSam.dir, (-1.0f)*ray_dir, surfHit.norm);
-        //  matSam.val            = lambertEvalBSDF(matSam.dir, (-1.0f)*ray_dir, surfHit.norm)*color;
-        //  matSam.flags = rayFlags | RAY_FLAG_HAS_NON_SPEC;
-        //  matSam.ior   = 1.0f;
-        //}
+        //const uint bounceTmp    = depth;
+        //const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, float4(1.0f), &gen, (-1.0f)*ray_dir, surfHit.norm, surfHit.tang, surfHit.uv, &mis, rayFlags);
+        BsdfSample matSam;
+        {
+          const float4 color = m_materials[matId].colors[GLTF_COLOR_BASE];
+          const float2 rands = rndFloat2_Pseudo(&gen);
+          matSam.dir            = lambertSample  (rands,      (-1.0f)*ray_dir, surfHit.norm);
+          matSam.pdf            = lambertEvalPDF (matSam.dir, (-1.0f)*ray_dir, surfHit.norm);
+          matSam.val            = lambertEvalBSDF(matSam.dir, (-1.0f)*ray_dir, surfHit.norm)*color;
+          matSam.flags = rayFlags | RAY_FLAG_HAS_NON_SPEC;
+          matSam.ior   = 1.0f;
+        }
 
         const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
         const float  cosTheta   = std::abs(dot(matSam.dir, surfHit.norm)); 
