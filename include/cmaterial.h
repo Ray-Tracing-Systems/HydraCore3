@@ -1110,15 +1110,13 @@ static inline FrReflRefr calculateMultFrFilm(const complex *a_cosTheta, const co
 {
   complex FrRefl = FrComplexRefl(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior[layers - 1], a_ior[layers], p);
   complex FrRefr = FrComplexRefr(a_cosTheta[layers - 1], a_cosTheta[layers], a_ior[layers - 1], a_ior[layers], p);
-  complex FrReflI = complex(1.f);
-  complex FrRefrI = complex(1.f);
   for (int i = layers - 2; i >= 0; --i)
   {
-    FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
-    FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
-    FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
-
-    FrRefl = FrRefl * exp(-a_phaseDiff[i].im) * complex(cos(a_phaseDiff[i].re), sin(a_phaseDiff[i].re));
+    complex FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
+    complex FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
+    complex exp_1 = exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+    FrRefr = FrRefrI * FrRefr * exp_1;
+    FrRefl = FrRefl * exp_1 * exp_1;
     complex denom = 1.f / (1 + FrReflI * FrRefl);
     FrRefr = FrRefr * denom;
     FrRefl = (FrReflI + FrRefl) * denom;
@@ -1130,15 +1128,13 @@ static inline FrReflRefr calculateMultFrFilm_r(const complex *a_cosTheta, const 
 {
   complex FrRefl = FrComplexRefl(a_cosTheta[1], a_cosTheta[0], a_ior[1], a_ior[0], p);
   complex FrRefr = FrComplexRefr(a_cosTheta[1], a_cosTheta[0], a_ior[1], a_ior[0], p);
-  complex FrReflI = complex(1.f);
-  complex FrRefrI = complex(1.f);
   for (int i = 1; i < layers; ++i)
   {
-    FrReflI = FrComplexRefl(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
-    FrRefrI = FrComplexRefr(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
-    FrRefr = FrRefrI * FrRefr * exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
-
-    FrRefl = FrRefl * exp(-a_phaseDiff[i - 1].im) * complex(cos(a_phaseDiff[i - 1].re), sin(a_phaseDiff[i - 1].re));
+    complex FrReflI = FrComplexRefl(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
+    complex FrRefrI = FrComplexRefr(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
+    complex exp_1 = exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
+    FrRefr = FrRefrI * FrRefr * exp_1;
+    FrRefl = FrRefl * exp_1 * exp_1;
     complex denom = 1.f / (1 + FrReflI * FrRefl);
     FrRefr = FrRefr * denom;
     FrRefl = (FrReflI + FrRefl) * denom;
