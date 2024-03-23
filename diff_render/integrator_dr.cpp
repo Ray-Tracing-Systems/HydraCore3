@@ -489,26 +489,10 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint tid, uint
 
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
-  const float4 texColor  = m_textures[texId]->sample(texCoordT);
+  const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); //m_textures[texId]->sample(texCoordT);
   const uint cflags      = m_materials[currMatId].cflags;
 
   float4 fourScalarMatParams = float4(1,1,1,1);
-  if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
-  {
-    const uint texId2  = m_materials[currMatId].texid[2];
-    const uint texId3  = m_materials[currMatId].texid[3];
-    
-    const float2 texCoord2T = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
-    const float2 texCoord3T = mulRows2x4(m_materials[currMatId].row0[3], m_materials[currMatId].row1[3], tc);
-
-    const float4 color2 = m_textures[texId2]->sample(texCoord2T);
-    const float4 color3 = m_textures[texId3]->sample(texCoord3T);
-    
-    if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
-      fourScalarMatParams = color2;
-    else
-      fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
-  }
 
   switch(mtype)
   {
@@ -591,27 +575,11 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
 
     const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
     const uint   texId     = m_materials[currMat.id].texid[0];
-    const float4 texColor  = m_textures[texId]->sample(texCoordT);
+    const float4 texColor  = Tex2DFetchAD(texId, texCoordT, dparams); // m_textures[texId]->sample(texCoordT);
     const uint   mtype     = m_materials[currMat.id].mtype;
     const uint   cflags    = m_materials[currMat.id].cflags;
 
     float4 fourScalarMatParams = float4(1,1,1,1);
-    if(KSPEC_MAT_FOUR_TEXTURES != 0 && (cflags & FLAG_FOUR_TEXTURES) != 0)
-    {
-      const uint texId2  = m_materials[currMat.id].texid[2];
-      const uint texId3  = m_materials[currMat.id].texid[3];
-
-      const float2 texCoord2T = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
-      const float2 texCoord3T = mulRows2x4(m_materials[currMat.id].row0[3], m_materials[currMat.id].row1[3], tc);
-
-      const float4 color2 = m_textures[texId2]->sample(texCoord2T);
-      const float4 color3 = m_textures[texId3]->sample(texCoord3T);
-    
-      if((cflags & FLAG_PACK_FOUR_PARAMS_IN_TEXTURE) != 0)
-        fourScalarMatParams = color2;
-      else
-        fourScalarMatParams = float4(color2.x, color3.x, 1, 1);
-    }
 
     BsdfEval currVal;
     {
@@ -998,7 +966,7 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
         // (2) perform path trace replay and differentiate actual function
         //
         float4 color = this->PathTraceReplay(i, channels, cpuThreadId, out_color, 
-                                             this->m_recorded[cpuThreadId].perBounceRands.data(), grads[cpuThreadId].data());
+                                             this->m_recorded[cpuThreadId].perBounceRands.data(), a_data);
        
         
         const uint XY = m_packedXY[i];
