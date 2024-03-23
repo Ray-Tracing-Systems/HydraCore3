@@ -100,6 +100,7 @@
                  "-width", "512",
                  "-height", "512",
                  "-spp", "16",
+                 "-grad", "1",
                  "-out", "z_render.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

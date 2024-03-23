@@ -486,7 +486,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
-  //kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 
   return accumColor;
 }
@@ -519,7 +519,7 @@ float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
 }   
 
 
-float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint a_passNum,
+float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint a_passNum,
                                 const float* a_refImg, const float* a_data, float* a_dataGrad, size_t a_gradSize)
 {
   m_disableImageContrib = 1;
@@ -544,7 +544,7 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
     #ifndef _DEBUG
     #pragma omp parallel for default(shared) num_threads(MAXTHREADS_CPU)
     #endif
-    for (int i = 0; i < int(tid); ++i) 
+    for (int i = 0; i < int(size); ++i) 
     {
       float lossVal = 0.0f;
       for(int passId = 0; passId < int(a_passNum); passId++) 
@@ -558,11 +558,11 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
         
         // (2) perform path trace replay and differentiate actual function
         //
-        float4 color = this->PathTraceReplay(tid, channels, cpuThreadId, out_color, 
+        float4 color = this->PathTraceReplay(i, channels, cpuThreadId, out_color, 
                                              this->m_recorded[cpuThreadId].perBounceRands.data(), grads[cpuThreadId].data());
        
         
-        const uint XY = m_packedXY[tid];
+        const uint XY = m_packedXY[i];
         const uint x  = (XY & 0x0000FFFF);
         const uint y  = (XY & 0xFFFF0000) >> 16;
 
@@ -597,7 +597,8 @@ float IntegratorDR::PathTraceDR(uint tid, uint channels, float* out_color, uint 
   }
   
   const float normConst = 1.0f/float(a_passNum);
-  SaveImage4fToBMP(testImage.data(), m_winWidth, m_winHeight, 4, "z_render_test.bmp", normConst, 2.4f);
+  SaveImage4fToBMP(out_color, m_winWidth, m_winHeight, 4,        "z_render1.bmp", normConst, 2.4f);
+  SaveImage4fToBMP(testImage.data(), m_winWidth, m_winHeight, 4, "z_render2.bmp", normConst, 2.4f);
 
   diffPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 
