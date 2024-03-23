@@ -473,6 +473,12 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
     const uint x  = (XY & 0x0000FFFF);
     const uint y  = (XY & 0xFFFF0000) >> 16;
   
+    //if(x == 256 && y == 256)
+    //{
+    //  int a = 2;
+    //  std::cout << "x = " << x << " , y = " << y << std::endl;
+    //}
+
     const float4 pixelOffsets = float4(drands[0], drands[1], drands[2], drands[3]);
     const float2 wt           = float2(drands[4], drands[5]);
   
@@ -496,7 +502,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 
   for(uint bounce = 0; bounce < m_traceDepth; bounce++) 
   {
-    float4 shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float4 hitPart1, hitPart2, hitPart3;
     uint   instId;
 
@@ -559,11 +564,10 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 
     }
 
-    if(isDeadRay(rayFlags))
-      break;
-    
     //kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
     //                         bounce, &gen, &shadeColor);
+    float4 shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    if(!isDeadRay(rayFlags))
     {
       const uint32_t matId = extractMatId(rayFlags);
       const float3 ray_dir = to_float3(rayDirAndFar);
@@ -578,7 +582,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
       const int bounceTmp = int(bounce); 
       const float4 rands = GetRandomNumbersLgts(tid, &gen, bounceTmp); 
       const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
-      RecordLightRndIfNeeded(bounce, rands); 
 
       if(lightId >= 0) // no lights or invalid light id
       {
@@ -591,7 +594,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
 
         const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
-        RecordShadowHitIfNeeded(bounce, needShade);
 
         if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
         {
@@ -623,8 +625,119 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
       }
     }
 
-    kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+    //kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+    //                  &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+    
+    //if(!isDeadRay(rayFlags))
+    {
+      const uint32_t matId = extractMatId(rayFlags);
+
+      // process surface hit case
+      //
+      const float3 ray_dir = to_float3(rayDirAndFar);
+      const float3 ray_pos = to_float3(rayPosAndNear);
+      const float4 lambda  = wavelengths;
+      
+      SurfaceHit hit;
+      hit.pos  = to_float3(hitPart1);
+      hit.norm = to_float3(hitPart2);
+      hit.tang = to_float3(hitPart3);
+      hit.uv   = float2(hitPart1.w, hitPart2.w);
+    
+      const float hitDist = hitPart3.w;
+      
+      const MisData prevBounce = mis;
+      const float   prevPdfW   = prevBounce.matSamplePdf;
+
+      // process light hit case
+      //
+      if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
+      {
+        const uint   texId     = m_materials[matId].texid[0];
+        const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
+        const float4 texColor  = m_textures[texId]->sample(texCoordT);
+        const uint   lightId   = m_instIdToLightInstId[instId]; 
+        
+        const float4 emissColor = m_materials[matId].colors[EMISSION_COLOR];
+        float4 lightIntensity   = emissColor * texColor;
+    
+        if(lightId != 0xFFFFFFFF)
+        {
+          const float lightCos = dot(to_float3(rayDirAndFar), to_float3(m_lights[lightId].norm));
+          const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
+          lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(rayDirAndFar))*lightDirectionAtten;
+        }
+    
+        float misWeight = 1.0f;
+        if(m_intergatorType == INTEGRATOR_MIS_PT) 
+        {
+          if(bounce > 0 && lightId != 0xFFFFFFFF)
+          {
+            const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f);
+            misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
+            if (prevPdfW <= 0.0f) // specular bounce
+              misWeight = 1.0f;
+          }
+        }
+        else if(m_intergatorType == INTEGRATOR_SHADOW_PT && hasNonSpecular(rayFlags))
+          misWeight = 0.0f;
+        
+        const bool isDirectLight  = !hasNonSpecular(rayFlags);
+        const bool isFirstNonSpec = (rayFlags & RAY_FLAG_FIRST_NON_SPEC) != 0;
+        if(m_renderLayer == FB_INDIRECT && (isDirectLight || isFirstNonSpec))
+          misWeight = 0.0f;
+    
+        float4 currAccumColor      = accumColor;
+        float4 currAccumThroughput = accumThroughput;
+        
+        currAccumColor += currAccumThroughput * lightIntensity * misWeight;
+       
+        accumColor = currAccumColor;
+        rayFlags   = rayFlags | (RAY_FLAG_IS_DEAD | RAY_FLAG_HIT_LIGHT);
+      }
+      else
+      {
+        const uint bounceTmp    = bounce;
+        const BsdfSample matSam = MaterialSampleAndEval(matId, tid, bounceTmp, lambda, &gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, &mis, rayFlags);
+        const float4 bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
+        const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
+  
+        MisData nextBounceData      = mis;        // remember current pdfW for next bounce
+        nextBounceData.matSamplePdf = (matSam.flags & RAY_EVENT_S) != 0 ? -1.0f : matSam.pdf; 
+        nextBounceData.cosTheta     = cosTheta;   
+        mis                         = nextBounceData;
+  
+        if(m_intergatorType == INTEGRATOR_STUPID_PT)
+        {
+          accumThroughput *= cosTheta * bxdfVal; 
+        }
+        else if(m_intergatorType == INTEGRATOR_SHADOW_PT || m_intergatorType == INTEGRATOR_MIS_PT)
+        {
+          const float4 currThoroughput = accumThroughput;
+          float4 currAccumColor        = accumColor;
+      
+          currAccumColor += currThoroughput * shadeColor;
+          accumColor      = currAccumColor;
+          accumThroughput = currThoroughput*cosTheta*bxdfVal; 
+        }
+      
+        // compute point on the other side of the surface in case of transmission
+        if((matSam.flags & RAY_EVENT_T) != 0)
+        {
+          hit.pos = hit.pos + hitDist * ray_dir * 2 * 1e-6f;
+        }  
+      
+        rayPosAndNear = to_float4(OffsRayPos(hit.pos, hit.norm, matSam.dir), 0.0f); // todo: use flatNormal for offset
+        rayDirAndFar  = to_float4(matSam.dir, FLT_MAX);
+        
+        uint nextFlags = ((rayFlags & ~RAY_FLAG_FIRST_NON_SPEC) | matSam.flags); // always force reset RAY_FLAG_FIRST_NON_SPEC;
+        if(m_renderLayer == FB_DIRECT && hasNonSpecular(rayFlags))               // NOTE: use currRayFlags for check, not nextFlags because of MIS: a ray may hit light source in next bounce
+          nextFlags |= RAY_FLAG_IS_DEAD;                                         //       but if we already have non specular bounce previously, definitely can stop  
+        else if(!hasNonSpecular(rayFlags) && hasNonSpecular(nextFlags))
+          nextFlags |= RAY_FLAG_FIRST_NON_SPEC;
+        rayFlags = nextFlags;    
+      }              
+    }
 
     if(isDeadRay(rayFlags))
       break;
