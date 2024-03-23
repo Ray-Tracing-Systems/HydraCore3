@@ -61,7 +61,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu",
+        "args": ["--gpu",
                  "-in", "../HydraScenes/mitsuba_knob.xml",
                  "-integrator", "mispt", 
                  "-width", "1000",

@@ -238,29 +238,23 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
-  float3 wo = float3(dot(v, s), dot(v, t), dot(v, n));
+  float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
 
   float ior = a_ior.value[layers].re / extIOR;
   if (reversed)
   {
-    wo = -1 * wo;
+    wi = -1 * wi;
     ior = 1.f / ior;
   }
 
-  const float4 wm_pdf = sample_visible_normal(wo, {rands.x, rands.y}, alpha);
+  const float4 wm_pdf = sample_visible_normal(wi, {rands.x, rands.y}, alpha);
   const float3 wm = to_float3(wm_pdf);
   if(wm_pdf.w == 0.0f) // not in the same hemisphere
   {
     return;
   }
 
-  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
-
-  float4 fr = FrDielectricDetailedV2(dot(wo, wm), ior);
-
-  const float cosThetaT = fr.y;
-  const float eta_it = fr.z;
-  const float eta_ti = fr.w;  
+  float cosThetaI = clamp(fabs(dot(wi, wm)), 0.00001, 1.0f);
   
   float R, T;
   FrReflRefr result = {0.f, 0.f};
@@ -389,67 +383,72 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
 
   if (a_ior.value[layers].im > 0.001)
   {
-    float3 wi = reflect((-1.0f) * wo, wm);
-    if (wi.z < 0.f)
+    float3 wo = reflect((-1.0f) * wi, wm);
+    if (wi.z < 0.f || wo.z <= 0.f)
     {
       return;
     }
     float D = eval_microfacet(wm, alpha, 1);
     float G = microfacet_G(wi, wo, wm, alpha);
-    pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
-    pRes->pdf = D / (4.0f * std::abs(dot(wi, wm)));
+    pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wo, wm)));
+    pRes->val = pRes->pdf * smith_g1(wo, wm, alpha) * float4(R) / std::max(wo.z, EPSILON_32);
     if (reversed)
     {
-      wi = -1 * wi;
+      wo = -1 * wo;
     }
-    pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
-    pRes->flags |= RAY_EVENT_S;
+    pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+    pRes->flags = RAY_FLAG_HAS_NON_SPEC;
     pRes->ior = _extIOR;
   }
   else
   {
     if (rands.w * (R + T) < R)
     {
-      float3 wi = reflect((-1.0f) * wo, wm);
-      if (wi.z < 0.f)
+      float3 wo = reflect((-1.0f) * wi, wm);
+      if (wi.z < 0.f || wo.z <= 0.f)
       {
         return;
       }
       float D = eval_microfacet(wm, alpha, 1);
-      float G = microfacet_G(wi, wo, wm, alpha);
-      pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
-      pRes->pdf = D / (4.0f * std::abs(dot(wo, wm))) * R / (R + T);
+      pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wo, wm)));
+      pRes->val = pRes->pdf * smith_g1(wo, wm, alpha) * float4(R) / std::max(wo.z, EPSILON_32);
+      pRes->pdf *= R / (R + T);
       if (reversed)
       {
-        wi = -1 * wi;
+        wo = -1 * wo;
       }
-      pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
-      pRes->flags |= RAY_EVENT_S;
+      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      pRes->flags = RAY_FLAG_HAS_NON_SPEC;
       pRes->ior = _extIOR;
     }
     else
     {
+      float4 fr = FrDielectricDetailedV2(dot(wi, wm), ior);
+      const float cosThetaT = fr.y;
+      const float eta_it = fr.z;
+      const float eta_ti = fr.w;  
+
       float3 ws, wt;
       CoordinateSystemV2(wm, &ws, &wt);
-      const float3 local_wo = {dot(ws, wo), dot(wt, wo), dot(wm, wo)};
-      const float3 local_wi = refract(local_wo, cosThetaT, eta_ti);
-      float3 wi = normalize(local_wi.x * ws + local_wi.y * wt + local_wi.z * wm);
-      if (wi.z > 0.f)
+      const float3 local_wi = {dot(ws, wi), dot(wt, wi), dot(wm, wi)};
+      const float3 local_wo = refract(local_wi, cosThetaT, eta_ti);
+      float3 wo = normalize(local_wi.x * ws + local_wi.y * wt + local_wi.z * wm);
+      if (wo.z > 0.f)
       {
         return;
       }
       float D = eval_microfacet(wm, alpha, 1);
       float G = microfacet_G(wi, wo, wm, alpha);
-      float denom = sqr(dot(wi, wm) + dot(wo, wm) / eta_it);
-      float dwm_dwi = fabs(dot(wi, wm)) / denom;
+      float denom = sqr(dot(wo, wm) + dot(wi, wm) / eta_it);
+      float dwm_dwi = fabs(dot(wo, wm)) / denom;
       pRes->val = D * G * float4(T) * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
       pRes->pdf = D * dwm_dwi * T / (R + T);
       if (reversed)
       {
-        wi = -1 * wi;
+        wo = -1 * wo;
       }
-      pRes->dir = normalize(wi.x * s + wi.y * t + wi.z * n);
-      pRes->flags |= (RAY_EVENT_S | RAY_EVENT_T);
+      pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
+      pRes->flags = RAY_FLAG_HAS_NON_SPEC;;
       pRes->ior = (_extIOR == a_ior.value[layers].re) ? extIOR : a_ior.value[layers].re;
     }
   }
@@ -605,8 +604,11 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
     R = lerp(v0, v1, beta);
   }
 
+  const float cos_theta_i = std::max(wi.z, EPSILON_32);
+  const float cos_theta_o = std::max(wo.z, EPSILON_32);
+
   float D = eval_microfacet(wm, alpha, 1);
   float G = microfacet_G(wi, wo, wm, alpha);
-  pRes->val = D * G * float4(R) / (4.0f * wi.z * wo.z);
-  pRes->pdf = D / (4.0f * std::abs(dot(wi, wm)));
+  pRes->val = D * G * float4(R) / (4.0f * cos_theta_i * cos_theta_o);
+  pRes->pdf = D * smith_g1(wi, wm, alpha) / (4.0f * cos_theta_i);
 }
