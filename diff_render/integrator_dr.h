@@ -74,6 +74,13 @@ public:
   float4 PathTraceReplay(uint tid, uint channels, uint cpuThreadId, float* out_color, 
                          const float* drands, const float* dparams);
 
+  BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, float3 v, float3 n, float3 tan, float2 tc, 
+                                   MisData* a_misPrev, const uint a_currRayFlags, 
+                                   const float* drands, const float* dparams);
+                                    
+  BsdfEval   MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, 
+                          const float* drands, const float* dparams);
+
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   

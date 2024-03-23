@@ -45,7 +45,7 @@ void IntegratorDR::RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow)
 {
   auto cpuThreadId = omp_get_thread_num();
   if(m_recorded[cpuThreadId].recordEnabled)
-    m_recorded[cpuThreadId].perBounce[bounceId].inShadow = inShadow ? 1 : 0;
+    m_recorded[cpuThreadId].perBounce[bounceId].inShadow = inShadow ? 0 : 1;
 }
 
 void IntegratorDR::RecordLightRndIfNeeded(uint32_t bounceId, float4 rands)
