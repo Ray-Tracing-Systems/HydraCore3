@@ -457,14 +457,42 @@ float IntegratorDR::RayTraceDR(uint tid, uint channels, float* out_color, uint a
 float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, float* out_color, 
                                      const float* drands, const float* dparams)
 {
-  float4 accumColor, accumThroughput;
+  float4  accumColor      = float4(0.0f);
+  float4  accumThroughput = float4(1.0f);
+  MisData mis             = makeInitialMisData();
+  uint    rayFlags = 0;
+
+  RandomGen gen = m_randomGens[RandomGenId(tid)];
+
   float4 rayPosAndNear, rayDirAndFar;
   float4 wavelengths;
-  RandomGen gen; 
-  MisData   mis;
-  uint      rayFlags;
   float     time;
-  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  //kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  {
+    const uint XY = m_packedXY[tid];
+    const uint x  = (XY & 0x0000FFFF);
+    const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+    const float4 pixelOffsets = float4(drands[0], drands[1], drands[2], drands[3]);
+    const float2 wt           = float2(drands[4], drands[5]);
+  
+    const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
+    const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
+
+    float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
+    float3 rayPos = float3(0,0,0);
+    
+    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
+      wavelengths = SampleWavelengths(wt.x, LAMBDA_MIN, LAMBDA_MAX);
+    else
+      wavelengths = float4(0.0f);
+  
+    time = wt.y;
+    transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
+  
+    rayPosAndNear = to_float4(rayPos, 0.0f);
+    rayDirAndFar  = to_float4(rayDir, FLT_MAX);
+  }
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -486,7 +514,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
-  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 
   return accumColor;
 }
@@ -536,8 +563,6 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
   //double avgLoss = 0.0;
   auto start = std::chrono::high_resolution_clock::now();
   float avgLoss = 0.0f;
-
-  std::vector<float> testImage(m_winWidth*m_winHeight*channels);
   
   if(m_gradMode != 0)
   {
@@ -566,9 +591,9 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
         const uint x  = (XY & 0x0000FFFF);
         const uint y  = (XY & 0xFFFF0000) >> 16;
 
-        testImage[(y*m_winWidth+x)*channels + 0] += color.x;
-        testImage[(y*m_winWidth+x)*channels + 1] += color.y;
-        testImage[(y*m_winWidth+x)*channels + 2] += color.z;
+        out_color[(y*m_winWidth+x)*channels + 0] += color.x;
+        out_color[(y*m_winWidth+x)*channels + 1] += color.y;
+        out_color[(y*m_winWidth+x)*channels + 2] += color.z;
 
         //__enzyme_autodiff((void*)PixelLossPT, 
         //                   enzyme_const, this,
@@ -597,8 +622,7 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
   }
   
   const float normConst = 1.0f/float(a_passNum);
-  SaveImage4fToBMP(out_color, m_winWidth, m_winHeight, 4,        "z_render1.bmp", normConst, 2.4f);
-  SaveImage4fToBMP(testImage.data(), m_winWidth, m_winHeight, 4, "z_render2.bmp", normConst, 2.4f);
+  SaveImage4fToBMP(out_color, m_winWidth, m_winHeight, 4, "z_render1.bmp", normConst, 2.4f);
 
   diffPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 

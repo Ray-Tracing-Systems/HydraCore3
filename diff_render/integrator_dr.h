@@ -81,7 +81,7 @@ public:
   static constexpr int RND_MTL_ID     = 4; // float4  matRands;
   static constexpr int RND_BLD_ID     = 8; // float   blendRnd[MAX_REC_BLEND];
   static constexpr int MAX_REC_BLEND  = 2;
-  static constexpr int RND_PER_BOUNCE = RND_LTG_ID + RND_MTL_ID + MAX_REC_BLEND;
+  static constexpr int RND_PER_BOUNCE = 10;
   static constexpr int LENS_RANDS     = 6; // pixels offsets, wave selector, lens offset in future 
 
   int MAXTHREADS_CPU   = 1;
