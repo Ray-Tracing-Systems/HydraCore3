@@ -420,10 +420,10 @@ public:
   // for recording path "constant" parameters, override in dereved class
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  virtual void RecordPixelRndIfNeeded(float2 offsets, float u){}
+  virtual void RecordPixelRndIfNeeded(float4 offsets, float2 wt){}
   virtual void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit){}
   virtual void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow){}
-  virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
+  virtual void RecordLightRndIfNeeded(uint32_t bounceId, float4 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
 

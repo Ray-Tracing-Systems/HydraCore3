@@ -210,7 +210,7 @@ Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
     res.cosTheta = 1.0f;
   }
   
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
+  RecordPixelRndIfNeeded(pixelOffsets, float2(res.waveSam,res.timeSam));
 
   return res;
 }
