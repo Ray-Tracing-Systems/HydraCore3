@@ -496,14 +496,16 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 
   for(uint bounce = 0; bounce < m_traceDepth; bounce++) 
   {
-    float4   shadeColor, hitPart1, hitPart2, hitPart3;
-    uint instId;
+    float4 shadeColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float4 hitPart1, hitPart2, hitPart3;
+    uint   instId;
 
-    kernel_RayTrace2(tid, bounce, &rayPosAndNear, &rayDirAndFar, &time, 
-                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
-    /*{
-      const CRT_Hit hit = m_recorded[cpuThreadId].perBounce[bounce].hit;
-      
+    //kernel_RayTrace2(tid, bounce, &rayPosAndNear, &rayDirAndFar, &time, 
+    //                 &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    {
+      //const CRT_Hit hit = m_recorded[cpuThreadId].perBounce[bounce].hit;
+      const CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPosAndNear, rayDirAndFar, time);
+
       if(hit.geomId != uint32_t(-1))
       {
         const float2 uv     = float2(hit.coords[0], hit.coords[1]);
@@ -555,13 +557,71 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         rayFlags              = rayFlags | flagsToAdd;
       }
 
-    }*/
+    }
 
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
-                             bounce, &gen, &shadeColor);
+    //kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
+    //                         bounce, &gen, &shadeColor);
+    {
+      const uint32_t matId = extractMatId(rayFlags);
+      const float3 ray_dir = to_float3(rayDirAndFar);
+      const float4 lambda  = wavelengths;
+    
+      SurfaceHit hit;
+      hit.pos  = to_float3(hitPart1);
+      hit.norm = to_float3(hitPart2);
+      hit.tang = to_float3(hitPart3);
+      hit.uv   = float2(hitPart1.w, hitPart2.w);
+      
+      const int bounceTmp = int(bounce); 
+      const float4 rands = GetRandomNumbersLgts(tid, &gen, bounceTmp); 
+      const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
+      RecordLightRndIfNeeded(bounce, rands); 
+
+      if(lightId >= 0) // no lights or invalid light id
+      {
+        const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos);
+        const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
+      
+        const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
+        const float3 shadowRayPos = hit.pos + hit.norm * std::max(maxcomp(hit.pos), 1.0f)*5e-6f; // TODO: see Ray Tracing Gems, also use flatNormal for offset
+      
+        const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
+
+        const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+        RecordShadowHitIfNeeded(bounce, needShade);
+
+        if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
+        {
+          const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
+          float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
+          
+          float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
+          float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
+          const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
+          const bool isPoint      = (m_lights[lightId].geomType == LIGHT_GEOM_POINT); 
+          
+          if(isDirect)
+          {
+            misWeight = 1.0f;
+            lgtPdfW   = 1.0f;
+          }
+          else if(isPoint)
+            misWeight = 1.0f;
+      
+          const bool isDirectLight = !hasNonSpecular(rayFlags);
+          if((m_renderLayer == FB_DIRECT   && !isDirectLight) || 
+             (m_renderLayer == FB_INDIRECT && isDirectLight)) // skip some number of bounces if this is set
+            misWeight = 0.0f;
+            
+          
+          const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
+          shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
+        }
+      }
+    }
 
     kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
