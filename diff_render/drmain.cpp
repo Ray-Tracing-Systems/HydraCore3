@@ -206,7 +206,7 @@ int main(int argc, const char** argv)
 
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
-    break;
+    //break;
     
     //std::vector<float> gradTest(imgGrad.size()); 
     //std::fill(gradTest.begin(), gradTest.end(), 0.0f);

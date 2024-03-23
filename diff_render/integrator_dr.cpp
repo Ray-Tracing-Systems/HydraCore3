@@ -608,6 +608,181 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
   return res;
 }
 
+LightSample IntegratorDR::LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint, const float* drands, const float* dparams)
+{
+  const uint   gtype  = m_lights[a_lightId].geomType;
+  const float2 rands2 = float2(rands.x, rands.y);
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands2, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands2);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
+    case LIGHT_GEOM_ENV: 
+    if(KSPEC_LIGHT_ENV != 0)
+    {
+      const uint32_t offset = m_lights[a_lightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[a_lightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[a_lightId].pdfTableSizeY;
+      
+      const Map2DPiecewiseSample sam = SampleMap2D(rands, offset, int(sizeX), int(sizeY));
+
+      // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0 in HydraCore2)
+      //
+      const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0Inv, m_lights[a_lightId].samplerRow1Inv, sam.texCoord);
+
+      float sintheta = 0.0f;
+      const float3 sampleDir = texCoord2DToSphereMap(texCoordT, &sintheta);
+      const float3 samplePos = illiminationPoint + sampleDir*1000.0f; // TODO: add sceen bounding sphere radius here
+      const float  samplePdf = (sam.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
+      
+      LightSample res;
+      res.hasIES = false;
+      res.isOmni = true;
+      res.norm   = sampleDir; 
+      res.pos    = samplePos;
+      res.pdf    = samplePdf; // evaluated here for environment lights 
+      return res;
+    }
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
+  };
+}
+
+
+float IntegratorDR::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf, const float* drands, const float* dparams)
+{
+  const uint gtype = m_lights[a_lightId].geomType;
+  if(gtype == LIGHT_GEOM_ENV)
+    return a_envPdf;
+
+  const float hitDist   = length(illuminationPoint - lpos);
+  const float cosValTmp = dot(ray_dir, -1.0f*lnorm);
+  float cosVal = 1.0f;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      // const float  lradius = m_lights[a_lightId].size.x;
+      // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
+      const float3 dirToV = normalize(lpos - illuminationPoint);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_LAMBERT)
+        cosVal = std::max(cosValTmp, 0.0f);
+    };
+    break;
+
+    default: // any type of area light
+    //cosVal = std::max(cosValTmp, 0.0f);                                                               ///< Note(!): actual correct way for area lights
+    cosVal = (m_lights[a_lightId].iesId == uint(-1)) ? std::max(cosValTmp, 0.0f) : std::abs(cosValTmp); ///< Note(!): this is not physically correct for area lights, see test_206;
+    break;                                                                                              ///< Note(!): dark line on top of image for pink light appears because area light don't shine to the side. 
+  };
+  
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
+}
+
+float4 IntegratorDR::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir, const float* drands, const float* dparams)
+{
+  float4 lightColor = m_lights[a_lightId].intensity;  
+  
+  // get spectral data for light source
+  //
+  const uint specId = m_lights[a_lightId].specId;
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
+  {
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+  }
+  lightColor *= m_lights[a_lightId].mult;
+  
+  // get ies data for light source
+  //
+  const uint iesId = m_lights[a_lightId].iesId;
+  if(KSPEC_LIGHT_IES != 0 && iesId != uint(-1))
+  {
+    if((m_lights[a_lightId].flags & LIGHT_FLAG_POINT_AREA) != 0)
+      a_rayDir = normalize(to_float3(m_lights[a_lightId].pos) - a_rayPos);
+    const float3 dirTrans = to_float3(m_lights[a_lightId].iesMatrix*to_float4(a_rayDir, 0.0f));
+    float sintheta        = 0.0f;
+    const float2 texCoord = sphereMapTo2DTexCoord((-1.0f)*dirTrans, &sintheta);
+    const float4 texColor = m_textures[iesId]->sample(texCoord);
+    lightColor *= texColor;
+  }
+
+  // get environment color
+  //
+  const uint texId = m_lights[a_lightId].texId;
+
+  if(m_lights[a_lightId].distType == LIGHT_DIST_SPOT) // areaSpotLightAttenuation
+  {
+    float cos1      = m_lights[a_lightId].lightCos1;
+    float cos2      = m_lights[a_lightId].lightCos2;
+    float3 norm     = to_float3(m_lights[a_lightId].norm);
+    float cos_theta = std::max(-dot(a_rayDir, norm), 0.0f);
+    lightColor *= mylocalsmoothstep(cos2, cos1, cos_theta);
+
+    if(KSPEC_LIGHT_PROJECTIVE != 0 && (m_lights[a_lightId].flags & LIGHT_FLAG_PROJECTIVE) != 0 && texId != uint(-1))
+    {
+      const float4x4 mat             = m_lights[a_lightId].iesMatrix;
+      const float4 posLightClipSpace = mat*to_float4(a_rayPos, 1.0f); // 
+      const float3 posLightSpaceNDC  = to_float3(posLightClipSpace)/posLightClipSpace.w;                         // perspective division
+      const float2 shadowTexCoord    = float2(posLightSpaceNDC.x, posLightSpaceNDC.y)*0.5f + float2(0.5f, 0.5f); // just shift coords from [-1,1] to [0,1]  
+      const float4 texColor          = m_textures[texId]->sample(shadowTexCoord);
+      lightColor *= texColor;
+    }
+  }
+  else if(KSPEC_LIGHT_ENV != 0 && texId != uint(-1))
+  {
+    float sintheta = 0.0f;
+    const float2 texCoord  = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
+    const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0, m_lights[a_lightId].samplerRow1, texCoord);
+    const float4 texColor  = m_textures[texId]->sample(texCoordT);
+    lightColor *= texColor;
+  }
+
+  return lightColor;
+}
+
+
+float4 IntegratorDR::EnvironmentColor(float3 a_dir, float& outPdf, const float* drands, const float* dparams)
+{
+  float4 color = m_envColor;
+  
+  // apply tex color
+  //
+  const uint envTexId = m_envTexId;
+  if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))
+  {
+    float sinTheta  = 1.0f;
+    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
+    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
+    
+    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT && m_envLightId != uint(-1))
+    {
+      const uint32_t offset = m_lights[m_envLightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[m_envLightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[m_envLightId].pdfTableSizeY;
+
+      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
+      //
+      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, int(sizeX), int(sizeY));
+      outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
+    }
+
+    const float4 texColor = m_textures[envTexId]->sample(texCoordT); 
+    color *= texColor; 
+  }
+
+  return color;
+}
+
 
 float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, float* out_color, 
                                      const float* drands, const float* dparams)
@@ -742,7 +917,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 
       if(lightId >= 0) // no lights or invalid light id
       {
-        const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos);
+        const LightSample lSam = LightSampleRev(lightId, to_float3(rands), hit.pos, drands, dparams);
         const float  hitDist   = std::sqrt(dot(hit.pos - lSam.pos, hit.pos - lSam.pos));
       
         const float3 shadowRayDir = normalize(lSam.pos - hit.pos); // explicitSam.direction;
@@ -756,7 +931,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
           const BsdfEval bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, drands, dparams);
           float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
           
-          float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
+          float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf, drands, dparams);
           float      misWeight    = (m_intergatorType == INTEGRATOR_MIS_PT) ? misWeightHeuristic(lgtPdfW, bsdfV.pdf) : 1.0f;
           const bool isDirect     = (m_lights[lightId].geomType == LIGHT_GEOM_DIRECT); 
           const bool isPoint      = (m_lights[lightId].geomType == LIGHT_GEOM_POINT); 
@@ -775,7 +950,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
             misWeight = 0.0f;
             
           
-          const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
+          const float4 lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir, drands, dparams);
           shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
         }
       }
@@ -820,7 +995,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         {
           const float lightCos = dot(to_float3(rayDirAndFar), to_float3(m_lights[lightId].norm));
           const float lightDirectionAtten = (lightCos < 0.0f || m_lights[lightId].geomType == LIGHT_GEOM_SPHERE) ? 1.0f : 0.0f;
-          lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(rayDirAndFar))*lightDirectionAtten;
+          lightIntensity = LightIntensity(lightId, lambda, ray_pos, to_float3(rayDirAndFar), drands, dparams)*lightDirectionAtten;
         }
     
         float misWeight = 1.0f;
@@ -828,7 +1003,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         {
           if(bounce > 0 && lightId != 0xFFFFFFFF)
           {
-            const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f);
+            const float lgtPdf  = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, ray_pos, ray_dir, hit.pos, hit.norm, 1.0f, drands, dparams);
             misWeight           = misWeightHeuristic(prevPdfW, lgtPdf);
             if (prevPdfW <= 0.0f) // specular bounce
               misWeight = 1.0f;
@@ -895,7 +1070,29 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
     }
   }
 
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
+  //kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
+  {
+    float envPdf = 1.0f;
+    float4 envColor = EnvironmentColor(to_float3(rayDirAndFar), envPdf, drands, dparams);
+  
+    const auto misPrev  = mis;
+    const bool isSpec   = isSpecular(&misPrev);
+    const bool exitZero = (rayFlags & RAY_FLAG_PRIME_RAY_MISS) != 0;
+  
+    if(m_intergatorType == INTEGRATOR_MIS_PT && m_envEnableSam != 0 && !isSpec && !exitZero)
+    {
+      float lgtPdf    = LightPdfSelectRev(m_envLightId)*envPdf;
+      float bsdfPdf   = misPrev.matSamplePdf;
+      float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
+      envColor *= misWeight;    
+    }
+    else if(m_intergatorType == INTEGRATOR_SHADOW_PT && m_envEnableSam != 0)
+    {
+      envColor = float4(0.0f);
+    }
+
+    accumColor += (accumThroughput) * envColor;
+  }
 
   return accumColor;
 }
@@ -920,6 +1117,10 @@ float PixelLossPT(IntegratorDR* __restrict__ pIntegrator,
   float4 colorRef  = float4(a_refImg[(yRef*pitch+x)*channels + 0], 
                             a_refImg[(yRef*pitch+x)*channels + 1], 
                             a_refImg[(yRef*pitch+x)*channels + 2], 0.0f);
+  
+  out_color[(y*pitch+x)*channels + 0] += colorRend.x;
+  out_color[(y*pitch+x)*channels + 1] += colorRend.y;
+  out_color[(y*pitch+x)*channels + 2] += colorRend.z;
 
   float4 diff = colorRend - colorRef;
   float loss = LiteMath::dot3(diff, diff);
@@ -965,30 +1166,18 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
         
         // (2) perform path trace replay and differentiate actual function
         //
-        float4 color = this->PathTraceReplay(i, channels, cpuThreadId, out_color, 
-                                             this->m_recorded[cpuThreadId].perBounceRands.data(), a_data);
-       
-        
-        const uint XY = m_packedXY[i];
-        const uint x  = (XY & 0x0000FFFF);
-        const uint y  = (XY & 0xFFFF0000) >> 16;
-
-        out_color[(y*m_winWidth+x)*channels + 0] += color.x;
-        out_color[(y*m_winWidth+x)*channels + 1] += color.y;
-        out_color[(y*m_winWidth+x)*channels + 2] += color.z;
-
-        //__enzyme_autodiff((void*)PixelLossPT, 
-        //                   enzyme_const, this,
-        //                   enzyme_const, uint(i),
-        //                   enzyme_const, channels,
-        //                   enzyme_const, m_winWidth,
-        //                   enzyme_const, cpuThreadId,
-        //                   enzyme_const, a_refImg,
-        //                   enzyme_const, out_color,
-        //                   enzyme_const, m_packedXY.data(),
-        //                   enzyme_const, &lossVal,
-        //                   enzyme_const, this->m_recorded[cpuThreadId].perBounceRands.data(),
-        //                   enzyme_dup,   a_data, grads[cpuThreadId].data());
+        __enzyme_autodiff((void*)PixelLossPT, 
+                           enzyme_const, this,
+                           enzyme_const, uint(i),
+                           enzyme_const, channels,
+                           enzyme_const, m_winWidth,
+                           enzyme_const, cpuThreadId,
+                           enzyme_const, a_refImg,
+                           enzyme_const, out_color,
+                           enzyme_const, m_packedXY.data(),
+                           enzyme_const, &lossVal,
+                           enzyme_const, this->m_recorded[cpuThreadId].perBounceRands.data(),
+                           enzyme_dup,   a_data, grads[cpuThreadId].data());
 
         avgLoss += float(lossVal)/float(a_passNum);
       }
@@ -1002,9 +1191,6 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
     //  avgLoss += float(lossVal)/float(a_passNum);
     //}
   }
-  
-  const float normConst = 1.0f/float(a_passNum);
-  SaveImage4fToBMP(out_color, m_winWidth, m_winHeight, 4, "z_render1.bmp", normConst, 2.4f);
 
   diffPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 

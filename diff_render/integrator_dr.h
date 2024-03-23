@@ -80,6 +80,12 @@ public:
                                     
   BsdfEval   MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc, 
                           const float* drands, const float* dparams);
+  
+  LightSample LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint, const float* drands, const float* dparams);
+  float       LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf, const float* drands, const float* dparams);
+  float4      LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a_rayPos, float3 a_rayDir, const float* drands, const float* dparams);
+
+  float4 EnvironmentColor(float3 a_dir, float& outPdf, const float* drands, const float* dparams);
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
