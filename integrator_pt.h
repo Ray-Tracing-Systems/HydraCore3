@@ -403,8 +403,9 @@ public:
   static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
   static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
   static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 16;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 17;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 17; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 18; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

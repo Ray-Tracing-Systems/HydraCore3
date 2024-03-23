@@ -105,17 +105,15 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
     return res;
 
   const uint specId = m_materials[matId].spdid[paramSpecId];
-  if(specId < 0xFFFFFFFF)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && specId < 0xFFFFFFFF)
   {
     const uint2 data   = m_spec_offset_sz[specId];
     const uint  offset = data.x;
     const uint  size   = data.y;
+
+    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
     
-    if(size > 0) // sample SPD
-    {
-      res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
-    }
-    else // check if spectrum is represented as textures
+    if(KSPEC_SPD_TEX != 0) // check if spectrum is represented as textures
     {
       const uint2 tex_data  = m_spec_tex_offset_sz[specId];
       const uint tex_offset = tex_data.x;

@@ -87,6 +87,35 @@
         ]
     },
 
+    {
+        "name": "CornellGlassBunny",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", "--spectral",
+                 "-in", "../comparisonrender/Tests/ORB/Cornell_Glass_Bunny/cornell_bunny_hydra3.xml",
+                 "-integrator", "mispt", 
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 //"-channels", "16",
+                 "-spp", "3080",
+                 "-scn_dir", "../comparisonrender",
+                 "-out", "z_cornell_glass_bunny.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
 
     {
         "name": "test_35",
