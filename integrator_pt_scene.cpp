@@ -19,6 +19,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
     case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
     case KSPEC_SPD_TEX            : return "SPD_TEX";
+    case KSPEC_MAT_TYPE_DIELECTRIC: return "DIELECTRIC";
     
     case KSPEC_BLEND_STACK_SIZE   :
     {
