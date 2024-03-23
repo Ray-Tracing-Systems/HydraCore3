@@ -468,6 +468,9 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint tid, uint
     res.ior   = 1.0f;
   }
 
+  const float* matRands  = drands + LENS_RANDS + bounce*RND_PER_BOUNCE + RND_MTL_ID;
+  const float4 rands     = float4(matRands[0], matRands[1], matRands[2], matRands[3]); // GetRandomNumbersMats(tid, a_gen, int(bounce));
+
   uint32_t currMatId = a_materialId;
   uint     mtype     = m_materials[currMatId].mtype;
   uint     layer     = 0;
@@ -487,9 +490,6 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint tid, uint
   const float2 texCoordT = mulRows2x4(m_materials[currMatId].row0[0], m_materials[currMatId].row1[0], tc);
   const uint   texId     = m_materials[currMatId].texid[0];
   const float4 texColor  = m_textures[texId]->sample(texCoordT);
-  
-  const float* matRands  = drands + LENS_RANDS + bounce*RND_PER_BOUNCE + RND_MTL_ID;
-  const float4 rands     = float4(matRands[0], matRands[1], matRands[2], matRands[3]); // GetRandomNumbersMats(tid, a_gen, int(bounce));
   const uint cflags      = m_materials[currMatId].cflags;
 
   float4 fourScalarMatParams = float4(1,1,1,1);
@@ -519,63 +519,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint tid, uint
       gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
-    case MAT_TYPE_GLASS: 
-    if(KSPEC_MAT_TYPE_GLASS != 0)
-    {
-      glassSampleAndEval(m_materials.data() + currMatId, rands, v, geomNormal, tc, &res, a_misPrev);
-    }
-    break;
-    case MAT_TYPE_CONDUCTOR:
-    if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
-    {
-      const float3 alphaTex = to_float3(texColor);    
-      const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
-      const float4 etaSpec  = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, 0);
-      const float4 kSpec    = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K,   1);
-      if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
-      else
-        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
-    }
-    break;
-    case MAT_TYPE_DIFFUSE:
-    if(KSPEC_MAT_TYPE_DIFFUSE != 0)
-    {
-      const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, DIFFUSE_COLOR, 0, tc);
-      if(m_spectral_mode == 0)
-        reflSpec *= color;
-      
-      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
-    }
-    break;
-    case MAT_TYPE_PLASTIC:
-    if(KSPEC_MAT_TYPE_PLASTIC != 0)
-    {
-      const float4 color = texColor;
-      float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, PLASTIC_COLOR, 0, tc);
-      // float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
-      if(m_spectral_mode == 0)
-        reflSpec *= color;
-
-      const uint precomp_id = m_materials[currMatId].datai[0];
-
-      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
-                           m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
-    }
-    break;
-    case MAT_TYPE_DIELECTRIC:
-    if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
-    {
-      const float4 intIORSpec = SampleMatParamSpectrum(currMatId, wavelengths, DIELECTRIC_ETA_INT, 0);
-      const uint specId = m_materials[currMatId].spdid[0];
-      dielectricSmoothSampleAndEval(m_materials.data() + currMatId, intIORSpec, a_misPrev->ior, rands, v, shadeNormal, tc, &res);
-
-      res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
-
-      a_misPrev->ior = res.ior;
-    }
-    break;
+   
     default:
     break;
   }
@@ -611,18 +555,18 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
   int top = 0;
   bool needPop = false;
 
-  do
-  {
-    if(KSPEC_MAT_TYPE_BLEND != 0)
-    {
-      if(needPop)
-      {
-        top--;
-        currMat = material_stack[std::max(top, 0)];
-      }
-      else
-        needPop = true; // if not blend, pop on next iter
-    } 
+  //do
+  //{
+    //if(KSPEC_MAT_TYPE_BLEND != 0)
+    //{
+    //  if(needPop)
+    //  {
+    //    top--;
+    //    currMat = material_stack[std::max(top, 0)];
+    //  }
+    //  else
+    //    needPop = true; // if not blend, pop on next iter
+    //} 
     
     // BSDF is multiplied (outside) by old cosThetaOut.
     // When normal map is enables this becames wrong because normal is changed;
@@ -674,6 +618,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
       currVal.val = float4(0,0,0,0);
       currVal.pdf   = 0.0f;
     }
+  
     switch(mtype)
     {
       case MAT_TYPE_GLTF:
@@ -685,72 +630,12 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
         res.pdf += currVal.pdf * currMat.weight;
       }
       break;
-      case MAT_TYPE_GLASS:
-      if(KSPEC_MAT_TYPE_GLASS != 0)
-      {
-        glassEval(m_materials.data() + currMat.id, l, v, geomNormal, tc, float3(0,0,0), &currVal);
-        res.val += currVal.val * currMat.weight * bumpCosMult;
-        res.pdf += currVal.pdf * currMat.weight;
-      }
-      break;
-      case MAT_TYPE_CONDUCTOR: 
-      if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
-      {
-        const float3 alphaTex  = to_float3(texColor);
-        const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
-
-        if(!trEffectivelySmooth(alpha))
-        {
-          const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
-          const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
-          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
-        }
-
-        res.val += currVal.val * currMat.weight * bumpCosMult;
-        res.pdf += currVal.pdf * currMat.weight;
-      }
-      break;
-      case MAT_TYPE_DIFFUSE:
-      if(KSPEC_MAT_TYPE_DIFFUSE != 0)
-      {
-        const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, DIFFUSE_COLOR, 0, tc);
-        if(m_spectral_mode == 0)
-          reflSpec *= color;        
-        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc,  &currVal);
-
-        res.val += currVal.val * currMat.weight * bumpCosMult;
-        res.pdf += currVal.pdf * currMat.weight;
-      }
-      break;
-      case MAT_TYPE_PLASTIC:
-      if(KSPEC_MAT_TYPE_PLASTIC != 0)
-      {
-        const float4 color = texColor;
-        float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, PLASTIC_COLOR, 0, tc);
-        // float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
-        if(m_spectral_mode == 0)
-          reflSpec *= color;
-        const uint precomp_id = m_materials[currMat.id].datai[0];
-        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
-                    m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
-
-        res.val += currVal.val * currMat.weight * bumpCosMult;
-        res.pdf += currVal.pdf * currMat.weight;
-      }
-      break;
-      case MAT_TYPE_DIELECTRIC:
-      if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
-      {
-        dielectricSmoothEval(&res); // val and pdf are always zero
-      }
-      break;
       
       default:
         break;
     }
 
-  } while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
+  //} while(KSPEC_MAT_TYPE_BLEND != 0 && top > 0);
 
   return res;
 }
@@ -807,6 +692,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
 
     //kernel_RayTrace2(tid, bounce, &rayPosAndNear, &rayDirAndFar, &time, 
     //                 &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+    if(!isDeadRay(rayFlags))
     {
       const CRT_Hit hit = m_recorded[cpuThreadId].perBounce[bounce].hit;
       //const CRT_Hit hit = m_pAccelStruct->RayQuery_NearestHit(rayPosAndNear, rayDirAndFar, time);
@@ -861,7 +747,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         const uint flagsToAdd = (bounce == 0) ? (RAY_FLAG_PRIME_RAY_MISS | RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE) : (RAY_FLAG_IS_DEAD | RAY_FLAG_OUT_OF_SCENE);
         rayFlags              = rayFlags | flagsToAdd;
       }
-
     }
 
     //kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
@@ -931,7 +816,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
     //kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
     //                  &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
     
-    //if(!isDeadRay(rayFlags))
+    if(!isDeadRay(rayFlags))
     {
       const uint32_t matId = extractMatId(rayFlags);
 
@@ -1040,9 +925,6 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         rayFlags = nextFlags;    
       }              
     }
-
-    if(isDeadRay(rayFlags))
-      break;
   }
 
   kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
