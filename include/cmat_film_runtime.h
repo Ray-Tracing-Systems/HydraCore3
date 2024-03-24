@@ -29,7 +29,6 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     refl_offset = 0;
     refr_offset = FILM_ANGLE_RES * FILM_LENGTH_RES;
   }
-  reversed = false;
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
@@ -49,10 +48,12 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     {
       if (!reversed)
       {
+        //result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], 350.f + (1.f - n.y) * 100.f, a_wavelengths[0]);
         result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
       {
+        //result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], 350.f + (1.f - n.y) * 100.f, a_wavelengths[0]);
         result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]);
       }
     }
@@ -267,6 +268,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
     {
       if (!reversed)
       {
+        //result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], 50.f + (n.y + 1.f) * 100.f, a_wavelengths[0]);
         result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
@@ -510,6 +512,7 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
     {
       if (!reversed)
       {
+        //R = FrFilmRefl(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], 50.f + (n.y + 1.f) * 100.f, a_wavelengths[0]);
         R = FrFilmRefl(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
