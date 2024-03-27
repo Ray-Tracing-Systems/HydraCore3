@@ -48,12 +48,10 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
     {
       if (!reversed)
       {
-        //result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], 350.f + (1.f - n.y) * 100.f, a_wavelengths[0]);
         result = FrFilm(cosThetaI, a_ior.value[0], a_ior.value[1], a_ior.value[2], thickness[0], a_wavelengths[0]);
       }
       else
       {
-        //result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], 350.f + (1.f - n.y) * 100.f, a_wavelengths[0]);
         result = FrFilm(cosThetaI, a_ior.value[2], a_ior.value[1], a_ior.value[0], thickness[0], a_wavelengths[0]);
       }
     }
@@ -96,7 +94,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(a_ior.value[layers].re / a_ior.value[0].re, cosThetaI);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior.value[0], a_ior.value[layers]);
       }
       else
       {
@@ -135,7 +133,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(a_ior.value[0].re / a_ior.value[layers].re, cosThetaI);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior.value[layers], a_ior.value[0]);
       }
     } 
   }
@@ -315,7 +313,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(a_ior.value[layers].re / a_ior.value[0].re, cosThetaI);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior.value[0], a_ior.value[layers]);
       }
       else
       {
@@ -354,7 +352,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(a_ior.value[0].re / a_ior.value[layers].re, cosThetaI);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior.value[layers], a_ior.value[0]);
       }
     } 
   }
