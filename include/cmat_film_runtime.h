@@ -60,8 +60,8 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
       if (!reversed)
       { 
         //result = multFrFilm(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -99,8 +99,8 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials, const In
       else
       {
         //result = multFrFilm_r(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[layers] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -279,8 +279,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
        if (!reversed)
       { 
         //result = multFrFilm(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -318,8 +318,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials, const Int
       else
       {
         //result = multFrFilm_r(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[layers] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -523,8 +523,8 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
       if (!reversed)
       { 
         //result = multFrFilm(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[0] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -555,8 +555,8 @@ static void filmRoughEval(const Material* a_materials, const Integrator::IORVect
       else
       {
         //result = multFrFilm_r(cosThetaI, a_ior, thickness, layers, a_wavelengths[0]);
-        complex a_cosTheta[FILM_LAYERS_MAX + 1];
-        complex a_phaseDiff[FILM_LAYERS_MAX - 1];
+        complex a_cosTheta[Integrator::KSPEC_FILMS_STACK_SIZE + 1];
+        complex a_phaseDiff[Integrator::KSPEC_FILMS_STACK_SIZE - 1];
         a_cosTheta[layers] = complex(cosThetaI);
 
         float sinThetaI = 1.0f - cosThetaI * cosThetaI;
