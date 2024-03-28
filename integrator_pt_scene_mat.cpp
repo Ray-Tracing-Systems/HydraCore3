@@ -937,7 +937,6 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     precompFlag = 1u;
     mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
     mat.data[FILM_PRECOMP_ID] = as_float(precomputed_film.size() / (FILM_ANGLE_RES * FILM_LENGTH_RES * 4));
-    std::cout << precomputed_film.size() / (FILM_ANGLE_RES * FILM_LENGTH_RES * 4) << std::endl;
     auto precomputed = precomputeThinFilm(mat.data[FILM_ETA_EXT], spec_id_vec.data(), spec_id_vec.data() + layers, spec_values, 
           spec_offsets, thickness_vec.data(), layers);
     std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));

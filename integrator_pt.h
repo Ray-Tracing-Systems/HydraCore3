@@ -385,11 +385,6 @@ public:
   std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
 
-  struct IORVector
-  {
-    complex value[FILM_LAYERS_MAX + 1];
-  };
-
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);
@@ -416,7 +411,9 @@ public:
   static constexpr uint32_t KSPEC_OPTIC_SIM           = 16;
   static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 17;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 18; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t KSPEC_FILMS_STACK_SIZE    = 18;
+
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 19; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -476,6 +473,12 @@ public:
   static constexpr uint GBUFFER_SAMPLES = 16;
   std::vector<float2> m_qmcHammersley;
   virtual void InitDataForGbuffer();
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  struct IORVector
+  {
+    complex value[KSPEC_FILMS_STACK_SIZE];
+  };
 };
 
 #endif

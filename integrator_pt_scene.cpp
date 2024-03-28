@@ -23,7 +23,14 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
-      strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
+      strout << "BLEND_STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
+      return strout.str();
+    }
+
+    case KSPEC_FILMS_STACK_SIZE   :
+    {
+      std::stringstream strout;
+      strout << "FILMS_STACK_SIZE = " << m_enabledFeatures[KSPEC_FILMS_STACK_SIZE];
       return strout.str();
     }
     
@@ -74,6 +81,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   for(auto& feature : features)         //
     feature = 0;                        //
   features[KSPEC_BLEND_STACK_SIZE]   = 1; // set smallest possible stack size for blends (i.e. blends are disabled!)
+  features[KSPEC_FILMS_STACK_SIZE]   = 1; // set smallest possible stack size for films
   features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
   //// list reauired material features
@@ -113,6 +121,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     else if(mat_type == thinFilmMatTypeStr)
     {
       features[KSPEC_MAT_TYPE_THIN_FILM] = 1;
+      uint layers = 0;
+      for (auto layerNode : materialNode.child(L"layers").children()) layers++;
+      if (layers > features[KSPEC_FILMS_STACK_SIZE])
+        features[KSPEC_FILMS_STACK_SIZE] = layers; // set appropriate stack size for blends
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
@@ -270,6 +282,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   for(auto& feature : m_actualFeatures)              //
     feature = 0;                                      //
   m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
+  m_actualFeatures[KSPEC_FILMS_STACK_SIZE] = 1;
   m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
   //// 
 
@@ -478,6 +491,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
                                  m_spec_values, m_spec_offset_sz);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
+      uint layers = 0;
+      for (auto layerNode : materialNode.child(L"layers").children()) layers++;
+      if (layers > m_actualFeatures[KSPEC_FILMS_STACK_SIZE])
+        m_actualFeatures[KSPEC_FILMS_STACK_SIZE] = layers; // set stack size for films (one additional layer for medium)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
