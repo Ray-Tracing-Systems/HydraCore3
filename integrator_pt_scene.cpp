@@ -352,6 +352,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         spec_path.append(specNode.attribute(L"loc").as_string());
 
         auto spec = LoadSPDFromFile(spec_path, spec_id);
+        if(spec.values.size() == 0)
+          std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
         auto specValsUniform = spec.ResampleUniform();
         
         uint32_t offset = uint32_t(m_spec_values.size());

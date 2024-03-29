@@ -617,7 +617,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector
   Material mat = {};
 
   mat.mtype    = MAT_TYPE_BLEND;
-  mat.cflags   = uint(-1);
+  mat.cflags   = 0;
   mat.texid[0] = 0;
   mat.data[BLEND_WEIGHT] = 1.0f;
   
