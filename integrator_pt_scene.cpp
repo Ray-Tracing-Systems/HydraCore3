@@ -2,7 +2,6 @@
 
 #include "spectrum_loader.h"
 #include <spectral/spec/basic_spectrum.h>
-#include <spectral/upsample/upsamplers.h>
 
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
