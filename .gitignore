@@ -38,3 +38,19 @@ bin-debug/
 bin-release/
 build_generated/
 out/
+
+# Slicer
+integrator_pt_generated.cpp
+integrator_pt_generated.h
+integrator_pt_generated_ds.cpp
+integrator_pt_generated_init.cpp
+integrator_pt_temp.cpp
+
+shaders_generated/
+
+include/Integrator_generated_ubo.h
+
+# Scripts
+build_cpu.sh
+build_gpu.sh
+build.sh

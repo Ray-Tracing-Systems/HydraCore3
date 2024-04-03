@@ -22,7 +22,10 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   float4 color;
   auto lightColorNode = lightInst.lightNode.child(L"intensity").child(L"color");
   uint32_t lightSpecId = INVALID_SPECTRUM_ID;
-  if(lightColorNode) {
+
+  color = GetColorFromNode(lightColorNode, resources).value_or(float4(1.0f));
+  lightSpecId = GetSpectrumIdFromNode(lightColorNode);
+  /*if(lightColorNode) {
     if(!a_spectral_mode) {
       color = GetColorFromNode(lightColorNode, resources).value_or(float4(1.0f));
     }
@@ -37,7 +40,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
       }
       std::cerr << "Light specid = " << lightSpecId << std::endl;
     }
-  }
+  }*/
   auto matrix      = lightInst.matrix;
 
   LightSource lightSource{};

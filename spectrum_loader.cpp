@@ -1,10 +1,15 @@
 #include "spectrum_loader.h"
 #include <spectral/spec/spectral_util.h>
 #include <spectral/spec/conversions.h>
-#include <spectral/upsample/upsamplers.h>
+#include <spectral/upsample/functional/sigpoly.h>
+#include <spectral/upsample/sigpoly.h>
+#include <unordered_map>
 #include <fstream>
 #include <iostream>
 
+namespace {
+  spec::SigPolyUpsampler upsampler{};
+}
 
 std::vector<float> Spectrum::ResampleUniform() const
 {
@@ -21,7 +26,7 @@ float Spectrum::Sample(float lambda) const
 
 spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &rgb)
 {
-  return spec::upsamplers::sigpoly->upsample_pixel(spec::Pixel::from_vec3(rgb));
+  return upsampler.upsample_pixel(spec::Pixel::from_vec3(rgb));
 }
 
 spec::ISpectrum::ptr UpsampleAndResample(const spec::vec3 &rgb, float multiplier)
