@@ -1,5 +1,6 @@
 #include "integrator_pt_scene.h"
 
+#include "bin_serialization.h"
 #include "spectrum_loader.h"
 #include <spectral/spec/basic_spectrum.h>
 
@@ -861,4 +862,42 @@ void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
   self->lines.resize(ids.size());
   for(size_t i=0;i<ids.size(); i++)
     self->lines[i] = ids[i].lensElement;
+}
+
+
+namespace {
+    constexpr uint64_t FILE_MARKER = 0xfafa0000ab0ba000;
+
+    bool validate_header(std::istream &src)
+    {
+        uint64_t marker = binary::read<uint64_t>(src);
+        if(!src) return false;
+        uint16_t floatsize = binary::read<uint16_t>(src);
+        if(!src) return false;
+
+        return marker == FILE_MARKER && floatsize == sizeof(float);
+    }
+
+    void load_sigpoly_lut(float3 *lut, const std::string &path) 
+    {
+        std::ifstream src{path};
+        if(!validate_header(src)) return;
+        const uint16_t step = binary::read<uint16_t>(src);
+        const uint size = 256 / step + (255 % step != 0);
+        if(size != UPSAMPLER_LUT_SIZE) return;
+        const unsigned sz = size * size * size;
+        for(unsigned i = 0; i < sz; ++i) {
+            lut[i] = binary::read_vec<float3, 3>(src);
+        }
+    }
+}
+
+void Integrator::LoadUpsamplingResources()
+{
+    uint sz = UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE;
+    m_spec_lut.reserve(sz * 3);
+
+    load_sigpoly_lut(m_spec_lut.data(), "resources/sp_lut0.slf");
+    load_sigpoly_lut(m_spec_lut.data() + sz, "resources/sp_lut1.slf");
+    load_sigpoly_lut(m_spec_lut.data() + 2 * sz, "resources/sp_lut2.slf");
 }

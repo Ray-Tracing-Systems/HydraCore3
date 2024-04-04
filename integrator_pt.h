@@ -59,6 +59,7 @@ public:
   void InitRandomGens(int a_maxThreads);
 
   void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
+
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
   virtual void LoadSceneBegin(){} ///<! override it in derived class
   virtual void LoadSceneEnd(){}   ///<! override it in derived class
@@ -160,6 +161,9 @@ public:
 
   void kernel_ContributeToImage3(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, float* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
+
+  //Upsampling
+  void kernel_Upsample(const float4 *in_color, float *out_spectrum);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -379,6 +383,11 @@ public:
   std::vector<float> m_cie_z;
 
   std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
+
+  // Upsampler
+  std::vector<float3> m_spec_lut;
+  
+  void LoadUpsamplingResources();
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

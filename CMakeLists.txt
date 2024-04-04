@@ -168,6 +168,7 @@ set(CORE_SRC
         integrator_pt_scene_mat.cpp
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
+        integrator_pt_upsample.cpp
         integrator_gbuffer.cpp
         integrator_spectrum.cpp
         mlt/integrator_qmc.cpp
@@ -179,6 +180,7 @@ set(CORE_SRC
         imageutils.cpp
         imageutils_gbuffer.cpp
         utils.cpp
+        bin_serialization.cpp
         ies_parser/ies_render.cpp)
 
 
