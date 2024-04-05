@@ -45,7 +45,6 @@ float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uin
   if(a_wavelengths[0] == 0.0f)
     return res;
 
-  //const uint specId = m_films_eta_id_vec[as_uint(m_materials[a_materialId].data[FILM_ETA_SPECID_OFFSET]) + layer];
   const uint specId = m_films_spec_id_vec[as_uint(m_materials[matId].data[paramSpecId]) + layer];
   if(specId < 0xFFFFFFFF)
   {

@@ -917,7 +917,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     {
       thickness_vec.push_back(layerNode.child(L"thickness").attribute(L"val").as_float());
     }
-    eta_k_vec.push_back(materialNode.child(L"eta").attribute(L"val").as_float());
+    eta_k_vec.push_back(layerNode.child(L"eta").attribute(L"val").as_float());
     spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
   }
   mat.data[FILM_LAYERS_COUNT] = as_float(layers);
@@ -926,7 +926,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
 
   for (auto layerNode : materialNode.child(L"layers").children())
   {
-    eta_k_vec.push_back(materialNode.child(L"k").attribute(L"val").as_float());
+    eta_k_vec.push_back(layerNode.child(L"k").attribute(L"val").as_float());
     spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
   }
 
