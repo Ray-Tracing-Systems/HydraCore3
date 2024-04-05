@@ -35,6 +35,9 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
     res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
+  else if(m_spectral_mode) {
+
+  }
 
   return res;
 }
@@ -98,14 +101,14 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
   return rgb;
 }
 
-float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords)
+float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, float4 texColor, uint32_t paramId, uint32_t paramSpecId, float2 texCoords)
 {  
   float4 res = m_materials[matId].colors[paramId];
   if(a_wavelengths[0] == 0.0f)
     return res;
 
   const uint specId = m_materials[matId].spdid[paramSpecId];
-  if(specId < 0xFFFFFFFF)
+  if(specId != INVALID_SPECTRUM_ID)
   {
     const uint2 data   = m_spec_offset_sz[specId];
     const uint  offset = data.x;
@@ -149,6 +152,9 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
         }
       }
     }
+  }
+  else {
+    Upsample(&texColor, &a_wavelengths, &res);
   }
 
   return res;

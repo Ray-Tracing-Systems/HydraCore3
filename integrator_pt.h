@@ -163,7 +163,7 @@ public:
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //Upsampling
-  void kernel_Upsample(const float4 *in_color, float *out_spectrum);
+  void Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -391,7 +391,7 @@ public:
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
-  float4 SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords);
+  float4 SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, float4 texColor, uint32_t paramId, uint32_t paramSpecId, float2 texCoords);
 
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;

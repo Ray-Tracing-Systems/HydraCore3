@@ -23,14 +23,14 @@ float aid_to_alpha(int alpha_id, int size)
     return smoothstep2(float(alpha_id) / float(size - 1));
 }
 
-float sigmoid(float x)
+float4 sigmoid(float4 x)
 {
-    return fmaf(0.5, x / sqrt(fmaf(x, x, 1)), 0.5);
+    return 0.5f * x / sqrt(x * x + 1) + 0.5f;
 }
 
-float sigmoid_polynomial(float x, float3 coef)
+float4 sigmoid_polynomial(float4 x, float3 coef)
 {
-    return sigmoid(fmaf(fmaf(coef[0], x, coef[1]), x, coef[2]));
+    return sigmoid((coef[0] * x + coef[1]) * x + coef[2]);
 }
 
 float inv_smoothstep(float x) 
@@ -38,7 +38,7 @@ float inv_smoothstep(float x)
     return 0.5f - sinf(asin(fmaf(-2.0f, x, 1.0f)) / 3.0f);
 }
 
-void Integrator::kernel_Upsample(const float4 *in_color, float *out_spectrum)
+void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum)
 {   
     constexpr uint _size = UPSAMPLER_LUT_SIZE;
     constexpr uint _step = UPSAMPLER_LUT_STEP;
@@ -95,10 +95,6 @@ void Integrator::kernel_Upsample(const float4 *in_color, float *out_spectrum)
                + m_spec_lut[offset + ((alpha1_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf2 * div
                + m_spec_lut[offset + ((alpha2_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf1 * div;
 
-
-    size_t wl_size = size_t(LAMBDA_MAX - LAMBDA_MIN);
-    for(uint c = 0; c < wl_size; ++c) {
-        out_spectrum[c] = sigmoid_polynomial(float(c) + LAMBDA_MIN, res);
-    }
+    out_spectrum[0] = sigmoid_polynomial(in_wavelenghts[0], res);
 
 }
