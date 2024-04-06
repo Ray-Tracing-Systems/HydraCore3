@@ -101,7 +101,7 @@ extern const Spectrum DUMMY_UNIFORM_SPECTRUM;
 
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
-uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders);
+uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders, uint32_t &spec_count);
 
 float4 DownsampleSpectrum(const Spectrum &st);
 

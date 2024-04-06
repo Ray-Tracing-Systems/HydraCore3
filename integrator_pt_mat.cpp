@@ -200,7 +200,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     {
       const float4 color = texColor;
       float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, color, DIFFUSE_COLOR, 0, tc);
-      if(m_spectral_mode == 0)
+      if(!m_spectral_mode)
         reflSpec *= color;
       
       diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);

@@ -357,7 +357,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       
       m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-      m_spec_offset_sz.push_back(uint2{INVALID_SPECTRUM_ID, 0});
+      m_spec_offset_sz.push_back(uint2{spec_id, 0});
+      resources.loadedSpectrumCount += 1;
+      resources.specTexIds.insert(spec_id);
     }
     else
     {

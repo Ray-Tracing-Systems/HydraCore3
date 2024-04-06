@@ -3,6 +3,7 @@
 #include <spectral/spec/basic_spectrum.h>
 #include <spectral/spec/conversions.h>
 #include "spectrum_loader.h"
+#include <algorithm>
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
@@ -157,13 +158,13 @@ ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceConte
     if(spec_id != INVALID_SPECTRUM_ID) {
       return {spec_id};
     }
-    else {//Register new spectrum
+    else if(!a_node.child(L"texture")) {//Register new spectrum
       auto coloropt = GetColorFromNode(a_node, resources);
       if(coloropt) {
-        return UpsampleSpectrumFromColor(*coloropt, resources.spectraInfo);
+        return UpsampleSpectrumFromColor(*coloropt, resources.spectraInfo, resources.loadedSpectrumCount);
       }
-      return {};
     }
+    return {};
   }
   else {
     auto coloropt = GetColorFromNode(a_node, resources);
@@ -672,7 +673,7 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext
     mat.row1 [0]  = sampler.row1;
     mat.texid[0]  = texID;
 
-    if(is_spectral_mode && mat.spdid[0] < resources.loadedSpectrumCount)
+    if(is_spectral_mode && resources.specTexIds.find(mat.spdid[0]) != resources.specTexIds.end())
     {
       LoadSpectralTextures(mat.spdid[0], resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
@@ -799,6 +800,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
   mat.lightId   = uint(-1);
   mat.nonlinear = 0;
   mat.texid[0]  = 0;
+  //std::fill(mat.spdid, mat.spdid + 4, INVALID_SPECTRUM_ID);
   mat.spdid[0]  = INVALID_SPECTRUM_ID;
 
   auto nodeColor = materialNode.child(L"reflectance");
@@ -811,7 +813,7 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
       mat.colors[PLASTIC_COLOR] = var_color.getRGB();
     }
     else if(var_color) {
-      mat.spdid[0] = var_color.getSpectrumId();
+      specId = var_color.getSpectrumId();
     }
     const auto& [sampler, texID] = LoadTextureFromNode(nodeColor, resources, texCache, textures);
 
@@ -820,9 +822,9 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
     mat.texid[0]  = texID;
 
   //  specId = GetSpectrumIdFromNode(nodeColor);
-   // mat.spdid[0] = specId;
+    mat.spdid[0] = specId;
 
-    if(is_spectral_mode && specId < resources.loadedSpectrumCount)
+    if(is_spectral_mode && resources.specTexIds.find(specId) != resources.specTexIds.end())
     {
       LoadSpectralTextures(specId, resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);

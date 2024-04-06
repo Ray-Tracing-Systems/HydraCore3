@@ -100,7 +100,7 @@ namespace {
 }
 
 
-uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders)
+uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders, uint32_t &spec_count)
 {
   spec::vec3 rgb{color[0], color[1], color[2]};
   auto it = spec_cache.find(rgb);
@@ -110,7 +110,7 @@ uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoad
   }
   else {
     float multiplier = LiteMath::hmax(color);
-    uint32_t spec_id = uint32_t(loaders.size());
+    uint32_t spec_id = spec_count++;
     std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
     std::cerr << "ID = " << spec_id << std::endl;
     if(multiplier <= 1.0f) {

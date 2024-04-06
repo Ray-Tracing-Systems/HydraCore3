@@ -194,6 +194,7 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
 
 struct ResourceContext
 { 
+  std::unordered_set<uint32_t> specTexIds;
   std::vector<SpectrumLoader> spectraInfo;
   std::vector<TextureInfo> texturesInfo;
   uint32_t loadedSpectrumCount;

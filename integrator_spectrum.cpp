@@ -1,5 +1,5 @@
 #include "integrator_pt.h"
-
+#include <iostream>
 
 float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId)
 {  
@@ -104,10 +104,15 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
 float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, float4 texColor, uint32_t paramId, uint32_t paramSpecId, float2 texCoords)
 {  
   float4 res = m_materials[matId].colors[paramId];
-  if(a_wavelengths[0] == 0.0f)
+  if(a_wavelengths[0] == 0.0f) {
     return res;
-
+  }
   const uint specId = m_materials[matId].spdid[paramSpecId];
+
+ /* if(paramId == PLASTIC_COLOR) {
+    std::cerr << "SpecId " << specId << ", a_wavelengths = " << a_wavelengths.x << " " << a_wavelengths.y << " " << a_wavelengths.z << std::endl;
+  }*/
+
   if(specId != INVALID_SPECTRUM_ID)
   {
     const uint2 data   = m_spec_offset_sz[specId];
@@ -153,7 +158,8 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
       }
     }
   }
-  else {
+  else if(m_spectral_mode) {
+    //std::cerr << "Upsampling" << std::endl;
     Upsample(&texColor, &a_wavelengths, &res);
   }
 
