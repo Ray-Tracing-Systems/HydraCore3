@@ -325,7 +325,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
       resources.texturesInfo.push_back(tex);
     }
-    resources.texturesInfo.push_back(tex);
   }
 
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> texCache;
@@ -880,26 +879,40 @@ namespace {
         return marker == FILE_MARKER && floatsize == sizeof(float);
     }
 
-    void load_sigpoly_lut(float3 *lut, const std::string &path) 
+    bool load_sigpoly_lut(float3 *lut, const std::string &path) 
     {
         std::ifstream src{path};
-        if(!validate_header(src)) return;
+        if(!src || !validate_header(src)) return false;
         const uint16_t step = binary::read<uint16_t>(src);
         const uint size = 256 / step + (255 % step != 0);
-        if(size != UPSAMPLER_LUT_SIZE) return;
+        if(size != UPSAMPLER_LUT_SIZE) {
+          std::cout << "Incorrect lut size " << size << " not " << UPSAMPLER_LUT_SIZE << std::endl;
+          return false;
+        }
+
         const unsigned sz = size * size * size;
         for(unsigned i = 0; i < sz; ++i) {
             lut[i] = binary::read_vec<float3, 3>(src);
         }
+        return true;
     }
 }
 
-void Integrator::LoadUpsamplingResources()
+void Integrator::LoadUpsamplingResources(const std::string &dir)
 {
+    std::filesystem::path p{dir};
     uint sz = UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE;
     m_spec_lut.reserve(sz * 3);
 
-    load_sigpoly_lut(m_spec_lut.data(), "resources/sp_lut0.slf");
-    load_sigpoly_lut(m_spec_lut.data() + sz, "resources/sp_lut1.slf");
-    load_sigpoly_lut(m_spec_lut.data() + 2 * sz, "resources/sp_lut2.slf");
+    std::string path = (p / "sp_lut0.slf").string();
+    if(!load_sigpoly_lut(m_spec_lut.data(), path))
+      std::cout << "Error loading " << path << std::endl;
+
+    path = (p / "sp_lut1.slf").string();
+    if(!load_sigpoly_lut(m_spec_lut.data() + sz, path))
+      std::cout << "Error loading " << path << std::endl;
+
+    path = (p / "sp_lut2.slf").string();
+    if(!load_sigpoly_lut(m_spec_lut.data() + 2 * sz, path))
+      std::cout << "Error loading " << path << std::endl;
 }

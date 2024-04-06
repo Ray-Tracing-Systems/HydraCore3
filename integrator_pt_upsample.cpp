@@ -1,8 +1,8 @@
 #include "integrator_pt.h"
 #include "include/cglobals.h"
 #include "LiteMath.h"
-#include <fstream>
-
+#include <iostream>
+#include <spectral/internal/common/format.h>
 
 float fmaf(float a, float b, float c) 
 {
@@ -95,6 +95,8 @@ void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, 
                + m_spec_lut[offset + ((alpha1_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf2 * div
                + m_spec_lut[offset + ((alpha2_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf1 * div;
 
+
+    std::cerr << spec::format("[%f %f %f]", res.x, res.y, res.z) << std::endl; 
     out_spectrum[0] = sigmoid_polynomial(in_wavelenghts[0], res);
 
 }

@@ -6,7 +6,7 @@
 using namespace LiteMath;
 #endif
 
-static constexpr uint UPSAMPLER_LUT_SIZE = 65;
+static constexpr uint UPSAMPLER_LUT_SIZE = 33;
 static constexpr uint UPSAMPLER_LUT_STEP = 4;
 
 static constexpr uint RAY_FLAG_IS_DEAD        = 0x80000000;

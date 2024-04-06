@@ -387,7 +387,7 @@ public:
   // Upsampler
   std::vector<float3> m_spec_lut;
   
-  void LoadUpsamplingResources();
+  void LoadUpsamplingResources(const std::string &dir);
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

@@ -12,6 +12,10 @@
 #include <chrono>
 #include <string>
 
+
+#include <iostream>
+#include <spectral/internal/common/format.h>
+
 #include "Image2d.h"
 using LiteImage::Image2D;
 using LiteImage::Sampler;
@@ -211,6 +215,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     {
       float4 color = texColor;
       float4 reflSpec    = SampleMatColorSpectrumTexture(currMatId, wavelengths, color, PLASTIC_COLOR, 0, tc);
+      //std::cerr <<  spec::format("{%f, %f, %f} -> {%f, %f, %f, %f}", color.x, color.y, color.z, reflSpec.x, reflSpec.y, reflSpec.z, reflSpec.w)  << std::endl;
       // float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
       if(!m_spectral_mode)
         reflSpec *= color;
