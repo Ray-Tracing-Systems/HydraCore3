@@ -945,6 +945,8 @@ static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static inline float sum(float4 v) {return v.x + v.y + v.z + v.w;}
+
 static constexpr uint PolarizationS = 0;
 static constexpr uint PolarizationP = 1;
 
@@ -1060,8 +1062,6 @@ struct FrReflRefr
 {
   float refl, refr;
 };
-
-#include <iostream>
 
 static inline FrReflRefr FrFilm(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
 {
