@@ -901,15 +901,15 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
     uint step, size;
 
     std::string path = (p / "sp_lut0.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_size))
+    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut1.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_size)
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut2.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_size)
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
     if(m_spec_lut.size() != size * size * size * 3) {

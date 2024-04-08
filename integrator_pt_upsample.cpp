@@ -39,7 +39,7 @@ float inv_smoothstep(float x)
 
 void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum)
 {   
-    const uint _size = m_spec_lut_size;
+    const uint _size = m_spec_lut_csize;
     const uint _step = m_spec_lut_step;
 
     float4 color = LiteMath::clamp(in_color[0], 0.0f, 1.0f);
