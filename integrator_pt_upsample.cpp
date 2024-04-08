@@ -2,7 +2,6 @@
 #include "include/cglobals.h"
 #include "LiteMath.h"
 #include <iostream>
-#include <spectral/internal/common/format.h>
 
 float fmaf(float a, float b, float c) 
 {
@@ -40,21 +39,25 @@ float inv_smoothstep(float x)
 
 void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum)
 {   
-    constexpr uint _size = UPSAMPLER_LUT_SIZE;
-    constexpr uint _step = UPSAMPLER_LUT_STEP;
+    const uint _size = m_spec_lut_size;
+    const uint _step = m_spec_lut_step;
 
-    float4 color = in_color[0];
+    float4 color = LiteMath::clamp(in_color[0], 0.0f, 1.0f);
+
     uint amax = color[0] >= color[1] ? 0 : 1;
     amax = color[amax] >= color[2] ? amax : 2;
+
     const uint offset = amax * _size * _size * _size;
+
+  //  std::cerr << amax << std::endl;
 
     int a = 0, b = 0;
 
     const float alphaf = color[amax];
 
     if(alphaf > EPSILON_32) {
-        a = int(color[(amax + 1) % 3] / alphaf * 255.0f);
-        b = int(color[(amax + 2) % 3] / alphaf * 255.0f);
+        a = int((color[(amax + 1) % 3] / alphaf) * 255.0f);
+        b = int((color[(amax + 2) % 3] / alphaf) * 255.0f);
     }
 
     const int a1_id = a / _step;
@@ -80,23 +83,35 @@ void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, 
     const float dbf1 = float(b - b1) / 255.0f;
     const float dbf2 = float(b2 - b) / 255.0f; 
 
-    const float dalphaf = alphaf2 - alphaf1;
-    const float dalphaf1 = alphaf - alphaf1;
-    const float dalphaf2 = alphaf2 - alphaf;
+    const float dalphaf = 100 * alphaf2 - 100 *alphaf1;
+    const float dalphaf1 = 100 * alphaf - 100 * alphaf1;
+    const float dalphaf2 = 100 * alphaf2 - 100 * alphaf;
 
-    const float div = 1.0f / (daf * dbf * dalphaf);
+    const float ml = daf * dbf * dalphaf;
+    const float div = ml > 0.0f ? (1.0f / ml) : 0.0f;
+
+    const uint alpha1a1_off = offset + (alpha1_id * _size + a1_id) * _size;
+    const uint alpha1a2_off = offset + (alpha1_id * _size + a2_id) * _size;
+    const uint alpha2a1_off = offset + (alpha2_id * _size + a1_id) * _size;
+    const uint alpha2a2_off = offset + (alpha2_id * _size + a2_id) * _size;
     
-    float3 res = m_spec_lut[offset + ((alpha1_id * _size) + a1_id) * _size + b1_id] * daf2 * dbf2 * dalphaf2 * div
-               + m_spec_lut[offset + ((alpha2_id * _size) + a1_id) * _size + b1_id] * daf2 * dbf2 * dalphaf1 * div
-               + m_spec_lut[offset + ((alpha1_id * _size) + a1_id) * _size + b2_id] * daf2 * dbf1 * dalphaf2 * div
-               + m_spec_lut[offset + ((alpha2_id * _size) + a1_id) * _size + b2_id] * daf2 * dbf1 * dalphaf1 * div
-               + m_spec_lut[offset + ((alpha1_id * _size) + a2_id) * _size + b1_id] * daf1 * dbf2 * dalphaf2 * div
-               + m_spec_lut[offset + ((alpha2_id * _size) + a2_id) * _size + b1_id] * daf1 * dbf2 * dalphaf1 * div
-               + m_spec_lut[offset + ((alpha1_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf2 * div
-               + m_spec_lut[offset + ((alpha2_id * _size) + a2_id) * _size + b2_id] * daf1 * dbf1 * dalphaf1 * div;
-
-
-    std::cerr << spec::format("[%f %f %f]", res.x, res.y, res.z) << std::endl; 
-    out_spectrum[0] = sigmoid_polynomial(in_wavelenghts[0], res);
-
+    float3 res = m_spec_lut[alpha1a1_off + b1_id] * daf2 * dbf2 * dalphaf2 * div
+               + m_spec_lut[alpha2a1_off + b1_id] * daf2 * dbf2 * dalphaf1 * div
+               + m_spec_lut[alpha1a1_off + b2_id] * daf2 * dbf1 * dalphaf2 * div
+               + m_spec_lut[alpha2a1_off + b2_id] * daf2 * dbf1 * dalphaf1 * div
+               + m_spec_lut[alpha1a2_off + b1_id] * daf1 * dbf2 * dalphaf2 * div
+               + m_spec_lut[alpha2a2_off + b1_id] * daf1 * dbf2 * dalphaf1 * div
+               + m_spec_lut[alpha1a2_off + b2_id] * daf1 * dbf1 * dalphaf2 * div
+               + m_spec_lut[alpha2a2_off + b2_id] * daf1 * dbf1 * dalphaf1 * div;
+    
+    *out_spectrum = sigmoid_polynomial(*in_wavelenghts, res);
+   /* 
+    if(res.x == 0.0f && res.y == 0.0f && res.z == 0.0f) {
+        std::cerr << spec::format("[%f %f %f] with {a=%d, b=%d, alphaf=%f, alpha1_id=%d, alpha2_id=%d,\n\t"
+            "a1=%d, a2=%d, b1=%d, b2=%d\n\t"
+            "daf=%f, daf1=%f, daf2=%f, dbf=%f, dbf1=%f, dbf2=%f, dalphaf=%f, dalphaf1=%f, dalphaf2=%f",
+            color.x, color.y, color.z, a, b, alphaf, alpha1_id, alpha2_id, a1, a2, b1, b2,
+            daf, daf1, daf2, dbf, dbf1, dbf2, dalphaf, dalphaf1, dalphaf2) << std::endl;
+    }
+    */
 }

@@ -386,6 +386,8 @@ public:
 
   // Upsampler
   std::vector<float3> m_spec_lut;
+  uint m_spec_lut_size = 65;
+  uint m_spec_lut_step = 4;
   
   void LoadUpsamplingResources(const std::string &dir);
 

@@ -879,20 +879,17 @@ namespace {
         return marker == FILE_MARKER && floatsize == sizeof(float);
     }
 
-    bool load_sigpoly_lut(float3 *lut, const std::string &path) 
+    bool load_sigpoly_lut(std::vector<float3> &lut, const std::string &path, uint &step, uint &size) 
     {
         std::ifstream src{path};
         if(!src || !validate_header(src)) return false;
-        const uint16_t step = binary::read<uint16_t>(src);
-        const uint size = 256 / step + (255 % step != 0);
-        if(size != UPSAMPLER_LUT_SIZE) {
-          std::cout << "Incorrect lut size " << size << " not " << UPSAMPLER_LUT_SIZE << std::endl;
-          return false;
-        }
-
+        step = binary::read<uint16_t>(src);
+        size = 256 / step + (255 % step != 0);
+        lut.reserve(size * size * size * 3);
+    
         const unsigned sz = size * size * size;
         for(unsigned i = 0; i < sz; ++i) {
-            lut[i] = binary::read_vec<float3, 3>(src);
+            lut.push_back(binary::read_vec<float3, 3>(src));
         }
         return true;
     }
@@ -901,18 +898,21 @@ namespace {
 void Integrator::LoadUpsamplingResources(const std::string &dir)
 {
     std::filesystem::path p{dir};
-    uint sz = UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE * UPSAMPLER_LUT_SIZE;
-    m_spec_lut.reserve(sz * 3);
+    uint step, size;
 
     std::string path = (p / "sp_lut0.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut.data(), path))
+    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_size))
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut1.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut.data() + sz, path))
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_size)
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut2.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut.data() + 2 * sz, path))
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_size)
       std::cout << "Error loading " << path << std::endl;
+
+    if(m_spec_lut.size() != size * size * size * 3) {
+      std::cout << "Error loading lut" << std::endl;
+    }
 }
