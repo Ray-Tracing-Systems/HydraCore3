@@ -371,7 +371,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       m_actualFeatures[KSPEC_SPD_TEX] = 1;
       m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      m_spec_offset_sz.push_back(uint2{spec_id, 0});
 
       resources.loadedSpectrumCount += 1;
       resources.specTexIds.insert(spec_id);
@@ -661,6 +661,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   //Load found spectra
   if(m_spectral_mode) {
+    m_spec_offset_sz.resize(m_spec_tex_offset_sz.size() + resources.loadedSpectrumCount);
     for(const auto &specInfo : resources.spectraInfo)
     {
       const auto &spec = specInfo.load();

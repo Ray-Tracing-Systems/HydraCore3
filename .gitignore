@@ -52,5 +52,6 @@ include/Integrator_generated_ubo.h
 
 # Scripts
 build_cpu.sh
+build_dbg.sh
 build_gpu.sh
 build.sh
