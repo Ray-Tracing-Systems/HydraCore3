@@ -774,7 +774,7 @@ struct ThinFilmPrecomputed
 };
 
 ThinFilmPrecomputed precomputeThinFilmSpectral(
-        const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
         const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
         const float* a_thickness, int layers)
 {
@@ -795,15 +795,25 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
     uint size;
     for (size_t layer = 0; layer < layers; ++layer)
     {
-      data  = spec_offsets[eta_id[layer]];
-      offset = data.x;
-      size   = data.y;
-      eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      eta = eta_vec[layer];
+      uint eta_id = eta_id_vec[layer];
+      if (eta_id < 0xFFFFFFFF)
+      {
+        data  = spec_offsets[eta_id];
+        offset = data.x;
+        size   = data.y;
+        eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      }
 
-      data  = spec_offsets[k_id[layer]];
-      offset = data.x;
-      size   = data.y;
-      k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      k = k_vec[layer];
+      uint k_id = k_id_vec[layer];
+      if (k < 0xFFFFFFFF)
+      {
+        data  = spec_offsets[k_id];
+        offset = data.x;
+        size   = data.y;
+        k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      }
 
       ior[layer + 1] = complex(eta, k);
     }
@@ -854,7 +864,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
 }
 
 ThinFilmPrecomputed precomputeThinFilmRGB(
-        const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
         const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec, const float* a_thickness, int layers, 
         const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z)
 {
@@ -863,10 +873,10 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
   res.ext_transmittivity.resize(FILM_ANGLE_RES * 3);
   res.int_reflectivity.resize(FILM_ANGLE_RES * 3);
   res.int_transmittivity.resize(FILM_ANGLE_RES * 3);
-  std::fill(res.ext_reflectivity.begin(), res.ext_reflectivity.end(), 0);
-  std::fill(res.ext_transmittivity.begin(), res.ext_transmittivity.end(), 0);
-  std::fill(res.int_reflectivity.begin(), res.int_reflectivity.end(), 0);
-  std::fill(res.int_transmittivity.begin(), res.int_transmittivity.end(), 0);
+  std::fill(res.ext_reflectivity.begin(), res.ext_reflectivity.end(), 0.0f);
+  std::fill(res.ext_transmittivity.begin(), res.ext_transmittivity.end(), 0.0f);
+  std::fill(res.int_reflectivity.begin(), res.int_reflectivity.end(), 0.0f);
+  std::fill(res.int_transmittivity.begin(), res.int_transmittivity.end(), 0.0f);
 
   for (size_t i = 0; i < FILM_LENGTH_RES; ++i)
   {
@@ -880,15 +890,25 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
     uint size;
     for (size_t layer = 0; layer < layers; ++layer)
     {
-      data  = spec_offsets[eta_id[layer]];
-      offset = data.x;
-      size   = data.y;
-      eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      eta = eta_vec[layer];
+      uint eta_id = eta_id_vec[layer];
+      if (eta_id < 0xFFFFFFFF)
+      {
+        data  = spec_offsets[eta_id];
+        offset = data.x;
+        size   = data.y;
+        eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      }
 
-      data  = spec_offsets[k_id[layer]];
-      offset = data.x;
-      size   = data.y;
-      k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      k = k_vec[layer];
+      uint k_id = k_id_vec[layer];
+      if (k < 0xFFFFFFFF)
+      {
+        data  = spec_offsets[k_id];
+        offset = data.x;
+        size   = data.y;
+        k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+      }
 
       ior[layer + 1] = complex(eta, k);
     }
@@ -929,27 +949,27 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
 
       float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       float3 rgb = XYZToRGB(xyz);
-      res.ext_reflectivity[i * 3]     += rgb.x;
-      res.ext_reflectivity[i * 3 + 1] += rgb.y;
-      res.ext_reflectivity[i * 3 + 2] += rgb.z;
+      res.ext_reflectivity[j * 3]     += rgb.x;
+      res.ext_reflectivity[j * 3 + 1] += rgb.y;
+      res.ext_reflectivity[j * 3 + 2] += rgb.z;
 
       xyz = SpectrumToXYZ({forward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.ext_transmittivity[i * 3]     += rgb.x;
-      res.ext_transmittivity[i * 3 + 1] += rgb.y;
-      res.ext_transmittivity[i * 3 + 2] += rgb.z;
+      res.ext_transmittivity[j * 3]     += rgb.x;
+      res.ext_transmittivity[j * 3 + 1] += rgb.y;
+      res.ext_transmittivity[j * 3 + 2] += rgb.z;
 
       xyz = SpectrumToXYZ({backward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.int_reflectivity[i * 3]     += rgb.x;
-      res.int_reflectivity[i * 3 + 1] += rgb.y;
-      res.int_reflectivity[i * 3 + 2] += rgb.z;
+      res.int_reflectivity[j * 3]     += rgb.x;
+      res.int_reflectivity[j * 3 + 1] += rgb.y;
+      res.int_reflectivity[j * 3 + 2] += rgb.z;
 
       xyz = SpectrumToXYZ({backward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.ext_transmittivity[i * 3]     += rgb.x;
-      res.ext_transmittivity[i * 3 + 1] += rgb.y;
-      res.ext_transmittivity[i * 3 + 2] += rgb.z;
+      res.ext_transmittivity[j * 3]     += rgb.x;
+      res.ext_transmittivity[j * 3 + 1] += rgb.y;
+      res.ext_transmittivity[j * 3 + 2] += rgb.z;
     }
   }
   return res;
