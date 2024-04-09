@@ -371,7 +371,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       m_actualFeatures[KSPEC_SPD_TEX] = 1;
       m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      m_spec_offset_sz.push_back(uint2{spec_id, 0});
 
       resources.loadedSpectrumCount += 1;
       resources.specTexIds.insert(spec_id);
@@ -661,6 +661,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   //Load found spectra
   if(m_spectral_mode) {
+    m_spec_offset_sz.resize(m_spec_tex_offset_sz.size() + resources.loadedSpectrumCount);
     for(const auto &specInfo : resources.spectraInfo)
     {
       const auto &spec = specInfo.load();
@@ -916,7 +917,7 @@ namespace {
         return marker == FILE_MARKER && floatsize == sizeof(float);
     }
 
-    bool load_sigpoly_lut(std::vector<float3> &lut, const std::string &path, uint &step, uint &size) 
+    bool load_sigpoly_lut(std::vector<float4> &lut, const std::string &path, uint &step, uint &size) 
     {
         std::ifstream src{path};
         if(!src || !validate_header(src)) return false;
@@ -926,7 +927,7 @@ namespace {
     
         const unsigned sz = size * size * size;
         for(unsigned i = 0; i < sz; ++i) {
-            lut.push_back(binary::read_vec<float3, 3>(src));
+            lut.push_back(binary::read_vec<float4, 3>(src));
         }
         return true;
     }
@@ -939,24 +940,19 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
 
     std::vector<float3> spec_lut3;
     std::string path = (p / "sp_lut0.slf").string();
-    if(!load_sigpoly_lut(spec_lut3, path, m_spec_lut_step, m_spec_lut_csize))
+    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut1.slf").string();
-    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut2.slf").string();
-    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
-    if(spec_lut3.size() != size * size * size * 3) {
+    if(m_spec_lut.size() != size * size * size * 3) {
       std::cout << "Error loading lut" << std::endl;
     }
 
-    m_spec_lut.resize(spec_lut3.size());
-    for(size_t i = 0; i < spec_lut3.size(); ++i)
-    {
-      m_spec_lut[i] = float4(spec_lut3[i].x, spec_lut3[i].y, spec_lut3[i].z, 0.0f);
-    }
 }
