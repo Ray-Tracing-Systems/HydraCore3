@@ -672,15 +672,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
         uint32_t offset = uint32_t(m_spec_values.size());
         std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-
-        if(id <= m_spec_offset_sz.size())
-        {
-          m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
-        }
-        else
-        {
-          m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
-        }
+        m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
+        
       }
       else {
         PushDummySpectrum(m_spec_values, m_spec_offset_sz);
@@ -938,7 +931,6 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
     std::filesystem::path p{dir};
     uint step, size;
 
-    std::vector<float3> spec_lut3;
     std::string path = (p / "sp_lut0.slf").string();
     if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;
