@@ -601,6 +601,8 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
         resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
         kSpecId = uint32_t(resources.spectraInfo.size());
         resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
+        
+        resources.loadedSpectrumCount += 2;
 
         /* POSTMP
         size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
