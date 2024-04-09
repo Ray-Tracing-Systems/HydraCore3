@@ -239,7 +239,7 @@ void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
 
 namespace {
 
-  void PushDummySpectrum(std::vector<float> &spec_values, std::vector<uint2> &spec_offsets)
+  void PushDummySpectrum(std::vector<float> &spec_values, std::vector<uint2> &spec_offsets, uint32_t id = 0xFFFFFFFF)
   {
     Spectrum uniform1;
     uniform1.id = 0;
@@ -256,7 +256,10 @@ namespace {
     
     uint32_t offset = uint32_t(spec_values.size());
     std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(spec_values));
-    spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+    if(id == 0xFFFFFFFF)
+      spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+    else
+      spec_offsets[id] = uint2{offset, uint32_t(specValsUniform.size())};
   }
 
 }
@@ -356,12 +359,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       
       m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-      m_spec_offset_sz.push_back(uint2{spec_id, 0});
+      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+
       resources.loadedSpectrumCount += 1;
       resources.specTexIds.insert(spec_id);
     }
     else
     {
+      m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      
       auto spec_path = std::filesystem::path(sceneFolder);
       spec_path.append(specNode.attribute(L"loc").as_string());
 
@@ -638,11 +645,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       const auto &spec = specInfo.load();
 
       if(spec) {
+        auto id = spec.value().id;
         auto specValsUniform = spec->ResampleUniform();
 
         uint32_t offset = uint32_t(m_spec_values.size());
         std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+        m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
       }
       else {
         PushDummySpectrum(m_spec_values, m_spec_offset_sz);
