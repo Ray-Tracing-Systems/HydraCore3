@@ -1,7 +1,6 @@
 #include "spectrum_loader.h"
 #include <spectral/spec/spectral_util.h>
 #include <spectral/spec/conversions.h>
-#include <spectral/upsample/functional/sigpoly.h>
 #include <spectral/upsample/sigpoly.h>
 #include <unordered_map>
 #include <fstream>
@@ -64,7 +63,7 @@ void SpectrumLoader::FileLoader::load(spec::ISpectrum::sptr &ptr)
   spec::ISpectrum::ptr sp;
   spec::ISpectrum::csptr illum;
 
-  spec::util::load_spectrum(std::string(path.begin(), path.end()), sp, illum);
+  spec::util::load_spectrum(path, sp, illum);
   ptr = std::move(sp);
 }
 
@@ -76,6 +75,41 @@ void SpectrumLoader::UpsampleLoader::load(spec::ISpectrum::sptr &ptr)
 void SpectrumLoader::SimpleLoader::load(spec::ISpectrum::sptr &ptr) 
 {
   ptr = std::move(spectrum);
+}
+
+std::vector<float> ParseSpectrumStr(const std::string &specStr)
+{
+  std::vector<float> res;
+
+  std::stringstream ss(specStr);
+  float val = 0.0f;
+  while (ss >> val) 
+  {
+    res.push_back(val);
+  }
+
+  if(res.size() % 2 != 0)
+  {
+    std::cerr << "[parseSpectrumStr] : size of spectrum string is not even: " << specStr << std::endl;
+  }
+  
+  return res;
+}
+
+void SpectrumLoader::VectorLoader::load(spec::ISpectrum::sptr &ptr)
+{
+  spec::BasicSpectrum spec;
+
+  if(specVec.size() % 2 != 0)
+  {
+    std::cerr << "[SpectrumLoader::VectorLoader] : size of spectrum vector is not even: " << specVec.size() << std::endl;
+  }
+
+  for(size_t i = 0; i < specVec.size(); i += 2) 
+  {
+    spec.set(specVec[i], specVec[i + 1]);
+  }
+  ptr.reset(new spec::BasicSpectrum(spec));
 }
 
 std::optional<Spectrum> &SpectrumLoader::load() const

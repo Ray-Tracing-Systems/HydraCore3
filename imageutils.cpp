@@ -338,13 +338,18 @@ std::vector<float> LoadImage1fFromEXR(const char* infilename, int* pW, int* pH)
   *pH = uint32_t(height);
   
   #pragma omp parallel for
-  for (int i = 0; i < imgSize; ++i)
+  for(int y = 0; y < height; ++y)
   {
-    const int i4 = i * 4;
-    if (std::isinf(out[i4]))
-      result[i] = 65504.0f;                       // max half float according to ieee
-    else
-      result[i] = clamp(out[i4], 0.0f, 65504.0f); // max half float according to ieee
+    for (int x = 0; x < width; ++x)
+    {
+      size_t idx = (x + (height - y - 1) * width) * 4;
+      size_t out_idx = x + y * width;
+      if (std::isinf(out[idx]))
+        result[out_idx] = 65504.0f;                       // max half float according to ieee
+      else
+        result[out_idx] = clamp(out[idx], 0.0f, 65504.0f); // max half float according to ieee
+      
+    }
   }
 
   free(out);
@@ -369,10 +374,17 @@ std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH)
     return std::vector<float>();
   }
 
-  std::vector<float> result(width * height*4);
+  std::vector<float> result(width * height * 4);
   *pW = uint32_t(width);
   *pH = uint32_t(height);
-  memcpy(result.data(), out, width*height*sizeof(float)*4);
+
+  #pragma omp parallel for
+  for(int y = 0; y < height; y++)
+  {
+    const int offset1 = (height - y - 1) * width * 4;
+    const int offset2 = y * width * 4;
+    memcpy((void*)(result.data() + offset1), (void*)(out + offset2), width * sizeof(float) * 4);
+  }
   free(out);  
   
   return result;

@@ -22,6 +22,8 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
     case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
     case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
+    case KSPEC_SPD_TEX            : return "SPD_TEX";
+    case KSPEC_MAT_TYPE_DIELECTRIC: return "DIELECTRIC";
     
     case KSPEC_BLEND_STACK_SIZE   :
     {
@@ -79,6 +81,14 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   features[KSPEC_BLEND_STACK_SIZE]   = 1; // set smallest possible stack size for blends (i.e. blends are disabled!)
   features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
+  for(auto specNode : g_lastScene.SpectraNodes())
+  {
+    auto spec_id   = specNode.attribute(L"id").as_uint();
+    auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+    if(refs_attr)
+      features[KSPEC_SPD_TEX] = 1; 
+  }
+
   //// list reauired material features
   //
   for(auto materialNode : g_lastScene.MaterialNodes())
@@ -239,7 +249,7 @@ void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
 
 namespace {
 
-  void PushDummySpectrum(std::vector<float> &spec_values, std::vector<uint2> &spec_offsets)
+  void PushDummySpectrum(std::vector<float> &spec_values, std::vector<uint2> &spec_offsets, uint32_t id = 0xFFFFFFFF)
   {
     Spectrum uniform1;
     uniform1.id = 0;
@@ -256,7 +266,10 @@ namespace {
     
     uint32_t offset = uint32_t(spec_values.size());
     std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(spec_values));
-    spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+    if(id == 0xFFFFFFFF)
+      spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+    else
+      spec_offsets[id] = uint2{offset, uint32_t(specValsUniform.size())};
   }
 
 }
@@ -340,8 +353,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     auto spec_id   = specNode.attribute(L"id").as_uint();
 
+    auto val_attr = specNode.attribute(L"value");
     auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-    if(refs_attr) //might need to remove later
+
+    if(refs_attr) // spectrum is represented as texture array
     {
       auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 
@@ -354,20 +369,33 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       {
         m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
       }
-      
+      m_actualFeatures[KSPEC_SPD_TEX] = 1;
       m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-      m_spec_offset_sz.push_back(uint2{spec_id, 0});
+      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+
       resources.loadedSpectrumCount += 1;
       resources.specTexIds.insert(spec_id);
     }
     else
     {
-      auto spec_path = std::filesystem::path(sceneFolder);
-      spec_path.append(specNode.attribute(L"loc").as_string());
+      if (val_attr) // spectrum is specified directly in XML
+      {
+        std::wstring wstr = val_attr.as_string();
+        auto specVec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+        resources.spectraInfo.push_back({specVec, spec_id});
+        
+      }
+      else // spectrum is specified in a .spd file
+      {
+        auto spec_path = std::filesystem::path(sceneFolder);
+        spec_path.append(specNode.attribute(L"loc").as_string());
 
-      std::wstring wstr = spec_path.wstring();
+        auto str = spec_path.string();
+        resources.spectraInfo.push_back({str, spec_id});
+      }
 
-      resources.spectraInfo.push_back({wstr, spec_id});
+      m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
       resources.loadedSpectrumCount += 1;
     }
   }
@@ -638,11 +666,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       const auto &spec = specInfo.load();
 
       if(spec) {
+        auto id = spec.value().id;
         auto specValsUniform = spec->ResampleUniform();
 
         uint32_t offset = uint32_t(m_spec_values.size());
         std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+        m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
       }
       else {
         PushDummySpectrum(m_spec_values, m_spec_offset_sz);
@@ -900,19 +929,26 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
     std::filesystem::path p{dir};
     uint step, size;
 
+    std::vector<float3> spec_lut3;
     std::string path = (p / "sp_lut0.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
+    if(!load_sigpoly_lut(spec_lut3, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut1.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut2.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
-    if(m_spec_lut.size() != size * size * size * 3) {
+    if(spec_lut3.size() != size * size * size * 3) {
       std::cout << "Error loading lut" << std::endl;
+    }
+
+    m_spec_lut.resize(spec_lut3.size());
+    for(size_t i = 0; i < spec_lut3.size(); ++i)
+    {
+      m_spec_lut[i] = float4(spec_lut3[i].x, spec_lut3[i].y, spec_lut3[i].z, 0.0f);
     }
 }

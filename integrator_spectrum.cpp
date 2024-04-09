@@ -35,7 +35,7 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
     res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
   }
-  else if(m_spectral_mode) {
+  else if(m_spectral_mode != 0) {
 
   }
 
@@ -113,17 +113,17 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
     std::cerr << "SpecId " << specId << ", a_wavelengths = " << a_wavelengths.x << " " << a_wavelengths.y << " " << a_wavelengths.z << std::endl;
   }*/
 
-  if(specId != INVALID_SPECTRUM_ID)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && specId != INVALID_SPECTRUM_ID)
   {
     const uint2 data   = m_spec_offset_sz[specId];
     const uint  offset = data.x;
     const uint  size   = data.y;
-    
+
     if(size > 0) // sample SPD
     {
       res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
     }
-    else // check if spectrum is represented as textures
+    else if(KSPEC_SPD_TEX != 0) // check if spectrum is represented as textures
     {
       const uint2 tex_data  = m_spec_tex_offset_sz[specId];
       const uint tex_offset = tex_data.x;
@@ -158,9 +158,9 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
       }
     }
   }
-  else if(m_spectral_mode) {
+  else if(m_spectral_mode != 0) {
     //std::cerr << "Upsampling" << std::endl;
-    Upsample(&texColor, &a_wavelengths, &res);
+    res = Upsample(texColor, a_wavelengths);
   }
 
   return res;

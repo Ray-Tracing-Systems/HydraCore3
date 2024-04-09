@@ -58,7 +58,7 @@ int main(int argc, const char** argv) // common hydra main
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
   std::string fbLayer        = "color";
-  std::string resourceDir   = ".";
+  std::string resourceDir   = "resources";
   float gamma                = 2.4f; // out gamma, special value, see save image functions.
 
   ///////////////////////////////////////////////////////////////////////////////////////

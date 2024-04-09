@@ -163,7 +163,7 @@ public:
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //Upsampling
-  void Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum);
+  float4 Upsample(float4 in_color, float4 in_wavelenghts);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -257,10 +257,10 @@ public:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags);
+  virtual BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+                                           MisData* a_misPrev, const uint a_currRayFlags);
                                     
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+  virtual BsdfEval   MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t BlendSampleAndEval(uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes);
@@ -385,9 +385,10 @@ public:
   std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
 
   // Upsampler
-  std::vector<float3> m_spec_lut;
-  uint m_spec_lut_csize = 65;
-  uint m_spec_lut_step = 4;
+  // std::vector<float3> m_spec_lut;
+  std::vector<float4> m_spec_lut;
+  uint32_t m_spec_lut_csize = 65;
+  uint32_t m_spec_lut_step = 4;
   
   void LoadUpsamplingResources(const std::string &dir);
 
@@ -414,8 +415,9 @@ public:
   static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
   static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
   static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 16;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 17;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 17; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 18; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -431,10 +433,10 @@ public:
   // for recording path "constant" parameters, override in dereved class
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  virtual void RecordPixelRndIfNeeded(float2 offsets, float u){}
+  virtual void RecordPixelRndIfNeeded(float4 offsets, float2 wt){}
   virtual void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit){}
   virtual void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow){}
-  virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
+  virtual void RecordLightRndIfNeeded(uint32_t bounceId, float4 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
 

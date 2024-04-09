@@ -33,10 +33,12 @@ public:
     : loader{}, spec_id{INVALID_SPECTRUM_ID}, spectrum{} {}
   SpectrumLoader(spec::ISpectrum::ptr &&ptr, uint32_t spec_id)
     : loader{new SimpleLoader(std::move(ptr))}, spec_id{spec_id}, spectrum{} {}
-  SpectrumLoader(const std::wstring &str, uint32_t spec_id)
+  SpectrumLoader(const std::string &str, uint32_t spec_id)
     : loader{new FileLoader(str)}, spec_id{spec_id}, spectrum{} {}
   SpectrumLoader(const spec::vec3 &v, uint32_t spec_id)
     : loader{new UpsampleLoader(v)}, spec_id{spec_id}, spectrum{} {}
+  SpectrumLoader(const std::vector<float> &v, uint32_t spec_id)
+    : loader{new VectorLoader(v)}, spec_id{spec_id}, spectrum{} {}
 
   SpectrumLoader(const SpectrumLoader &other) = delete;
   SpectrumLoader &operator=(const SpectrumLoader &other) = delete;
@@ -73,8 +75,8 @@ private:
 
   struct FileLoader : public ILoader
   {
-    std::wstring path;
-    FileLoader(const std::wstring &p) : path(p) {}
+    std::string path;
+    FileLoader(const std::string &p) : path(p) {}
     void load(spec::ISpectrum::sptr &ptr) override;
   };
 
@@ -92,6 +94,13 @@ private:
     void load(spec::ISpectrum::sptr &ptr) override;
   };
 
+  struct VectorLoader : public ILoader
+  {
+    std::vector<float> specVec;
+    VectorLoader(const std::vector<float> &vec) : specVec(std::move(vec)) {}
+    void load(spec::ISpectrum::sptr &ptr) override;
+  };
+
   mutable ILoader *loader;
   uint32_t spec_id;
   mutable std::optional<Spectrum> spectrum;
@@ -106,5 +115,7 @@ uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoad
 float4 DownsampleSpectrum(const Spectrum &st);
 
 spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &rgb);
+
+std::vector<float> ParseSpectrumStr(const std::string &specStr);
 
 #endif

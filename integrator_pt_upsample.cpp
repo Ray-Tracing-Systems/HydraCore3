@@ -1,6 +1,9 @@
 #include "integrator_pt.h"
 #include "include/cglobals.h"
 #include "LiteMath.h"
+#ifndef __OPENCL_VERSION__
+using namespace LiteMath;
+#endif
 #include <iostream>
 
 float fmaf(float a, float b, float c) 
@@ -14,7 +17,7 @@ int safe_int(int i, int size)
 }
 
 float smoothstep2(float x) {
-    return LiteMath::smoothstep(0.0f, 1.0f, LiteMath::smoothstep(0.0f, 1.0f, x));
+    return smoothstep(0.0f, 1.0f, smoothstep(0.0f, 1.0f, x));
 }
 
 float aid_to_alpha(int alpha_id, int size)
@@ -34,15 +37,16 @@ float4 sigmoid_polynomial(float4 x, float3 coef)
 
 float inv_smoothstep(float x) 
 {
-    return 0.5f - sinf(asin(fmaf(-2.0f, x, 1.0f)) / 3.0f);
+    return 0.5f - std::sin(std::asin(fmaf(-2.0f, x, 1.0f)) / 3.0f);
 }
 
-void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum)
+float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
 {   
-    const uint _size = m_spec_lut_csize;
-    const uint _step = m_spec_lut_step;
+    float4 out_spectrum;
+    const int _size = int(m_spec_lut_csize);
+    const int _step = int(m_spec_lut_step);
 
-    float4 color = LiteMath::clamp(in_color[0], 0.0f, 1.0f);
+    float4 color = clamp(in_color, 0.0f, 1.0f);
 
     uint amax = color[0] >= color[1] ? 0 : 1;
     amax = color[amax] >= color[2] ? amax : 2;
@@ -95,7 +99,7 @@ void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, 
     const uint alpha2a1_off = offset + (alpha2_id * _size + a1_id) * _size;
     const uint alpha2a2_off = offset + (alpha2_id * _size + a2_id) * _size;
     
-    float3 res = m_spec_lut[alpha1a1_off + b1_id] * daf2 * dbf2 * dalphaf2 * div
+    float4 res = m_spec_lut[alpha1a1_off + b1_id] * daf2 * dbf2 * dalphaf2 * div
                + m_spec_lut[alpha2a1_off + b1_id] * daf2 * dbf2 * dalphaf1 * div
                + m_spec_lut[alpha1a1_off + b2_id] * daf2 * dbf1 * dalphaf2 * div
                + m_spec_lut[alpha2a1_off + b2_id] * daf2 * dbf1 * dalphaf1 * div
@@ -104,7 +108,8 @@ void Integrator::Upsample(const float4 *in_color, const float4 *in_wavelenghts, 
                + m_spec_lut[alpha1a2_off + b2_id] * daf1 * dbf1 * dalphaf2 * div
                + m_spec_lut[alpha2a2_off + b2_id] * daf1 * dbf1 * dalphaf1 * div;
     
-    *out_spectrum = sigmoid_polynomial(*in_wavelenghts, res);
+    out_spectrum = sigmoid_polynomial(in_wavelenghts, to_float3(res));
+    return out_spectrum;
    /* 
     if(res.x == 0.0f && res.y == 0.0f && res.z == 0.0f) {
         std::cerr << spec::format("[%f %f %f] with {a=%d, b=%d, alphaf=%f, alpha1_id=%d, alpha2_id=%d,\n\t"

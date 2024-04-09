@@ -30,10 +30,15 @@ float4x4 ReadMatrixFromString(const std::string& str)
   return res;
 }
 
-HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes)
+HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes, bool from_spectrum)
 {
   HydraSampler res;
-  auto texNode = a_colorNodes.child(L"texture");
+  pugi::xml_node texNode;
+
+  if(from_spectrum)
+    texNode = a_colorNodes.child(L"spectrum");
+  else
+    texNode = a_colorNodes.child(L"texture");
   if(texNode == nullptr)
     return res;
   
@@ -180,7 +185,7 @@ ColorHolder GetVariableColorFromNode(const pugi::xml_node& a_node, ResourceConte
 
 
 
-void LoadSpectralTextures(const uint32_t specId,
+void LoadSpectralTextures(const uint32_t specId, HydraSampler& a_sampler,
                           const ResourceContext &resources,
                           std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                           std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
@@ -197,13 +202,13 @@ void LoadSpectralTextures(const uint32_t specId,
       uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
 
       //TODO: put sampler somewhere in XML
-      HydraSampler sampler;
-      sampler.inputGamma = 1.0f;
-      sampler.texId = xml_tex_id;
-      sampler.sampler.addressU = Sampler::AddressMode::CLAMP;
-      sampler.sampler.addressV = Sampler::AddressMode::CLAMP;
+      // HydraSampler sampler;
+      // sampler.inputGamma = 1.0f;
+      a_sampler.texId = xml_tex_id;
+      // sampler.sampler.addressU = Sampler::AddressMode::CLAMP;
+      // sampler.sampler.addressV = Sampler::AddressMode::CLAMP;
 
-      const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, resources, sampler, texCache, textures);
+      const auto& [sampler_out, loaded_tex_id] = LoadTextureById(xml_tex_id, resources, a_sampler, texCache, textures);
       spec_tex_ids_wavelengths[offset + i].x = loaded_tex_id;     
     }
     loadedSpectralTextures.insert(specId);
@@ -675,7 +680,8 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, ResourceContext
 
     if(is_spectral_mode && resources.specTexIds.find(mat.spdid[0]) != resources.specTexIds.end())
     {
-      LoadSpectralTextures(mat.spdid[0], resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
+      auto sampler = ReadSamplerFromColorNode(nodeColor, true);
+      LoadSpectralTextures(mat.spdid[0], sampler, resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
     }
   }
@@ -737,7 +743,7 @@ Material LoadBlendMaterial(const pugi::xml_node& materialNode, ResourceContext &
   Material mat = {};
 
   mat.mtype    = MAT_TYPE_BLEND;
-  mat.cflags   = uint(-1);
+  mat.cflags   = 0;
   mat.texid[0] = 0;
   mat.data[BLEND_WEIGHT] = 1.0f;
   
@@ -826,7 +832,8 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, ResourceContext
 
     if(is_spectral_mode && resources.specTexIds.find(specId) != resources.specTexIds.end())
     {
-      LoadSpectralTextures(specId, resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
+      auto sampler = ReadSamplerFromColorNode(nodeColor, true);
+      LoadSpectralTextures(specId, sampler, resources, texCache, textures, spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                            loadedSpectralTextures);
     }
 
