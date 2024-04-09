@@ -3,6 +3,7 @@ import os
 import subprocess
 import re
 import argparse
+import sys
 
 os.environ["OPENCV_IO_ENABLE_OPENEXR"]="1"
 import cv2
@@ -15,7 +16,7 @@ from colorama import Fore
 ############################################################################################################
 ############################################################################################################
 
-def alignIntegratorName(name): # "naivept","shadowpt","mispt" ==> "naivept ","shadowpt","mispt   " 
+def alignIntegratorName(name): # "naivept","shadowpt","mispt" ==> "naivept ","shadowpt","mispt   "
   if name == "mispt":
     return name + "   "
   elif  name == "naivept":
@@ -27,27 +28,29 @@ def alignIntegratorName(name): # "naivept","shadowpt","mispt" ==> "naivept ","sh
 ############################################################################################################
 
 class REQ:
-  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4):
+  def __init__(self, name, tests, imsize = (512,512), integrators=None, naivemul = 4):
+    if integrators is None:
+      integrators = ["naivept", "shadowpt", "mispt"]
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
     self.integs = integrators
     self.naivem = naivemul
     self.times  = []
-  
+
   def test(req, gpu_id=0):
     pass
 
   def need_render_time(req):
     return False
-  
+
   def run(req, test_name, args, image_ref, outp, inregrator):
     try:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       output  = res.stdout.decode('utf-8')
       #print(output)
       pattern = r'PathTraceBlock\(MIS-PT\) = (\d+\.\d+) ms'
-      match   = re.search(pattern, output) 
+      match   = re.search(pattern, output)
       if match:
         execution_time_ms = round(float(match.group(1)))
         req.times.append(execution_time_ms)
@@ -57,8 +60,8 @@ class REQ:
       PSNR      = cv2.PSNR(image_ref,image_mis)
       color     = Fore.GREEN
       message   = "[PASSED]"
-      if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
-      if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
+      if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]")
+      if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]")
       Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
     except Exception as e:
       Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
@@ -69,7 +72,9 @@ class REQ:
       return
 
 class REQ_H2(REQ):
-  def __init__(self, name, tests, imsize = (512,512), integrators = ["naivept","shadowpt","mispt"], naivemul = 4, imname = "w_ref.png"):
+  def __init__(self, name, tests, imsize = (512,512), integrators=None, naivemul = 4, imname ="w_ref.png"):
+    if integrators is None:
+      integrators = ["naivept", "shadowpt", "mispt"]
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
@@ -79,7 +84,7 @@ class REQ_H2(REQ):
     self.times  = []
 
   def test(req, gpu_id=0):
-    for test_name in req.tests: 
+    for test_name in req.tests:
       image_ref = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + req.image_name, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
       full = PATH_TO_HYDRA2_TESTS + "/tests_f/" + test_name + "/statex_00001.xml"
       devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
@@ -87,7 +92,7 @@ class REQ_H2(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
         for inregrator in req.integs:
           outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/z_" + dev_type + inregrator + ".bmp"
-          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+          args = [HYDRA3_PATH, "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
           args = args + ["--" + dev_type]
@@ -102,12 +107,14 @@ class REQ_H2(REQ):
           PSNR    = cv2.PSNR(image1, image2)
           color   = Fore.GREEN
           message = "[PASSED]"
-          if PSNR < 40.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
-          if PSNR < 35.0: (color,message) = (Fore.RED, "[FAILED]") 
-          Log().print_colored_text("  {}: PSNR({}, CPU/GPU) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color) 
+          if PSNR < 40.0: (color,message) = (Fore.YELLOW,"[PASSED]")
+          if PSNR < 35.0: (color,message) = (Fore.RED, "[FAILED]")
+          Log().print_colored_text("  {}: PSNR({}, CPU/GPU) = {:.2f}".format(message,alignIntegratorName(inregrator),PSNR), color = color)
 
 class REQ_H2GBuff(REQ):
-  def __init__(self, name, tests, imsize = (512,512), integrators = ["mispt"], naivemul = 4):
+  def __init__(self, name, tests, imsize = (512,512), integrators=None, naivemul = 4):
+    if integrators is None:
+      integrators = ["mispt"]
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
@@ -119,21 +126,21 @@ class REQ_H2GBuff(REQ):
     try:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       output  = res.stdout.decode('utf-8')
-      
+
       all_pairs = [("w_ref2.png", "z_rend2.png", "normal"),
                    ("w_ref3.png", "z_rend3.png", "texcol"),
                    ("w_ref5.png", "z_rend5.png", "matid"),
                    ("w_ref6.png", "z_rend6.png", "instid"),
                    ("w_ref7.png", "z_rend7.png", "objid")]
-                   
+
       for trio in all_pairs:
         image_ref1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + trio[0], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
         image_our1 = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/" + trio[1], cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
         PSNR       = cv2.PSNR(image_ref1,image_our1)
         color     = Fore.GREEN
         message   = "[PASSED]"
-        if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]") 
-        if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]") 
+        if PSNR < 35.0: (color,message) = (Fore.YELLOW,"[PASSED]")
+        if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]")
         Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message,alignIntegratorName(trio[2]),PSNR), color = color)
 
     except Exception as e:
@@ -145,7 +152,7 @@ class REQ_H2GBuff(REQ):
       return
 
   def test(req, gpu_id=0):
-    for test_name in req.tests: 
+    for test_name in req.tests:
       image_ref = cv2.imread(PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/w_ref.png", cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
       full = PATH_TO_HYDRA2_TESTS + "/tests/" + test_name + "/statex_00001.xml"
       devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
@@ -153,13 +160,16 @@ class REQ_H2GBuff(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, full))
         for inregrator in req.integs:
           outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + "/z_rend.png"
-          args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+          args = [HYDRA3_PATH, "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
           args = args + ["--cpu", "-evalgbuffer", "1"]
           req.run(test_name, args, image_ref, outp, inregrator)
 
+
 class REQ_H2Spectral(REQ):
-  def __init__(self, name, tests, wavelengths, compare_hdr = False, imsize = (512,512), integrators = ["mispt"], naivemul = 4):
+  def __init__(self, name, tests, wavelengths, compare_hdr = False, imsize = (512,512), integrators=None, naivemul = 4):
+    if integrators is None:
+      integrators = ["mispt"]
     self.name   = name
     self.tests  = tests
     self.imsize = imsize
@@ -172,7 +182,7 @@ class REQ_H2Spectral(REQ):
   def run(req, test_name, args, wave):
     try:
       res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
+
       if req.hdr:
         image_names = (f"{wave}nm.exr", f"h3_{wave}nm.exr")
       else:
@@ -187,20 +197,21 @@ class REQ_H2Spectral(REQ):
       if PSNR < 30.0: (color,message) = (Fore.RED, "[FAILED]")
       Log().print_colored_text("  {}: PSNR({}) = {:.2f}".format(message, alignIntegratorName(f"{wave} nm"), PSNR), color = color)
 
-      return PSNR
-
     except Exception as e:
       Log().status_info("Failed to launch sample {0} : {1}".format(test_name, e), status=Status.FAILED)
       return
+
     if res.returncode != 0:
       Log().status_info("{}: launch, returncode = {}".format(test_name,res.returncode), status=Status.FAILED)
       Log().save_std_output(test_name, res.stdout.decode(), res.stderr.decode())
       return
 
+    return PSNR
+
   def test(req, gpu_id=0):
     for test_name in req.tests:
       PSNR_avg = {}
-      for idx, wave in enumerate(req.wavelengths): 
+      for idx, wave in enumerate(req.wavelengths):
         full = PATH_TO_HYDRA2_TESTS + "/tests/" + test_name + f"/statex_{idx + 1:05d}.xml"
         devices = ["gpu"] if not TEST_CPU else ["gpu", "cpu"]
         for dev_type in devices:
@@ -208,7 +219,7 @@ class REQ_H2Spectral(REQ):
           for inregrator in req.integs:
             name = f"/h3_{wave}nm.exr" if req.hdr else f"/h3_{wave}nm.png"
             outp = PATH_TO_HYDRA2_TESTS + "/tests_images/" + test_name + name
-            args = ["./bin-release/hydra", "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+            args = [HYDRA3_PATH, "-in", full, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
             args = args + ["-width", str(req.imsize[0]), "-height", str(req.imsize[1])]
             args = args + ["--gpu", "-channels", "1"]
             args = args + ["--" + dev_type]
@@ -240,7 +251,7 @@ class REQ_HX(REQ):
     self.integs = integrators
     self.naivem = naivemul
     self.spectral = is_spectral
-    self.auxArgs  = auxArgs 
+    self.auxArgs  = auxArgs
     self.times    = []
 
   def test(req, gpu_id=0):
@@ -254,7 +265,7 @@ class REQ_HX(REQ):
         Log().info("  rendering scene: '{0}', dev_type='{1}', scene = '{2}'".format(test_name, dev_type, scene_path))
         for inregrator in req.integs:
           outp = folder_path + "/y" + str(id) + "_" + dev_type + inregrator + os.path.splitext(imgp)[1]
-          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
+          args = [HYDRA3_PATH, "-in", scene_path, "-out", outp, "-integrator", inregrator, "-spp-naive-mul", str(req.naivem)]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
@@ -292,7 +303,7 @@ class REQ_HP(REQ):
         for integrator in req.integs:
           outp = folder_path + "/y" + str(id) + "_" + dev_type + integrator + ".bmp"
           print(outp)
-          args = ["./bin-release/hydra", "-in", scene_path, "-out", outp, "-integrator", integrator, "-spp", "1024"]
+          args = [HYDRA3_PATH, "-in", scene_path, "-out", outp, "-integrator", integrator, "-spp", "1024"]
           args = args + ["-gpu_id", str(gpu_id)]  # for single launch samples
           args = args + ["-width", str(imsize2[0]), "-height", str(imsize2[1])]
           args = args + ["--" + dev_type]
@@ -305,21 +316,35 @@ class REQ_HP(REQ):
 
 
 if __name__ == '__main__':
+
+  if sys.platform == 'win32':
+    HYDRA3_PATH = "./bin-release/Release/hydra.exe"
+  else:  # if sys.platform == 'linux':
+    HYDRA3_PATH = "./bin-release/hydra"
+
   parser = argparse.ArgumentParser()
   parser.add_argument('-h2', '--hydra2-tests', action="store", help="path to hydra2 tests (HydraAPI-tests repo)",
                       default='../../HydraAPI-tests')
   parser.add_argument('-h3', '--hydra3-tests', action="store", help="path to hydra3 tests",
                       default='../../comparisonrender')
+  parser.add_argument('-hydra', '--hydra-bin', action="store", help="path to hydra3 executable")
   parser.add_argument('--cpu', help="run tests on cpu", action='store_true')
 
+
   args = parser.parse_args()
+
+  if args.hydra_bin:
+    HYDRA3_PATH = args.hydra_bin.replace(os.sep, '/')
 
   TEST_CPU             = args.cpu
   PATH_TO_HYDRA2_TESTS = os.path.abspath(args.hydra2_tests)
   PATH_TO_HYDRA3_SCENS = os.path.abspath(args.hydra3_tests)
 
+  PATH_TO_HYDRA2_TESTS = PATH_TO_HYDRA2_TESTS.replace(os.sep, '/')
+  PATH_TO_HYDRA3_SCENS = PATH_TO_HYDRA3_SCENS.replace(os.sep, '/')
+
   reqs = []
-  
+
 
   reqs.append( REQ_H2("mat_mirror",           ["test_102"], integrators = ["naivept","mispt"]) )
   reqs.append( REQ_H2("mat_lambert_texture",  ["test_103"]) )
@@ -341,14 +366,14 @@ if __name__ == '__main__':
                       [PATH_TO_HYDRA2_TESTS + "/tests_f/test_248/statex_00001.xml"],
                       [PATH_TO_HYDRA2_TESTS + "/tests_images/test_248/z_ref_0.png"],
                       imsize = [(512, 512)],
-                      naivemul = 1, integrators = ["mispt"], is_spectral = False, 
+                      naivemul = 1, integrators = ["mispt"], is_spectral = False,
                       auxArgs = ["-fb_layer", "direct"]))
 
   reqs.append( REQ_HX("lgt_indirect",
                       [PATH_TO_HYDRA2_TESTS + "/tests_f/test_248/statex_00001.xml"],
                       [PATH_TO_HYDRA2_TESTS + "/tests_images/test_248/z_ref_1.png"],
                       imsize = [(512, 512)],
-                      naivemul = 1, integrators = ["mispt"], is_spectral = False, 
+                      naivemul = 1, integrators = ["mispt"], is_spectral = False,
                       auxArgs = ["-fb_layer", "indirect"]))
 
   reqs.append( REQ_H2("lgt_env", ["test_203", "test_204", "test_214"], integrators = ["mispt"]) )

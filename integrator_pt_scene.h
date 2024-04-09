@@ -72,7 +72,7 @@ public:
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode);
 float4x4 ReadMatrixFromString(const std::string& str);
-HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes);
+HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes, bool from_spectrum = false);
 
 std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy();
 std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma = false);

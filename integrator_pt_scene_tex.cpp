@@ -65,7 +65,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
     fin.read((char*)wh, sizeof(int)*2);
     if(wh[0] == 0 || wh[1] == 0)
     {
-      std::cout << "[LoadTextureAndMakeCombined]: can't read texture from file '" << fnameA.c_str() << "'; use white dummy;" << std::endl;
+      //std::cout << "[LoadTextureAndMakeCombined]: can't read texture from file '" << fnameA.c_str() << "'; use white dummy;" << std::endl;
       float4 data[1] = {float4(1.0f, 1.0f, 1.0f, 1.0f)};
       auto pTexture  = std::make_shared< Image2D<float4> >(1, 1, data);
       pTexture->setSRGB(false);
@@ -91,6 +91,12 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
       pResult       = MakeCombinedTexture2D(pTexture, a_sampler);
     }
   }
+
+  //if(pResult->width() <= 1 || pResult->height() <= 1) 
+  //{
+  //  const std::string fileName = hydra_xml::ws2s(a_texInfo.path);  
+  //  std::cout << "[LoadTextureAndMakeCombined]: ALERT! texture at path '" << fileName.c_str() << "' is not found, file does not exists!" << std::endl;
+  //}
  
   return pResult;
 }

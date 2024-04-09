@@ -11,7 +11,7 @@
 #include "adam.h"
 
 void SaveFrameBufferToEXR(float* data, int width, int height, int channels, const char* outfilename, float a_normConst = 1.0f);
-bool SaveImage4fToBMP(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, float a_gamma = 2.2f);
+bool SaveImage4fToBMP(const float* rgb, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
 std::vector<float> LoadImage4fFromEXR(const char* infilename, int* pW, int* pH);
 
 float4x4 ReadMatrixFromString(const std::string& str);
@@ -208,7 +208,8 @@ int main(int argc, const char** argv)
 
     float loss = pImpl->PathTraceDR(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), currPassNumber,
                                     refColor.data(), imgData.data(), imgGrad.data(), imgGrad.size());                                
-
+    //break;
+    
     //std::vector<float> gradTest(imgGrad.size()); 
     //std::fill(gradTest.begin(), gradTest.end(), 0.0f);
     //Image2D4fRegularizer(wh[0], wh[1], imgData.data(), gradTest.data());
@@ -249,7 +250,7 @@ int main(int argc, const char** argv)
       std::stringstream strOut;
       strOut << imageOutClean << std::setfill('0') << std::setw(2) << iter << ".bmp";
       auto outName = strOut.str();
-      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, outName.c_str(), normConst, 2.4f);
+      SaveImage4fToBMP(realColor.data(), FB_WIDTH, FB_HEIGHT, 4, outName.c_str(), normConst, 2.4f);
     }
     else if(gradMode == 0)
     {
@@ -259,7 +260,7 @@ int main(int argc, const char** argv)
     }
   }
 
-  SaveImage4fToBMP(imgData.data(), 256, 256, "z_opt_tex.bmp", 1.0f, 2.4f);
+  SaveImage4fToBMP(imgData.data(), 256, 256, 4, "z_opt_tex.bmp", 1.0f, 2.4f);
 
   return 0;
 }
