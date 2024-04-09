@@ -671,7 +671,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
         uint32_t offset = uint32_t(m_spec_values.size());
         std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-        m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
+
+        if(id <= m_spec_offset_sz.size())
+        {
+          m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+        }
+        else
+        {
+          m_spec_offset_sz[id] = uint2{offset, uint32_t(specValsUniform.size())};
+        }
       }
       else {
         PushDummySpectrum(m_spec_values, m_spec_offset_sz);
