@@ -1,7 +1,6 @@
 #include "spectrum_loader.h"
 #include <spectral/spec/spectral_util.h>
 #include <spectral/spec/conversions.h>
-#include <spectral/upsample/functional/sigpoly.h>
 #include <spectral/upsample/sigpoly.h>
 #include <unordered_map>
 #include <fstream>

@@ -163,7 +163,7 @@ public:
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
   //Upsampling
-  void Upsample(const float4 *in_color, const float4 *in_wavelenghts, float4 *out_spectrum);
+  float4 Upsample(float4 in_color, float4 in_wavelenghts);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -386,8 +386,8 @@ public:
 
   // Upsampler
   std::vector<float3> m_spec_lut;
-  uint m_spec_lut_csize = 65;
-  uint m_spec_lut_step = 4;
+  uint32_t m_spec_lut_csize = 65;
+  uint32_t m_spec_lut_step = 4;
   
   void LoadUpsamplingResources(const std::string &dir);
 
