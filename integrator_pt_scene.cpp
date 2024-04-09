@@ -353,8 +353,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     auto spec_id   = specNode.attribute(L"id").as_uint();
 
+    auto val_attr = specNode.attribute(L"value");
     auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-    if(refs_attr) //might need to remove later
+
+    if(refs_attr) // spectrum is represented as texture array
     {
       auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 
@@ -376,15 +378,24 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else
     {
+      if (val_attr) // spectrum is specified directly in XML
+      {
+        std::wstring wstr = val_attr.as_string();
+        auto specVec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+        resources.spectraInfo.push_back({specVec, spec_id});
+        
+      }
+      else // spectrum is specified in a .spd file
+      {
+        auto spec_path = std::filesystem::path(sceneFolder);
+        spec_path.append(specNode.attribute(L"loc").as_string());
+
+        auto str = spec_path.string();
+        resources.spectraInfo.push_back({str, spec_id});
+      }
+
       m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
       m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
-      
-      auto spec_path = std::filesystem::path(sceneFolder);
-      spec_path.append(specNode.attribute(L"loc").as_string());
-
-      std::wstring wstr = spec_path.wstring();
-
-      resources.spectraInfo.push_back({wstr, spec_id});
       resources.loadedSpectrumCount += 1;
     }
   }
