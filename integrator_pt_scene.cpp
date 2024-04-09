@@ -489,7 +489,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if (mat_type == thinFilmMatTypeStr)
     {
       mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
-                                 m_spec_values, m_spec_offset_sz);
+                                 m_spec_values, m_spec_offset_sz, m_cie_x, m_cie_y, m_cie_z, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
       uint layers = 0;
       for (auto layerNode : materialNode.child(L"layers").children()) layers++;

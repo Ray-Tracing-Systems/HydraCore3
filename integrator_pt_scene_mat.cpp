@@ -773,8 +773,10 @@ struct ThinFilmPrecomputed
   std::vector<float> int_transmittivity;
 };
 
-ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values,
-        const std::vector<uint2> &spec_offsets, const float* a_thickness, int layers)
+ThinFilmPrecomputed precomputeThinFilmSpectral(
+        const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
+        const float* a_thickness, int layers)
 {
   ThinFilmPrecomputed res;
   res.ext_reflectivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
@@ -844,10 +846,112 @@ ThinFilmPrecomputed precomputeThinFilm(const float extIOR, const uint* eta_id, c
       }
     }
   }
-  save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  //save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  return res;
+}
+
+ThinFilmPrecomputed precomputeThinFilmRGB(
+        const float extIOR, const uint* eta_id, const uint* k_id, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec, const float* a_thickness, int layers, 
+        const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z)
+{
+  ThinFilmPrecomputed res;
+  res.ext_reflectivity.resize(FILM_ANGLE_RES * 3);
+  res.ext_transmittivity.resize(FILM_ANGLE_RES * 3);
+  res.int_reflectivity.resize(FILM_ANGLE_RES * 3);
+  res.int_transmittivity.resize(FILM_ANGLE_RES * 3);
+  std::fill(res.ext_reflectivity.begin(), res.ext_reflectivity.end(), 0);
+  std::fill(res.ext_transmittivity.begin(), res.ext_transmittivity.end(), 0);
+  std::fill(res.int_reflectivity.begin(), res.int_reflectivity.end(), 0);
+  std::fill(res.int_transmittivity.begin(), res.int_transmittivity.end(), 0);
+
+  for (size_t i = 0; i < FILM_LENGTH_RES; ++i)
+  {
+    float wavelength = (LAMBDA_MAX - LAMBDA_MIN - 1) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
+    std::vector<complex> ior;
+    ior.reserve(layers + 1);
+    ior[0] = complex(extIOR, 0.f);
+    float eta, k;
+    uint2 data;
+    uint offset;
+    uint size;
+    for (size_t layer = 0; layer < layers; ++layer)
+    {
+      data  = spec_offsets[eta_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+      data  = spec_offsets[k_id[layer]];
+      offset = data.x;
+      size   = data.y;
+      k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+
+      ior[layer + 1] = complex(eta, k);
+    }
+    for (int j = 0; j < FILM_ANGLE_RES; ++j)
+    {
+      float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
+      
+      float cosTheta = clamp(cosf(theta), 1e-6f, 1.f);
+      FrReflRefr forward;
+      FrReflRefr backward;
+      if (layers == 2)
+      {
+        forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
+        backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+      }
+      else
+      {
+        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+      }
+
+      if(forward.refl < 0 || std::isnan(forward.refl) || std::isinf(forward.refl))
+      {
+        std::cout << "WARNING! Precomputed film external reflectance is " << forward.refl << std::endl;
+      }
+      if(forward.refr < 0 || std::isnan(forward.refr) || std::isinf(forward.refr))
+      {
+        std::cout << "WARNING! Precomputed film external transmittance is " << forward.refr << std::endl;
+      }
+      if(backward.refl < 0 || std::isnan(backward.refl) || std::isinf(backward.refl))
+      {      
+        std::cout << "WARNING! Precomputed film internal reflectance is " << backward.refl << std::endl;
+      }
+      if(backward.refr < 0 || std::isnan(backward.refr) || std::isinf(backward.refr))
+      {
+        std::cout << "WARNING! Precomputed film internal transmittance is " << backward.refr << std::endl;
+      }
+
+      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      float3 rgb = XYZToRGB(xyz);
+      res.ext_reflectivity[i * 3]     += rgb.x;
+      res.ext_reflectivity[i * 3 + 1] += rgb.y;
+      res.ext_reflectivity[i * 3 + 2] += rgb.z;
+
+      xyz = SpectrumToXYZ({forward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      rgb = XYZToRGB(xyz);
+      res.ext_transmittivity[i * 3]     += rgb.x;
+      res.ext_transmittivity[i * 3 + 1] += rgb.y;
+      res.ext_transmittivity[i * 3 + 2] += rgb.z;
+
+      xyz = SpectrumToXYZ({backward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      rgb = XYZToRGB(xyz);
+      res.int_reflectivity[i * 3]     += rgb.x;
+      res.int_reflectivity[i * 3 + 1] += rgb.y;
+      res.int_reflectivity[i * 3 + 2] += rgb.z;
+
+      xyz = SpectrumToXYZ({backward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      rgb = XYZToRGB(xyz);
+      res.ext_transmittivity[i * 3]     += rgb.x;
+      res.ext_transmittivity[i * 3 + 1] += rgb.y;
+      res.ext_transmittivity[i * 3 + 2] += rgb.z;
+    }
+  }
   return res;
 }
 
@@ -856,8 +960,9 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
                               std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
                               std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
                               std::vector<uint> &spec_id_vec, std::vector<float> &eta_k_vec,
-                              const std::vector<float> &spec_values,
-                              const std::vector<uint2> &spec_offsets)
+                              const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets,
+                              const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z,
+                              const int spectral_mode)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -936,17 +1041,33 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   {
     precompFlag = 1u;
     mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
-    mat.data[FILM_PRECOMP_ID] = as_float(precomputed_film.size() / (FILM_ANGLE_RES * FILM_LENGTH_RES * 4));
-    auto precomputed = precomputeThinFilm(mat.data[FILM_ETA_EXT], spec_id_vec.data(), spec_id_vec.data() + layers, spec_values, 
-          spec_offsets, thickness_vec.data(), layers);
-    std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
-    std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
-    std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));
-    std::copy(precomputed.int_transmittivity.begin(), precomputed.int_transmittivity.end(), std::back_inserter(precomputed_film));
+    mat.data[FILM_PRECOMP_OFFSET] = as_float(precomputed_film.size());
+    if (spectral_mode != 0)
+    {
+      auto precomputed = precomputeThinFilmSpectral(mat.data[FILM_ETA_EXT], spec_id_vec.data() + as_uint(mat.data[FILM_ETA_SPECID_OFFSET]), 
+              spec_id_vec.data() + as_uint(mat.data[FILM_K_SPECID_OFFSET]), spec_values, spec_offsets,
+              eta_k_vec.data() + as_uint(mat.data[FILM_ETA_OFFSET]), eta_k_vec.data() + as_uint(mat.data[FILM_K_OFFSET]),
+              thickness_vec.data(), layers);
+      std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.int_transmittivity.begin(), precomputed.int_transmittivity.end(), std::back_inserter(precomputed_film));
+    }
+    else
+    {
+      auto precomputed = precomputeThinFilmRGB(mat.data[FILM_ETA_EXT], spec_id_vec.data() + as_uint(mat.data[FILM_ETA_SPECID_OFFSET]), 
+              spec_id_vec.data() + as_uint(mat.data[FILM_K_SPECID_OFFSET]), spec_values, spec_offsets,
+              eta_k_vec.data() + as_uint(mat.data[FILM_ETA_OFFSET]), eta_k_vec.data() + as_uint(mat.data[FILM_K_OFFSET]),
+              thickness_vec.data(), layers, m_cie_x, m_cie_y, m_cie_z);
+      std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));
+      std::copy(precomputed.int_transmittivity.begin(), precomputed.int_transmittivity.end(), std::back_inserter(precomputed_film));
+    }
   }
   else
   {
-    mat.data[FILM_PRECOMP_ID] = as_float(0);
+    mat.data[FILM_PRECOMP_OFFSET] = as_float(0);
   }
 
   return mat;
