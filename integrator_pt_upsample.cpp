@@ -99,7 +99,7 @@ float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
     const uint alpha2a1_off = offset + (alpha2_id * _size + a1_id) * _size;
     const uint alpha2a2_off = offset + (alpha2_id * _size + a2_id) * _size;
     
-    float3 res = m_spec_lut[alpha1a1_off + b1_id] * daf2 * dbf2 * dalphaf2 * div
+    float4 res = m_spec_lut[alpha1a1_off + b1_id] * daf2 * dbf2 * dalphaf2 * div
                + m_spec_lut[alpha2a1_off + b1_id] * daf2 * dbf2 * dalphaf1 * div
                + m_spec_lut[alpha1a1_off + b2_id] * daf2 * dbf1 * dalphaf2 * div
                + m_spec_lut[alpha2a1_off + b2_id] * daf2 * dbf1 * dalphaf1 * div
@@ -108,7 +108,7 @@ float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
                + m_spec_lut[alpha1a2_off + b2_id] * daf1 * dbf1 * dalphaf2 * div
                + m_spec_lut[alpha2a2_off + b2_id] * daf1 * dbf1 * dalphaf1 * div;
     
-    out_spectrum = sigmoid_polynomial(in_wavelenghts, res);
+    out_spectrum = sigmoid_polynomial(in_wavelenghts, to_float3(res));
     return out_spectrum;
    /* 
     if(res.x == 0.0f && res.y == 0.0f && res.z == 0.0f) {

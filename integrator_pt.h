@@ -385,7 +385,8 @@ public:
   std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
 
   // Upsampler
-  std::vector<float3> m_spec_lut;
+  // std::vector<float3> m_spec_lut;
+  std::vector<float4> m_spec_lut;
   uint32_t m_spec_lut_csize = 65;
   uint32_t m_spec_lut_step = 4;
   

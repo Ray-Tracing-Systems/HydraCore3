@@ -929,19 +929,26 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
     std::filesystem::path p{dir};
     uint step, size;
 
+    std::vector<float3> spec_lut3;
     std::string path = (p / "sp_lut0.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
+    if(!load_sigpoly_lut(spec_lut3, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut1.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
     path = (p / "sp_lut2.slf").string();
-    if(!load_sigpoly_lut(m_spec_lut, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
+    if(!load_sigpoly_lut(spec_lut3, path, step, size) || step != m_spec_lut_step || size != m_spec_lut_csize)
       std::cout << "Error loading " << path << std::endl;
 
-    if(m_spec_lut.size() != size * size * size * 3) {
+    if(spec_lut3.size() != size * size * size * 3) {
       std::cout << "Error loading lut" << std::endl;
+    }
+
+    m_spec_lut.resize(spec_lut3.size());
+    for(size_t i = 0; i < spec_lut3.size(); ++i)
+    {
+      m_spec_lut[i] = float4(spec_lut3[i].x, spec_lut3[i].y, spec_lut3[i].z, 0.0f);
     }
 }
