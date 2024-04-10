@@ -892,7 +892,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
     {
       eta = eta_vec[layer];
       uint eta_id = eta_id_vec[layer];
-      if (eta_id < 0xFFFFFFFF)
+      if (eta_id < 0xFFFFFFFF && false)
       {
         data  = spec_offsets[eta_id];
         offset = data.x;
@@ -902,7 +902,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
 
       k = k_vec[layer];
       uint k_id = k_id_vec[layer];
-      if (k < 0xFFFFFFFF)
+      if (k < 0xFFFFFFFF && false)
       {
         data  = spec_offsets[k_id];
         offset = data.x;
@@ -947,29 +947,29 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
         std::cout << "WARNING! Precomputed film internal transmittance is " << backward.refr << std::endl;
       }
 
-      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       float3 rgb = XYZToRGB(xyz);
-      res.ext_reflectivity[j * 3]     += rgb.x;
-      res.ext_reflectivity[j * 3 + 1] += rgb.y;
-      res.ext_reflectivity[j * 3 + 2] += rgb.z;
+      res.ext_reflectivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
+      res.ext_reflectivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
+      res.ext_reflectivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
 
-      xyz = SpectrumToXYZ({forward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      xyz = SpectrumToXYZ({forward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.ext_transmittivity[j * 3]     += rgb.x;
-      res.ext_transmittivity[j * 3 + 1] += rgb.y;
-      res.ext_transmittivity[j * 3 + 2] += rgb.z;
+      res.ext_transmittivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
+      res.ext_transmittivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
+      res.ext_transmittivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
 
-      xyz = SpectrumToXYZ({backward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      xyz = SpectrumToXYZ({backward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.int_reflectivity[j * 3]     += rgb.x;
-      res.int_reflectivity[j * 3 + 1] += rgb.y;
-      res.int_reflectivity[j * 3 + 2] += rgb.z;
+      res.int_reflectivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
+      res.int_reflectivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
+      res.int_reflectivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
 
-      xyz = SpectrumToXYZ({backward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 0.0f, 0.0f, 0.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      xyz = SpectrumToXYZ({backward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       rgb = XYZToRGB(xyz);
-      res.ext_transmittivity[j * 3]     += rgb.x;
-      res.ext_transmittivity[j * 3 + 1] += rgb.y;
-      res.ext_transmittivity[j * 3 + 2] += rgb.z;
+      res.int_transmittivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
+      res.int_transmittivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
+      res.int_transmittivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
     }
   }
   return res;
