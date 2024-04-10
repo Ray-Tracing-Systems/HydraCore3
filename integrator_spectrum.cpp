@@ -42,7 +42,7 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
 float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer)
 {  
   float4 res = float4(m_films_eta_k_vec[as_uint(m_materials[matId].data[paramId]) + layer]);
-  if(a_wavelengths[0] == 0.0f)
+  if(a_wavelengths[0] == 0.0f && false)
     return res;
 
   const uint specId = m_films_spec_id_vec[as_uint(m_materials[matId].data[paramSpecId]) + layer];

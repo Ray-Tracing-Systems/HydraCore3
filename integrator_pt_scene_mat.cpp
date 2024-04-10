@@ -892,7 +892,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
     {
       eta = eta_vec[layer];
       uint eta_id = eta_id_vec[layer];
-      if (eta_id < 0xFFFFFFFF && false)
+      if (eta_id < 0xFFFFFFFF)
       {
         data  = spec_offsets[eta_id];
         offset = data.x;
@@ -902,7 +902,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
 
       k = k_vec[layer];
       uint k_id = k_id_vec[layer];
-      if (k < 0xFFFFFFFF && false)
+      if (k < 0xFFFFFFFF)
       {
         data  = spec_offsets[k_id];
         offset = data.x;
@@ -947,7 +947,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
         std::cout << "WARNING! Precomputed film internal transmittance is " << backward.refr << std::endl;
       }
 
-      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
+      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 380.0f, 380.0f, 380.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
       float3 rgb = XYZToRGB(xyz);
       res.ext_reflectivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
       res.ext_reflectivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;

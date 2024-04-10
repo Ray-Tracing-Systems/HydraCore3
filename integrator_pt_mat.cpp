@@ -206,10 +206,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       const bool spectral_mode = wavelengths[0] > 0.0f;
       // sampling 3 wavelengths for naive RGB method
       float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(700.f, 525.f, 450.f, 0.0f);
+      float4 wavelengths_sample = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(525.f, 0.f, 0.f, 0.0f);
       float extIOR = m_materials[currMatId].data[FILM_ETA_EXT];
       complex intIOR = complex(
-        SampleFilmsSpectrum(currMatId, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
-        SampleFilmsSpectrum(currMatId, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
+        SampleFilmsSpectrum(currMatId, wavelengths_sample, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
+        SampleFilmsSpectrum(currMatId, wavelengths_sample, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
       );
 
       if (as_uint(m_materials[currMatId].data[FILM_PRECOMP_FLAG]) > 0u)
@@ -431,10 +432,11 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           const bool spectral_mode = wavelengths[0] > 0.0f;
           // sampling 3 wavelengths for naive RGB method
           float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(700.f, 525.f, 450.f, 0.0f);
+          float4 wavelengths_sample = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(525.f, 0.f, 0.f, 0.0f);
           float extIOR = m_materials[currMat.id].data[FILM_ETA_EXT];
           complex intIOR = complex(
-            SampleFilmsSpectrum(currMat.id, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
-            SampleFilmsSpectrum(currMat.id, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
+            SampleFilmsSpectrum(currMat.id, wavelengths_sample, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
+            SampleFilmsSpectrum(currMat.id, wavelengths_sample, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
           );
           if (as_uint(m_materials[0].data[FILM_PRECOMP_FLAG]) > 0u)
           {

@@ -330,7 +330,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // std::vector<SpectrumInfo> spectraInfo;
   // spectraInfo.reserve(100);
-  if(m_spectral_mode != 0)
+  if(m_spectral_mode != 0 || true)
   {  
     for(auto specNode : scene.SpectraNodes())
     {
