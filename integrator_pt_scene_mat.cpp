@@ -1,4 +1,6 @@
 #include "integrator_pt_scene.h"
+#include "spectral/spec/conversions.h"
+#include "spectral/spec/spectral_util.h"
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
@@ -873,10 +875,11 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
   res.ext_transmittivity.resize(FILM_ANGLE_RES * 3);
   res.int_reflectivity.resize(FILM_ANGLE_RES * 3);
   res.int_transmittivity.resize(FILM_ANGLE_RES * 3);
-  std::fill(res.ext_reflectivity.begin(), res.ext_reflectivity.end(), 0.0f);
-  std::fill(res.ext_transmittivity.begin(), res.ext_transmittivity.end(), 0.0f);
-  std::fill(res.int_reflectivity.begin(), res.int_reflectivity.end(), 0.0f);
-  std::fill(res.int_transmittivity.begin(), res.int_transmittivity.end(), 0.0f);
+
+  spec::BasicSpectrum spec_refl_ext[FILM_ANGLE_RES];
+  spec::BasicSpectrum spec_refr_ext[FILM_ANGLE_RES];
+  spec::BasicSpectrum spec_refl_int[FILM_ANGLE_RES];
+  spec::BasicSpectrum spec_refr_int[FILM_ANGLE_RES];
 
   for (size_t i = 0; i < FILM_LENGTH_RES; ++i)
   {
@@ -947,30 +950,34 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
         std::cout << "WARNING! Precomputed film internal transmittance is " << backward.refr << std::endl;
       }
 
-      float3 xyz = SpectrumToXYZ({forward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 380.0f, 380.0f, 380.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
-      float3 rgb = XYZToRGB(xyz);
-      res.ext_reflectivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
-      res.ext_reflectivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
-      res.ext_reflectivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
-
-      xyz = SpectrumToXYZ({forward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
-      rgb = XYZToRGB(xyz);
-      res.ext_transmittivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
-      res.ext_transmittivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
-      res.ext_transmittivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
-
-      xyz = SpectrumToXYZ({backward.refl, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
-      rgb = XYZToRGB(xyz);
-      res.int_reflectivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
-      res.int_reflectivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
-      res.int_reflectivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
-
-      xyz = SpectrumToXYZ({backward.refr, 0.0f, 0.0f, 0.0f}, {wavelength, 500.0f, 500.0f, 500.0f}, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), true);
-      rgb = XYZToRGB(xyz);
-      res.int_transmittivity[j * 3]     += rgb.x / FILM_LENGTH_RES;
-      res.int_transmittivity[j * 3 + 1] += rgb.y / FILM_LENGTH_RES;
-      res.int_transmittivity[j * 3 + 2] += rgb.z / FILM_LENGTH_RES;
+      spec_refl_ext[j].set(wavelength, forward.refl);
+      spec_refr_ext[j].set(wavelength, forward.refr);
+      spec_refl_int[j].set(wavelength, backward.refl);
+      spec_refr_int[j].set(wavelength, backward.refr);
     }
+  }
+
+  for (uint i = 0; i < FILM_ANGLE_RES; ++i)
+  {
+    auto rgb = spec::xyz2rgb(spec::spectre2xyz(spec_refl_ext[i]));
+    res.ext_reflectivity[i * 3]     += rgb.x;
+    res.ext_reflectivity[i * 3 + 1] += rgb.y;
+    res.ext_reflectivity[i * 3 + 2] += rgb.z;
+
+    rgb = spec::xyz2rgb(spec::spectre2xyz(spec_refr_ext[i]));
+    res.ext_transmittivity[i * 3]     += rgb.x;
+    res.ext_transmittivity[i * 3 + 1] += rgb.y;
+    res.ext_transmittivity[i * 3 + 2] += rgb.z;
+
+    rgb = spec::xyz2rgb(spec::spectre2xyz(spec_refl_int[i]));
+    res.int_reflectivity[i * 3]     += rgb.x;
+    res.int_reflectivity[i * 3 + 1] += rgb.y;
+    res.int_reflectivity[i * 3 + 2] += rgb.z;
+
+    rgb = spec::xyz2rgb(spec::spectre2xyz(spec_refr_int[i]));
+    res.int_transmittivity[i * 3]     += rgb.x;
+    res.int_transmittivity[i * 3 + 1] += rgb.y;
+    res.int_transmittivity[i * 3 + 2] += rgb.z;
   }
   return res;
 }

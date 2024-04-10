@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
-option(USE_VULKAN "Enable Vulkan implementation" ON)
+option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
 
@@ -50,6 +50,10 @@ else()
 endif()
 
 find_package(OpenMP)
+
+#LIBSPECTRAL
+include(libspectral.cmake)
+#//////////
 
 if(USE_VULKAN)
 
@@ -219,7 +223,7 @@ else()
   set(CUSTOM_OMP "")
 endif()
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser spectral)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})
