@@ -50,6 +50,8 @@ shaders_generated/
 
 include/Integrator_generated_ubo.h
 
+scenes/
+
 # Scripts
 build_cpu.sh
 build_dbg.sh

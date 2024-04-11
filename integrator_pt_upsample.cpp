@@ -46,7 +46,7 @@ float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
     const int _size = int(m_spec_lut_csize);
     const int _step = int(m_spec_lut_step);
 
-    float4 color = clamp(in_color, 0.0f, 1.0f);
+    const float4 color = LiteMath::clamp(in_color, 0.0f, 1.0f);
 
     uint amax = color[0] >= color[1] ? 0 : 1;
     amax = color[amax] >= color[2] ? amax : 2;
@@ -119,4 +119,16 @@ float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
             daf, daf1, daf2, dbf, dbf1, dbf2, dalphaf, dalphaf1, dalphaf2) << std::endl;
     }
     */
+}
+
+
+float4 Integrator::UpsampleEmission(float4 in_color, float4 in_wavelenghts)
+{
+    uint amax = in_color[0] >= in_color[1] ? 0 : 1;
+    amax = in_color[amax] >= in_color[2] ? amax : 2;
+
+    float mul = in_color[amax];
+    if(mul <= 1.0f) mul = 1.0f;
+
+    return Upsample(in_color / mul, in_wavelenghts) * mul;
 }

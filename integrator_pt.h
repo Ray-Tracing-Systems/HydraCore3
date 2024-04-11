@@ -148,7 +148,7 @@ public:
                                 const uint* rayFlags, const float* a_time, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
-  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
+  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4 *a_wavelenghts, const float4* accumThoroughput,
                              float4* accumColor);
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
@@ -164,6 +164,7 @@ public:
 
   //Upsampling
   float4 Upsample(float4 in_color, float4 in_wavelenghts);
+  float4 UpsampleEmission(float4 in_color, float4 in_wavelenghts);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -252,7 +253,7 @@ public:
   */
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
-  float4 EnvironmentColor(float3 a_dir, float& outPdf);
+  float4 EnvironmentColor(float3 a_dir, float& outPdf, float4 wavelengths);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);

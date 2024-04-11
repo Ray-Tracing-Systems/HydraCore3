@@ -930,7 +930,6 @@ void Integrator::LoadUpsamplingResources(const std::string &dir)
     std::filesystem::path p{dir};
     uint step, size;
 
-    std::vector<float3> spec_lut3;
     std::string path = (p / "sp_lut0.slf").string();
     if(!load_sigpoly_lut(m_spec_lut, path, m_spec_lut_step, m_spec_lut_csize))
       std::cout << "Error loading " << path << std::endl;

@@ -164,13 +164,18 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
     const float2 texCoord  = sphereMapTo2DTexCoord(a_rayDir, &sintheta);
     const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0, m_lights[a_lightId].samplerRow1, texCoord);
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
-    lightColor *= texColor;
+    if(m_spectral_mode != 0) {
+      lightColor *= UpsampleEmission(texColor, a_wavelengths);
+    }
+    else {
+      lightColor *= texColor;
+    }
   }
 
   return lightColor;
 }
 
-float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
+float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf, float4 wavelengths) //TODO
 {
   float4 color = m_envColor;
   
@@ -195,7 +200,10 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
       outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 
-    const float4 texColor = m_textures[envTexId]->sample(texCoordT); 
+    float4 texColor = m_textures[envTexId]->sample(texCoordT); 
+    if(m_spectral_mode != 0) {
+      texColor = UpsampleEmission(texColor, wavelengths);
+    }
     color *= texColor; 
   }
 
