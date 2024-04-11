@@ -5,26 +5,27 @@
 #include <cstring>
 #include <fstream>
 
-
-std::vector<unsigned int> CreateQuadTriIndices(const int a_sizeX, const int a_sizeY)
-{
-  std::vector<unsigned int> indicesData(a_sizeY*a_sizeX * 6);
-  unsigned int* indexBuf = indicesData.data();
-
-  for (int i = 0; i < a_sizeY; i++)
+namespace cmesh4 {
+  std::vector<unsigned int> CreateQuadTriIndices(const int a_sizeX, const int a_sizeY)
   {
-    for (int j = 0; j < a_sizeX; j++)
-    {
-      *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 0) );
-      *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 0) );
-      *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 1) );
-      *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 0) );
-      *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 1) );
-      *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 1) );
-    }
-  }
+    std::vector<unsigned int> indicesData(a_sizeY*a_sizeX * 6);
+    unsigned int* indexBuf = indicesData.data();
 
-  return indicesData;
+    for (int i = 0; i < a_sizeY; i++)
+    {
+      for (int j = 0; j < a_sizeX; j++)
+      {
+        *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 0) );
+        *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 0) );
+        *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 1) );
+        *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 0) );
+        *indexBuf++ = (unsigned int)( (i + 1) * (a_sizeX + 1) + (j + 1) );
+        *indexBuf++ = (unsigned int)( (i + 0) * (a_sizeX + 1) + (j + 1) );
+      }
+    }
+
+    return indicesData;
+  }
 }
 
 cmesh4::SimpleMesh cmesh4::CreateQuad(const int a_sizeX, const int a_sizeY, const float a_size)
