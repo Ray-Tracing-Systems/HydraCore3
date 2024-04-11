@@ -1186,7 +1186,7 @@ static inline FrReflRefr multFrFilm_r(float cosThetaI, const complex* a_ior, con
     result.refl += temp.refl / 2;
     result.refr += temp.refr / 2;
   }
-  result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior[layers], a_ior[0]);
+  result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[0], a_ior[layers], a_ior[0]);
   return result;
 }
 

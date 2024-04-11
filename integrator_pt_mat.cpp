@@ -205,7 +205,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       uint layers = as_uint(m_materials[currMatId].data[FILM_LAYERS_COUNT]);
       const bool spectral_mode = wavelengths[0] > 0.0f;
       // sampling 3 wavelengths for naive RGB method
-      float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(700.f, 525.f, 450.f, 0.0f);
+      float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(645.f, 525.f, 445.f, 0.0f);
       float4 wavelengths_sample = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(525.f, 0.f, 0.f, 0.0f);
       float extIOR = m_materials[currMatId].data[FILM_ETA_EXT];
       complex intIOR = complex(

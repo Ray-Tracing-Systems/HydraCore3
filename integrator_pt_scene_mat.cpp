@@ -809,7 +809,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
 
       k = k_vec[layer];
       uint k_id = k_id_vec[layer];
-      if (k < 0xFFFFFFFF)
+      if (k_id < 0xFFFFFFFF)
       {
         data  = spec_offsets[k_id];
         offset = data.x;
@@ -823,7 +823,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
     {
       float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
       
-      float cosTheta = clamp(cosf(theta), 1e-6f, 1.f);
+      float cosTheta = clamp(cosf(theta), 1e-3f, 1.f);
       FrReflRefr forward;
       FrReflRefr backward;
       if (layers == 2)
@@ -858,10 +858,10 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
       }
     }
   }
-  //save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  //save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  //save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
-  //save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
+  save_to_file("../precomputed_film_refr_int.txt", res.int_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
   return res;
 }
 
@@ -905,7 +905,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
 
       k = k_vec[layer];
       uint k_id = k_id_vec[layer];
-      if (k < 0xFFFFFFFF)
+      if (k_id < 0xFFFFFFFF)
       {
         data  = spec_offsets[k_id];
         offset = data.x;
@@ -919,7 +919,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
     {
       float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
       
-      float cosTheta = clamp(cosf(theta), 1e-6f, 1.f);
+      float cosTheta = clamp(cosf(theta), 1e-3f, 1.f);
       FrReflRefr forward;
       FrReflRefr backward;
       if (layers == 2)
