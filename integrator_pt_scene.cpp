@@ -19,6 +19,8 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
     case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
     case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
+    case KSPEC_SPD_TEX            : return "SPD_TEX";
+    case KSPEC_MAT_TYPE_DIELECTRIC: return "DIELECTRIC";
     
     case KSPEC_BLEND_STACK_SIZE   :
     {
@@ -84,6 +86,14 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   features[KSPEC_FILMS_STACK_SIZE]   = 1; // set smallest possible stack size for films
   features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
+  for(auto specNode : g_lastScene.SpectraNodes())
+  {
+    auto spec_id   = specNode.attribute(L"id").as_uint();
+    auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+    if(refs_attr)
+      features[KSPEC_SPD_TEX] = 1; 
+  }
+
   //// list reauired material features
   //
   for(auto materialNode : g_lastScene.MaterialNodes())
@@ -307,7 +317,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     TextureInfo tex;
 
     if (texNode.attribute(L"loc").empty())
-      tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"path").as_string();
+      tex.path = std::wstring(texNode.attribute(L"path").as_string());
     else
       tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
     
@@ -317,8 +327,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       const size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
+      texturesInfo.push_back(tex);
     }
-    texturesInfo.push_back(tex);
+    
   }
 
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> texCache;
@@ -350,7 +361,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         {
           m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
         }
-        
+        m_actualFeatures[KSPEC_SPD_TEX] = 1;
         m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
         m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
       }
@@ -360,6 +371,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         spec_path.append(specNode.attribute(L"loc").as_string());
 
         auto spec = LoadSPDFromFile(spec_path, spec_id);
+        if(spec.values.size() == 0)
+          std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
         auto specValsUniform = spec.ResampleUniform();
         
         uint32_t offset = uint32_t(m_spec_values.size());

@@ -14,7 +14,7 @@ if(USE_ENZYME)
   set(CLANG_VERSION "17" CACHE STRING "clang and LLVM version to use")
   set(CMAKE_C_COMPILER   "/usr/bin/clang-${CLANG_VERSION}")   # $ export CC=/usr/bin/clang-17
   set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}") # $ export CXX=/usr/bin/clang++-17
-  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_101/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
+  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_103/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_definitions(-DUSE_ENZYME)
 endif()
@@ -22,18 +22,21 @@ endif()
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-add_library(project_options INTERFACE)
-target_compile_features(project_options INTERFACE cxx_std_17)
 
-# compiler warnings
-add_library(project_warnings INTERFACE)
+if(NOT HYDRA_CORE3_LIB)
+  add_library(project_options INTERFACE)
+  target_compile_features(project_options INTERFACE cxx_std_17)
 
-include(cmake/CompilerWarnings.cmake)
-set_project_warnings(project_warnings)
+  # compiler warnings
+  add_library(project_warnings INTERFACE)
 
-# sanitizer options
-include(cmake/Sanitizers.cmake)
-enable_sanitizers(project_options)
+  include(cmake/CompilerWarnings.cmake)
+  set_project_warnings(project_warnings)
+
+  # sanitizer options
+  include(cmake/Sanitizers.cmake)
+  enable_sanitizers(project_options)
+endif()
 
 add_subdirectory(ies_parser)
 
@@ -180,38 +183,68 @@ set(CORE_SRC
         utils.cpp
         ies_parser/ies_render.cpp)
 
-
-if(USE_VULKAN)    
-  if(CAM_PLUGIN)
-    add_executable(hydra ${CORE_SRC}
-                         ${VULKAN_EXTERNAL_SRC}
-                         ${VULKAN_SRC}
-                         ${VULKAN_CAM1}
-                         ${VULKAN_CAM2}
-                         ${LOADER_EXTERNAL_SRC}
-                         ${OTHER_EXTERNAL_SRC})
+if(HYDRA_CORE3_LIB)
+  if(USE_VULKAN)    
+    if(CAM_PLUGIN)
+        add_library(hydra ${CORE_SRC}
+                          ${VULKAN_EXTERNAL_SRC}
+                          ${VULKAN_SRC}
+                          ${VULKAN_CAM1}
+                          ${VULKAN_CAM2}
+                          ${LOADER_EXTERNAL_SRC}
+                          ${OTHER_EXTERNAL_SRC})
+    else()
+        add_library(hydra ${CORE_SRC}
+                          ${VULKAN_EXTERNAL_SRC}
+                          ${VULKAN_SRC}
+                          ${LOADER_EXTERNAL_SRC}
+                          ${OTHER_EXTERNAL_SRC})
+    endif()
   else()
-    add_executable(hydra ${CORE_SRC}
-                         ${VULKAN_EXTERNAL_SRC}
-                         ${VULKAN_SRC}
-                         ${LOADER_EXTERNAL_SRC}
-                         ${OTHER_EXTERNAL_SRC})
+      add_library(hydra ${CORE_SRC}
+                        ${LOADER_EXTERNAL_SRC}
+                        ${OTHER_EXTERNAL_SRC})
   endif()
 else()
-  add_executable(hydra ${CORE_SRC}
-                       ${LOADER_EXTERNAL_SRC}
-                       ${OTHER_EXTERNAL_SRC})
+  if(USE_VULKAN)    
+    if(CAM_PLUGIN)
+      add_executable(hydra ${CORE_SRC}
+                          ${VULKAN_EXTERNAL_SRC}
+                          ${VULKAN_SRC}
+                          ${VULKAN_CAM1}
+                          ${VULKAN_CAM2}
+                          ${LOADER_EXTERNAL_SRC}
+                          ${OTHER_EXTERNAL_SRC})
+    else()
+      add_executable(hydra ${CORE_SRC}
+                          ${VULKAN_EXTERNAL_SRC}
+                          ${VULKAN_SRC}
+                          ${LOADER_EXTERNAL_SRC}
+                          ${OTHER_EXTERNAL_SRC})
+    endif()
+  else()
+    add_executable(hydra ${CORE_SRC}
+                        ${LOADER_EXTERNAL_SRC}
+                        ${OTHER_EXTERNAL_SRC})
+  endif()
 endif()
 
 set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   link_directories("${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64")
-  set(EMBREE_LIBS ${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
+  set(EMBREE_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
   find_package(Threads REQUIRED)
-  link_directories(${CMAKE_SOURCE_DIR}/external/CrossRT/lib)
-  set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
+  set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib)
+  link_directories(${EMBREE_DIR})
+  set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.a 
+                  ${EMBREE_DIR}/libembree_sse42.a 
+                  ${EMBREE_DIR}/libembree_avx.a 
+                  ${EMBREE_DIR}/libembree_avx2.a 
+                  ${EMBREE_DIR}/liblexers.a ${EMBREE_DIR}/libsimd.a
+                  ${EMBREE_DIR}/libsys.a 
+                  ${EMBREE_DIR}/libtasking.a)
 endif()
 
 

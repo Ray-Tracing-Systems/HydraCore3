@@ -67,7 +67,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     rayPos.y += xy.y;
     rayDir = normalize(focusPosition - rayPos);
   }
-  else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0) // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further  
+  else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0)  
   {
     const float2 xy = 0.25f*m_physSize*float2(2.0f*xCoordNormalized - 1.0f, 2.0f*yCoordNormalized - 1.0f);
     
@@ -108,7 +108,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     res.cosTheta = 1.0f;
   }
   
-  RecordPixelRndIfNeeded(float2(pixelOffsets.x, pixelOffsets.y), res.waveSam);
+  RecordPixelRndIfNeeded(pixelOffsets, float2(res.waveSam,res.timeSam));
 
   return res;
 }
@@ -307,7 +307,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
   const int bounceTmp = int(bounce); 
   const float4 rands = GetRandomNumbersLgts(tid, a_gen, bounceTmp); 
   const int lightId  = std::min(int(std::floor(rands.w * float(m_lights.size()))), int(m_lights.size() - 1u));
-  RecordLightRndIfNeeded(bounce, lightId, float2(rands.x, rands.y)); // TODO: write float3 ?
+  RecordLightRndIfNeeded(bounce, rands); 
 
   if(lightId < 0) // no lights or invalid light id
   {

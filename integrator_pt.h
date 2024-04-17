@@ -253,10 +253,10 @@ public:
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
 
-  BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                   MisData* a_misPrev, const uint a_currRayFlags);
+  virtual BsdfSample MaterialSampleAndEval(uint a_materialId, uint tid, uint bounce, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+                                           MisData* a_misPrev, const uint a_currRayFlags);
                                     
-  BsdfEval   MaterialEval         (uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+  virtual BsdfEval   MaterialEval(uint a_materialId, float4 wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
 
   uint32_t BlendSampleAndEval(uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                               MisData* a_misPrev, BsdfSample* a_pRes);
@@ -411,8 +411,9 @@ public:
   static constexpr uint32_t KSPEC_MOTION_BLUR         = 16;  
   static constexpr uint32_t KSPEC_OPTIC_SIM           = 17;
   static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 18;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 19;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 19; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 20; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -428,10 +429,10 @@ public:
   // for recording path "constant" parameters, override in dereved class
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  virtual void RecordPixelRndIfNeeded(float2 offsets, float u){}
+  virtual void RecordPixelRndIfNeeded(float4 offsets, float2 wt){}
   virtual void RecordRayHitIfNeeded(uint32_t bounceId, CRT_Hit hit){}
   virtual void RecordShadowHitIfNeeded(uint32_t bounceId, bool inShadow){}
-  virtual void RecordLightRndIfNeeded(uint32_t bounceId, int lightId, float2 rands) {}
+  virtual void RecordLightRndIfNeeded(uint32_t bounceId, float4 rands) {}
   virtual void RecordMatRndNeeded(uint32_t bounceId, float4 rands){}
   virtual void RecordBlendRndNeeded(uint32_t bounceId, uint layer, float rand){}
 
