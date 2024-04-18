@@ -33,7 +33,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   CoordinateSystemV2(n, &s, &t);
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
 
-  float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
+  float cosThetaI = clamp(fabs(wi.z), 0.001, 1.0f);
   float ior = a_ior[layers].re / extIOR;
   float4 R = float4(0.0f), T = float4(0.0f);
 
@@ -129,7 +129,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior[layers], a_ior[0]);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[0], a_ior[layers], a_ior[0]);
       }
     }
     R[k] = result.refl;
@@ -218,7 +218,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
     return;
   }
 
-  float cosThetaI = clamp(fabs(dot(wi, wm)), 0.00001, 1.0f);
+  float cosThetaI = clamp(fabs(dot(wi, wm)), 0.001, 1.0f);
   float4 R = float4(0.0f), T = float4(0.0f);
 
   for(uint32_t k = 0; k < SPECTRUM_SAMPLE_SZ && a_wavelengths[k] > 0.0f; ++k)
@@ -315,7 +315,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
           result.refl += complex_norm(FrRefl) / 2;
           result.refr += complex_norm(FrRefr) / 2;
         }
-        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[layers], a_ior[layers], a_ior[0]);
+        result.refr *= getRefractionFactor(cosThetaI, a_cosTheta[0], a_ior[layers], a_ior[0]);
       }
     } 
 
@@ -435,7 +435,7 @@ static void filmRoughEval(const Material* a_materials,
     ior = 1.f / ior;
   }
 
-  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
+  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.001, 1.0f);
   
   float4 R = float4(0.0f);
   
