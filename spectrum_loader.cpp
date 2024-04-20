@@ -165,12 +165,13 @@ namespace {
 
 uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders, uint32_t &spec_count)
 {
-  spec::vec3 rgb{color[0], color[1], color[2]};
   float multiplier = LiteMath::hmax(color);
-  if(multiplier < 1.0f) multiplier = 1.0f;
-  rgb /= multiplier;
 
-  auto it = spec_cache.find({rgb, multiplier});
+  if(multiplier > 1.0f) return UpsampleEmissionSpectrum(color / multiplier, multiplier, loaders, spec_count);
+
+  spec::vec3 rgb{color[0], color[1], color[2]};
+
+  auto it = spec_cache.find({rgb, 1.0f});
   if(it != spec_cache.end()) {
     std::cerr << "Reusing spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
     return it->second;
@@ -179,15 +180,8 @@ uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoad
     uint32_t spec_id = spec_count++;
     std::cerr << "Creating new spectrum of " << color.x << " " << color.y << " " << color.z << std::endl;
     std::cerr << "ID = " << spec_id << std::endl;
-    if(multiplier == 1.0f) {
-      loaders.push_back({rgb, spec_id});
-      spec_cache[{rgb, 1.0f}] = spec_id;
-    }
-    else {
-      auto spec = UpsampleEmissionRaw(rgb, multiplier);
-      loaders.push_back({std::move(spec), spec_id});
-      spec_cache[{rgb, multiplier}] = spec_id;
-    }
+    loaders.push_back({rgb, spec_id});
+    spec_cache[{rgb, 1.0f}] = spec_id;
     return spec_id;
   }
 }
@@ -198,7 +192,7 @@ uint32_t UpsampleEmissionSpectrum(const float4 &color, float power, std::vector<
 
   auto it = spec_cache.find({rgb, power});
   if(it != spec_cache.end()) {
-    std::cerr << "Reusinge emission spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
+    std::cerr << "Reusing emission spectrum for " << color.x << " " << color.y << " " << color.z << std::endl;
     return it->second;
   }
   else {

@@ -348,7 +348,7 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
   {
     auto nodeEmissColor = nodeEmiss.child(L"color");
 
-    /*auto var_color = GetVariableColorFromNode(nodeEmissColor, resources, is_spectral_mode);
+    auto var_color = GetVariableColorFromNode(nodeEmissColor, resources, is_spectral_mode);
     if(var_color.isRGB()) {
         color = var_color.getRGB();
     }
@@ -356,10 +356,10 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, ResourceCon
       mat.spdid[0] = var_color.getSpectrumId();
       std::cerr << "Mat specid = " << mat.spdid[0] << std::endl; 
     }
-    */
-
+    /*
     color = GetColorFromNode(nodeEmissColor, resources).value_or(float4(1.0f));
     mat.spdid[0] = GetSpectrumIdFromNode(nodeEmissColor);
+    */
     is_emission_color = (materialNode.attribute(L"light_id") != nullptr) || (length(color) > 1e-5f );
 
     const auto& [emissiveSampler, texID] = LoadTextureFromNode(nodeEmissColor, resources, texCache, textures);
