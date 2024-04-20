@@ -34,7 +34,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
       if(lightSpecId == INVALID_SPECTRUM_ID) {
         auto opt = GetColorFromNode(lightColorNode, resources);
         if(opt) {
-          lightSpecId = UpsampleSpectrumFromColor(*opt * power, resources.spectraInfo, resources.loadedSpectrumCount);
+          lightSpecId = UpsampleEmissionSpectrum(*opt, power, resources.spectraInfo, resources.loadedSpectrumCount);
           power = 1.0f;
         }
       }

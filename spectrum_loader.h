@@ -14,7 +14,7 @@
 using namespace LiteMath;
 #endif
 
-//constexpr uint32_t INVALID_SPECTRUM_ID = 0xFFFFFFFF;
+void SetEmissLut(const std::string &path);
 
 struct Spectrum
 {
@@ -111,10 +111,13 @@ extern const Spectrum DUMMY_UNIFORM_SPECTRUM;
 std::optional<Spectrum> LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
 uint32_t UpsampleSpectrumFromColor(const float4 &color, std::vector<SpectrumLoader> &loaders, uint32_t &spec_count);
+uint32_t UpsampleEmissionSpectrum(const float4 &color, float power, std::vector<SpectrumLoader> &loaders, uint32_t &spec_count);
 
 float4 DownsampleSpectrum(const Spectrum &st);
 
 spec::ISpectrum::ptr UpsampleRaw(const spec::vec3 &rgb);
+
+spec::ISpectrum::ptr UpsampleEmissionRaw(const spec::vec3 &rgb, float power);
 
 std::vector<float> ParseSpectrumStr(const std::string &specStr);
 

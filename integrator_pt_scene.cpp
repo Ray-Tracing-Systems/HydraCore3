@@ -928,6 +928,9 @@ namespace {
 void Integrator::LoadUpsamplingResources(const std::string &dir)
 {
     std::filesystem::path p{dir};
+
+    SetEmissLut((p / "f_emission_lut.eflf").string());
+
     uint step, size;
 
     std::string path = (p / "sp_lut0.slf").string();
