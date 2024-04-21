@@ -199,7 +199,7 @@ static inline void filmRoughSampleAndEvalPrecomputed(const Material* a_materials
     T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
     T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
   }
-
+  
   if (intIOR.im > 0.001)
   {
     float3 wo = reflect((-1.0f) * wi, wm);
@@ -207,10 +207,9 @@ static inline void filmRoughSampleAndEvalPrecomputed(const Material* a_materials
     {
       return;
     }
-    float D = eval_microfacet(wm, alpha, 1);
     float G = microfacet_G(wi, wo, wm, alpha);
     pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wo, wm)));
-    pRes->val = pRes->pdf * smith_g1(wo, wm, alpha) * R / std::max(wo.z, EPSILON_32);
+    pRes->val = wm_pdf.w / (4.0f * wo.z * wm.z) * smith_g1(wo, wm, alpha) * R / std::max(wo.z, EPSILON_32);
     if (reversed)
     {
       wo = -1 * wo;
@@ -228,10 +227,8 @@ static inline void filmRoughSampleAndEvalPrecomputed(const Material* a_materials
       {
         return;
       }
-      float D = eval_microfacet(wm, alpha, 1);
-      pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wo, wm)));
-      pRes->val = pRes->pdf * smith_g1(wo, wm, alpha) * R / std::max(wo.z, EPSILON_32);
-      pRes->pdf *= sum(R) / (sum(R) + sum(T));
+      pRes->pdf = wm_pdf.w / (4.0f * std::abs(dot(wo, wm))) * sum(R) / (sum(R) + sum(T));
+      pRes->val = wm_pdf.w / (4.0f * wo.z * wm.z) * smith_g1(wo, wm, alpha) * R / std::max(wo.z, EPSILON_32);
       if (reversed)
       {
         wo = -1 * wo;
@@ -251,17 +248,16 @@ static inline void filmRoughSampleAndEvalPrecomputed(const Material* a_materials
       CoordinateSystemV2(wm, &ws, &wt);
       const float3 local_wi = {dot(ws, wi), dot(wt, wi), dot(wm, wi)};
       const float3 local_wo = refract(local_wi, cosThetaT, eta_ti);
-      float3 wo = normalize(local_wi.x * ws + local_wi.y * wt + local_wi.z * wm);
+      float3 wo = local_wo.x * ws + local_wo.y * wt + local_wo.z * wm;
       if (wo.z > 0.f)
       {
         return;
       }
-      float D = eval_microfacet(wm, alpha, 1);
       float G = microfacet_G(wi, wo, wm, alpha);
       float denom = sqr(dot(wo, wm) + dot(wi, wm) / eta_it);
       float dwm_dwi = fabs(dot(wo, wm)) / denom;
-      pRes->val = D * G * T * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
-      pRes->pdf = D * dwm_dwi * sum(T) / (sum(R) + sum(T));
+      pRes->val = wm_pdf.w * G * T * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
+      pRes->pdf = wm_pdf.w * dwm_dwi * sum(T) / (sum(R) + sum(T));
       if (reversed)
       {
         wo = -1 * wo;

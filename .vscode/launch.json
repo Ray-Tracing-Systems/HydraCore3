@@ -30,60 +30,6 @@
     },
 
     {
-        "name": "CornellDragon",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu",
-                 "-in", "../HydraScenes/cornell_dragon.xml",
-                 "-integrator", "mispt", 
-                 "-width", "1000",
-                 "-height", "1000",
-                 "-spp", "50", 
-                 "-out", "../out/pic.bmp",
-                 "--spectral"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-
-    {
-        "name": "MitsubaKnob",
-        "type": "cppdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu",
-                 "-in", "../HydraScenes/mitsuba_knob.xml",
-                 "-integrator", "mispt", 
-                 "-width", "1500",
-                 "-height", "1500",
-                 "-spp", "200", 
-                 "-out", "../out/pic.bmp",
-                 "--spectral"],
-        "stopAtEntry": false,
-        "cwd": "${workspaceFolder}",
-        "environment": [],
-        "externalConsole": false,
-        "MIMode": "gdb",
-        "setupCommands": [
-            {
-                "description": "Enable pretty-printing for gdb",
-                "text": "-enable-pretty-printing",
-                "ignoreFailures": true
-            }
-        ]
-    },
-
-    {
         "name": "NewSphere",
         "type": "cppdbg",
         "request": "launch",
@@ -143,11 +89,11 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu",
-                 "-in", "../HydraScenes/multilayer_experiments/mitsuba_knob_1.xml",
+                 "-in", "../HydraScenes/multilayer_experiments/mitsuba_knob_4.xml",
                  "-integrator", "mispt", 
                  "-width", "1000",
                  "-height", "1000",
-                 "-spp", "2500", 
+                 "-spp", "500", 
                  "-out", "../out/pic.bmp",
                  "--spectral"],
         "stopAtEntry": false,
@@ -169,12 +115,12 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu",
+        "args": ["--cpu",
                  "-in", "../HydraScenes/cornell_sphere.xml",
                  "-integrator", "mispt", 
-                 "-width", "1500",
-                 "-height", "1500",
-                 "-spp", "500", 
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "100", 
                  "-out", "../out/pic.bmp",
                  "--spectral"],
         "stopAtEntry": false,
@@ -201,7 +147,7 @@
                  "-integrator", "mispt", 
                  "-width", "1500",
                  "-height", "1500",
-                 "-spp", "500", 
+                 "-spp", "50000", 
                  "-out", "../out/pic.bmp",
                  "--spectral"],
         "stopAtEntry": false,
@@ -282,9 +228,8 @@
                  "-integrator", "mispt", 
                  "-width", "1500",
                  "-height", "1500",
-                 "-spp", "1500", 
-                 "-out", "../out/pic.bmp",
-                 "--spectral"],
+                 "-spp", "500", 
+                 "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -304,8 +249,60 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu",
+        "args": ["--gpu",
                  "-in", "../HydraScenes/bubble.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1500",
+                 "-height", "1500",
+                 "-spp", "500", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Bubble1",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/demo01/bubble.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1500",
+                 "-height", "1500",
+                 "-spp", "5000", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Demo",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/demo01/statex_00001.xml",
                  "-integrator", "mispt", 
                  "-width", "500",
                  "-height", "500",
