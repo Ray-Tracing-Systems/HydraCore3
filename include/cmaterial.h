@@ -1063,6 +1063,8 @@ struct FrReflRefr
   float refl, refr;
 };
 
+#include <iostream>
+
 static inline FrReflRefr FrFilm(float cosThetaI, complex etaI, complex etaF, complex etaT, float thickness, float lambda)
 {
   complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
@@ -1086,10 +1088,21 @@ static inline FrReflRefr FrFilm(float cosThetaI, complex etaI, complex etaF, com
     complex exp_1 = exp(-phaseDiff.im / 2) * complex(cos(phaseDiff.re / 2), sin(phaseDiff.re / 2));
     complex exp_2 = exp_1 * exp_1;
 
-    result.refl += complex_norm((FrReflI + FrReflF * exp_2) / (1 + FrReflI * FrReflF * exp_2)) / 2;
-    result.refr += complex_norm(FrRefrI * FrRefrF * exp_1 / (1 + FrReflI * FrReflF * exp_2)) / 2;
+    complex denom = 1 + FrReflI * FrReflF * exp_2;
+    if (complex_norm(denom) < 1e-6f)
+    {
+      result.refl += 0.5f;
+    }
+    else
+    {
+      result.refl += complex_norm((FrReflI + FrReflF * exp_2) / denom) / 2;
+      result.refr += complex_norm(FrRefrI * FrRefrF * exp_1 / denom) / 2;
+    }
+
   }
   result.refr *= getRefractionFactor(cosThetaI, cosThetaT, etaI, etaT);
+
+  //std::cout << cosThetaI << " " << sinThetaF.re << " " << sinThetaF.im << std::endl;
 
   return result;
 }
@@ -1103,11 +1116,22 @@ static inline FrReflRefr calculateMultFrFilm(const complex *a_cosTheta, const co
     complex FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
     complex FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
     complex exp_1 = exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+
     FrRefr = FrRefrI * FrRefr * exp_1;
     FrRefl = FrRefl * exp_1 * exp_1;
-    complex denom = 1.f / (1 + FrReflI * FrRefl);
-    FrRefr = FrRefr * denom;
-    FrRefl = (FrReflI + FrRefl) * denom;
+
+    complex denom = 1 + FrReflI * FrRefl;
+    
+    if (complex_norm(denom) < 1e-6f)
+    {
+      FrRefr = 0.0f;
+      FrRefl = 1.0f;
+    }
+    else
+    {
+      FrRefr = FrRefr / denom;
+      FrRefl = (FrReflI + FrRefl) / denom;
+    }
   }
   return {complex_norm(FrRefl), complex_norm(FrRefr)};
 }
@@ -1123,9 +1147,19 @@ static inline FrReflRefr calculateMultFrFilm_r(const complex *a_cosTheta, const 
     complex exp_1 = exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
     FrRefr = FrRefrI * FrRefr * exp_1;
     FrRefl = FrRefl * exp_1 * exp_1;
-    complex denom = 1.f / (1 + FrReflI * FrRefl);
-    FrRefr = FrRefr * denom;
-    FrRefl = (FrReflI + FrRefl) * denom;
+
+    complex denom = 1 + FrReflI * FrRefl;
+    
+    if (complex_norm(denom) < 1e-6f)
+    {
+      FrRefr = 0.0f;
+      FrRefl = 1.0f;
+    }
+    else
+    {
+      FrRefr = FrRefr / denom;
+      FrRefl = (FrReflI + FrRefl) / denom;
+    }
   }
   return {complex_norm(FrRefl), complex_norm(FrRefr)};
 }
