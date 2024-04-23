@@ -15,7 +15,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
    * `git clone --recurse-submodules git@github.com:Ray-Tracing-Systems/HydraCore3.git`
    * or use `git submodule init && git submodule update` after clone
 4) Run kernel_slicer with `Launch (HydraCore3/GLSL/External)` config (see `kernel_slicer/.vsode/launch.json`)
-5) Build shaders (by calling `build.sh` in `shaders_generated`)
+5) Build shaders (by calling `build.sh` in `shaders_generated/`)
 6) Build solution normally with CMake
 
 # Build diff render (Enzyme AD)
@@ -30,8 +30,9 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
    sudo apt-get install libclang-17-dev 
    sudo apt install clang-17
    sudo apt install libomp-17-dev
-   sudo apt-get install libzstd-dev (a compression library which is needed for Enzyme)
+   sudo apt-get install libzstd-dev
    ```
+   (libzstd-dev is a compression library which is needed for Enzyme)
 
 2. Build Enzyme 
    * Download latest release from https://github.com/EnzymeAD/Enzyme
@@ -44,8 +45,8 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
    * You should have `ClangEnzyme-17.so` in `enzyme/build/Enzyme`. You have to pass this DLL to clang via `-fplugin=...` when compile the project!
 
 3. Build hydra with CMake and clang
+   * Make sure you set `ENZYME_PLUGIN_DLL` correctly to your `ClangEnzyme-17.so`
    ```
-   make sure you set 'ENZYME_PLUGIN_DLL' correctly to your 'ClangEnzyme-17.so'
    export CC=/usr/bin/clang-17
    export CXX=/usr/bin/clang++-17
    cmake -DCMAKE_BUILD_TYPE=Release -DUSE_ENZYME=ON -DCLANG_VERSION=17 .. 
@@ -54,15 +55,15 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 # Development pipeline
 1) Select/Find/Make a reference image to you feature
 2) Implement it in renderer on CPU
-3) run kernel_slicer to get GPU version and be sure that code succesefully transformed to shaders
+3) Run kernel_slicer to get GPU version and be sure that code succesefully transformed to shaders
    * you may work with CPU build only, but this is long ...  
-4) Add test to python script 'testing/run_tests.py':
+4) Add test to python script `testing/run_tests.py`:
    * You have to clone https://github.com/Ray-Tracing-Systems/HydraAPI-tests
-   * You have to run tests from 'HydraAPI-tests' repo to generate scene files
+   * You have to run tests from HydraAPI-tests repo to generate scene files
    * If you don't have access to some closed test repo which is used in test, please comment out such tests. Otherwise clone these repos.
-   * Currently you have to set two variables in script: 'PATH_TO_HYDRA2_TESTS' and 'PATH_TO_HYDRA3_SCENS' (the last one is currently closed)
-   * read [testing script doc](testing/testing_doc.md)
-5) Add you feature to specitication in specification: 'HydraAPI-tests/doc/doc_hydra_standart/hydra_spec.tex' 
+   * Currently you have to set two variables in script: `PATH_TO_HYDRA2_TESTS` and `PATH_TO_HYDRA3_SCENS` (the last one is currently closed)
+   * Read [testing script doc](testing/testing_doc.md)
+5) Add you feature to specitication in specification: `HydraAPI-tests/doc/doc_hydra_standart/hydra_spec.tex` 
 
 # Documentation
 
