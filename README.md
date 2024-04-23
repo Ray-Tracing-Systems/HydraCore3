@@ -4,7 +4,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 # Build (CPU)
 1) clone this repo with all its submodules
    * git clone --recurse-submodules git@github.com:Ray-Tracing-Systems/HydraCore3.git
-   * or use git submodule init && git submodule apdate after clone
+   * or use git submodule init && git submodule update after clone
 2) Disable Vulkan by '-DUSE_VULKAN=OFF'
 3) Build normally with Cmake 
 
@@ -13,7 +13,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 2) Build kernel_slicer
 3) clone this repo with all its submodules
    * git clone --recurse-submodules git@github.com:Ray-Tracing-Systems/HydraCore3.git
-   * or use git submodule init && git submodule apdate after clone
+   * or use git submodule init && git submodule update after clone
 4) run kernel_slicer with 'Launch (HydraCore3/GLSL/External)' config
 5) build shaders (by calling 'shaders_generated/build.sh')
 6) build solution normally with CMake
@@ -35,7 +35,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
  * Download latest release from https://github.com/EnzymeAD/Enzyme
  * cd /path/to/Enzyme/enzyme
  * mkdir build && cd build
- * cmake -G Ninja .. -DLLVM_DIR=usr/lib/llvm-17/lib/cmake/llvm -DClang_DIR=/usr/lib/cmake/clang-17
+ * cmake -G Ninja .. -DLLVM_DIR=/usr/lib/llvm-17/lib/cmake/llvm -DClang_DIR=/usr/lib/cmake/clang-17
  * ninja
  * you should have 'ClangEnzyme-17.so' in 'enzyme/build/Enzyme'. You have to pass this DLL to clang via '-fplugin=...' when compile the project!
 
