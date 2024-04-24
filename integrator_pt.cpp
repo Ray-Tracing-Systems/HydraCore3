@@ -13,7 +13,9 @@ using namespace LiteMath;
 void Integrator::InitRandomGens(int a_maxThreads)
 {
   m_randomGens.resize(a_maxThreads);
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int i=0;i<a_maxThreads;i++)
     m_randomGens[i] = RandomGenInit(i);
 }

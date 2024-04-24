@@ -20,7 +20,9 @@ using namespace LiteMath;
 
 void Integrator::PackXYBlock(uint tidX, uint tidY, uint a_passNum)
 {
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int y = 0; y < tidY; ++y)
     for(int x = 0; x < tidX; ++x)
       PackXY(uint(x), (uint)(y));
