@@ -136,6 +136,10 @@ public:
   //virtual void UpdateMembersVectorData() {}                              // will be overriden in generated class, optional function
   //virtual void UpdateMembersTexureData() {}                              // will be overriden in generated class, optional function
 
+  virtual std::string GetResourcesRootDir() {return m_resourcesDir; }
+
+  void SetResourcesDir(const std::string& a_dir) {m_resourcesDir = a_dir; }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
@@ -446,6 +450,8 @@ protected:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
+
+  std::string m_resourcesDir = ".";
 
   // for recording path "constant" parameters, override in dereved class
   //
