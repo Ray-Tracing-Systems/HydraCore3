@@ -795,16 +795,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
 void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
 {
-  self->m_aspect = float(self->m_winWidth/self->m_winHeight);
-  
   float scale = 1.0f;
   if(opticalSys.attribute(L"scale") != nullptr)
     scale = opticalSys.attribute(L"scale").as_float();
 
-  self->m_diagonal = opticalSys.attribute(L"sensor_diagonal").as_float();
-  //CalcPhysSize();
-  self->m_physSize.x = 2.0f*std::sqrt(self->m_diagonal * self->m_diagonal / (1.0f + self->m_aspect * self->m_aspect));
-  self->m_physSize.y = self->m_aspect * self->m_physSize.x;
+  self->SetDiagonal(opticalSys.attribute(L"sensor_diagonal").as_float());
+  float2 physSize;
+  physSize.x = 2.0f*std::sqrt(self->GetDiagonal() * self->GetDiagonal() / (1.0f + self->GetAspect() * self->GetAspect()));
+  physSize.y = self->GetAspect() * physSize.x;
+  self->SetPhysSize(physSize);
 
   struct LensElementInterfaceWithId 
   {
@@ -843,7 +842,9 @@ void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
   else
     std::sort(ids.begin(), ids.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
 
-  self->lines.resize(ids.size());
+  std::vector<Integrator::LensElementInterface> elems(ids.size());
   for(size_t i=0;i<ids.size(); i++)
-    self->lines[i] = ids[i].lensElement;
+    elems[i] = ids[i].lensElement;
+
+  self->SetLines(elems);
 }

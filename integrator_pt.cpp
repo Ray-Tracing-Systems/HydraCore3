@@ -792,9 +792,9 @@ bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) c
   float3 rayPosLens = float3(inoutRayPos.x, inoutRayPos.y, -inoutRayPos.z);
   float3 rayDirLens = float3(inoutRayDir.x, inoutRayDir.y, -inoutRayDir.z);
 
-  for(int i=0; i<lines.size(); i++)
+  for(int i=0; i<m_lines.size(); i++)
   {
-    const auto element = lines[i];                                  
+    const auto element = m_lines[i];                                  
     // Update ray from film accounting for interaction with _element_
     elementZ -= element.thickness;
     
@@ -830,8 +830,8 @@ bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) c
     if (!isStop) 
     {
       float3 wt;
-      float etaI = lines[i+0].eta;                                                      
-      float etaT = (i == lines.size()-1) ? 1.0f : lines[i+1].eta;
+      float etaI = m_lines[i+0].eta;                                                      
+      float etaT = (i == m_lines.size()-1) ? 1.0f : m_lines[i+1].eta;
       if(etaT == 0.0f)
         etaT = 1.0f;                                                          
       if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, &wt))
