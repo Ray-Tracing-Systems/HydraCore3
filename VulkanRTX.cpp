@@ -97,7 +97,7 @@ uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_m
   return m_pScnMgr->InstanceMesh(a_geomId, a_matrix);
 }
 
-uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
+uint32_t VulkanRTX::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
 {
   if(a_matrixNumber == 0 || a_matrices == nullptr)
   {
@@ -131,7 +131,7 @@ void VulkanRTX::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& 
   std::cout << "[VulkanRTX::UpdateInstance]: not implemented" << std::endl;
 }
 
-CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
+CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
 {    
   CRT_Hit result;
   result.t      = std::numeric_limits<float>::max();
@@ -141,7 +141,22 @@ CRT_Hit VulkanRTX::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::fl
   return result;
 }
 
-bool VulkanRTX::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
+bool VulkanRTX::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+{
+  return false;
+}
+
+CRT_Hit VulkanRTX::RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
+{    
+  CRT_Hit result;
+  result.t      = std::numeric_limits<float>::max();
+  result.geomId = uint32_t(-1);
+  result.instId = uint32_t(-1);
+  result.primId = uint32_t(-1);
+  return result;
+}
+
+bool VulkanRTX::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {
   return false;
 }

@@ -24,11 +24,13 @@ public:
   void CommitScene  (uint32_t options = BUILD_HIGH) override; 
   
   uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix) override;
-  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;
+  uint32_t AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;
   void     UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix) override;
 
-  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;
-  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time = 0.0f) override;
+  CRT_Hit  RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
+  bool     RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
+  CRT_Hit  RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time) override;
+  bool     RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time) override;
 
 protected:
   uint32_t maxFrames = 1;
@@ -259,7 +261,7 @@ uint32_t EmbreeRT::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_ma
   return uint32_t(m_inst.size()-1);
 }
 
-uint32_t EmbreeRT::AddInstance(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
+uint32_t EmbreeRT::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
 {
  if(a_geomId >= m_blas.size())
     return uint32_t(-1);
@@ -305,7 +307,91 @@ void  EmbreeRT::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& 
   rtcCommitGeometry(m_inst[a_instanceId]);
 }
 
-CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
+CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+{    
+  // The intersect context can be used to set intersection
+  // filters or flags, and it also contains the instance ID stack
+  // used in multi-level instancing.
+  // 
+  struct RTCIntersectContext context;
+  rtcInitIntersectContext(&context);
+
+  // The ray hit structure holds both the ray and the hit.
+  // The user must initialize it properly -- see API documentation
+  // for rtcIntersect1() for details.
+  //  
+  struct RTCRayHit rayhit;
+  rayhit.ray.org_x = posAndNear.x;
+  rayhit.ray.org_y = posAndNear.y;
+  rayhit.ray.org_z = posAndNear.z;
+  rayhit.ray.tnear = posAndNear.w;
+
+  rayhit.ray.dir_x = dirAndFar.x;
+  rayhit.ray.dir_y = dirAndFar.y;
+  rayhit.ray.dir_z = dirAndFar.z;
+  rayhit.ray.tfar  = dirAndFar.w; // std::numeric_limits<float>::infinity();
+
+  rayhit.ray.mask   = -1;
+  rayhit.ray.flags  = 0;
+  rayhit.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+  rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+
+  // There are multiple variants of rtcIntersect. This one intersects a single ray with the scene.
+  // 
+  rtcIntersect1(m_scene, &context, &rayhit);
+
+  CRT_Hit result;
+  if(rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
+  {
+    result.t      = rayhit.ray.tfar;
+    result.geomId = m_geomIdByInstId[rayhit.hit.instID[0]];
+    result.instId = rayhit.hit.instID[0];
+    result.primId = rayhit.hit.primID;
+    result.coords[1] = rayhit.hit.u;
+    result.coords[0] = rayhit.hit.v;
+    result.coords[2] = 1.0f - rayhit.hit.v - rayhit.hit.u;
+  }
+  else
+  {
+    result.t      = rayhit.ray.tfar;
+    result.geomId = uint32_t(-1);
+    result.instId = uint32_t(-1);
+    result.primId = uint32_t(-1);
+  }
+
+  return result;
+}
+
+bool EmbreeRT::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)
+{
+  // The intersect context can be used to set intersection
+  // filters or flags, and it also contains the instance ID stack
+  // used in multi-level instancing.
+  // 
+  struct RTCIntersectContext context;
+  rtcInitIntersectContext(&context);
+
+  // The ray hit structure holds both the ray and the hit.
+  // The user must initialize it properly -- see API documentation
+  // for rtcIntersect1() for details.
+  //  
+  struct RTCRay ray;
+  ray.org_x = posAndNear.x;
+  ray.org_y = posAndNear.y;
+  ray.org_z = posAndNear.z;
+  ray.tnear = posAndNear.w;
+
+  ray.dir_x = dirAndFar.x;
+  ray.dir_y = dirAndFar.y;
+  ray.dir_z = dirAndFar.z;
+  ray.tfar  = dirAndFar.w; // std::numeric_limits<float>::infinity();
+
+  rtcOccluded1(m_scene, &context, &ray);  
+
+  return (ray.tfar < 0.0f);
+}
+
+CRT_Hit  EmbreeRT::RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {    
   // The intersect context can be used to set intersection
   // filters or flags, and it also contains the instance ID stack
@@ -366,7 +452,7 @@ CRT_Hit  EmbreeRT::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::fl
   return result;
 }
 
-bool EmbreeRT::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
+bool EmbreeRT::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)
 {
   // The intersect context can be used to set intersection
   // filters or flags, and it also contains the instance ID stack
