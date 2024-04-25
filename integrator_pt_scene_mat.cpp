@@ -1,6 +1,8 @@
 #include "integrator_pt_scene.h"
 #include "spectral/spec/conversions.h"
 #include "spectral/spec/spectral_util.h"
+#include "include/transfer_matrix.h"
+#include "include/airy_reflectance.h"
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode)
 {
@@ -835,13 +837,17 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
       FrReflRefr backward;
       if (layers == 2)
       {
-        forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
-        backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+        //forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
+        //backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+        forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
       }
       else
       {
-        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
-        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
       }
       res.ext_reflectivity[i * FILM_ANGLE_RES + j] = forward.refl;
       res.ext_transmittivity[i * FILM_ANGLE_RES + j] = forward.refr;
@@ -1071,6 +1077,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
 
   uint precompFlag = 0;
   auto nodePrecomp = materialNode.child(L"precompute");
+
   if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0)
   {
     precompFlag = 1u;

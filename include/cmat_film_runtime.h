@@ -4,6 +4,7 @@
 #include "cmaterial.h"
 #include "../spectrum.h"
 #include <iostream>
+#include "airy_reflectance.h"
 
 #ifndef KERNEL_SLICER
 #define KSPEC_FILMS_STACK_SIZE Integrator::KSPEC_FILMS_STACK_SIZE
