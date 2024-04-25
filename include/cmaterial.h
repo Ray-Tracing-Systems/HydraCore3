@@ -169,7 +169,9 @@ static constexpr uint FILM_ETA_SPECID_OFFSET = 6;
 static constexpr uint FILM_K_SPECID_OFFSET   = 7;
 static constexpr uint FILM_ETA_EXT           = 8;
 static constexpr uint FILM_THICKNESS_OFFSET  = 9;
-static constexpr uint FILM_LAYERS_COUNT      = 10;
+static constexpr uint FILM_THICKNESS_MIN     = 10;
+static constexpr uint FILM_THICKNESS_MAX     = 11;
+static constexpr uint FILM_LAYERS_COUNT      = 12;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_LAYERS_COUNT;
 
 

@@ -937,13 +937,17 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
       FrReflRefr backward;
       if (layers == 2)
       {
-        forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
-        backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+        //forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
+        //backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+        forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
       }
       else
       {
-        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
-        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
       }
 
       if(forward.refl < 0 || std::isnan(forward.refl) || std::isinf(forward.refl))
@@ -1010,6 +1014,12 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   mat.mtype                    = MAT_TYPE_THIN_FILM;
   mat.lightId                  = uint(-1);
 
+  for(int i=0;i<4;i++) {
+    mat.row0 [i] = float4(1,0,0,0);
+    mat.row1 [i] = float4(0,1,0,0);
+    mat.texid[i] = 0;
+  }
+
   auto nodeBSDF = materialNode.child(L"bsdf");
 
   float alpha_u = 0.0f;
@@ -1041,6 +1051,19 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
 
   mat.data[FILM_ROUGH_U] = alpha_u;
   mat.data[FILM_ROUGH_V] = alpha_v;
+
+  auto nodeThickness = materialNode.child(L"thickness_map");
+  if(nodeThickness != nullptr)
+  {
+    mat.data[FILM_THICKNESS_MIN] = nodeThickness.attribute(L"min").as_float();
+    mat.data[FILM_THICKNESS_MAX] = nodeThickness.attribute(L"max").as_float();
+
+    const auto& [sampler, texID] = LoadTextureFromNode(nodeThickness, texturesInfo, texCache, textures);
+    
+    mat.row0 [2]  = sampler.row0;
+    mat.row1 [2]  = sampler.row1;
+    mat.texid[2] = texID;
+  }
 
   mat.data[FILM_ETA_EXT] = 1.00028f; // air
 
