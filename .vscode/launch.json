@@ -246,16 +246,43 @@
     },
 
     {
+        "name": "Texture",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/cornell/change_00000.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "500", 
+                 "-out", "../out/pic.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "Bubble",
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu",
+        "args": ["--gpu",
                  "-in", "../HydraScenes/bubble.xml",
                  "-integrator", "mispt", 
                  "-width", "1000",
                  "-height", "1000",
-                 "-spp", "100", 
+                 "-spp", "1000", 
                  "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

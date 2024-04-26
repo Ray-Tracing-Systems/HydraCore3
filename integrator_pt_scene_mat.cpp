@@ -1057,12 +1057,17 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   {
     mat.data[FILM_THICKNESS_MIN] = nodeThickness.attribute(L"min").as_float();
     mat.data[FILM_THICKNESS_MAX] = nodeThickness.attribute(L"max").as_float();
+    mat.data[FILM_THICKNESS_MAP] = as_float(1u);
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeThickness, texturesInfo, texCache, textures);
     
-    mat.row0 [2]  = sampler.row0;
-    mat.row1 [2]  = sampler.row1;
-    mat.texid[2] = texID;
+    mat.row0 [0] = sampler.row0;
+    mat.row1 [0] = sampler.row1;
+    mat.texid[0] = texID;
+  }
+  else
+  {
+    mat.data[FILM_THICKNESS_MAP] = as_float(0u);
   }
 
   mat.data[FILM_ETA_EXT] = 1.00028f; // air
@@ -1088,6 +1093,8 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     eta_k_vec.push_back(layerNode.child(L"eta").attribute(L"val").as_float());
     spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
   }
+
+  mat.data[FILM_THICKNESS] = thickness_vec[as_uint(mat.data[FILM_THICKNESS_OFFSET])];
   mat.data[FILM_LAYERS_COUNT] = as_float(layers);
   mat.data[FILM_K_SPECID_OFFSET] = as_float((uint) spec_id_vec.size());
   mat.data[FILM_K_OFFSET] = as_float((uint) eta_k_vec.size());
@@ -1101,10 +1108,9 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   uint precompFlag = 0;
   auto nodePrecomp = materialNode.child(L"precompute");
 
-  if(nodePrecomp != nullptr && nodePrecomp.attribute(L"val").as_uint() > 0)
+  if(spectral_mode == 0 || layers > 2)
   {
     precompFlag = 1u;
-    mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
     mat.data[FILM_PRECOMP_OFFSET] = as_float(precomputed_film.size());
     if (spectral_mode != 0)
     {
@@ -1133,6 +1139,8 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
   {
     mat.data[FILM_PRECOMP_OFFSET] = as_float(0);
   }
+
+  mat.data[FILM_PRECOMP_FLAG] = as_float(precompFlag);
 
   return mat;
 }
