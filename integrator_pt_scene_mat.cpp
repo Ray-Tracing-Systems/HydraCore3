@@ -1117,7 +1117,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
       auto precomputed = precomputeThinFilmSpectral(mat.data[FILM_ETA_EXT], spec_id_vec.data() + as_uint(mat.data[FILM_ETA_SPECID_OFFSET]), 
               spec_id_vec.data() + as_uint(mat.data[FILM_K_SPECID_OFFSET]), spec_values, spec_offsets,
               eta_k_vec.data() + as_uint(mat.data[FILM_ETA_OFFSET]), eta_k_vec.data() + as_uint(mat.data[FILM_K_OFFSET]),
-              thickness_vec.data(), layers);
+              thickness_vec.data() + as_uint(mat.data[FILM_THICKNESS_OFFSET]), layers);
       std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
       std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
       std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));
@@ -1128,7 +1128,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
       auto precomputed = precomputeThinFilmRGB(mat.data[FILM_ETA_EXT], spec_id_vec.data() + as_uint(mat.data[FILM_ETA_SPECID_OFFSET]), 
               spec_id_vec.data() + as_uint(mat.data[FILM_K_SPECID_OFFSET]), spec_values, spec_offsets,
               eta_k_vec.data() + as_uint(mat.data[FILM_ETA_OFFSET]), eta_k_vec.data() + as_uint(mat.data[FILM_K_OFFSET]),
-              thickness_vec.data(), layers, m_cie_x, m_cie_y, m_cie_z);
+              thickness_vec.data() + as_uint(mat.data[FILM_THICKNESS_OFFSET]), layers, m_cie_x, m_cie_y, m_cie_z);
       std::copy(precomputed.ext_reflectivity.begin(), precomputed.ext_reflectivity.end(), std::back_inserter(precomputed_film));
       std::copy(precomputed.ext_transmittivity.begin(), precomputed.ext_transmittivity.end(), std::back_inserter(precomputed_film));
       std::copy(precomputed.int_reflectivity.begin(), precomputed.int_reflectivity.end(), std::back_inserter(precomputed_film));

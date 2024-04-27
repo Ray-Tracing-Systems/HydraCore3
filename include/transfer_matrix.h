@@ -197,8 +197,3 @@ static inline FrReflRefr TransferMatrixBackward(float cosThetaI, const complex* 
   result.refr = (T_P + T_S) / 2.f * getRefractionFactor(cosThetaI, cosThetaF, a_ior[layers], a_ior[0]);
   return result;
 }
-
-static inline FrReflRefr MixedTransferMatrixForward(float cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda)
-{
-
-}
