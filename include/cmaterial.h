@@ -951,6 +951,8 @@ static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
 
 static inline float sum(float4 v) {return v.x + v.y + v.z + v.w;}
 
+static inline complex conjugate(complex c) {return {c.re, -c.im};}
+
 static constexpr uint PolarizationS = 0;
 static constexpr uint PolarizationP = 1;
 
@@ -966,6 +968,24 @@ static inline float getRefractionFactor(float cosThetaI, complex cosThetaT, comp
     return 0;
   }
   return (iorT.re * cosThetaT.re) / (iorI.re * cosThetaI);
+}
+
+static inline float getRefractionFactorS(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT)
+{
+  if (complex_norm(cosThetaI) <= 1e-6f)
+  {
+    return 0;
+  }
+  return (iorT * cosThetaT).re / (iorI * cosThetaI).re;
+}
+
+static inline float getRefractionFactorP(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT)
+{
+  if (complex_norm(cosThetaI) <= 1e-6f)
+  {
+    return 0;
+  }
+  return (iorT * conjugate(cosThetaT)).re / (iorI * conjugate(cosThetaI)).re;
 }
 
 static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT, uint polarization)

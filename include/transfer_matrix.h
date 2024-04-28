@@ -43,9 +43,9 @@ static inline complex getPropCoeff(complex phaseExp)
   }
 }
 
-static inline FrReflRefr TransferMatrixForward(float cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda)
+static inline FrReflRefr TransferMatrixForward(complex cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda)
 {
-  float sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
   complex sinThetaF = sinThetaI * a_ior[0].re * a_ior[0].re / (a_ior[1] * a_ior[1]);
   complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
     
@@ -114,16 +114,16 @@ static inline FrReflRefr TransferMatrixForward(float cosThetaI, const complex* a
   float R_S = complex_norm(transferMatrix[1].value[1][0] / transferMatrix[1].value[0][0]);
   result.refl = (R_P + R_S) / 2.f;
 
-  float T_P = complex_norm(coeff[0] / transferMatrix[0].value[0][0]);
-  float T_S = complex_norm(coeff[1] / transferMatrix[1].value[0][0]);
-  result.refr = (T_P + T_S) / 2.f * getRefractionFactor(cosThetaI, cosThetaF, a_ior[0], a_ior[layers]);
+  float T_P = complex_norm(coeff[0] / transferMatrix[0].value[0][0]) * getRefractionFactorP(cosThetaI, cosThetaF, a_ior[0], a_ior[layers]);
+  float T_S = complex_norm(coeff[1] / transferMatrix[1].value[0][0]) * getRefractionFactorS(cosThetaI, cosThetaF, a_ior[0], a_ior[layers]);
+  result.refr = (T_P + T_S) / 2.f;
 
   return result;
 }
 
-static inline FrReflRefr TransferMatrixBackward(float cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda)
+static inline FrReflRefr TransferMatrixBackward(complex cosThetaI, const complex* a_ior, const float* thickness, uint layers, float lambda)
 {
-  float sinThetaI = 1.0f - cosThetaI * cosThetaI;
+  complex sinThetaI = 1.0f - cosThetaI * cosThetaI;
   complex sinThetaF = sinThetaI * a_ior[layers].re * a_ior[layers].re / (a_ior[layers - 1] * a_ior[layers - 1]);
   complex cosThetaF = complex_sqrt(1.0f - sinThetaF);
     
@@ -192,8 +192,8 @@ static inline FrReflRefr TransferMatrixBackward(float cosThetaI, const complex* 
   float R_S = complex_norm(transferMatrix[1].value[1][0] / transferMatrix[1].value[0][0]);
   result.refl = (R_P + R_S) / 2.f;
 
-  float T_P = complex_norm(coeff[0] / transferMatrix[0].value[0][0]);
-  float T_S = complex_norm(coeff[1] / transferMatrix[1].value[0][0]);
-  result.refr = (T_P + T_S) / 2.f * getRefractionFactor(cosThetaI, cosThetaF, a_ior[layers], a_ior[0]);
+  float T_P = complex_norm(coeff[0] / transferMatrix[0].value[0][0]) * getRefractionFactorP(cosThetaI, cosThetaF, a_ior[layers], a_ior[0]);
+  float T_S = complex_norm(coeff[1] / transferMatrix[1].value[0][0]) * getRefractionFactorS(cosThetaI, cosThetaF, a_ior[layers], a_ior[0]);
+  result.refr = (T_P + T_S) / 2.f;
   return result;
 }

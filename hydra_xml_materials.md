@@ -252,3 +252,64 @@ Examples:
   </material>
 </materials_lib>
 ```
+
+### Thin film
+
+Models material consisting of thin layers with complex Fresnel IOR: eta (refractive index) and k (extinction coefficient). 
+Generally, should be used in *spectral* rendering mode (pass `--spectral` in command line). In RGB mode colors are preintegrated for D65 source.
+
+Spectra can be found, for example, [here](https://refractiveindex.info/)
+
+| Node | Attributes | Texture | Spectrum |
+| --- | --- | --- | --- |
+| bsdf  | `type` - bsdf model, possible values - `ggx` | - | - |
+| alpha  | `val` - microfacet roughness, used to set `alpha_u` and `alpha_v` to the same value, possible values - 1 float | yes | no |
+| eta  | `val` - internal refractive index, possible values - 1 float | no | yes |
+| k  | `val` - internal extinction coefficient, possible values - 1 float | no | yes |
+| ext_ior  | `val` - external index of refraction, possible values - 1 float | no | no |
+| thickness_map  | `min` and `max` - limits of thickness for 1-layer film, possible values - 1 float | yes | no |
+
+Layers are stacked in <layers> block and have these parameters:
+| eta  | `val` - refractive index, possible values - 1 float | no | yes |
+| k  | `val` - extinction coefficient, possible values - 1 float | no | yes |
+| thickness  | `val` - thickness of layer, possible values - 1 float | no | yes |
+
+Examples:
+
+```
+<materials_lib>
+  <material id="0" name="conductor" type="rough_conductor">
+    <bsdf type="ggx" />
+    <alpha val="0.1" />
+    <eta val="1.5">
+      <spectrum id="1" type="ref"/>
+    </eta>
+    <k val="1.0">
+      <spectrum id="2" type="ref"/>
+    </k>
+  </material>
+  <material id="1" name="conductor_anisotropic" type="rough_conductor">
+    <bsdf type="ggx" />
+    <alpha_u val="0.25" />
+    <alpha_v val="0.01" />
+    <eta val="0.0" />
+    <k val="1.0" />
+  </material>
+  <material id="2" name="conductor_texture" type="rough_conductor">
+    <bsdf type="ggx" />
+    <alpha val="0.1" >
+      <texture id="1" type="texref" matrix="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" addressing_mode_u="wrap" addressing_mode_v="wrap" input_gamma="1.0" input_alpha="rgb" />
+    </alpha>
+    <eta val="1.5" />
+    <k val="1.0" />
+  </material>
+  <material id="3" name="conductor_rgb_mode" type="rough_conductor">
+    <bsdf type="ggx" />
+    <alpha_u val="0.1" />
+    <alpha_v val="0.1" />
+    <eta val="1.5" />
+    <k val="1.0" />
+    <reflectance val ="1.0 0.782 0.344" />
+  </material>
+</materials_lib>
+```

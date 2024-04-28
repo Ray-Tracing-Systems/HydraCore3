@@ -1093,6 +1093,9 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     eta_k_vec.push_back(layerNode.child(L"eta").attribute(L"val").as_float());
     spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"eta")));
   }
+  layers++;
+  eta_k_vec.push_back(materialNode.child(L"eta").attribute(L"val").as_float());
+  spec_id_vec.push_back(GetSpectrumIdFromNode(materialNode.child(L"eta")));
 
   mat.data[FILM_THICKNESS] = thickness_vec[as_uint(mat.data[FILM_THICKNESS_OFFSET])];
   mat.data[FILM_LAYERS_COUNT] = as_float(layers);
@@ -1104,6 +1107,8 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     eta_k_vec.push_back(layerNode.child(L"k").attribute(L"val").as_float());
     spec_id_vec.push_back(GetSpectrumIdFromNode(layerNode.child(L"k")));
   }
+  eta_k_vec.push_back(materialNode.child(L"k").attribute(L"val").as_float());
+  spec_id_vec.push_back(GetSpectrumIdFromNode(materialNode.child(L"k")));
 
   uint precompFlag = 0;
   auto nodePrecomp = materialNode.child(L"precompute");
