@@ -278,38 +278,63 @@ Examples:
 
 ```
 <materials_lib>
-  <material id="0" name="conductor" type="rough_conductor">
+  <material id="0" name="thin_film_0" type="thin_film">
     <bsdf type="ggx" />
-    <alpha val="0.1" />
-    <eta val="1.5">
-      <spectrum id="1" type="ref"/>
+    <ext_ior val="1"/>
+    <alpha val="0.0" />
+    <eta val="1.0">
     </eta>
-    <k val="1.0">
-      <spectrum id="2" type="ref"/>
+    <k val="0.0">
     </k>
+    <layers>
+      <layer>
+        <thickness val="300" />
+        <eta val="2.0">
+        </eta>
+        <k val="0.0">
+        </k>
+      </layer>
+      <layer>
+        <thickness val="5" />
+        <eta val="1.0">
+          <spectrum id="1" type="ref"/>
+        </eta>
+        <k val="1.0">
+          <spectrum id="2" type="ref"/>
+        </k>
+      </layer>
+      <layer>
+        <thickness val="1000" />
+        <eta val="1.6">
+        </eta>
+        <k val="2.0">
+        </k>
+      </layer>
+    </layers>
   </material>
-  <material id="1" name="conductor_anisotropic" type="rough_conductor">
+  <material id="1" name="thin_film_1" type="thin_film">
     <bsdf type="ggx" />
-    <alpha_u val="0.25" />
-    <alpha_v val="0.01" />
-    <eta val="0.0" />
-    <k val="1.0" />
-  </material>
-  <material id="2" name="conductor_texture" type="rough_conductor">
-    <bsdf type="ggx" />
-    <alpha val="0.1" >
-      <texture id="1" type="texref" matrix="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" addressing_mode_u="wrap" addressing_mode_v="wrap" input_gamma="1.0" input_alpha="rgb" />
-    </alpha>
-    <eta val="1.5" />
-    <k val="1.0" />
-  </material>
-  <material id="3" name="conductor_rgb_mode" type="rough_conductor">
-    <bsdf type="ggx" />
-    <alpha_u val="0.1" />
-    <alpha_v val="0.1" />
-    <eta val="1.5" />
-    <k val="1.0" />
-    <reflectance val ="1.0 0.782 0.344" />
+    <alpha val="0.01" />
+		<eta val="1.0">
+			<spectrum id="3" type="ref"/>
+		</eta>
+		<k val="0.0">
+			<spectrum id="4" type="ref"/>
+		</k>
+    <thickness_map min="100" max="550">
+      <texture id="1" type="texref" matrix="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" addressing_mode_u="wrap" addressing_mode_v="wrap" input_gamma="2.20000005" input_alpha="rgb" />
+    </thickness_map>
+    <layers>
+      <layer>
+        <thickness val="550" />
+        <eta val="1.33">
+          <spectrum id="1" type="ref"/>
+        </eta>
+        <k val="0.0">
+          <spectrum id="2" type="ref"/>
+        </k>
+      </layer>
+    </layers>
   </material>
 </materials_lib>
 ```
