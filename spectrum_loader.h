@@ -48,16 +48,14 @@ public:
   {
     *this = std::move(other);
   }
+  
   SpectrumLoader &operator=(SpectrumLoader &&other)
   {
-    std::swap(loader, other.loader);
+    loader = std::move(other.loader);
     std::swap(spec_id, other.spec_id);
     spectrum = std::move(other.spectrum);
     return *this;
   }
-
-  ~SpectrumLoader() {delete loader;}
-
 
   std::optional<Spectrum> &load() const;
 
@@ -101,7 +99,7 @@ private:
     void load(spec::ISpectrum::sptr &ptr) override;
   };
 
-  mutable ILoader *loader;
+  mutable std::unique_ptr<ILoader> loader;
   uint32_t spec_id;
   mutable std::optional<Spectrum> spectrum;
 };

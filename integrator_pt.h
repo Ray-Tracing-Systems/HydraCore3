@@ -388,6 +388,7 @@ public:
   // Upsampler
   // std::vector<float3> m_spec_lut;
   std::vector<float4> m_spec_lut;
+  std::vector<float> m_textures_max_power;
   uint32_t m_spec_lut_csize = 65;
   uint32_t m_spec_lut_step = 4;
   
