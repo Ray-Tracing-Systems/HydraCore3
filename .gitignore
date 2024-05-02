@@ -39,4 +39,10 @@ bin-release/
 build_generated/
 out/
 
+CMakeFiles/*
+*.cmake
+ies_parser/CMakeFiles/*
+Makefile
+CMakeCache.txt
+*.bmp
 # Files
