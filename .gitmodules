@@ -13,3 +13,6 @@
 [submodule "external/CrossRT"]
 	path = external/CrossRT
 	url = https://github.com/msu-graphics-group/CrossRT.git
+[submodule "external/LiteRT"]
+	path = external/LiteRT
+	url = https://github.com/msu-graphics-group/LiteRT.git
