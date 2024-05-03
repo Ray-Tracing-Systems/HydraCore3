@@ -261,7 +261,8 @@ else()
                           ${RT_VULKAN_SRC}
                           ${VULKAN_SRC}
                           ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+                          ${OTHER_EXTERNAL_SRC}
+                          ${RT_SRC})
     endif()
   else()
     add_executable(hydra ${CORE_SRC}
