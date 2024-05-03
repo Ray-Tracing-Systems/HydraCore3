@@ -4,6 +4,7 @@ project (HydraCore3)
 option(USE_VULKAN "Enable Vulkan implementation" ON)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
+option(USE_LITERT "Use LiteRT interface for ray-tracing instead of CrossRT" OFF)
 
 option(USE_STB_IMAGE "Enable STB image " ON)
 if(USE_STB_IMAGE)
@@ -80,10 +81,19 @@ include_directories(SYSTEM "external/tinyexr"
                     "external/LiteMath/external")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
                     "external"
-                    "external/vkutils"
-                    "external/CrossRT")
+                    "external/vkutils")
 
-link_directories("external/CrossRT/lib")
+if (USE_LITERT)
+  if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+    message("LiteRT not supported on Windows")
+  endif()
+  add_compile_definitions(USE_LITERT)
+  link_directories("external/LiteRT/dependencies/embree/lib")
+  include_directories("external/LiteRT/dependencies/embree")
+else()
+  include_directories("external/CrossRT")
+  link_directories("external/CrossRT/lib")
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")
@@ -108,7 +118,6 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/vk_descriptor_sets.cpp
         external/vkutils/ray_tracing/vk_rt_utils.cpp
         external/vkutils/geom/vk_mesh.cpp
-        external/CrossRT/VulkanRTX.cpp
         external/LiteScene/scene_mgr.cpp
         external/vkutils/geom/cmesh.cpp)
 
@@ -135,8 +144,36 @@ set(LOADER_EXTERNAL_SRC
         external/LiteScene/cmesh4.cpp)
 
 set(OTHER_EXTERNAL_SRC
-        external/LiteMath/Image2d.cpp
-        external/CrossRT/EmbreeRT.cpp)
+        external/LiteMath/Image2d.cpp)
+
+if (USE_LITERT)
+  set(RT_SRC
+      external/LiteRT/BVH/BVH2Common.cpp
+      external/LiteRT/BVH/BVH2Common_host.cpp
+      external/LiteRT/BVH/cbvh.cpp
+      external/LiteRT/BVH/cbvh_fat.cpp
+      external/LiteRT/BVH/cbvh_embree2.cpp
+      external/LiteRT/Timer.cpp
+      external/LiteRT/BruteForceRT.cpp
+      external/LiteRT/Renderer/eye_ray.cpp
+      external/LiteRT/Renderer/eye_ray_host.cpp
+      external/LiteRT/sdfScene/sdf_scene.cpp
+      external/LiteRT/utils/mesh_bvh.cpp
+      external/LiteRT/utils/mesh.cpp
+      external/LiteRT/utils/sparse_octree.cpp
+      external/LiteRT/utils/radiance_field.cpp
+      external/LiteRT/tests/tests.cpp
+      external/LiteRT/tests/benchmark.cpp)
+  set(RT_VULKAN_SRC
+      external/LiteRT/Renderer/eye_ray_gpu.cpp 
+      external/LiteRT/Renderer/eye_ray_gpu_ds.cpp 
+      external/LiteRT/Renderer/eye_ray_gpu_init.cpp)
+else()
+  set(RT_SRC
+      external/CrossRT/EmbreeRT.cpp)
+  set(RT_VULKAN_SRC
+      external/CrossRT/VulkanRTX.cpp)
+endif()
 
 if(USE_VULKAN)
   set (CAM_MAIN cam_plugin/main_with_cam_gpu.cpp)   
@@ -184,36 +221,44 @@ if(HYDRA_CORE3_LIB)
     if(CAM_PLUGIN)
         add_library(hydra ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
+                          ${RT_VULKAN_SRC}
                           ${VULKAN_SRC}
                           ${VULKAN_CAM1}
                           ${VULKAN_CAM2}
                           ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+                          ${OTHER_EXTERNAL_SRC}
+                          ${RT_SRC})
     else()
         add_library(hydra ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
+                          ${RT_VULKAN_SRC}
                           ${VULKAN_SRC}
                           ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+                          ${OTHER_EXTERNAL_SRC}
+                          ${RT_SRC})
     endif()
   else()
       add_library(hydra ${CORE_SRC}
                         ${LOADER_EXTERNAL_SRC}
-                        ${OTHER_EXTERNAL_SRC})
+                        ${OTHER_EXTERNAL_SRC}
+                        ${RT_SRC})
   endif()
 else()
   if(USE_VULKAN)    
     if(CAM_PLUGIN)
       add_executable(hydra ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
+                          ${RT_VULKAN_SRC}
                           ${VULKAN_SRC}
                           ${VULKAN_CAM1}
                           ${VULKAN_CAM2}
                           ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+                          ${OTHER_EXTERNAL_SRC}
+                          ${RT_SRC})
     else()
       add_executable(hydra ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
+                          ${RT_VULKAN_SRC}
                           ${VULKAN_SRC}
                           ${LOADER_EXTERNAL_SRC}
                           ${OTHER_EXTERNAL_SRC})
@@ -221,7 +266,8 @@ else()
   else()
     add_executable(hydra ${CORE_SRC}
                         ${LOADER_EXTERNAL_SRC}
-                        ${OTHER_EXTERNAL_SRC})
+                        ${OTHER_EXTERNAL_SRC}
+                        ${RT_SRC})
   endif()
 endif()
 
@@ -232,10 +278,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   set(EMBREE_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
   find_package(Threads REQUIRED)
-  set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib)
-  link_directories(${EMBREE_DIR})
-  set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.so 
-                  ${EMBREE_DIR}/libtbb.so)
+  if (USE_LITERT)
+    set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/LiteRT/dependencies/embree/lib)
+    link_directories(${EMBREE_DIR})
+    set(EMBREE_LIBS ${EMBREE_DIR}/libembree4.so 
+                    ${EMBREE_DIR}/libtbb.so
+                    ${EMBREE_DIR}/libtbbmalloc.so)
+  else()
+    set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib)
+    link_directories(${EMBREE_DIR})
+    set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.so 
+                    ${EMBREE_DIR}/libtbb.so)
+  endif()
 endif()
 
 

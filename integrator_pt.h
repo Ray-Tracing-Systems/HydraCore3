@@ -13,7 +13,11 @@
 #include <utility>
 #include <cfloat>
 
+#ifdef USE_LITERT
+#include "LiteRT/ISceneObject.h" // special include for ray tracing
+#else
 #include "CrossRT.h" // special include for ray tracing
+#endif
 #include "Image2d.h" // special include for textures
 
 #include "spectrum.h"
