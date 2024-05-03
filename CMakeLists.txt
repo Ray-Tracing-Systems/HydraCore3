@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
+option(USE_LANGEVIN "Enable Langevin main" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
 
@@ -14,7 +15,7 @@ if(USE_ENZYME)
   set(CLANG_VERSION "17" CACHE STRING "clang and LLVM version to use")
   set(CMAKE_C_COMPILER   "/usr/bin/clang-${CLANG_VERSION}")   # $ export CC=/usr/bin/clang-17
   set(CMAKE_CXX_COMPILER "/usr/bin/clang++-${CLANG_VERSION}") # $ export CXX=/usr/bin/clang++-17
-  set(ENZYME_PLUGIN_DLL  "/home/frol/PROG/enzyme_103/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
+  set(ENZYME_PLUGIN_DLL  "/home/alehandreus/E/Graphics/Enzyme_103/enzyme/build/Enzyme/ClangEnzyme-${CLANG_VERSION}.so")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_definitions(-DUSE_ENZYME)
 endif()
@@ -148,6 +149,10 @@ if(CAM_PLUGIN)
   set(MAIN_FILES ${CAM_MAIN}
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
+elseif(USE_LANGEVIN)
+message(STATUS "Using Langevin")
+  set(MAIN_FILES main_langevin.cpp
+                 mlt/integrator_langevin.cpp)
 elseif(USE_ENZYME)
   set(MAIN_FILES diff_render/drmain.cpp
                  diff_render/integrator_dr.cpp

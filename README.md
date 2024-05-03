@@ -56,7 +56,7 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 1) Select/Find/Make a reference image to you feature
 2) Implement it in renderer on CPU
 3) Run kernel_slicer to get GPU version and be sure that code succesefully transformed to shaders
-   * you may work with CPU build only, but this is long ...  
+   * You may work with CPU build only, but this is long ...  
 4) Add test to python script `testing/run_tests.py`:
    * You have to clone https://github.com/Ray-Tracing-Systems/HydraAPI-tests
    * You have to run tests from HydraAPI-tests repo to generate scene files
