@@ -73,7 +73,7 @@ int main(int argc, const char **argv) {
     std::vector<float> realColor(FB_WIDTH * FB_HEIGHT * FB_CHANNELS);
 
     std::shared_ptr<Integrator> pImpl;
-    pImpl = CreateIntegratorKMLT(FB_WIDTH * FB_HEIGHT, spectral_mode, features);
+    pImpl = CreateIntegratorLangevin(FB_WIDTH * FB_HEIGHT, spectral_mode, features);
     pImpl->SetViewport(0, 0, FB_WIDTH, FB_HEIGHT);
     std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
     pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());

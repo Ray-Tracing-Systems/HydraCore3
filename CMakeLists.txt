@@ -150,7 +150,7 @@ if(CAM_PLUGIN)
                 cam_plugin/CamPinHole.cpp
                 cam_plugin/CamTableLens.cpp)
 elseif(USE_LANGEVIN)
-message(STATUS "Using Langevin")
+  message(STATUS "Using Langevin")
   set(MAIN_FILES main_langevin.cpp
                  mlt/integrator_langevin.cpp)
 elseif(USE_ENZYME)
@@ -251,7 +251,7 @@ endif()
 
 if(USE_ENZYME)
   set(ENZYME_FLAGS "-fplugin=${ENZYME_PLUGIN_DLL}") # -fplugin=${ENZYME_PLUGIN_DLL}
-  set(OMP_FLAGS "-fopenmp=libomp ") # -fplugin=${ENZYME_PLUGIN_DLL}
+  set(OMP_FLAGS "-fopenmp") # -fplugin=${ENZYME_PLUGIN_DLL}
   target_compile_options(hydra PUBLIC ${OMP_FLAGS} ${ENZYME_FLAGS})
 else()
   set(CUSTOM_OMP "")
@@ -276,5 +276,6 @@ endif()
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")   # add debug specific options here
   target_link_libraries(hydra LINK_PUBLIC Threads::Threads OpenMP::OpenMP_CXX)
 else()
-  target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
+  # target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
+  target_link_options(hydra PUBLIC "-fopenmp")
 endif()
