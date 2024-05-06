@@ -23,7 +23,9 @@ endif()
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 
-if(NOT HYDRA_CORE3_LIB)
+if(HYDRA_CORE3_LIB)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+else()
   add_library(project_options INTERFACE)
   target_compile_features(project_options INTERFACE cxx_std_17)
 
