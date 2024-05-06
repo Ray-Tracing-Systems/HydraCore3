@@ -784,6 +784,9 @@ struct ThinFilmPrecomputed
   std::vector<float> int_transmittivity;
 };
 
+#include <chrono>
+using namespace std::chrono;
+
 ThinFilmPrecomputed precomputeThinFilmSpectral(
         const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
         const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
@@ -794,6 +797,8 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
   res.ext_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
   res.int_reflectivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
   res.int_transmittivity.resize(FILM_ANGLE_RES * FILM_LENGTH_RES);
+
+  auto start = high_resolution_clock::now();
   for (size_t i = 0; i < FILM_LENGTH_RES; ++i)
   {
     float wavelength = (LAMBDA_MAX - LAMBDA_MIN - 1) / (FILM_LENGTH_RES - 1) * i + LAMBDA_MIN;
@@ -871,6 +876,9 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
       }
     }
   }
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<microseconds>(stop - start);
+  std::cout << duration.count() << std::endl;
   save_to_file("../precomputed_film_refl_ext.txt", res.ext_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
   save_to_file("../precomputed_film_refl_int.txt", res.int_reflectivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
   save_to_file("../precomputed_film_refr_ext.txt", res.ext_transmittivity.data(), FILM_LENGTH_RES, FILM_ANGLE_RES);
@@ -1061,9 +1069,9 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
 
     const auto& [sampler, texID] = LoadTextureFromNode(nodeThickness, texturesInfo, texCache, textures);
     
-    mat.row0 [0] = sampler.row0;
-    mat.row1 [0] = sampler.row1;
-    mat.texid[0] = texID;
+    mat.row0 [2] = sampler.row0;
+    mat.row1 [2] = sampler.row1;
+    mat.texid[2] = texID;
   }
   else
   {

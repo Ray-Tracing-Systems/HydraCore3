@@ -223,8 +223,114 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--cpu",
+        "args": ["--gpu",
                  "-in", "../HydraScenes/sphere.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "100", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "BreakfastFilms",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/breakfast_room/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1500",
+                 "-height", "1500",
+                 "-spp", "5000", 
+                 "-out", "../out/pic.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Breakfast",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/breakfast_room/simple.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1500",
+                 "-height", "1500",
+                 "-spp", "5000", 
+                 "-out", "../out/pic.bmp",
+                 "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Copper",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/Copper/copper-hydra3.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "100", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "CopperSpectral",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/Copper/spectral-copper-hydra3.xml",
                  "-integrator", "mispt", 
                  "-width", "500",
                  "-height", "500",
@@ -310,6 +416,59 @@
                  "-height", "1500",
                  "-spp", "250", 
                  "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "BMW",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/bmw/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1500",
+                 "-height", "1500",
+                 "-spp", "2000", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "room",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/room/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "50000", 
+                 "-out", "../out/pic.bmp",
+                 "--spectral"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

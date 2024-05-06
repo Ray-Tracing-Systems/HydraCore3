@@ -219,9 +219,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       float thickness;
       if (as_uint(m_materials[currMatId].data[FILM_THICKNESS_MAP]) > 0u)
       {
+        const uint texId  = m_materials[currMatId].texid[2];
+        const float2 texCoord = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
+        const float4 thickness_val = m_textures[texId]->sample(texCoord);
         float thickness_max = m_materials[currMatId].data[FILM_THICKNESS_MAX];
         float thickness_min = m_materials[currMatId].data[FILM_THICKNESS_MIN];
-        thickness = (thickness_max - thickness_min) * texColor.x + thickness_min;
+        thickness = (thickness_max - thickness_min) * thickness_val.x + thickness_min;
+        //std::cout << fourScalarMatParams.x << " " << fourScalarMatParams.y << " " << fourScalarMatParams.z << " " << fourScalarMatParams.w << std::endl;
       }
       else
       {
@@ -442,9 +446,12 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           float thickness;
           if (as_uint(m_materials[currMat.id].data[FILM_THICKNESS_MAP]) > 0u)
           {
+            const uint texId  = m_materials[currMat.id].texid[2];
+            const float2 texCoord = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
+            const float4 thickness_val = m_textures[texId]->sample(texCoord);
             float thickness_max = m_materials[currMat.id].data[FILM_THICKNESS_MAX];
             float thickness_min = m_materials[currMat.id].data[FILM_THICKNESS_MIN];
-            thickness = (thickness_max - thickness_min) * texColor.x + thickness_min;
+            thickness = (thickness_max - thickness_min) * thickness_val.x + thickness_min;
           }
           else
           {
