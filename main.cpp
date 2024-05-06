@@ -58,6 +58,7 @@ int main(int argc, const char** argv) // common hydra main
   std::string imageOut       = "z_out.bmp";
   std::string integratorType = "mispt";
   std::string fbLayer        = "color";
+  std::string resourceDir    = ".";
   float gamma                = 2.4f; // out gamma, special value, see save image functions.
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -78,6 +79,9 @@ int main(int argc, const char** argv) // common hydra main
 
   if(args.hasOption("-scn_dir"))
     sceneDir = args.getOptionValue<std::string>("-scn_dir");
+
+  if(args.hasOption("-resource_dir"))
+    resourceDir = args.getOptionValue<std::string>("-resource_dir");
 
   const bool saveHDR = imageOut.find(".exr") != std::string::npos ||
                        imageOut.find(".image1f") != std::string::npos ||

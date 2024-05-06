@@ -13,7 +13,9 @@ using namespace LiteMath;
 void Integrator::InitRandomGens(int a_maxThreads)
 {
   m_randomGens.resize(a_maxThreads);
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int i=0;i<a_maxThreads;i++)
     m_randomGens[i] = RandomGenInit(i);
 }
@@ -200,7 +202,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   const float4 rayDir = *rayDirAndFar ;
   const float  time   = *a_time;
 
-  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
+  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHitMotion(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
 
   if(hit.geomId != uint32_t(-1))
@@ -323,7 +325,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   float time = *a_time;
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
-  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHitMotion(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
 
   if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
@@ -793,9 +795,9 @@ bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) c
   float3 rayPosLens = float3(inoutRayPos.x, inoutRayPos.y, -inoutRayPos.z);
   float3 rayDirLens = float3(inoutRayDir.x, inoutRayDir.y, -inoutRayDir.z);
 
-  for(int i=0; i<lines.size(); i++)
+  for(int i=0; i<m_lines.size(); i++)
   {
-    const auto element = lines[i];                                  
+    const auto element = m_lines[i];                                  
     // Update ray from film accounting for interaction with _element_
     elementZ -= element.thickness;
     
@@ -831,8 +833,8 @@ bool Integrator::TraceLensesFromFilm(float3& inoutRayPos, float3& inoutRayDir) c
     if (!isStop) 
     {
       float3 wt;
-      float etaI = lines[i+0].eta;                                                      
-      float etaT = (i == lines.size()-1) ? 1.0f : lines[i+1].eta;
+      float etaI = m_lines[i+0].eta;                                                      
+      float etaT = (i == m_lines.size()-1) ? 1.0f : m_lines[i+1].eta;
       if(etaT == 0.0f)
         etaT = 1.0f;                                                          
       if (!Refract(normalize((-1.0f)*rayDirLens), n, etaI / etaT, &wt))

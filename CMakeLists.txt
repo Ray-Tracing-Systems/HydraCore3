@@ -23,7 +23,9 @@ endif()
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 
-if(NOT HYDRA_CORE3_LIB)
+if(HYDRA_CORE3_LIB)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+else()
   add_library(project_options INTERFACE)
   target_compile_features(project_options INTERFACE cxx_std_17)
 
@@ -238,13 +240,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
   find_package(Threads REQUIRED)
   set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib)
   link_directories(${EMBREE_DIR})
-  set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.a 
-                  ${EMBREE_DIR}/libembree_sse42.a 
-                  ${EMBREE_DIR}/libembree_avx.a 
-                  ${EMBREE_DIR}/libembree_avx2.a 
-                  ${EMBREE_DIR}/liblexers.a ${EMBREE_DIR}/libsimd.a
-                  ${EMBREE_DIR}/libsys.a 
-                  ${EMBREE_DIR}/libtasking.a)
+  set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.so 
+                  ${EMBREE_DIR}/libtbb.so)
 endif()
 
 

@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <utility>
 #include <cfloat>
 
 #include "CrossRT.h" // special include for ray tracing
@@ -88,6 +89,32 @@ public:
     int32_t instId;
   };
 
+  struct Map2DPiecewiseSample
+  {
+    float2 texCoord;
+    float  mapPdf;
+  };
+
+  struct LensElementInterface 
+  {
+    float curvatureRadius;
+    float thickness;
+    float eta;
+    float apertureRadius;
+  };
+
+
+  struct EyeRayData
+  {
+    float3 rayPos;
+    float3 rayDir;
+    float  timeSam;
+    float  waveSam;
+    float  cosTheta; // cos with sensor plane
+    uint   x;        // screen x coord
+    uint   y;        // screen y coord
+  };
+
   virtual void EvalGBuffer(uint blockId, uint localId, GBufferPixel* out_gbuffer);
   virtual void GBufferReduction(uint blockId, uint blockSize, GBufferPixel* samples, GBufferPixel* out_gbuffer);
 
@@ -108,6 +135,10 @@ public:
   virtual void UpdateMembersPlainData() {}                               // will be overriden in generated class, optional function
   //virtual void UpdateMembersVectorData() {}                              // will be overriden in generated class, optional function
   //virtual void UpdateMembersTexureData() {}                              // will be overriden in generated class, optional function
+
+  virtual std::string GetResourcesRootDir() {return m_resourcesDir; }
+
+  void SetResourcesDir(const std::string& a_dir) {m_resourcesDir = a_dir; }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -179,6 +210,18 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Integrator Settings
 
+  int2 GetResolution() const { return {m_winWidth, m_winHeight};}
+  
+  float GetAspect() const { return m_aspect; }
+
+  float GetDiagonal() const { return m_diagonal; }
+  void  SetDiagonal(float new_diagonal) { m_diagonal = new_diagonal; }
+
+  float2 GetPhysSize() const { return m_physSize; }
+  void  SetPhysSize(float2 new_size) { m_physSize = new_size; }
+
+  void SetLines(std::vector<LensElementInterface> a_lines) {m_lines = std::move(a_lines);}
+
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
   { 
@@ -187,6 +230,8 @@ public:
     m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
     m_winHeight = a_height;
     m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
+
+    m_aspect = float(m_winWidth) / float(m_winHeight);
 
     const auto sizeX = a_width  - a_xStart;
     const auto sizeY = a_height - a_yStart;
@@ -218,7 +263,7 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// \\ Integrator Settings
 
-//protected:
+protected:
   int m_winStartX   = 0;
   int m_winStartY   = 0;
   int m_winWidth    = 512;
@@ -301,11 +346,6 @@ public:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
   std::vector<float>       m_pdfLightData;
-  struct Map2DPiecewiseSample
-  {
-    float2 texCoord;
-    float  mapPdf;
-  };
 
   Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY);
 
@@ -335,22 +375,15 @@ public:
 
   /// @brief ////////////////////////////////////////////////////// optics sim
   
-  struct LensElementInterface 
-  {
-    float curvatureRadius;
-    float thickness;
-    float eta;
-    float apertureRadius;
-  };
 
   uint m_enableOpticSim = 0;
-  std::vector<LensElementInterface> lines;
+  std::vector<LensElementInterface> m_lines;
   float2 m_physSize;
   float  m_diagonal;
   float  m_aspect;
 
-  inline float LensRearZ()      const { return lines[0].thickness; }
-  inline float LensRearRadius() const { return lines[0].apertureRadius; }         
+  inline float LensRearZ()      const { return m_lines[0].thickness; }
+  inline float LensRearRadius() const { return m_lines[0].apertureRadius; }         
 
   bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
                                  float *t, float3 *n) const;
@@ -426,6 +459,8 @@ public:
   static std::string g_lastSceneDir;
   static SceneInfo   g_lastSceneInfo;
 
+  std::string m_resourcesDir = ".";
+
   // for recording path "constant" parameters, override in dereved class
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -443,17 +478,6 @@ public:
   virtual float4 GetRandomNumbersLgts(uint tid, RandomGen* a_gen, int a_bounce);
   virtual float  GetRandomNumbersMatB(uint tid, RandomGen* a_gen, int a_bounce, int a_layer);
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  struct EyeRayData
-  {
-    float3 rayPos;
-    float3 rayDir;
-    float  timeSam;
-    float  waveSam;
-    float  cosTheta; // cos with sensor plane
-    uint   x;        // screen x coord
-    uint   y;        // screen y coord
-  };
 
   virtual EyeRayData SampleCameraRay(RandomGen* pGen, uint tid);
   virtual uint       RandomGenId(uint tid);
