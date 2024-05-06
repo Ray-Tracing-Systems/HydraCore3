@@ -162,8 +162,10 @@ if (USE_LITERT)
       external/LiteRT/utils/mesh.cpp
       external/LiteRT/utils/sparse_octree.cpp
       external/LiteRT/utils/radiance_field.cpp
+      external/LiteRT/utils/gaussian_field.cpp
       external/LiteRT/tests/tests.cpp
-      external/LiteRT/tests/benchmark.cpp)
+      external/LiteRT/tests/benchmark.cpp
+      external/LiteRT/NeuralRT/NeuralRT.cpp)
   set(RT_VULKAN_SRC
       external/LiteRT/Renderer/eye_ray_gpu.cpp 
       external/LiteRT/Renderer/eye_ray_gpu_ds.cpp 
