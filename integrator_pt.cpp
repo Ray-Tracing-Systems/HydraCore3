@@ -297,9 +297,10 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
       const float2 tc = float2(0,0);
 
       //normals for SDFs are calculated along with the hit calculation
-      const float3 n = float3(hit.coords[0], hit.coords[1], hit.coords[2]);
+      const float3 n(hit.coords[2], hit.coords[3], sqrt(max(0.0f, 1-hit.coords[2]*hit.coords[2] - hit.coords[3]*hit.coords[3])));
+    
       const float len = length(n);
-      const float3 hitNorm = len > 1e-9f ? n / len : float3(1.0f, 0.0f, 0.0f);
+      const float3 hitNorm = len > -1e-9f ? n / len : float3(1.0f, 0.0f, 0.0f);
 
       //it is not always good, but we do not expect that tangent will be used at all
       const float3 hitTang = float3(0.0f, 1.0f, 0.0f);
