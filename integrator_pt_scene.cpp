@@ -242,6 +242,31 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
 void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys);
 
+Spectrum ParseSpectrumStr(const std::string &specStr)
+{
+  Spectrum res;
+
+  std::stringstream ss(specStr);
+  float val = 0.0f;
+  int idx = 1;
+  while (ss >> val) 
+  {
+    if(idx % 2 == 0)
+      res.values.push_back(val);
+    else
+      res.wavelengths.push_back(val);
+    
+    idx++;
+  }
+
+  if(res.values.size() != res.wavelengths.size())
+  {
+    std::cout << "[parseSpectrumStr] : size of spectrum string is not even: " << specStr << std::endl;
+  }
+  
+  return res;
+}
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   LoadSceneBegin();
@@ -329,6 +354,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       auto spec_id   = specNode.attribute(L"id").as_uint();
 
       auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+      auto val_attr = specNode.attribute(L"value");
       if(refs_attr)
       {
         auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
@@ -348,12 +374,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       else
       {
-        auto spec_path = std::filesystem::path(sceneFolder);
-        spec_path.append(specNode.attribute(L"loc").as_string());
+        Spectrum spec;
+        if (val_attr) // spectrum is specified directly in XML
+        {
+          std::wstring wstr = val_attr.as_string();
+          spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+          
+        }
+        else
+        {
+          auto spec_path = std::filesystem::path(sceneFolder);
+          spec_path.append(specNode.attribute(L"loc").as_string());
 
-        auto spec = LoadSPDFromFile(spec_path, spec_id);
-        if(spec.values.size() == 0)
-          std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
+          spec = LoadSPDFromFile(spec_path, spec_id);
+          if(spec.values.size() == 0)
+            std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
+        }
+        
         auto specValsUniform = spec.ResampleUniform();
         
         uint32_t offset = uint32_t(m_spec_values.size());
