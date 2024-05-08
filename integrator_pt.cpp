@@ -286,7 +286,6 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 #ifdef USE_LITERT
     else
     {
-      //printf("loool %f %f %f\n", hitPos.x, hitPos.y, hitPos.z);
       //no normal flip/remap on SDFs and other obscure stuff
       currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
 
