@@ -197,7 +197,7 @@ uint32_t UpsampleEmissionSpectrum(const float4 &color, float power, std::vector<
   else {
     uint32_t spec_id = spec_count++;
 
-    auto spec = UpsampleAndResample(rgb, power);
+    auto spec = UpsampleEmissionRaw(rgb, power);
     loaders.push_back({std::move(spec), spec_id});
     spec_cache[{rgb, power}] = spec_id;
 

@@ -560,29 +560,7 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
       auto coloropt = GetColorFromNode(nodeColor, resources);
       if(coloropt) {
 
-        /* PREMP
-        float etaMp = eta > k ? 1.0f : eta / k;
-        float kMp = eta > k ? k / eta : 1.0f;
 
-
-        spec::ISpectrum::ptr etaupsampled = UpsampleRaw(spec::vec3(coloropt->x, coloropt->y, coloropt->z) * etaMp);
-        spec::ISpectrum::ptr kupsampled = UpsampleRaw(spec::vec3(coloropt->x, coloropt->y, coloropt->z) * kMp);
-
-        size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
-        spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
-        spec::BasicSpectrum *kspec = new spec::BasicSpectrum();
-        for(unsigned c = 0; c < count; c++) {
-          spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
-          auto p = spec::color2ior(etaupsampled->get_or_interpolate(lambda), kupsampled->get_or_interpolate(lambda));
-          etaspec->set(lambda, p.first);
-          kspec->set(lambda, p.second);
-        }
-        etaSpecId = uint32_t(resources.spectraInfo.size());
-        resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
-        kSpecId = uint32_t(resources.spectraInfo.size());
-        resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
-        */
-        
         spec::ISpectrum::ptr upsampled = UpsampleRaw({coloropt->x, coloropt->y, coloropt->z});
         size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
         spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
@@ -599,21 +577,6 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, Resource
         resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
         resources.loadedSpectrumCount += 2;
 
-        /* POSTMP
-        size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN);
-        spec::BasicSpectrum *etaspec = new spec::BasicSpectrum();
-        spec::BasicSpectrum *kspec = new spec::BasicSpectrum();
-        for(unsigned c = 0; c < count; c++) {
-          spec::Float lambda = (LAMBDA_MIN + spec::Float(c));
-          auto p = spec::color2ior(upsampled->get_or_interpolate(lambda) * eta, upsampled->get_or_interpolate(lambda) * k);
-          etaspec->set(lambda, p.first);
-          kspec->set(lambda, p.second);
-        }
-        etaSpecId = uint32_t(resources.spectraInfo.size());
-        resources.spectraInfo.push_back({spec::ISpectrum::ptr(etaspec), etaSpecId});
-        kSpecId = uint32_t(resources.spectraInfo.size());
-        resources.spectraInfo.push_back({spec::ISpectrum::ptr(kspec), kSpecId});
-        */
       }
     }
   }
