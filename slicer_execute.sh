@@ -27,7 +27,15 @@ $2 $start_dir/integrator_pt.cpp \
 -enable_motion_blur 0 \
 -gen_gpu_api 0 \
 -megakernel 1 \
--DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -DUSE_LITERT -v
+-DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -DUSE_LITERT -v \
+-DDISABLE_SDF_PRIMITIVE \
+-DDISABLE_SDF_OCTREE \
+-DDISABLE_SDF_GRID \
+-DDISABLE_SDF_FRAME_OCTREE \
+-DDISABLE_SDF_SBS \
+-DDISABLE_RF_GRID \
+-DDISABLE_GS_PRIMITIVE
+
 
 cd $start_dir
 cd shaders_generated

@@ -122,7 +122,7 @@
         "type": "cppdbg",
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
-        "args": ["--gpu", 
+        "args": ["--cpu", 
                  "-in", "scenes/test_035/statex_00001.xml",
                  "-integrator", "mispt",
                  //"--qmc",
