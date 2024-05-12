@@ -268,6 +268,7 @@ Spectra can be found, for example, [here](https://refractiveindex.info/)
 | k  | `val` - internal extinction coefficient, possible values - 1 float | no | yes |
 | ext_ior  | `val` - external index of refraction, possible values - 1 float | no | no |
 | thickness_map  | `min` and `max` - limits of thickness for 1-layer film, possible values - 1 float | yes | no |
+| transparent  | `val` - on/off transparency, possible values - `1` and `0` | no | yes |
 
 Layers are stacked in <layers> block and have these parameters:
 | eta  | `val` - refractive index, possible values - 1 float | no | yes |
@@ -282,6 +283,7 @@ Examples:
     <bsdf type="ggx" />
     <ext_ior val="1"/>
     <alpha val="0.0" />
+    <transparent val="0"/>
     <eta val="1.0">
     </eta>
     <k val="0.0">

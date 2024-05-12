@@ -111,6 +111,32 @@
     },
 
     {
+        "name": "MitsubaKnob",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/mitsuba_knob.xml",
+                 "-integrator", "mispt", 
+                 "-width", "500",
+                 "-height", "500",
+                 "-spp", "5000", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "MitsubaKnobV2",
         "type": "cppdbg",
         "request": "launch",
@@ -120,9 +146,87 @@
                  "-integrator", "mispt", 
                  "-width", "1000",
                  "-height", "1000",
-                 "-spp", "1000", 
+                 "-spp", "500", 
                  "-out", "../out/pic.bmp",
                  "--spectral"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Butterfly",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/butterfly/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "25000", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Dragon",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/dragon/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "1000", 
+                 "-out", "../out/pic.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
+        "name": "Hall",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu",
+                 "-in", "../HydraScenes/hall/films.xml",
+                 "-integrator", "mispt", 
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "3000", 
+                 "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
@@ -467,7 +571,7 @@
                  "-integrator", "mispt", 
                  "-width", "1500",
                  "-height", "1500",
-                 "-spp", "2000", 
+                 "-spp", "1000", 
                  "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
@@ -491,11 +595,10 @@
         "args": ["--gpu",
                  "-in", "../HydraScenes/room/films.xml",
                  "-integrator", "mispt", 
-                 "-width", "1024",
-                 "-height", "1024",
-                 "-spp", "50000", 
-                 "-out", "../out/pic.bmp",
-                 "--spectral"],
+                 "-width", "1000",
+                 "-height", "1000",
+                 "-spp", "1000", 
+                 "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],

@@ -10,6 +10,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
         float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
 {
+  const uint transparFlag = as_uint((a_materials[0].data[FILM_TRANSPARENT]));
   bool reversed = false;
   uint32_t refl_offset;
   uint32_t refr_offset;
@@ -79,20 +80,64 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   {
     float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    {
+      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
+      t *= FILM_THICKNESS_RES - 1;
+      uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
+      uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
-    float alpha = theta - float(index);
+      float alpha = t - float(index1);
+      float beta = theta - float(index2);
 
-    R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-    R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-    R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      uint a = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
+      uint b = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2) * 3;
+      uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
+      uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-    T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
-    T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
-    T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
+      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      R[0] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
+      v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      T[0] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      R[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      T[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      R[2] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      T[2] = lerp(v0, v1, beta);
+    }
+    else
+    {
+      uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+
+      float alpha = theta - float(index);
+
+      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
+      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+
+      T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
+      T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
+      T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+    }
   }
 
-  if (intIOR.im > 0.001)
+  if (intIOR.im > 0.001 || transparFlag == 0)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
     pRes->val = R;
@@ -134,6 +179,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
         float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
 {
+  const uint transparFlag = a_materials[0].data[FILM_TRANSPARENT];
   bool reversed = false;
   uint32_t refl_offset;
   uint32_t refr_offset;
@@ -215,20 +261,64 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
   {
     float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    {
+      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
+      t *= FILM_THICKNESS_RES - 1;
+      uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
+      uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
-    float alpha = theta - float(index);
+      float alpha = t - float(index1);
+      float beta = theta - float(index2);
 
-    R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-    R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-    R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      uint a = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
+      uint b = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2) * 3;
+      uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
+      uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-    T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
-    T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
-    T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
+      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      R[0] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
+      v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      T[0] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      R[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      T[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      R[2] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      T[2] = lerp(v0, v1, beta);
+    }
+    else
+    {
+      uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+
+      float alpha = theta - float(index);
+
+      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
+      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+
+      T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
+      T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
+      T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+    }
   }
   
-  if (intIOR.im > 0.001)
+  if (intIOR.im > 0.001 || transparFlag == 0)
   {
     float3 wo = reflect((-1.0f) * wi, wm);
     if (wi.z < 0.f || wo.z <= 0.f)
@@ -380,13 +470,45 @@ static void filmRoughEval(const Material* a_materials,
   {
     float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    {
+      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
+      t *= FILM_THICKNESS_RES - 1;
+      uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
+      uint32_t index2 = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
 
-    float alpha = theta - float(index);
+      float alpha = t - float(index1);
+      float beta = theta - float(index2);
 
-    R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-    R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-    R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      uint a = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
+      uint b = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2) * 3;
+      uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
+      uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
+
+      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
+      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      R[0] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      R[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      R[2] = lerp(v0, v1, beta);
+    }
+    else
+    {
+      uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+
+      float alpha = theta - float(index);
+
+      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
+      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+    }
   }
 
   const float cos_theta_i = std::max(wi.z, EPSILON_32);

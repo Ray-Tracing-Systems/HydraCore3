@@ -16,9 +16,9 @@ static constexpr uint RAY_FLAG_PRIME_RAY_MISS = 0x02000000;
 static constexpr uint RAY_FLAG_FIRST_NON_SPEC = 0x01000000; // indicate that previous bounce is the first non specular bounce
 
 static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
-static constexpr uint32_t FILM_ANGLE_RES = 1000;
-static constexpr uint32_t FILM_LENGTH_RES = 1000;
-static constexpr uint32_t FILM_THICKNESS_RES = 100;
+static constexpr uint32_t FILM_ANGLE_RES = 180;
+static constexpr uint32_t FILM_LENGTH_RES = 94;
+static constexpr uint32_t FILM_THICKNESS_RES = 32;
 static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;

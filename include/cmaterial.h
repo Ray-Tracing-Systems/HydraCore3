@@ -174,6 +174,7 @@ static constexpr uint FILM_THICKNESS_MAX     = 11;
 static constexpr uint FILM_THICKNESS_MAP     = 12;
 static constexpr uint FILM_THICKNESS         = 13;
 static constexpr uint FILM_LAYERS_COUNT      = 14;
+static constexpr uint FILM_TRANSPARENT       = 15;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_LAYERS_COUNT;
 
 
@@ -963,11 +964,12 @@ struct FrReflRefr
 
 static inline float getRefractionFactor(float cosThetaI, complex cosThetaT, complex iorI, complex iorT)
 {
-  if (cosThetaI <= 1e-6f)
+  complex mult = cosThetaT * iorT;
+  if (cosThetaI <= 1e-6f || mult.im > 1e-6f)
   {
     return 0;
   }
-  return (iorT.re * cosThetaT.re) / (iorI.re * cosThetaI);
+  return mult.re / (iorI.re * cosThetaI);
 }
 
 static inline float getRefractionFactorS(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT)
