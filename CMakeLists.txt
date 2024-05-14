@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
-option(USE_VULKAN "Enable Vulkan implementation" ON)
+option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
 
