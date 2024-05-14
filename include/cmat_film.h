@@ -101,21 +101,26 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
       float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
       R[0] = lerp(v0, v1, beta);
 
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      R[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      R[2] = lerp(v0, v1, beta);
+
+      a = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
+      b = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2) * 3;
+      c = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
+      d = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
+
       v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
       v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
       T[0] = lerp(v0, v1, beta);
 
       v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
       v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
-      R[1] = lerp(v0, v1, beta);
-
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
       T[1] = lerp(v0, v1, beta);
-
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
-      R[2] = lerp(v0, v1, beta);
 
       v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
       v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
@@ -282,21 +287,26 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
       R[0] = lerp(v0, v1, beta);
 
+      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
+      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      R[1] = lerp(v0, v1, beta);
+
+      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
+      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      R[2] = lerp(v0, v1, beta);
+
+      a = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
+      b = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2) * 3;
+      c = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
+      d = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
+
       v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
       v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
       T[0] = lerp(v0, v1, beta);
 
       v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
       v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
-      R[1] = lerp(v0, v1, beta);
-
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
       T[1] = lerp(v0, v1, beta);
-
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
-      R[2] = lerp(v0, v1, beta);
 
       v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
       v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
