@@ -198,6 +198,7 @@ uint32_t UpsampleEmissionSpectrum(const float4 &color, float power, std::vector<
     uint32_t spec_id = spec_count++;
 
     auto spec = UpsampleEmissionRaw(rgb, power);
+    std::cerr << "Light effective color is " << spec::xyz2rgb_unsafe(spec::spectre2xyz0(*spec)) << std::endl;
     loaders.push_back({std::move(spec), spec_id});
     spec_cache[{rgb, power}] = spec_id;
 
