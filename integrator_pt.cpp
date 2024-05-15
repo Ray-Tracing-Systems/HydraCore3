@@ -199,7 +199,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
   const float4 rayDir = *rayDirAndFar ;
   const float  time   = *a_time;
 
-  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHit(rayPos, rayDir, time);
+  const CRT_Hit hit   = m_pAccelStruct->RayQuery_NearestHitMotion(rayPos, rayDir, time);
   RecordRayHitIfNeeded(bounce, hit);
 
   if(hit.geomId != uint32_t(-1))
@@ -322,7 +322,7 @@ void Integrator::kernel_SampleLightSource(uint tid, const float4* rayPosAndNear,
 
   float time = *a_time;
   const bool   inIllumArea  = (dot(shadowRayDir, lSam.norm) < 0.0f) || lSam.isOmni || lSam.hasIES;
-  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHit(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
+  const bool   needShade    = inIllumArea && !m_pAccelStruct->RayQuery_AnyHitMotion(to_float4(shadowRayPos, 0.0f), to_float4(shadowRayDir, hitDist*0.9995f), time); /// (!!!) expression-way, RT pipeline bug work around, if change check test_213
   RecordShadowHitIfNeeded(bounce, needShade);
 
   if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213

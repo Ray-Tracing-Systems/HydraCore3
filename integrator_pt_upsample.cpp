@@ -46,7 +46,7 @@ float4 Integrator::Upsample(float4 in_color, float4 in_wavelenghts)
     const int _size = int(m_spec_lut_csize);
     const int _step = int(m_spec_lut_step);
 
-    const float4 color = LiteMath::clamp(in_color, 0.0f, 1.0f);
+    const float4 color = clamp(in_color, 0.0f, 1.0f);
 
     uint amax = color[0] >= color[1] ? 0 : 1;
     amax = color[amax] >= color[2] ? amax : 2;

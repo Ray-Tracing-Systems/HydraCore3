@@ -745,7 +745,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     if(inst.hasMotion) 
     {
       LiteMath::float4x4 movement[2] = {inst.matrix, inst.matrix_motion};
-      m_pAccelStruct->AddInstance(inst.geomId, movement, 2);
+      m_pAccelStruct->AddInstanceMotion(inst.geomId, movement, 2);
       m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] = 1;
       m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix_motion)));
     }

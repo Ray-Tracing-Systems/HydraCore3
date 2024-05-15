@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.15)
 project (HydraCore3)
 
-option(USE_VULKAN "Enable Vulkan implementation" OFF)
+option(USE_VULKAN "Enable Vulkan implementation" ON)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
 
@@ -210,11 +210,13 @@ set_target_properties(hydra PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SO
 
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   link_directories("${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64")
-  set(EMBREE_LIBS ${CMAKE_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
+  set(EMBREE_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib_win64/embree3.lib)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
   find_package(Threads REQUIRED)
-  link_directories(${CMAKE_SOURCE_DIR}/external/CrossRT/lib)
-  set(EMBREE_LIBS embree3 embree_sse42 embree_avx embree_avx2 lexers simd sys tasking)
+  set(EMBREE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/CrossRT/lib)
+  link_directories(${EMBREE_DIR})
+  set(EMBREE_LIBS ${EMBREE_DIR}/libembree3.so 
+                  ${EMBREE_DIR}/libtbb.so)
 endif()
 
 
