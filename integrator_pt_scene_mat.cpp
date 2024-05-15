@@ -153,6 +153,10 @@ std::optional<float4> GetColorFromNode(const pugi::xml_node& a_node, ResourceCon
     float3 rgb = std::get<float3>(val);
     return to_float4(rgb, 0.0f);
   }
+  else if(std::holds_alternative<float4>(val))
+  {
+    return std::get<float4>(val);
+  }
   return {};
 }
 
