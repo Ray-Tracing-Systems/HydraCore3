@@ -56,6 +56,7 @@ float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uin
 
   return res;
 }
+
 float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uint32_t rayFlags)
 {
   float3 rgb = to_float3(specSamples);

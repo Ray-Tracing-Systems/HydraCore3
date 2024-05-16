@@ -649,7 +649,7 @@
                  "-integrator", "mispt", 
                  "-width", "1000",
                  "-height", "1000",
-                 "-spp", "1000", 
+                 "-spp", "500", 
                  "-out", "../out/pic.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

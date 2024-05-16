@@ -184,7 +184,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
         float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
 {
-  const uint transparFlag = a_materials[0].data[FILM_TRANSPARENT];
+  const uint transparFlag = as_uint(a_materials[0].data[FILM_TRANSPARENT]);
   bool reversed = false;
   uint32_t refl_offset;
   uint32_t refr_offset;
@@ -381,16 +381,24 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
         return;
       }
       float G = microfacet_G(wi, wo, wm, alpha);
-      float denom = sqr(dot(wo, wm) + dot(wi, wm) / eta_it);
-      float dwm_dwi = fabs(dot(wo, wm)) / denom;
-      pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
-      pRes->pdf = trPDF(wi, wm, alpha) * dwm_dwi * sum(T) / (sum(R) + sum(T));
+      if (fabs(eta_it - 1.f) <= 1e-6f)
+      {
+        pRes->pdf = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm))) * sum(T) / (sum(R) + sum(T));
+        pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T / (4.0f * (-wo.z) * wi.z);
+      }
+      else
+      {
+        float denom = sqr(dot(wo, wm) + dot(wi, wm) / eta_it);
+        float dwm_dwi = fabs(dot(wo, wm)) / denom;
+        pRes->pdf = trPDF(wi, wm, alpha) * dwm_dwi * sum(T) / (sum(R) + sum(T));
+        pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T * fabs(dot(wi, wm) * dot(wo, wm) / (wi.z * wo.z * denom));
+      }
       if (reversed)
       {
         wo = -1 * wo;
       }
       pRes->dir = normalize(wo.x * s + wo.y * t + wo.z * n);
-      pRes->flags = RAY_FLAG_HAS_NON_SPEC;;
+      pRes->flags = RAY_FLAG_HAS_NON_SPEC;
       pRes->ior = (_extIOR == intIOR.re) ? extIOR : intIOR.re;
     }
   }
