@@ -615,6 +615,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // load first camera and update matrix
   //
+  m_allCams.clear();
   for(auto cam : scene.Cameras())
   {
     float aspect   = float(m_winWidth) / float(m_winHeight);
@@ -671,10 +672,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_actualFeatures[KSPEC_OPTIC_SIM] = 1;
       LoadOpticsFromNode(this, opticNode);
     }
-
-    break; // take first cam
+    
+    AppendCamFromInternalVariables();
   }
-
+  
+  SetCamId(0); // take first cam by default
   
   //// (2) load meshes
   //
@@ -884,4 +886,48 @@ void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
     elems[i] = ids[i].lensElement;
 
   self->SetLines(elems);
+}
+
+void Integrator::SetCamId(int a_camId)
+{
+  if(a_camId >= m_allCams.size())
+  {
+    std::cout << "[Integrator::SetCamId]: don't have cam with id = " << a_camId << std::endl;
+    return;
+  }
+  const auto& cam = m_allCams[a_camId];
+  m_aspect                = cam.m_aspect;
+  m_camLensRadius         = cam.m_camLensRadius;
+  for(int i=0;i<3;i++)
+    m_camResponseSpectrumId[i] = cam.m_camResponseSpectrumId[i];
+  m_camResponseType       = cam.m_camResponseType;
+  m_camTargetDist         = cam.m_camTargetDist;
+  m_diagonal              = cam.m_diagonal;
+  m_enableOpticSim        = cam.m_enableOpticSim;
+  m_exposureMult          = cam.m_exposureMult;
+  m_physSize              = cam.m_physSize;
+  m_proj         = cam.m_proj;
+  m_worldView    = cam.m_worldView;
+  m_projInv      = cam.m_projInv;
+  m_worldViewInv = cam.m_worldViewInv;
+}
+
+void Integrator::AppendCamFromInternalVariables()
+{
+  CamData cam;
+  cam.m_aspect                = m_aspect;
+  cam.m_camLensRadius         = m_camLensRadius;
+  for(int i=0;i<3;i++)
+    cam.m_camResponseSpectrumId[i] = m_camResponseSpectrumId[i];
+  cam.m_camResponseType       = m_camResponseType;
+  cam.m_camTargetDist         = m_camTargetDist;
+  cam.m_diagonal              = m_diagonal;
+  cam.m_enableOpticSim        = m_enableOpticSim;
+  cam.m_exposureMult          = m_exposureMult;
+  cam.m_physSize              = m_physSize;
+  cam.m_proj                  = m_proj;
+  cam.m_worldView             = m_worldView;
+  cam.m_projInv               = m_projInv;
+  cam.m_worldViewInv          = m_worldViewInv;
+  m_allCams.push_back(cam);
 }

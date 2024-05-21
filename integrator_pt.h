@@ -103,6 +103,29 @@ public:
     float apertureRadius;
   };
 
+  struct CamData 
+  {
+    float m_exposureMult  = 1.0f;
+    float m_camLensRadius = 0.0f;
+    float m_camTargetDist = 0.0f;
+    int   m_camResponseSpectrumId[3] = {-1, -1, -1};
+    int   m_camResponseType = 0; // 0 -- XYZ, 1 -- RGB
+  
+    uint m_enableOpticSim = 0;
+    std::vector<LensElementInterface> m_lines;
+    float2 m_physSize;
+    float  m_diagonal;
+    float  m_aspect;
+
+    float4x4 m_proj;
+    float4x4 m_worldView;
+    float4x4 m_projInv;
+    float4x4 m_worldViewInv;
+  };
+
+  void SetCamId(int a_camId);
+  void AppendCamFromInternalVariables();
+  std::vector<CamData> m_allCams;
 
   struct EyeRayData
   {
