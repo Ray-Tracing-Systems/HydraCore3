@@ -200,7 +200,33 @@
             }
         ]
     },
-
+    {
+        "name": "test_sdf_2_gpu",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/02_sdf_scenes/teapot_hp.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_2_render_gpu.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
     //"external/LiteRT/scenes/02_sdf_scenes/teapot_sdf.xml"
     //"external/LiteRT/scenes/02_sdf_scenes/buddha_sdf.xml"
     //"external/LiteRT/large_scenes/02_casual_effects/crytek_sponza/sponza_SDF.xml"

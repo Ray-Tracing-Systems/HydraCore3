@@ -164,6 +164,7 @@ if (USE_LITERT)
       external/LiteRT/utils/radiance_field.cpp
       external/LiteRT/utils/gaussian_field.cpp
       external/LiteRT/utils/hp_octree.cpp
+      external/LiteRT/utils/watertight_mesh.cpp
       external/LiteRT/tests/tests.cpp
       external/LiteRT/tests/benchmark.cpp
       external/LiteRT/NeuralRT/NeuralRT.cpp)
