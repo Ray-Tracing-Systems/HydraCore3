@@ -38,7 +38,7 @@ class Integrator // : public DataClass, IRenderer
 {
 public:
 
-  Integrator(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) : m_spectral_mode(a_spectral_mode), m_enabledFeatures(a_features)
+  Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
@@ -56,6 +56,9 @@ public:
   }
 
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
+
+
+  void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
 
   void InitRandomGens(int a_maxThreads);
 
@@ -103,6 +106,7 @@ public:
     float apertureRadius;
   };
 
+#ifndef KERNEL_SLICER
   struct CamData 
   {
     float m_exposureMult  = 1.0f;
@@ -126,6 +130,7 @@ public:
   void SetCamId(int a_camId);
   void AppendCamFromInternalVariables();
   std::vector<CamData> m_allCams;
+#endif
 
   struct EyeRayData
   {

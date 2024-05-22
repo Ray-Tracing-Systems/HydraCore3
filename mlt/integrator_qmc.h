@@ -10,7 +10,7 @@ class IntegratorQMC : public Integrator
 {
 public:
 
-  IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features);
+  IntegratorQMC(int a_maxThreads, std::vector<uint32_t> a_features);
 
   float  GetRandomNumbersSpec(uint tid, RandomGen* a_gen) override;
   float  GetRandomNumbersTime(uint tid, RandomGen* a_gen) override;

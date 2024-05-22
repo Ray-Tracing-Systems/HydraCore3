@@ -8,7 +8,7 @@ class IntegratorKMLT : public IntegratorQMC
 {
 public:
 
-  IntegratorKMLT(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : IntegratorQMC(a_maxThreads, a_spectral_mode, a_features)
+  IntegratorKMLT(int a_maxThreads, std::vector<uint32_t> a_features) : IntegratorQMC(a_maxThreads, a_features)
   {
 
   }
@@ -480,7 +480,7 @@ void IntegratorKMLT::PathTraceBlock(uint pixelsNum, uint channels, float* out_co
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) 
+std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) 
 { 
-  return std::make_shared<IntegratorKMLT>(a_maxThreads, a_spectral_mode, a_features); 
+  return std::make_shared<IntegratorKMLT>(a_maxThreads, a_features); 
 }

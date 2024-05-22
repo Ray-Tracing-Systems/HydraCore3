@@ -9,13 +9,13 @@
 #include "mi_materials.h"
 
 float4x4 ReadMatrixFromString(const std::string& str);
-std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
-std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
+std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, std::vector<uint32_t> a_features = {});
+std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, std::vector<uint32_t> a_features = {});
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
 #include "integrator_pt_generated.h" // advanced way
-//std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
+//std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
 #endif
 
 #ifdef USE_STB_IMAGE
@@ -198,13 +198,13 @@ int main(int argc, const char** argv) // common hydra main
     //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
     //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
 
-    size_t gpuAuxMemSize = FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 16 * 1024 * 1024; // reservse for frame buffer and other
+    size_t gpuAuxMemSize = FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 16 * 1024 * 1024; // reserve for frame buffer and other
 
     // advanced way, init device with features which is required by generated class
     //
     std::vector<const char*> requiredExtensions;
     auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);
-    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, gpuAuxMemSize, 0);
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, gpuAuxMemSize, 1);
 
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster
@@ -218,7 +218,7 @@ int main(int argc, const char** argv) // common hydra main
 
     // advanced way
     //
-    auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, features);
     pObj->SetVulkanContext(ctx);
     pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, FB_WIDTH*FB_HEIGHT);
     pImpl = pObj;
@@ -227,14 +227,16 @@ int main(int argc, const char** argv) // common hydra main
   #endif
   {
     if(mltIsEnabled)
-      pImpl = CreateIntegratorKMLT(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+      pImpl = CreateIntegratorKMLT(FB_WIDTH*FB_HEIGHT, features);
     else if(qmcIsEnabled)
-      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+      pImpl = CreateIntegratorQMC(FB_WIDTH*FB_HEIGHT, features);
     else
-      pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+      pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT,features);
   }
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
+
+  pImpl->SetSpectralMode(spectral_mode);
 
   pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;

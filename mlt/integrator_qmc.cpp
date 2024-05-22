@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-IntegratorQMC:: IntegratorQMC(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features)
+IntegratorQMC:: IntegratorQMC(int a_maxThreads, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_features)
 {
   qmc::init(m_qmcTable);
 }
@@ -317,7 +317,7 @@ void IntegratorQMC::PathTraceBlock(uint pixelsNum, uint channels, float* out_col
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {}) 
+std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) 
 { 
-  return std::make_shared<IntegratorQMC>(a_maxThreads, a_spectral_mode, a_features); 
+  return std::make_shared<IntegratorQMC>(a_maxThreads, a_features); 
 }
