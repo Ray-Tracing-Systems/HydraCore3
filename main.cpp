@@ -198,13 +198,13 @@ int main(int argc, const char** argv) // common hydra main
     //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
     //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
 
-    sceneInfo.memGeom += FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 50*1024*1024; // reservse for frame buffer and other
+    size_t gpuAuxMemSize = FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 16 * 1024 * 1024; // reservse for frame buffer and other
 
     // advanced way, init device with features which is required by generated class
     //
     std::vector<const char*> requiredExtensions;
     auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);
-    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, sceneInfo.memGeom, sceneInfo.memTextures);
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, gpuAuxMemSize, 0);
 
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster
