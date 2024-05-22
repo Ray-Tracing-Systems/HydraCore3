@@ -280,22 +280,46 @@ int main(int argc, const char** argv) // common hydra main
       splitDirectAndIndirect = true;
     }
   }
-
+  
+  //////////////////////////////////////////////////////////////////////////////////////
+  //
+  struct FrameData
+  {
+    int32_t     camId;
+    uint32_t    fbId;
+    std::string suffix;
+  };
+  
+  std::vector<FrameData> frames;
   for(auto camId : camsId) {
-  for(auto imLayer : fbLayers) {
-    float timings[4] = {0,0,0,0};
-    pImpl->SetFrameBufferLayer(imLayer);
-    pImpl->SetCamId(camId);
-    std::cout << "[main]: cam id   = " << camId << std::endl;
-    std::cout << "[main]: fb layer = " << imLayer << std::endl;
-    
-    std::string suffix = splitDirectAndIndirect ? "_" + std::to_string(imLayer) : "";
-    std::string suffixCam = "";
-    if(camsId.size() > 1) {
-      std::stringstream strOut;
-      strOut << "_cam_" << std::setfill('0') << std::setw(3) << camId;
-      suffixCam += strOut.str(); //std::string("_cam_") + std::to_string(camId);
+    for(auto imLayer : fbLayers) {
+      std::string suffix = splitDirectAndIndirect ? "_" + std::to_string(imLayer) : "";
+      std::string suffixCam = "";
+      if(camsId.size() > 1) {
+        std::stringstream strOut;
+        strOut << "_cam_" << std::setfill('0') << std::setw(3) << camId;
+        suffixCam += strOut.str(); //std::string("_cam_") + std::to_string(camId);
+      }
+      suffix += suffixCam;
+
+      FrameData frame;
+      frame.camId  = camId;
+      frame.fbId   = imLayer;
+      frame.suffix = suffix;
+      frames.push_back(frame);
     }
+  }
+  //////////////////////////////////////////////////////////////////////////////////////
+
+  for(size_t i=0;i<frames.size();i++) 
+  {
+    auto frame = frames[i];
+    float timings[4] = {0,0,0,0};
+    pImpl->SetFrameBufferLayer(frame.fbId);
+    pImpl->SetCamId(frame.camId);
+    std::cout << "[main]: frame = " << i << " / "  << frames.size() << ", cam_id = " << frame.camId << ", fb_layer = " << frame.fbId  << std::endl;
+    
+    const auto& suffix = frame.suffix;
 
     if(enableNaivePT)
     {
@@ -317,13 +341,13 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_naivept" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_naivept" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_naivept" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "naivept" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_naivept" + suffix  + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
@@ -342,13 +366,13 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
@@ -371,13 +395,13 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + suffixCam + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
       }
@@ -410,23 +434,23 @@ int main(int argc, const char** argv) // common hydra main
   
       if(saveHDR)
       {
-        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
       }
       else
       {
-        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOutClean + suffixCam + "." + imageOutFiExt : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
+        const std::string outName = (integratorType == "raytracing" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_rt" + suffix + "." + imageOutFiExt;
         std::cout << "[main]: save image to " << outName.c_str() << std::endl;
         SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConstRT, gamma);
       }
     } // end if(enableRT || enablePRT)
     
-    if(imLayer == Integrator::FB_DIRECT) // preserve direct light in separate image
+    if(frame.fbId == Integrator::FB_DIRECT) // preserve direct light in separate image
       directLightCopy = realColor;
-  }}
+  }
   
-  // save finale image as summ direct and indirect light
+  // save finale image as summ direct and indirect light; TODO: add correct support for multiple cameras here
   //
   if(splitDirectAndIndirect) 
   {

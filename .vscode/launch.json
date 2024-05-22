@@ -7,7 +7,7 @@
         "request": "launch",
         "program": "${workspaceFolder}/bin-release/hydra",
         "args": ["--gpu", "--spectral",
-                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3-copy.xml",
+                 "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
                  "-integrator", "mispt", 
                  //"--qmc",
                  "-width", "1024",
