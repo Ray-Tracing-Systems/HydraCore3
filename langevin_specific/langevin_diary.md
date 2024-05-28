@@ -37,3 +37,24 @@ Elapsed time: 70ms
 Gradient: ( ... )
 
 ```
+
+### Paper: [3D Gaussian Splatting as Markov Chain Monte Carlo](https://arxiv.org/abs/2404.09591)
+*Shakiba Kheradmand на стажировке в гугле | 2024*
+
+Contributions:
+* **"we rethink Gaussians in Gaussian Splatting as samples from a distribution that represents the 3D
+scene, which allows simplification"** — OK
+* **"we improve robustness to initialization"** — initialization algorithm does not change, robustness comes from next point
+* **"we propose to simply add samples and resample by drawing samples from existing Gaussian
+locations under the SGLD paradigm"** — didn't crack the SGLD paradigm; however, instead of splitting / deleting gaussians
+they teleport gaussians with respect to the distribution of existing gaussians 
+(how? need to check [this](https://epubs.siam.org/doi/10.1137/21M1425062))
+* **"we introduce L1 regularization on opacity and scale to encourage using fewer Gaussians and
+increase efficiency and performance"** — good, because
+    - Heuristics (split / delete) -> theory (regularization, bad gaussians become too small and are teleported)
+    - Smaller gaussians means better performance
+* **"we provide higher rendering quality when the heuristics are a limiting factor"** — k
+
+Still not quite clear: 
+* **Adding Gaussians**: why add gaussians if we can teleport bad ones? If it is important, why limit to 5%?
+* SGLD paradigm

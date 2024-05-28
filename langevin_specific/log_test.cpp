@@ -2,7 +2,7 @@
 #include <cmath>
 #include <chrono>
 
-const int X_SIZE = 100;
+const int X_SIZE = 5;
 
 int enzyme_dup;
 int enzyme_out;
