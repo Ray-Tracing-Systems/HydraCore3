@@ -342,6 +342,9 @@ protected:
 
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
+  virtual void Update_m_materials(size_t a_first, size_t a_offet) {}
+  virtual void Update_m_matIdOffsets() {}
+
   std::vector<Material>         m_materials;  
 
   std::vector<uint32_t>         m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
