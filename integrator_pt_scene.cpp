@@ -568,6 +568,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
                     << "Using values from light intensity node. lightId = " << lightId << std::endl;
         
         mat.spdid[0] = m_lights[lightId].specId;
+        m_lights[lightId].matId = uint(m_materials.size());
       }
     }
 

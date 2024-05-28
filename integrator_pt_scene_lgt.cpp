@@ -31,6 +31,7 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
   lightSource.samplerRow0 = float4(1,0,0,0);
   lightSource.samplerRow1 = float4(0,1,0,0);
   lightSource.camBackTexId = uint(-1);
+  lightSource.matId        = uint(-1);
 
   if(ltype == std::wstring(L"sky"))
   {

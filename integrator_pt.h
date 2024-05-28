@@ -291,7 +291,7 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// \\ Integrator Settings
 
-protected:
+//protected:
   int m_winStartX   = 0;
   int m_winStartY   = 0;
   int m_winWidth    = 512;
@@ -343,6 +343,7 @@ protected:
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
 
   virtual void Update_m_materials(size_t a_first, size_t a_offet) {}
+  virtual void Update_m_lights(size_t a_first, size_t a_offet) {}
   virtual void Update_m_matIdOffsets() {}
 
   std::vector<Material>         m_materials;  

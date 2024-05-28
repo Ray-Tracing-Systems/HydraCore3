@@ -50,7 +50,7 @@ struct LightSource
   float    lightCos1;
   
   float    lightCos2;
-  float    dummy1;
+  uint     matId;
   float    dummy2;
   float    dummy3;
 };
