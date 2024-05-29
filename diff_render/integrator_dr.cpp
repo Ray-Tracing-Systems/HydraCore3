@@ -624,7 +624,37 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float3 rands, float3 ill
       const uint32_t sizeX  = m_lights[a_lightId].pdfTableSizeX;
       const uint32_t sizeY  = m_lights[a_lightId].pdfTableSizeY;
       
-      const Map2DPiecewiseSample sam = SampleMap2D(rands, offset, int(sizeX), int(sizeY));
+      Map2DPiecewiseSample sam; // = SampleMap2D(rands, offset, int(sizeX), int(sizeY));
+      // Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY)
+      {
+        uint32_t a_tableOffset = offset;
+        int sizeX = sizeX;
+        int sizeY = sizeY;
+
+        const float fw = (float)sizeX;
+        const float fh = (float)sizeY;
+        const float fN = fw*fh;
+
+        float pdf = 1.0f;
+        int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
+
+        if (pixelOffset >= sizeX*sizeY)
+          pixelOffset = sizeX*sizeY - 1;
+
+        const int yPos = pixelOffset / sizeX;
+        const int xPos = pixelOffset - yPos*sizeX;
+
+        const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
+        const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
+
+        sam.mapPdf   = pdf*fN;
+        sam.texCoord = make_float2(texX, texY);
+
+        // Map2DPiecewiseSample result;
+        // result.mapPdf   = pdf*fN; 
+        // result.texCoord = make_float2(texX, texY);
+        // return result;
+      }
 
       // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0 in HydraCore2)
       //
@@ -956,7 +986,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
       }
     }
 
-    //kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+    // kernel_NextBounce(tid, bounce, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
     //                  &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
     
     if(!isDeadRay(rayFlags))
@@ -1178,6 +1208,21 @@ float IntegratorDR::PathTraceDR(uint size, uint channels, float* out_color, uint
                            enzyme_const, &lossVal,
                            enzyme_const, this->m_recorded[cpuThreadId].perBounceRands.data(),
                            enzyme_dup,   a_data, grads[cpuThreadId].data());
+
+        __enzyme_autodiff(
+          (void*)PixelLossPT, 
+          enzyme_const, this,
+          enzyme_const, uint(i),
+          enzyme_const, channels,
+          enzyme_const, m_winWidth,
+          enzyme_const, cpuThreadId,
+          enzyme_const, a_refImg,
+          enzyme_const, out_color,
+          enzyme_const, m_packedXY.data(),
+          enzyme_const, &lossVal,
+          enzyme_dup, this->m_recorded[cpuThreadId].perBounceRands.data(), grads[cpuThreadId].data(),
+          enzyme_const, a_data
+        );
 
         avgLoss += float(lossVal)/float(a_passNum);
       }
