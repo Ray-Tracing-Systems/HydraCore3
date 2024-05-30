@@ -52,10 +52,16 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     int a = 2;
   }
 
-  const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
+  const float4 pixelOffsets    = GetRandomNumbersLens(tid, pGen);
 
-  const float xCoordNormalized = (float(x + m_winStartX) + pixelOffsets.x)/float(m_fbWidth);
-  const float yCoordNormalized = (float(y + m_winStartY) + pixelOffsets.y)/float(m_fbHeight);
+  const float fx = float(x) + pixelOffsets.x;
+  const float fy = float(y) + pixelOffsets.y;
+  
+  const float xCoordNormalized = (fx + float(m_winStartX))/float(m_fbWidth);
+  const float yCoordNormalized = (fy + float(m_winStartY))/float(m_fbHeight);
+
+  //const float xCoordNormalized = ( fx*m_fbScaleX + float(m_winStartX)*(1.0f + m_fbScaleX))/float(m_fbWidth);
+  //const float yCoordNormalized = ( fy*1.0f       + float(m_winStartY))/float(m_fbHeight);
 
   float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);

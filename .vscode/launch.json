@@ -42,7 +42,7 @@
                  //"-cam_id", "0",
                  //"-cam_id", "1",
                  "-width", "1024",
-                 "-height", "512",
+                 "-height", "1024",
                  "-spp", "16",
                  "-fb_layer", "color",
                  "-scn_dir", "../comparisonrender",
