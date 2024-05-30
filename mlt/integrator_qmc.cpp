@@ -148,7 +148,7 @@ uint IntegratorQMC::RandomGenId(uint tid) { return tid % uint(m_randomGens.size(
 Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
 {
   const float4 pixelOffsets = GetRandomNumbersLens(tid, pGen);
-  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv);
+  float3 rayDir = EyeRayDirNormalized(pixelOffsets.x, pixelOffsets.y, m_projInv); // TODO: add support for viewport ... 
   float3 rayPos = float3(0,0,0);
 
   if (m_camLensRadius > 0.0f)

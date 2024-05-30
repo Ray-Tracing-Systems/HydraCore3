@@ -96,8 +96,8 @@ void Integrator::kernel_InitEyeRayGB(uint tidX, uint tidY, const uint* packedXY,
 
   float2 pixelOffsets = m_qmcHammersley[tidY];
 
-  const float xCoordNormalized = (float(x) + pixelOffsets.x)/float(m_winWidth);
-  const float yCoordNormalized = (float(y) + pixelOffsets.y)/float(m_winHeight);
+  const float xCoordNormalized = (float(x + m_winStartX) + pixelOffsets.x)/float(m_fbWidth);
+  const float yCoordNormalized = (float(y + m_winStartY) + pixelOffsets.y)/float(m_fbHeight);
 
   float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);

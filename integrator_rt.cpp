@@ -38,8 +38,11 @@ void Integrator::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPo
 
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
+  
+  const float xCoordNormalized = (float(x + m_winStartX) + 0.5f)/float(m_fbWidth);
+  const float yCoordNormalized = (float(y + m_winStartY) + 0.5f)/float(m_fbHeight);
 
-  float3 rayDir = EyeRayDirNormalized((float(x)+0.5f)/float(m_winWidth), (float(y)+0.5f)/float(m_winHeight), m_projInv);
+  float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);
 
   transform_ray3f(m_worldViewInv, 
@@ -66,8 +69,10 @@ void Integrator::kernel_InitEyeRay3(uint tid, const uint* packedXY,
   const uint x = (XY & 0x0000FFFF);
   const uint y = (XY & 0xFFFF0000) >> 16;
 
-  float3 rayDir = EyeRayDirNormalized((float(x))/float(m_winWidth), 
-                                      (float(y))/float(m_winHeight), m_projInv);
+  const float xCoordNormalized = (float(x + m_winStartX) + 0.5f)/float(m_fbWidth);
+  const float yCoordNormalized = (float(y + m_winStartY) + 0.5f)/float(m_fbHeight);
+
+  float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);
 
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
