@@ -251,15 +251,23 @@ public:
   void SetLines(std::vector<LensElementInterface> a_lines) {m_lines = std::move(a_lines);}
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
+  void SetFrameBufferSize(int a_width, int a_height)
+  {
+    m_winWidth  = a_width;  
+    m_winHeight = a_height;
+    m_packedXY.resize(m_winWidth*m_winHeight);
+  }
+
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
   { 
     m_winStartX = a_xStart; 
     m_winStartY = a_yStart;
-    m_winWidth  = a_width;  // todo: remember a_width for first call as pitch and dont change pitch anymore?
-    m_winHeight = a_height;
-    m_packedXY.resize(m_winWidth*m_winHeight); // todo: use a_xStart,a_yStart
-
-    m_aspect = float(m_winWidth) / float(m_winHeight);
+    
+    if(m_winWidth == 0 || m_winHeight == 0)  // only call this of framebuffer/window size is not yet initialized
+    {
+      SetFrameBufferSize(a_width, a_height);
+      std::cout << "[main]: SetViewport() --> SetFrameBufferSize() was called because frame buffer size was not initialized yet" << std::endl; 
+    }
 
     const auto sizeX = a_width  - a_xStart;
     const auto sizeY = a_height - a_yStart;
@@ -294,8 +302,8 @@ public:
 //protected:
   int m_winStartX   = 0;
   int m_winStartY   = 0;
-  int m_winWidth    = 512;
-  int m_winHeight   = 512;
+  int m_winWidth    = 0;
+  int m_winHeight   = 0;
   uint m_traceDepth = 10;
   
   uint m_renderLayer = FB_COLOR; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 

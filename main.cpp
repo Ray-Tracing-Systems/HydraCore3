@@ -237,8 +237,15 @@ int main(int argc, const char** argv) // common hydra main
   ///////////////////////////////////////////////////////////////////////////////////////
 
   pImpl->SetSpectralMode(spectral_mode);
+  
+  pImpl->SetFrameBufferSize(FB_WIDTH,FB_HEIGHT);
 
-  pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
+  const int vpStartX = 0; // 0
+  const int vpStartY = 256; // 0
+  const int vpSizeX  = 1024; // FB_WIDTH
+  const int vpSizeY  = 512; // FB_HEIGHT
+
+  pImpl->SetViewport(vpStartX,vpStartY,vpSizeX,vpSizeY);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
 
@@ -256,7 +263,7 @@ int main(int argc, const char** argv) // common hydra main
   // remember (x,y) coords for each thread to make our threading 1D
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl;
-  pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
+  pImpl->PackXYBlock(vpSizeX, vpSizeY, 1);
 
   if(evalGBuffer)
   {
@@ -388,7 +395,7 @@ int main(int argc, const char** argv) // common hydra main
   
       pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
       pImpl->UpdateMembersPlainData();
-      pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+      pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
   
       pImpl->GetExecutionTime("PathTraceBlock", timings);
       std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;

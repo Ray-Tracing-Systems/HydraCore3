@@ -12,7 +12,10 @@ using namespace LiteMath;
 
 void Integrator::kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY)
 {
-  if(int(tidX) >= m_winWidth || int(tidY) >= m_winHeight)
+  const uint pixelX = m_winStartX + tidX;
+  const uint pixelY = m_winStartY + tidY;
+  
+  if(int(pixelX) >= m_winWidth || int(pixelY) >= m_winHeight)
     return;
   uint offset = tidY*m_winWidth + tidX;
   if(m_tileSize != 1)
@@ -27,7 +30,7 @@ void Integrator::kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY)
     const uint blockY     = tidY/m_tileSize;
     offset                = (blockX + blockY*wBlocks)*m_tileSize*m_tileSize + localIndex;
   }
-  out_pakedXY[offset] = ((tidY << 16) & 0xFFFF0000) | (tidX & 0x0000FFFF);
+  out_pakedXY[offset] = ((pixelY << 16) & 0xFFFF0000) | (pixelX & 0x0000FFFF);
 }
 
 void Integrator::kernel_InitEyeRay(uint tid, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar) // (tid,tidX,tidY,tidZ) are SPECIAL PREDEFINED NAMES!!!
