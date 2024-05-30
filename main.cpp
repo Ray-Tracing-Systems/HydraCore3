@@ -238,10 +238,10 @@ int main(int argc, const char** argv) // common hydra main
 
   pImpl->SetSpectralMode(spectral_mode);
 
-  const int vpStartX = 400;   // 0
-  const int vpStartY = 300;   // 0
-  const int vpSizeX  = 400; // FB_WIDTH
-  const int vpSizeY  = 400; // FB_HEIGHT
+  const int vpStartX = 400; // 0
+  const int vpStartY = 100; // 0
+  const int vpSizeX  = 300; // FB_WIDTH
+  const int vpSizeY  = 150; // FB_HEIGHT
   
   pImpl->SetFrameBufferSize(FB_WIDTH, FB_HEIGHT);
   pImpl->SetViewport(vpStartX,vpStartY,vpSizeX,vpSizeY);

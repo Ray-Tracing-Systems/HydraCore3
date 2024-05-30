@@ -279,6 +279,10 @@ public:
       m_tileSize = 1;
     
     m_maxThreadId = a_width*a_height;
+
+    //m_aspect  = float(a_width) / float(a_height);
+    //m_proj    = perspectiveMatrix(45.0f, m_aspect, 0.01, 100.0f);
+    //m_projInv = LiteMath::inverse4x4(m_proj);   
   }
   
   void SetWorldView(const float4x4& a_mat)
