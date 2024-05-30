@@ -251,23 +251,20 @@ public:
   void SetLines(std::vector<LensElementInterface> a_lines) {m_lines = std::move(a_lines);}
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
-  void SetFrameBufferSize(int a_width, int a_height)
-  {
-    m_winWidth  = a_width;  
-    m_winHeight = a_height;
-    m_packedXY.resize(m_winWidth*m_winHeight);
-  }
+  
+  void SetFrameBufferSize(int a_width, int a_height) { m_fbWidth = a_width; m_fbHeight = a_height; }
 
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
   { 
     m_winStartX = a_xStart; 
     m_winStartY = a_yStart;
     
-    if(m_winWidth == 0 || m_winHeight == 0)  // only call this of framebuffer/window size is not yet initialized
-    {
+    m_winWidth  = a_width;  
+    m_winHeight = a_height;
+    m_packedXY.resize(m_winWidth*m_winHeight);
+
+    if(m_fbWidth == 0 || m_fbHeight == 0)
       SetFrameBufferSize(a_width, a_height);
-      std::cout << "[main]: SetViewport() --> SetFrameBufferSize() was called because frame buffer size was not initialized yet" << std::endl; 
-    }
 
     const auto sizeX = a_width  - a_xStart;
     const auto sizeY = a_height - a_yStart;
@@ -281,7 +278,7 @@ public:
     else 
       m_tileSize = 1;
     
-    m_maxThreadId = sizeX*sizeY;
+    m_maxThreadId = a_width*a_height;
   }
   
   void SetWorldView(const float4x4& a_mat)
@@ -304,6 +301,8 @@ public:
   int m_winStartY   = 0;
   int m_winWidth    = 0;
   int m_winHeight   = 0;
+  int m_fbWidth     = 0;
+  int m_fbHeight    = 0;
   uint m_traceDepth = 10;
   
   uint m_renderLayer = FB_COLOR; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 

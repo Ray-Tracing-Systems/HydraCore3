@@ -237,14 +237,13 @@ int main(int argc, const char** argv) // common hydra main
   ///////////////////////////////////////////////////////////////////////////////////////
 
   pImpl->SetSpectralMode(spectral_mode);
-  
-  pImpl->SetFrameBufferSize(FB_WIDTH,FB_HEIGHT);
 
-  const int vpStartX = 0; // 0
-  const int vpStartY = 256; // 0
-  const int vpSizeX  = 1024; // FB_WIDTH
+  const int vpStartX = 256;   // 0
+  const int vpStartY = 256;   // 0
+  const int vpSizeX  = 512; // FB_WIDTH
   const int vpSizeY  = 512; // FB_HEIGHT
-
+  
+  pImpl->SetFrameBufferSize(FB_WIDTH, FB_HEIGHT);
   pImpl->SetViewport(vpStartX,vpStartY,vpSizeX,vpSizeY);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
@@ -390,12 +389,26 @@ int main(int argc, const char** argv) // common hydra main
     if(enableMISPT)
     {
       std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
-  
       std::fill(realColor.begin(), realColor.end(), 0.0f);
   
       pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
       pImpl->UpdateMembersPlainData();
-      pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+      
+      std::vector<float> tileData(vpSizeX*vpSizeY*FB_CHANNELS);
+      std::fill(tileData.begin(), tileData.end(), 0.0f);
+      
+      pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, tileData.data(), PASS_NUMBER);
+      
+      // copy data from tile memory to FB memory
+      for(int y=0;y<vpSizeY;y++){
+        const int yOffset1 = FB_WIDTH*(y+vpStartY);
+        const int yOffset2 = vpSizeX*y;
+        for(int x=0;x<vpSizeX;x++) {
+          for(int c=0;c<FB_CHANNELS;c++) {
+            realColor[(yOffset1 + x + vpStartX)*FB_CHANNELS + c] = tileData[(yOffset2 + x)*FB_CHANNELS + c];
+          }
+        }
+      }
   
       pImpl->GetExecutionTime("PathTraceBlock", timings);
       std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
