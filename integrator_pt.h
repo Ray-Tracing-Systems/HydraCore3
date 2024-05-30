@@ -248,7 +248,7 @@ public:
   float2 GetPhysSize() const { return m_physSize; }
   void  SetPhysSize(float2 new_size) { m_physSize = new_size; }
 
-  void SetLines(std::vector<LensElementInterface> a_lines) {m_lines = std::move(a_lines);}
+  void SetLines(const std::vector<LensElementInterface>& a_lines) {m_lines = a_lines;}
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   

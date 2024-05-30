@@ -240,8 +240,8 @@ int main(int argc, const char** argv) // common hydra main
 
   const int vpStartX = 400;   // 0
   const int vpStartY = 300;   // 0
-  const int vpSizeX  = 300; // FB_WIDTH
-  const int vpSizeY  = 300; // FB_HEIGHT
+  const int vpSizeX  = 400; // FB_WIDTH
+  const int vpSizeY  = 400; // FB_HEIGHT
   
   pImpl->SetFrameBufferSize(FB_WIDTH, FB_HEIGHT);
   pImpl->SetViewport(vpStartX,vpStartY,vpSizeX,vpSizeY);
