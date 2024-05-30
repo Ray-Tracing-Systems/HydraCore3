@@ -279,8 +279,8 @@ public:
       m_tileSize = 1;
     
     m_maxThreadId = a_width*a_height;
-    
-    m_fbScaleX    = 0.5f;
+
+    m_fbScaleX    = 1.0f;
     m_fbScaleY    = 1.0f; 
     
     //m_aspect  = float(a_width) / float(a_height);

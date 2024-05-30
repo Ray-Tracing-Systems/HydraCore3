@@ -238,9 +238,9 @@ int main(int argc, const char** argv) // common hydra main
 
   pImpl->SetSpectralMode(spectral_mode);
 
-  const int vpStartX = 256; // 0
-  const int vpStartY = 256; // 0
-  const int vpSizeX  = 256; // FB_WIDTH
+  const int vpStartX = 130; // 0
+  const int vpStartY = 130; // 0
+  const int vpSizeX  = 512; // FB_WIDTH
   const int vpSizeY  = 256; // FB_HEIGHT
   
   pImpl->SetFrameBufferSize(FB_WIDTH, FB_HEIGHT);
