@@ -385,7 +385,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
         return;
       }
       const float cos_theta_i = std::max(wi.z, EPSILON_32);
-      const float cos_theta_o = std::max(wo.z, EPSILON_32);
+      const float cos_theta_o = std::min(wo.z, -EPSILON_32);
       if (fabs(eta_it - 1.f) <= 1e-6f)
       {
         pRes->pdf = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm))) * sum(T) / (sum(R) + sum(T));
