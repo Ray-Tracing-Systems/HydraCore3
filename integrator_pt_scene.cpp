@@ -1,4 +1,10 @@
 #include "integrator_pt_scene.h"
+#ifdef USE_LITERT
+#include "LiteRT/utils/mesh.h"
+#endif 
+extern std::string __global_ctx_model_path;
+extern std::string __global_ctx_model_type;
+extern float4x4 __global_ctx_model_transform;
 
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
@@ -638,7 +644,8 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     break; // take first cam
   }
 
-  
+  int context_dependant_geom_idx = -1;
+
   //// (2) load meshes
   //
   m_matIdOffsets.reserve(1024);
@@ -658,6 +665,13 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     std::string name = hydra_xml::ws2s(std::wstring(mIter->name()));
     m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
     m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
+
+    if (name == "context_dependant_model")
+    {
+      name = __global_ctx_model_type;
+      dir = __global_ctx_model_path;
+      context_dependant_geom_idx = m_matIdOffsets.size() - 1;
+    }
 
     if (name == "mesh")
     {
@@ -688,7 +702,26 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       //currently all non-mesh LiteRT types can have only one material for geometry
       uint32_t mat_id = mIter->attribute(L"mat_id").as_int(0);
       m_matIdByPrimId.push_back(mat_id);
-      if (name == "sdf")
+      if (name == "normalized_mesh")
+      {
+        std::cout << "[LoadScene]: normalized_mesh = " << dir.c_str() << std::endl;
+        auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
+        cmesh4::normalize_mesh(currMesh);
+        m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
+      
+        const size_t lastVertex = m_vNorm4f.size();
+
+        m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+
+        m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
+        m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
+
+        for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
+          m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
+          m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+        }
+      }
+      else if (name == "sdf")
       {
         std::cout << "[LoadScene]: sdf = " << dir.c_str() << std::endl;
         SdfScene scene;
@@ -707,21 +740,21 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         std::cout << "[LoadScene]: sdf octree = " << dir.c_str() << std::endl;
         std::vector<SdfOctreeNode> scene;
         load_sdf_octree(scene, dir);
-        m_pAccelStruct->AddGeom_SdfOctree({(unsigned)scene.size(), scene.data()});
+        m_pAccelStruct->AddGeom_SdfOctree(scene);
       }
       else if (name == "sdf_frame_octree")
       {
         std::cout << "[LoadScene]: sdf frame octree = " << dir.c_str() << std::endl;
         std::vector<SdfFrameOctreeNode> scene;
         load_sdf_frame_octree(scene, dir);
-        m_pAccelStruct->AddGeom_SdfFrameOctree({(unsigned)scene.size(), scene.data()});
+        m_pAccelStruct->AddGeom_SdfFrameOctree(scene);
       }
       else if (name == "sdf_svs")
       {
         std::cout << "[LoadScene]: sdf svs = " << dir.c_str() << std::endl;
         std::vector<SdfSVSNode> scene;
         load_sdf_SVS(scene, dir);
-        m_pAccelStruct->AddGeom_SdfSVS({(unsigned)scene.size(), scene.data()});
+        m_pAccelStruct->AddGeom_SdfSVS(scene);
       }
       else if (name == "sdf_sbs")
       {
@@ -786,6 +819,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       #endif
       inst.instId = realInstId;
     }
+
+    if (inst.geomId == context_dependant_geom_idx)
+      inst.matrix = __global_ctx_model_transform * inst.matrix;
 
     if(inst.hasMotion) 
     {

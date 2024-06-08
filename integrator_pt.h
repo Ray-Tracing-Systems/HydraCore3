@@ -65,6 +65,7 @@ public:
   void InitRandomGens(int a_maxThreads);
 
   void SetAccelStruct(std::shared_ptr<ISceneObject> a_customAccelStruct) { m_pAccelStruct = a_customAccelStruct; };
+  ISceneObject *GetAccelStruct() { return m_pAccelStruct.get(); };
   virtual bool LoadScene(const char* a_scehePath, const char* a_sncDir);
   virtual void LoadSceneBegin(){} ///<! override it in derived class
   virtual void LoadSceneEnd(){}   ///<! override it in derived class

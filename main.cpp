@@ -7,10 +7,15 @@
 #include "integrator_pt.h"
 #include "ArgParser.h"
 #include "mi_materials.h"
+#ifdef USE_LITERT
+#include "LiteRT/tests/tests.h"
+#endif
 
 float4x4 ReadMatrixFromString(const std::string& str);
 std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
+
+#define USE_VULKAN
 
 #ifdef USE_VULKAN
 #include "vk_context.h"
@@ -24,11 +29,147 @@ std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spe
   #define SaveLDRImageM SaveImage4fToBMP
 #endif
 
+std::vector<uint32_t> FrameBufferColorToLDRImage(const float* rgb, int width, int height, float a_normConst, float a_gamma, bool a_flip);
+
 void SaveGBufferImages(const std::string& imageOutClean, const std::string& imageOutFiExt, 
                        const std::vector<Integrator::GBufferPixel>& gbuffer, std::vector<float>& tmp, uint width, uint height);
 
+std::string __global_ctx_model_path = "";
+std::string __global_ctx_model_type = "";
+float4x4 __global_ctx_model_transform = float4x4();
+
+#ifdef USE_LITERT
+void direct_test(std::string path, std::string type, MultiRenderPreset preset,
+                 float rotation_angle, unsigned width, unsigned height, unsigned spp, 
+                 float *out_timings, std::vector<uint32_t> &out_image)
+{
+  __global_ctx_model_path = path;
+  __global_ctx_model_type = type;
+  __global_ctx_model_transform = LiteMath::rotate4x4Y(rotation_angle);
+
+  //settings
+  int FB_WIDTH        = width;
+  int FB_HEIGHT       = height;
+  int FB_CHANNELS     = 4;
+
+  int PASS_NUMBER     = spp;
+
+  std::string scenePath      = "external/LiteRT/scenes/02_sdf_scenes/teapot_svs.xml";
+  std::string sceneDir       = "";          // alternative path of scene library root folder (by default it is the folder where scene xml is located)
+  std::string imageOut       = "z_out.bmp";
+  std::string integratorType = "mispt";
+  std::string fbLayer        = "color";
+  std::string resourceDir    = ".";
+  float gamma                = 2.4f; // out gamma, special value, see save image functions.
+
+  #ifndef NDEBUG
+  bool enableValidationLayers = true;
+  #else
+  bool enableValidationLayers = false;
+  #endif
+  unsigned a_preferredDeviceId = 0;
+  int  spectral_mode = 0;
+
+
+  std::vector<uint32_t> features = {0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
+  std::shared_ptr<Integrator> pImpl = nullptr;
+  const float normConst = 1.0f/float(PASS_NUMBER);
+
+    std::vector<const char*> requiredExtensions;
+    auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);
+    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, 
+                                                      1000 * 1000 * 1000, 500 * 1000 * 1000);
+
+    // advanced way, you can disable some pipelines creation which you don't actually need;
+    // this will make application start-up faster
+    //
+    Integrator_Generated::EnabledPipelines().enableRayTraceMega               = false;
+    Integrator_Generated::EnabledPipelines().enableCastSingleRayMega          = false; // not used, for testing only
+    Integrator_Generated::EnabledPipelines().enablePackXYMega                 = true;  // always true for this main.cpp;
+    Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
+    Integrator_Generated::EnabledPipelines().enablePathTraceMega              = true;
+    Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = false;
+
+    // advanced way
+    //
+    auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+    pObj->SetVulkanContext(ctx);
+    pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, FB_WIDTH*FB_HEIGHT);
+    pImpl = pObj;
+
+    pImpl->GetAccelStruct()->SetPreset(preset);
+    pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
+    //std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
+    pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());
+
+    //if(override_camera_pos)
+    //{
+    //  pImpl->SetWorldView(look_at);
+    //}
+
+    pImpl->CommitDeviceData();
+
+    // remember (x,y) coords for each thread to make our threading 1D
+    //
+    //std::cout << "[main]: PackXYBlock() ... " << std::endl;
+    pImpl->PackXYBlock(FB_WIDTH, FB_HEIGHT, 1);
+
+    uint32_t imLayer = Integrator::FB_COLOR;
+    pImpl->SetFrameBufferLayer(imLayer);
+    //std::cout << "[main]: Rendering frame buffer layer: " << imLayer << std::endl;
+
+    std::string suffix = "";
+    //std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+  
+      pImpl->GetExecutionTime("PathTraceBlock", out_timings);
+      //std::cout << "PathTraceBlock(exec) = " << out_timings[0]              << " ms " << std::endl;
+      //std::cout << "PathTraceBlock(copy) = " << out_timings[1] + out_timings[2] << " ms " << std::endl;
+      //std::cout << "PathTraceBlock(ovrh) = " << out_timings[3]              << " ms " << std::endl;
+  
+        //const std::string outName = save_path;
+        //std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        //SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+      
+      out_image = FrameBufferColorToLDRImage(realColor.data(), FB_WIDTH, FB_HEIGHT, normConst, gamma, true);
+}
+#endif
+
 int main(int argc, const char** argv) // common hydra main
 {
+#ifdef USE_LITERT
+  if (argc > 2 && std::string(argv[1]) == "-benchmark")
+  {
+      std::string mesh_name = argv[2];
+      std::string supported_type = argc == 3  ? "" : argv[3];
+      unsigned flags = BENCHMARK_FLAG_RENDER_HYDRA;
+      main_benchmark("external/LiteRT/saves/"+mesh_name, mesh_name, flags, supported_type);
+
+      return 0;
+  }
+#endif
+
+/*
+  direct_test("../grade/modules/LiteRT/saves/teapot/mesh.vsgf", "normalized_mesh", "t0.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_125Kb/data.bin", "sdf_svs", "t1.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_250Kb/data.bin", "sdf_svs", "t2.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_500Kb/data.bin", "sdf_svs", "t3.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_1Mb/data.bin", "sdf_svs", "t4.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_2Mb/data.bin", "sdf_svs", "t5.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_4Mb/data.bin", "sdf_svs", "t6.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_8Mb/data.bin", "sdf_svs", "t7.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_16Mb/data.bin", "sdf_svs", "t8.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_32Mb/data.bin", "sdf_svs", "t9.png");
+  direct_test("../grade/modules/LiteRT/saves/teapot/teapot_sdf_SVS_64Mb/data.bin", "sdf_svs", "t10.png");
+  return 0;
+*/
+
   #ifndef NDEBUG
   bool enableValidationLayers = true;
   #else
