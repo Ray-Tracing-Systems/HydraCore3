@@ -279,13 +279,6 @@ public:
       m_tileSize = 1;
     
     m_maxThreadId = a_width*a_height;
-
-    m_fbScaleX    = 1.0f;
-    m_fbScaleY    = 1.0f; 
-    
-    //m_aspect  = float(a_width) / float(a_height);
-    //m_proj    = perspectiveMatrix(45.0f, m_aspect, 0.01, 100.0f);
-    //m_projInv = LiteMath::inverse4x4(m_proj);
   }
   
   void SetWorldView(const float4x4& a_mat)
@@ -310,8 +303,6 @@ public:
   int m_winHeight   = 0;
   int m_fbWidth     = 0;
   int m_fbHeight    = 0;
-  float m_fbScaleX  = 1.0f;
-  float m_fbScaleY  = 1.0f;
   uint m_traceDepth = 10;
   
   uint m_renderLayer = FB_COLOR; ///!< when greater than 1, skip all bounce before this one: 2 for secondary light, 3 for thertiary and e.t.c. 

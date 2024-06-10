@@ -619,7 +619,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_allCams.clear();
   for(auto cam : scene.Cameras())
   {
-    float aspect   = float(m_winWidth) / float(m_winHeight);
+    float aspect   = float(m_fbWidth) / float(m_fbHeight);
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
     auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
       

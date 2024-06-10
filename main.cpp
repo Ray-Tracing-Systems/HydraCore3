@@ -238,8 +238,8 @@ int main(int argc, const char** argv) // common hydra main
 
   pImpl->SetSpectralMode(spectral_mode);
 
-  const int vpStartX = 130; // 0
-  const int vpStartY = 130; // 0
+  const int vpStartX = 250; // 0
+  const int vpStartY = 250; // 0
   const int vpSizeX  = 512; // FB_WIDTH
   const int vpSizeY  = 256; // FB_HEIGHT
   
@@ -325,6 +325,7 @@ int main(int argc, const char** argv) // common hydra main
     float timings[4] = {0,0,0,0};
     pImpl->SetFrameBufferLayer(frame.fbId);
     pImpl->SetCamId(frame.camId);
+    pImpl->SetViewport(vpStartX,vpStartY,vpSizeX,vpSizeY);
     std::cout << "[main]: frame = " << i << " / "  << frames.size() << ", cam_id = " << frame.camId << ", fb_layer = " << frame.fbId  << std::endl;
     
     const auto& suffix = frame.suffix;
