@@ -167,6 +167,8 @@ if (USE_LITERT)
       external/LiteRT/utils/hp_octree.cpp
       external/LiteRT/utils/watertight_mesh.cpp
       external/LiteRT/utils/sdf_converter.cpp
+      external/LiteRT/utils/marching_cubes.cpp
+      external/LiteRT/utils/sdf_smoother.cpp
       external/LiteRT/tests/tests.cpp
       external/LiteRT/tests/benchmark.cpp
       external/LiteRT/NeuralRT/NeuralRT.cpp

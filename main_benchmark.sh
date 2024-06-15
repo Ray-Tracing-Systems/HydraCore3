@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#cd external/LiteRT
-#make -j15
-#./render_app -benchmark $3 build 
-#cd ../..
+cd external/LiteRT
+make -j15
+./render_app -benchmark $3 build 
+cd ../..
 
 cd external/LiteRT
 bash scripts/slicer_preprocess_grid_only.sh $1 $2
