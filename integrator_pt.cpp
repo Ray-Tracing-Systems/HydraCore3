@@ -245,16 +245,16 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
       const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
       const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
-
-      float3 hitNorm     = to_float3(data1);
-      float3 hitTang     = to_float3(data2);
       float2 hitTexCoord = float2(data1.w, data2.w);
 
-      // transform surface point with matrix and flip normal if needed
-      //
-      hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
-      hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
+      //normals for are calculated along with the hit calculation
+      const float3 n(hit.coords[2], hit.coords[3], sqrt(max(0.0f, 1-hit.coords[2]*hit.coords[2] - hit.coords[3]*hit.coords[3])));
+      const float len = length(n);
+      float3 hitNorm = len > 1e-9f ? n / len : float3(1.0f, 0.0f, 0.0f);
 
+      //it is not always good, but we do not expect that tangent will be used at all
+      float3 hitTang = float3(0.0f, 1.0f, 0.0f);
+    
       if(m_normMatrices2.size() > 0)
       {
         float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
