@@ -5,6 +5,18 @@ make -j15
 ./render_app -benchmark $3 build 
 cd ../..
 
+#cd external/LiteRT
+#bash scripts/slicer_preprocess_grid_only.sh $1 $2
+#bash scripts/slicer_build_shaders.sh $1 $2
+#make -j15
+#./render_app -benchmark $3 mesh_lod
+#cd ../..
+
+#bash scripts/slicer_preprocess_grid_only.sh $1 $2
+#bash scripts/slicer_build_shaders.sh $1 $2
+#make -j15
+#./bin-release/hydra -benchmark $3 mesh_lod
+
 cd external/LiteRT
 bash scripts/slicer_preprocess_grid_only.sh $1 $2
 bash scripts/slicer_build_shaders.sh $1 $2
