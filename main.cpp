@@ -15,8 +15,6 @@ float4x4 ReadMatrixFromString(const std::string& str);
 std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, int a_spectral_mode = 0, std::vector<uint32_t> a_features = {});
 
-#define USE_VULKAN
-
 #ifdef USE_VULKAN
 #include "vk_context.h"
 #include "integrator_pt_generated.h" // advanced way
@@ -76,6 +74,10 @@ void direct_test(std::string path, std::string type, MultiRenderPreset preset,
   std::shared_ptr<Integrator> pImpl = nullptr;
   const float normConst = 1.0f/float(PASS_NUMBER);
 
+  bool onGPU = true;
+  #ifdef USE_VULKAN
+  if(onGPU)
+  {
     std::vector<const char*> requiredExtensions;
     auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);
     auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, 
@@ -97,6 +99,12 @@ void direct_test(std::string path, std::string type, MultiRenderPreset preset,
     pObj->SetVulkanContext(ctx);
     pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, FB_WIDTH*FB_HEIGHT);
     pImpl = pObj;
+  }
+  else
+  #endif
+  {
+    pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT, spectral_mode, features);
+  }
 
     pImpl->GetAccelStruct()->SetPreset(preset);
     pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
