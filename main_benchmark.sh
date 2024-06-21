@@ -1,8 +1,4 @@
 #!/bin/bash
-bash scripts/slicer_preprocess_svs_only.sh $1 $2
-bash scripts/slicer_build_shaders.sh $1 $2
-make -j15
-./bin-release/hydra -benchmark $3 sdf_SVS
 
 cd external/LiteRT
 make -j15
