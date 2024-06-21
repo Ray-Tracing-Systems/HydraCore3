@@ -369,6 +369,12 @@ int main(int argc, const char** argv) // common hydra main
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_LITERT
+  MultiRenderPreset preset = getDefaultPreset();
+  preset.mesh_normal_mode = MESH_NORMAL_MODE_VERTEX;
+  pImpl->GetAccelStruct()->SetPreset(preset);
+#endif
+
   pImpl->SetViewport(0,0,FB_WIDTH,FB_HEIGHT);
   std::cout << "[main]: Loading scene ... " << scenePath.c_str() << std::endl;
   pImpl->LoadScene(scenePath.c_str(), sceneDir.c_str());

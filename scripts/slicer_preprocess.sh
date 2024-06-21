@@ -19,7 +19,7 @@ $2 $start_dir/Renderer/eye_ray.cpp $start_dir/BVH/BVH2Common.cpp \
 -shaderCC glsl \
 -suffix _GPU \
 -megakernel 1 \
--DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -v \
+-DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -DUSE_LITERT -v \
 -DDISABLE_SDF_PRIMITIVE \
 -DDISABLE_RF_GRID \
 -DDISABLE_GS_PRIMITIVE
@@ -36,6 +36,6 @@ $2 $start_dir/NeuralRT/NeuralRT.cpp \
 -I$start_dir/sdfScene           ignore \
 -shaderCC glsl \
 -suffix _GPU \
--DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -v 
+-DPUGIXML_NO_EXCEPTIONS -DKERNEL_SLICER -DUSE_LITERT -v 
 
 cd $start_dir

@@ -90,10 +90,10 @@ if (USE_LITERT)
   add_compile_definitions(USE_LITERT)
   link_directories("external/LiteRT/dependencies/embree/lib")
   include_directories("external/LiteRT/dependencies/embree")
-else()
-  include_directories("external/CrossRT")
-  link_directories("external/CrossRT/lib")
 endif()
+
+include_directories("external/CrossRT")
+link_directories("external/CrossRT/lib")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wno-attributes")

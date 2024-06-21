@@ -23,6 +23,7 @@ $2 $start_dir/integrator_pt.cpp \
 -I$start_dir/external/LiteRT                   process \
 -I$start_dir/external/LiteRT/BVH               process \
 -I$start_dir/external/LiteRT/sdfScene          process \
+-I$start_dir/external/CrossRT                  process \
 -shaderCC glsl \
 -enable_motion_blur 0 \
 -gen_gpu_api 0 \

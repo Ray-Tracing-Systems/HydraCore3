@@ -12,7 +12,6 @@
 #include <memory>
 #include <utility>
 #include <cfloat>
-#define USE_LITERT
 #ifdef USE_LITERT
 #include "LiteRT/ISceneObject.h" // special include for ray tracing
 #include "LiteRT/BVH/BVH2Common.h"
