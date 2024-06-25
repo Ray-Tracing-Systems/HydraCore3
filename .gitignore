@@ -46,3 +46,9 @@ Makefile
 CMakeCache.txt
 *.bmp
 # Files
+
+# Generated files
+*temp*
+*generated*
+*.comp
+shaders_generated/build.sh
