@@ -259,6 +259,195 @@
         ]
     },
     {
+        "name": "sdf_demo_buddha",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/buddha.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_buddha.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_bunny",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/bunny.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_bunny.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_clutch",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/clutch.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_clutch.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_dragon",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/dragon.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_dragon.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_sponza",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/sponza.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_sponza.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1024",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
         "name": "Launch LiteRT",
         "type": "cppdbg",
         "request": "launch",
