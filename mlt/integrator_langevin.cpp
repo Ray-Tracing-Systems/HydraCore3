@@ -13,6 +13,9 @@
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
 
+extern float __enzyme_autodiff(void*, ...);
+int enzyme_const, enzyme_dup, enzyme_out;
+
 class IntegratorLangevin : public Integrator {
 public:
     IntegratorLangevin(int a_maxThreads, int a_spectral_mode, std::vector<uint32_t> a_features) : Integrator(a_maxThreads, a_spectral_mode, a_features) {}
@@ -108,6 +111,10 @@ public:
         uint a_materialId, uint tid, uint bounce, uint layer, float4 wavelengths, float3 v, float3 n, float2 tc, 
         MisData* a_misPrev, BsdfSample* a_pRes, float *rands
     );
+
+    float LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
+    LightSample LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint);
+    // Integrator::Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY);
 
     void PathTraceBlock(uint pixelsNum, uint channels, float *out_color, uint a_passNum);
     void PathTraceBlockFixedDepth(uint pixelsNum, uint channels, float *out_color, uint a_passNum);
@@ -305,6 +312,10 @@ void IntegratorLangevin::PathTraceBlock(uint pixelsNum, uint channels, float *ou
     }
 }
 
+float4 PathTraceFWrapper(IntegratorLangevin *a_integrator, uint a_tid, int *a_pX, int *a_pY, float *a_rands) {
+    return a_integrator->PathTraceF(a_tid, a_pX, a_pY, a_rands);
+}
+
 void IntegratorLangevin::PathTraceBlockFixedDepth(uint pixelsNum, uint channels, float *out_color, uint a_passNum) {
     uint maxThreads = omp_get_max_threads();
     m_randsPerThread = AlignedSize(RandsPerThread(), uint32_t(16));
@@ -347,6 +358,17 @@ void IntegratorLangevin::PathTraceBlockFixedDepth(uint pixelsNum, uint channels,
         GetRandomNumbersLens(tid, rands_new);
 
         float4 yColor = PathTraceF(tid, &xScr, &yScr, rands_new);
+        std::vector<float> grad(m_randsPerThread, 0.0f);
+        // __enzyme_autodiff(
+        //   (void*)PathTraceFWrapper,
+        //   enzyme_const, this,
+        //   enzyme_const, tid,
+        //   enzyme_const, &xScr,
+        //   enzyme_const, &yScr,
+        //   enzyme_dup, rands_new, grad.data()
+        // );
+        // PathTraceFWrapper(this, tid, &xScr, &yScr, rands_new);
+
         float y = contribFunc(yColor);
 
         // (2) Markov Chain
@@ -479,27 +501,6 @@ Integrator::EyeRayData IntegratorLangevin::SampleCameraRay(uint tid, float *rand
         rayPos.x += xy.x;
         rayPos.y += xy.y;
         rayDir = normalize(focusPosition - rayPos);
-    } else if (m_enableOpticSim != 0) // not nessesary part of QMC. Just implemented here for test cases, could be moved in main class further
-    {
-        const float2 xy = 0.25f * m_physSize * float2(2.0f * pixelOffsets.x - 1.0f, 2.0f * pixelOffsets.y - 1.0f);
-
-        rayPos = float3(xy.x, xy.y, 0);
-
-        const float2 rareSam = LensRearRadius() * 2.0f * MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
-        const float3 shootTo = float3(rareSam.x, rareSam.y, LensRearZ());
-        const float3 ray_dirF = normalize(shootTo - rayPos);
-
-        float cosTheta = std::abs(ray_dirF.z);
-        rayDir = ray_dirF;
-        bool success = TraceLensesFromFilm(rayPos, rayDir);
-
-        if (!success) {
-            rayPos = float3(0, -10000000.0, 0.0); // shoot ray under the floor
-            rayDir = float3(0, -1, 0);
-        } else {
-            rayDir = float3(-1, -1, -1) * normalize(rayDir);
-            rayPos = float3(-1, -1, -1) * rayPos;
-        }
     }
 
     /////////////////////////////////////////////////////
@@ -674,6 +675,148 @@ float4 IntegratorLangevin::kernel_SampleLightSource(
     }
 
     return out_shadeColor;        
+}
+
+// Integrator::Map2DPiecewiseSample IntegratorLangevin::SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY)
+// {
+//   const float fw = (float)sizeX;
+//   const float fh = (float)sizeY;
+//   const float fN = fw*fh;
+
+//   float pdf = 1.0f;
+//   int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
+
+//   if (pixelOffset >= sizeX*sizeY)
+//     pixelOffset = sizeX*sizeY - 1;
+
+//   const int yPos = pixelOffset / sizeX;
+//   const int xPos = pixelOffset - yPos*sizeX;
+
+//   const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
+//   const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
+
+//   Map2DPiecewiseSample result;
+//   result.mapPdf   = pdf*fN; 
+//   result.texCoord = make_float2(texX, texY);
+//   return result;
+// }
+
+LightSample IntegratorLangevin::LightSampleRev(int a_lightId, float3 rands, float3 illiminationPoint)
+{
+  const uint   gtype  = m_lights[a_lightId].geomType;
+  const float2 rands2 = float2(rands.x, rands.y);
+  switch(gtype)
+  {
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands2, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands2);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
+    case LIGHT_GEOM_ENV: 
+    if(KSPEC_LIGHT_ENV != 0)
+    {
+      const uint32_t offset = m_lights[a_lightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[a_lightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[a_lightId].pdfTableSizeY;
+      
+    Map2DPiecewiseSample sam = SampleMap2D(rands, offset, int(sizeX), int(sizeY));
+    //   // Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY)
+    //   {
+    //     uint32_t a_tableOffset = offset;
+    //     int sizeX = sizeX;
+    //     int sizeY = sizeY;
+
+    //     const float fw = (float)sizeX;
+    //     const float fh = (float)sizeY;
+    //     const float fN = fw*fh;
+
+    //     float pdf = 1.0f;
+    //     int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data() + a_tableOffset, sizeX*sizeY+1, &pdf);
+
+    //     if (pixelOffset >= sizeX*sizeY)
+    //       pixelOffset = sizeX*sizeY - 1;
+
+    //     const int yPos = pixelOffset / sizeX;
+    //     const int xPos = pixelOffset - yPos*sizeX;
+
+    //     const float texX = (1.0f / fw)*(((float)(xPos) + 0.5f) + (rands.x*2.0f - 1.0f)*0.5f);
+    //     const float texY = (1.0f / fh)*(((float)(yPos) + 0.5f) + (rands.y*2.0f - 1.0f)*0.5f);
+
+    //     sam.mapPdf   = pdf*fN;
+    //     sam.texCoord = make_float2(texX, texY);
+
+    //     // Map2DPiecewiseSample result;
+    //     // result.mapPdf   = pdf*fN; 
+    //     // result.texCoord = make_float2(texX, texY);
+    //     // return result;
+    //   }
+
+      // apply inverse texcoord transform to get phi and theta (SKY_DOME_INV_MATRIX0 in HydraCore2)
+      //
+      const float2 texCoordT = mulRows2x4(m_lights[a_lightId].samplerRow0Inv, m_lights[a_lightId].samplerRow1Inv, sam.texCoord);
+
+      float sintheta = 0.0f;
+      const float3 sampleDir = texCoord2DToSphereMap(texCoordT, &sintheta);
+        const float phi   = texCoordT.x * 2.f * M_PI; // see PBRT coords:  Float phi = uv[0] * 2.f * Pi;
+        const float theta = texCoordT.y * M_PI;       // see PBRT coords:  Float theta = uv[1] * Pi
+
+        const float sinTheta = std::sin(theta);
+
+        const float x = sinTheta*std::cos(phi);           // see PBRT coords: (Vector3f(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta)
+        const float y = sinTheta*std::sin(phi);
+        const float z = std::cos(theta);
+
+        sintheta  = sinTheta;
+        // const float3 sampleDir = make_float3(y, -z, x);
+      const float3 samplePos = illiminationPoint + sampleDir*1000.0f; // TODO: add sceen bounding sphere radius here
+      const float  samplePdf = (sam.mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sintheta), 1e-20f)); // TODO: pass computed pdf to 'LightEvalPDF'
+      
+      LightSample res;
+      res.hasIES = false;
+      res.isOmni = true;
+      res.norm   = sampleDir; 
+      res.pos    = samplePos;
+      res.pdf    = samplePdf; // evaluated here for environment lights 
+      return res;
+    }
+    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
+  };
+}
+
+float IntegratorLangevin::LightEvalPDF(int a_lightId, float3 illuminationPoint, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf)
+{
+  const uint gtype = m_lights[a_lightId].geomType;
+  if(gtype == LIGHT_GEOM_ENV)
+    return a_envPdf;
+
+  const float hitDist   = length(illuminationPoint - lpos);
+  const float cosValTmp = dot(ray_dir, -1.0f*lnorm);
+  float cosVal = 1.0f;
+  switch(gtype)
+  {
+    case LIGHT_GEOM_SPHERE:
+    {
+      // const float  lradius = m_lights[a_lightId].size.x;
+      // const float3 lcenter = to_float3(m_lights[a_lightId].pos);
+      //if (DistanceSquared(illuminationPoint, lcenter) - lradius*lradius <= 0.0f)
+      //  return 1.0f;
+      const float3 dirToV = normalize(lpos - illuminationPoint);
+      cosVal = std::abs(dot(dirToV, lnorm));
+    }
+    break;
+
+    case LIGHT_GEOM_POINT:
+    {
+      if(m_lights[a_lightId].distType == LIGHT_DIST_LAMBERT)
+        cosVal = std::max(cosValTmp, 0.0f);
+    };
+    break;
+
+    default: // any type of area light
+    //cosVal = std::max(cosValTmp, 0.0f);                                                               ///< Note(!): actual correct way for area lights
+    cosVal = (m_lights[a_lightId].iesId == uint(-1)) ? std::max(cosValTmp, 0.0f) : std::abs(cosValTmp); ///< Note(!): this is not physically correct for area lights, see test_206;
+    break;                                                                                              ///< Note(!): dark line on top of image for pink light appears because area light don't shine to the side. 
+  };
+  
+  return PdfAtoW(m_lights[a_lightId].pdfA, hitDist, cosVal);
 }
 
 // returns delta accumColor
