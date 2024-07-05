@@ -691,6 +691,303 @@
         ]
     },
     {
+        "name": "sdf_demo_roadbike_svs_250k",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_svs_250k.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_svs_250k.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_svs_1m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_svs_1m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_svs_1m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_svs_4m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_svs_4m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_svs_4m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_svs_16m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_svs_16m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_svs_16m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_svs_64m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_svs_64m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_svs_64m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close_svs_250k",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close_svs_250k.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close_svs_250k.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close_svs_1m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close_svs_1m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close_svs_1m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close_svs_4m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close_svs_4m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close_svs_4m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close_svs_16m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close_svs_16m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close_svs_16m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_roadbike_close_svs_64m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/roadbike_close_svs_64m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_roadbike_close_svs_64m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
         "name": "sdf_demo_sponza",
         "type": "cppdbg",
         "request": "launch",
@@ -731,6 +1028,303 @@
                  "-spp", "2048",
                  "-grad", "1",
                  "-out", "sdf_demo_teapot.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_svs_250k",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_svs_250k.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_svs_250k.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_svs_1m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_svs_1m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_svs_1m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_svs_4m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_svs_4m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_svs_4m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_svs_16m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_svs_16m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_svs_16m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_svs_64m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_svs_64m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_svs_64m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close_svs_250k",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close_svs_250k.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close_svs_250k.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close_svs_1m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close_svs_1m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close_svs_1m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close_svs_4m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close_svs_4m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close_svs_4m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close_svs_16m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close_svs_16m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close_svs_16m.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+    {
+        "name": "sdf_demo_teapot_close_svs_64m",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-release/hydra",
+        "args": ["--gpu", 
+                 "-in", "external/LiteRT/scenes/99_demo_scenes/teapot_close_svs_64m.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "1024",
+                 "-height", "1024",
+                 "-spp", "2048",
+                 "-grad", "1",
+                 "-out", "sdf_demo_teapot_close_svs_64m.bmp"],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",
         "environment": [],
