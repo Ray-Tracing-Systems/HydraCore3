@@ -170,6 +170,7 @@ if (USE_LITERT)
       external/LiteRT/utils/marching_cubes.cpp
       external/LiteRT/utils/sdf_smoother.cpp
       external/LiteRT/utils/demo_meshes.cpp
+      external/LiteRT/utils/image_metrics.cpp
       external/LiteRT/tests/tests.cpp
       external/LiteRT/tests/benchmark.cpp
       external/LiteRT/NeuralRT/NeuralRT.cpp
