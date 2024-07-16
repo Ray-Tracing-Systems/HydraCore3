@@ -80,18 +80,6 @@ make -j15
 ./bin-release/hydra -benchmark $3 sdf_SBS-2-2
 
 cd external/LiteRT
-bash scripts/slicer_preprocess_hp_only.sh $1 $2
-bash scripts/slicer_build_shaders.sh $1 $2
-make -j15
-./render_app -benchmark $3 sdf_hp_octree 
-cd ../..
-
-bash scripts/slicer_preprocess_hp_only.sh $1 $2
-bash scripts/slicer_build_shaders.sh $1 $2
-make -j15
-./bin-release/hydra -benchmark $3 sdf_hp_octree
-
-cd external/LiteRT
 bash scripts/slicer_preprocess_svs_only.sh $1 $2
 bash scripts/slicer_build_shaders.sh $1 $2
 make -j15

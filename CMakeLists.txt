@@ -164,7 +164,6 @@ if (USE_LITERT)
       external/LiteRT/utils/sparse_octree_2.cpp
       external/LiteRT/utils/radiance_field.cpp
       external/LiteRT/utils/gaussian_field.cpp
-      external/LiteRT/utils/hp_octree.cpp
       external/LiteRT/utils/watertight_mesh.cpp
       external/LiteRT/utils/sdf_converter.cpp
       external/LiteRT/utils/marching_cubes.cpp
@@ -173,8 +172,7 @@ if (USE_LITERT)
       external/LiteRT/utils/image_metrics.cpp
       external/LiteRT/tests/tests.cpp
       external/LiteRT/tests/benchmark.cpp
-      external/LiteRT/NeuralRT/NeuralRT.cpp
-      external/LiteRT/utils/hp_octree_builder_stub.cpp)
+      external/LiteRT/NeuralRT/NeuralRT.cpp)
   set(RT_VULKAN_SRC
       external/LiteRT/Renderer/eye_ray_gpu.cpp 
       external/LiteRT/Renderer/eye_ray_gpu_ds.cpp 
