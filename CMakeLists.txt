@@ -154,7 +154,6 @@ if (USE_LITERT)
       external/LiteRT/BVH/cbvh_fat.cpp
       external/LiteRT/BVH/cbvh_embree2.cpp
       external/LiteRT/Timer.cpp
-      external/LiteRT/BruteForceRT.cpp
       external/LiteRT/Renderer/eye_ray.cpp
       external/LiteRT/Renderer/eye_ray_host.cpp
       external/LiteRT/sdfScene/sdf_scene.cpp
