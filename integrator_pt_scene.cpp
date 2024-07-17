@@ -723,10 +723,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       else if (name == "sdf")
       {
-        std::cout << "[LoadScene]: sdf = " << dir.c_str() << std::endl;
-        SdfScene scene;
-        load_sdf_scene(scene, dir);
-        m_pAccelStruct->AddGeom_SdfScene(scene);
+        std::cout << "[LoadScene]: sdf primitives scene was removed from LiteRT. Search for legacy version to load it. " << std::endl;
       }
       else if (name == "sdf_grid")
       {
@@ -769,10 +766,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       else if (name == "nsdf")
       {
-        std::cout << "[LoadScene]: neural sdf = " << dir.c_str() << std::endl;
-        SdfScene scene;
-        load_neural_sdf_scene_SIREN(scene, dir);
-        m_pAccelStruct->AddGeom_SdfScene(scene);
+        std::cout << "[LoadScene]: neural sdf scene was removed from LiteRT. Search for legacy version to load it. " << std::endl;
       }
       else if (name == "rf")
       {
