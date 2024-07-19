@@ -623,9 +623,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
 
     LiteMath::float4x4 c2w;
-    if(cam.has_matrix)
+    if(cam.has_matrix) // matrix is in mitsuba format!
     {
       c2w = cam.matrix;
+      c2w.m_col[0] *= -1;
+      c2w.m_col[2] *= -1;
+      c2w = inverse4x4(c2w);
       // TODO: compute basis from camera ?
     } 
     else
