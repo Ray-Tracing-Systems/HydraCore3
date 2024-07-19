@@ -621,13 +621,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     float aspect   = float(m_fbWidth) / float(m_fbHeight);
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
-    auto worldView = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
-      
+
+    LiteMath::float4x4 c2w;
+    if(cam.has_matrix)
+    {
+      c2w = cam.matrix;
+      // TODO: compute basis from camera ?
+    } 
+    else
+    {
+      c2w = lookAt(float3(cam.pos), float3(cam.lookAt), float3(cam.up));
+    }
+
     m_exposureMult = cam.exposureMult;
     m_proj         = proj;
-    m_worldView    = worldView;
+    m_worldView    = c2w;
     m_projInv      = inverse4x4(proj);
-    m_worldViewInv = inverse4x4(worldView);
+    m_worldViewInv = inverse4x4(c2w);
 
     m_camTargetDist = length(float3(cam.lookAt) - float3(cam.pos));
     m_camLensRadius = 0.0f;
