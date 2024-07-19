@@ -71,6 +71,8 @@ namespace hydra_xml
     float farPlane;
     float exposureMult;
     pugi::xml_node node;
+    LiteMath::float4x4 matrix;  // view matrix
+    bool has_matrix;
   };
 
   struct Settings
@@ -212,6 +214,14 @@ namespace hydra_xml
         cam.lookAt[i] = lookAt[i];
         cam.up    [i] = up[i];
       }
+
+      cam.has_matrix = false;
+      if(m_iter->child(L"matrix"))
+      {
+        cam.matrix = LiteMath::transpose(float4x4FromString(m_iter->child(L"matrix").attribute(L"val").as_string()));
+        cam.has_matrix = true;
+      }
+
       cam.node = (*m_iter);
       return cam;
     }
