@@ -190,7 +190,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
         conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
       {        
-        const float3 alphaTex = m_materials[currMatId].data[CONDUCTOR_HAS_SQUARE_ROUGH] ? to_float3(texColor * texColor) : to_float3(texColor);
+        const float3 alphaTex = (m_materials[currMatId].data[CONDUCTOR_HAS_SQUARE_ROUGH] != 0) ? to_float3(texColor * texColor) : to_float3(texColor);
         conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
       }
     }
@@ -358,7 +358,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         {
           const float4 etaSpec  = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
           const float4 kSpec    = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
-          const float3 alphaTex = m_materials[currMat.id].data[CONDUCTOR_HAS_SQUARE_ROUGH]? to_float3(texColor*texColor) : to_float3(texColor);
+          const float3 alphaTex = (m_materials[currMat.id].data[CONDUCTOR_HAS_SQUARE_ROUGH] != 0)? to_float3(texColor*texColor) : to_float3(texColor);
                     
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
