@@ -9,6 +9,12 @@
 #include "CrossRT.h"
 #include "LiteScene/scene_mgr.h" // RTX implementation of acceleration structures
 
+enum GeomTypeMasks
+{
+  CRT_VULKAN_GEOM_MASK_AABB_BIT    = 0x80000000, // 1000 0000 ... 
+  CRT_VULKAN_GEOM_MASK_AABB_BIT_RM = 0x7fffffff  // 0111 1111 ... 
+};
+
 class VulkanRTX : public ISceneObject
 {
 public:
@@ -24,6 +30,9 @@ public:
                                uint32_t a_flags, size_t vByteStride) override;
   void     UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices,
                                   size_t a_indNumber, uint32_t a_flags, size_t vByteStride) override;
+
+  uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) override;
+  void     UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) override;
 
   void ClearScene() override; 
   void CommitScene(uint32_t options = BUILD_HIGH) override; 

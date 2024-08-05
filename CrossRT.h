@@ -5,11 +5,6 @@
 #include "LiteMath.h"
 using LiteMath::float4;
 
-enum BuildQuality
-{
-
-};
-
 enum BuildOptions 
 {
     NONE                   = 0x00000000, 

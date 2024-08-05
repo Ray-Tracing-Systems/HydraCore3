@@ -81,6 +81,16 @@ uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
   return idx;
 }
 
+uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+{
+  return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS((const SceneManager::AABB8f*)boxMinMaxF8, a_boxNumber) | CRT_VULKAN_GEOM_MASK_AABB_BIT;
+}
+
+void VulkanRTX::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+{
+  std::cout << "[VulkanRTX::UpdateGeom_AABB]: not implemented" << std::endl;
+}
+
 void VulkanRTX::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices,
                                        size_t a_indNumber, uint32_t a_flags, size_t vByteStride)
 {
@@ -94,7 +104,13 @@ void VulkanRTX::ClearScene()
 
 uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)
 {
-  return m_pScnMgr->InstanceMesh(a_geomId, a_matrix);
+  if((a_geomId & CRT_VULKAN_GEOM_MASK_AABB_BIT) != 0)
+  {
+    const uint32_t aabbGeomId = (a_geomId & CRT_VULKAN_GEOM_MASK_AABB_BIT_RM);
+    return m_pScnMgr->InstanceAABB(aabbGeomId, a_matrix);
+  }
+  else
+    return m_pScnMgr->InstanceMesh(a_geomId, a_matrix);
 }
 
 uint32_t VulkanRTX::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)
