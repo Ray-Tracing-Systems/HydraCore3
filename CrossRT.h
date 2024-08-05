@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "LiteMath.h"
+using LiteMath::float4;
 
 enum BuildQuality
 {
@@ -30,6 +31,12 @@ struct CRT_Hit
   uint32_t instId;
   uint32_t geomId;    ///< use 4 most significant bits for geometry type; thay are zero for triangles 
   float    coords[4]; ///< custom intersection data; for triangles coords[0] and coords[1] stores baricentric coords (u,v)
+};
+
+struct CRT_AABB
+{
+  float4 boxMin;
+  float4 boxMax;
 };
 
 /**
@@ -72,6 +79,10 @@ struct ISceneObject
   virtual void UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber,
                                       uint32_t a_flags = BUILD_HIGH, size_t vByteStride = sizeof(float)*3) = 0;
   
+
+  virtual uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) { return 0; }
+  virtual void     UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) {}
+
   /**
   \brief Clear all instances, but don't touch geometry
   */
