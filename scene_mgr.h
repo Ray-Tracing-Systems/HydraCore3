@@ -82,7 +82,7 @@ struct SceneManager
     float4 boxMin;
     float4 boxMax;
   };
-  uint32_t AddGeomFromAABBAndQueueBuildAS(const AABB8f* boxMinMaxF8);
+  uint32_t AddGeomFromAABBAndQueueBuildAS(const AABB8f* boxMinMaxF8, size_t a_boxNumber);
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
                         const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
@@ -134,8 +134,15 @@ private:
   void InitMeshCPU(MESH_FORMATS format);
   void AddBLAS(uint32_t meshIdx);
 
-  std::vector<MeshInfo> m_meshInfos = {};
+  struct AABBBatchInfo
+  {
+    size_t start;
+    size_t size;
+  }; 
+  std::vector<MeshInfo>      m_meshInfos = {};
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;
+  std::vector<AABBBatchInfo> m_aabbsInfo;
+  size_t                     m_aabbsTotal = 0;
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
@@ -150,6 +157,7 @@ private:
   VkBuffer m_geoIdxBuf         = VK_NULL_HANDLE;
   VkBuffer m_meshInfoBuf       = VK_NULL_HANDLE;
   VkBuffer m_matIdsBuf         = VK_NULL_HANDLE;
+  VkBuffer m_aabbBuf           = VK_NULL_HANDLE;
   VkDeviceMemory m_geoMemAlloc = VK_NULL_HANDLE;
 
   VkBuffer m_instMatricesBuf    = VK_NULL_HANDLE;

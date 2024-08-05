@@ -164,8 +164,12 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   return idx;
 }
 
-uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const SceneManager::AABB8f* boxMinMaxF8)
+uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const SceneManager::AABB8f* boxMinMaxF8, size_t a_boxNumber)
 {
+  AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber};
+  m_aabbsInfo.push_back(currBatch);
+  m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(SceneManager::AABB8f), boxMinMaxF8, currBatch.size*sizeof(SceneManager::AABB8f));
+  m_aabbsTotal += a_boxNumber;
   return 0;
 }
 
@@ -212,8 +216,9 @@ void SceneManager::InitMeshCPU(MESH_FORMATS format)
 
 void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum)
 {
-  VkDeviceSize vertexBufSize = m_pMeshData->SingleVertexSize() * a_totalVertNum;
-  VkDeviceSize indexBufSize  = m_pMeshData->SingleIndexSize() * a_totalIndicesNum;
+  const VkDeviceSize vertexBufSize  = m_pMeshData->SingleVertexSize() * a_totalVertNum;
+  const VkDeviceSize indexBufSize   = m_pMeshData->SingleIndexSize() * a_totalIndicesNum;
+  const VkDeviceSize aabbBufferSize = 65536*sizeof(float)*8;                             //#TODO: set this buffer size some-whow from outside
 
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   if(m_useRTX)
@@ -231,6 +236,9 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   const VkBufferUsageFlags idxFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | flags;
   m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
   all_buffers.push_back(m_geoIdxBuf);
+
+  m_aabbBuf = vk_utils::createBuffer(m_device, aabbBufferSize, flags);
+  all_buffers.push_back(m_aabbBuf);
 
   VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
   m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
@@ -341,6 +349,12 @@ void SceneManager::DestroyScene()
     m_geoIdxBuf = VK_NULL_HANDLE;
   }
 
+  if(m_aabbBuf != VK_NULL_HANDLE)
+  {
+    vkDestroyBuffer(m_device, m_aabbBuf, nullptr);
+    m_aabbBuf = VK_NULL_HANDLE;
+  }
+
   if(m_meshInfoBuf != VK_NULL_HANDLE)
   {
     vkDestroyBuffer(m_device, m_meshInfoBuf, nullptr);
@@ -417,6 +431,8 @@ void SceneManager::DestroyScene()
   m_totalVertices = 0u;
   m_totalIndices  = 0u;
   m_meshInfos.clear();
+  m_aabbsInfo.clear();
+  m_aabbsTotal = 0;
   m_pMeshData = nullptr;
   m_instanceInfos.clear();
   m_instanceMatrices.clear();
