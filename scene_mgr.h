@@ -136,8 +136,10 @@ private:
 
   struct AABBBatchInfo
   {
-    size_t start;
-    size_t size;
+    size_t   start;
+    size_t   size;
+    uint32_t blasId;
+    uint32_t dummy;
   }; 
   std::vector<MeshInfo>      m_meshInfos = {};
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;

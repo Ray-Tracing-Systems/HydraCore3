@@ -166,11 +166,20 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
 
 uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const SceneManager::AABB8f* boxMinMaxF8, size_t a_boxNumber)
 {
-  AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber};
-  m_aabbsInfo.push_back(currBatch);
+  AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber, 0, 0};
   m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(SceneManager::AABB8f), boxMinMaxF8, currBatch.size*sizeof(SceneManager::AABB8f));
   m_aabbsTotal += a_boxNumber;
-  return 0;
+  
+  uint32_t idx = 0;
+  if(m_config.build_acc_structs)
+  {
+    VkDeviceOrHostAddressConstKHR aabbBufferDeviceAddress{};
+    aabbBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_aabbBuf) + currBatch.start*sizeof(SceneManager::AABB8f);
+    currBatch.blasId = m_pBuilderV2->AddBLAS(aabbBufferDeviceAddress, a_boxNumber); 
+  }
+
+  m_aabbsInfo.push_back(currBatch);
+  return uint32_t(m_aabbsInfo.size()-1);
 }
 
 uint32_t SceneManager::InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion, 
@@ -228,25 +237,26 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
   }
 
   std::vector<VkBuffer> all_buffers;
-
-  const VkBufferUsageFlags vertFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | flags;
-  m_geoVertBuf = vk_utils::createBuffer(m_device, vertexBufSize, vertFlags);
-  all_buffers.push_back(m_geoVertBuf);
-
-  const VkBufferUsageFlags idxFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | flags;
-  m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
-  all_buffers.push_back(m_geoIdxBuf);
-
-  m_aabbBuf = vk_utils::createBuffer(m_device, aabbBufferSize, flags);
-  all_buffers.push_back(m_aabbBuf);
-
-  VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
-  m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  all_buffers.push_back(m_meshInfoBuf);
-
-  VkDeviceSize matIdsBufSize = (a_totalIndicesNum / 3) * sizeof(uint32_t);
-  m_matIdsBuf = vk_utils::createBuffer(m_device, matIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-  all_buffers.push_back(m_matIdsBuf);
+  {
+    const VkBufferUsageFlags vertFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | flags;
+    m_geoVertBuf = vk_utils::createBuffer(m_device, vertexBufSize, vertFlags);
+    all_buffers.push_back(m_geoVertBuf);
+  
+    const VkBufferUsageFlags idxFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | flags;
+    m_geoIdxBuf = vk_utils::createBuffer(m_device, indexBufSize, idxFlags);
+    all_buffers.push_back(m_geoIdxBuf);
+  
+    m_aabbBuf = vk_utils::createBuffer(m_device, aabbBufferSize, flags);
+    all_buffers.push_back(m_aabbBuf);
+  
+    VkDeviceSize infoBufSize = a_meshNum * sizeof(uint32_t) * 2;
+    m_meshInfoBuf = vk_utils::createBuffer(m_device, infoBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    all_buffers.push_back(m_meshInfoBuf);
+  
+    VkDeviceSize matIdsBufSize = (a_totalIndicesNum / 3) * sizeof(uint32_t);
+    m_matIdsBuf = vk_utils::createBuffer(m_device, matIdsBufSize, flags | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    all_buffers.push_back(m_matIdsBuf);
+  }
 
   VkMemoryAllocateFlags allocFlags {};
   if(m_useRTX)
@@ -452,8 +462,7 @@ void SceneManager::AddBLAS(uint32_t meshIdx)
   vertexBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoVertBuf);
   indexBufferDeviceAddress.deviceAddress  = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoIdxBuf);
 
-  m_pBuilderV2->AddBLAS(m_meshInfos[meshIdx], m_pMeshData->SingleVertexSize(),
-    vertexBufferDeviceAddress, indexBufferDeviceAddress);
+  m_pBuilderV2->AddBLAS(m_meshInfos[meshIdx], m_pMeshData->SingleVertexSize(), vertexBufferDeviceAddress, indexBufferDeviceAddress);
 }
 
 void SceneManager::BuildAllBLAS()
