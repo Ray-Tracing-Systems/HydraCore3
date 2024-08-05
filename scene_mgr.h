@@ -16,8 +16,10 @@ struct InstanceInfo
 {
   uint32_t inst_id = 0u;
   uint32_t mesh_id = 0u;
+  uint32_t aabb_id = 0u;
   VkDeviceSize instBufOffset = 0u;
   bool renderMark = false;
+  bool isAABB     = false;
 };
 
 enum class BVH_BUILDER_TYPE
@@ -85,6 +87,9 @@ struct SceneManager
   uint32_t AddGeomFromAABBAndQueueBuildAS(const AABB8f* boxMinMaxF8, size_t a_boxNumber);
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
+                        const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
+
+  uint32_t InstanceAABB(uint32_t aabbId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
                         const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
 
   void MarkInstance(uint32_t instId);

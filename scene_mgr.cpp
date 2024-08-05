@@ -203,6 +203,27 @@ uint32_t SceneManager::InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &m
   return info.inst_id;
 }
 
+uint32_t SceneManager::InstanceAABB(uint32_t aabbId, const LiteMath::float4x4 &matrix, bool hasMotion, 
+                                    const LiteMath::float4x4 end_matrix, bool markForRender)
+{
+  assert(aabbId < m_aabbsInfo.size());
+  
+  m_instanceMatrices.push_back(matrix);
+
+  InstanceInfo info;
+  info.inst_id       = uint32_t(m_instanceMatrices.size() - 1);
+  info.aabb_id       = aabbId;
+  info.renderMark    = markForRender;
+  info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
+  info.isAABB        = true;
+  
+  if(hasMotion)
+    m_motionMatrices[info.inst_id] = end_matrix;
+  
+  m_instanceInfos.push_back(info);
+  return info.inst_id;
+}
+
 void SceneManager::MarkInstance(const uint32_t instId)
 {
   assert(instId < m_instanceInfos.size());
@@ -478,24 +499,28 @@ void SceneManager::BuildTLAS()
   std::vector<VkAccelerationStructureInstanceKHR> geometryInstances;
   geometryInstances.reserve(m_instanceInfos.size());
 
-#ifdef USE_MANY_HIT_SHADERS
-  std::map<uint32_t, uint32_t> materialMap = { {0, LAMBERT_MTL}, {1, GGX_MTL}, {2, MIRROR_MTL}, {3, BLEND_MTL}, {4, MIRROR_MTL}, {5, EMISSION_MTL} };
-#endif
-
   for(const auto& inst : m_instanceInfos)
   {
     auto transform = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transform;
-    instance.instanceCustomIndex = inst.mesh_id;
-    instance.mask = 0xFF;
-#ifdef USE_MANY_HIT_SHADERS
-    instance.instanceShaderBindingTableRecordOffset = materialMap[inst.mesh_id];
-#else
-    instance.instanceShaderBindingTableRecordOffset = 0;
-#endif
-    instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-    instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id);//m_blas[inst.mesh_id].deviceAddress;
+    if(inst.isAABB)
+    {
+      assert(inst.aabb_id < m_aabbsInfo.size());
+      instance.instanceCustomIndex = inst.aabb_id | 0x80000000; // CRT_VULKAN_GEOM_MASK_AABB_BIT
+      instance.mask                = 0xFF;
+      instance.flags               = 0;
+      instance.instanceShaderBindingTableRecordOffset = 0;                                                                    // PASS OFFSET HERE !!!
+      instance.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(m_aabbsInfo[inst.aabb_id].blasId); 
+    }
+    else
+    {
+      instance.instanceCustomIndex = inst.mesh_id;
+      instance.mask                = 0xFF;
+      instance.instanceShaderBindingTableRecordOffset = 0;
+      instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+      instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id); // #TODO: extract correct blasID, same as for AABBS
+    }
 
     geometryInstances.push_back(instance);
   }
