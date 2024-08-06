@@ -56,4 +56,6 @@ public:
 protected:
   VkAccelerationStructureKHR m_accel = VK_NULL_HANDLE;
   std::shared_ptr<SceneManager> m_pScnMgr;
+
+  virtual std::vector<uint32_t> GetSBTRecordOffsets() const { return std::vector<uint32_t>(); } // should be overrided in derived class for useful application
 };

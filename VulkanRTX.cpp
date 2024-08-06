@@ -134,10 +134,12 @@ uint32_t VulkanRTX::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x
 
 void VulkanRTX::CommitScene(uint32_t options)
 {
+  auto sbtRecords = GetSBTRecordOffsets();
+
   if(options & MOTION_BLUR)
-    m_pScnMgr->BuildTLAS_MotionBlur();
+    m_pScnMgr->BuildTLAS_MotionBlur(sbtRecords.data(), sbtRecords.size());
   else
-    m_pScnMgr->BuildTLAS();
+    m_pScnMgr->BuildTLAS(sbtRecords.data(), sbtRecords.size());
     
   m_accel = m_pScnMgr->GetTLAS();
 }  
