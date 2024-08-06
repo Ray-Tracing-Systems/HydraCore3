@@ -488,7 +488,7 @@ void SceneManager::BuildAllBLAS()
   m_pBuilderV2->BuildAllBLAS();
 }
 
-void SceneManager::BuildTLAS()
+void SceneManager::BuildTLAS(const uint32_t* a_sbtRecordOffset, size_t a_recordNum)
 {
   BuildAllBLAS();
 
@@ -500,20 +500,23 @@ void SceneManager::BuildTLAS()
     auto transform = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transform;
+    
+    const uint32_t sbtRecordOffset = (a_sbtRecordOffset != nullptr && inst.inst_id < a_recordNum) ? a_sbtRecordOffset[inst.inst_id] : 0;
+
     if(inst.isAABB)
     {
       assert(inst.mesh_id < m_aabbsInfo.size());
       instance.instanceCustomIndex = inst.mesh_id | 0x80000000; // CRT_VULKAN_GEOM_MASK_AABB_BIT
       instance.mask                = 0xFF;
       instance.flags               = 0;
-      instance.instanceShaderBindingTableRecordOffset = 0;                                                                   
+      instance.instanceShaderBindingTableRecordOffset = sbtRecordOffset;                                                                   
       instance.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(m_aabbsInfo[inst.mesh_id].blasId); 
     }
     else
     {
       instance.instanceCustomIndex = inst.mesh_id;
       instance.mask                = 0xFF;
-      instance.instanceShaderBindingTableRecordOffset = 0;
+      instance.instanceShaderBindingTableRecordOffset = sbtRecordOffset;
       instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
       instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(m_meshInfos[inst.mesh_id].blasId);
     }
@@ -558,7 +561,7 @@ void SceneManager::BuildTLAS()
   }
 }
 
-void SceneManager::BuildTLAS_MotionBlur()
+void SceneManager::BuildTLAS_MotionBlur(const uint32_t* a_sbtRecordOffset, size_t a_recordNum)
 {
   BuildAllBLAS();
 

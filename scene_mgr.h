@@ -122,8 +122,8 @@ struct SceneManager
 
   VkAccelerationStructureKHR GetTLAS() const { return m_pBuilderV2->GetTLAS(); }
   void BuildAllBLAS();
-  void BuildTLAS();
-  void BuildTLAS_MotionBlur();
+  void BuildTLAS(const uint32_t* a_sbtRecordOffset = nullptr, size_t a_recordNum = 0);
+  void BuildTLAS_MotionBlur(const uint32_t* a_sbtRecordOffset = nullptr, size_t a_recordNum = 0);
 
 private:
   const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
