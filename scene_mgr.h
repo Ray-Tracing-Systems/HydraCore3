@@ -16,7 +16,6 @@ struct InstanceInfo
 {
   uint32_t inst_id = 0u;
   uint32_t mesh_id = 0u;
-  uint32_t aabb_id = 0u;
   VkDeviceSize instBufOffset = 0u;
   bool renderMark = false;
   bool isAABB     = false;
@@ -137,7 +136,6 @@ private:
   void LoadInstanceDataOnGPU();
   void LoadMaterialDataOnGPU();
   void InitMeshCPU(MESH_FORMATS format);
-  void AddBLAS(uint32_t meshIdx);
 
   struct AABBBatchInfo
   {

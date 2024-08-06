@@ -143,6 +143,7 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
 
   info.m_vertexBufOffset = info.m_vertexOffset * m_pMeshData->SingleVertexSize();
   info.m_indexBufOffset  = info.m_indexOffset  * m_pMeshData->SingleIndexSize();
+  info.blasId            = 0; // filled later
 
   m_totalVertices += meshData.VerticesNum();
   m_totalIndices  += meshData.IndicesNum();
@@ -158,7 +159,13 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   LoadOneMeshOnGPU(idx);
   if(m_config.build_acc_structs)
   {
-    AddBLAS(idx);
+    VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
+    VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
+
+    vertexBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoVertBuf);
+    indexBufferDeviceAddress.deviceAddress  = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoIdxBuf);
+
+    m_meshInfos[idx].blasId = m_pBuilderV2->AddBLAS(m_meshInfos[idx], m_pMeshData->SingleVertexSize(), vertexBufferDeviceAddress, indexBufferDeviceAddress);
   }
 
   return idx;
@@ -212,7 +219,7 @@ uint32_t SceneManager::InstanceAABB(uint32_t aabbId, const LiteMath::float4x4 &m
 
   InstanceInfo info;
   info.inst_id       = uint32_t(m_instanceMatrices.size() - 1);
-  info.aabb_id       = aabbId;
+  info.mesh_id       = aabbId;
   info.renderMark    = markForRender;
   info.instBufOffset = (m_instanceMatrices.size() - 1) * sizeof(matrix);
   info.isAABB        = true;
@@ -475,17 +482,6 @@ void SceneManager::DestroyScene()
   m_sceneCameras.clear();
 }
 
-void SceneManager::AddBLAS(uint32_t meshIdx)
-{
-  VkDeviceOrHostAddressConstKHR vertexBufferDeviceAddress{};
-  VkDeviceOrHostAddressConstKHR indexBufferDeviceAddress{};
-
-  vertexBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoVertBuf);
-  indexBufferDeviceAddress.deviceAddress  = vk_rt_utils::getBufferDeviceAddress(m_device, m_geoIdxBuf);
-
-  m_pBuilderV2->AddBLAS(m_meshInfos[meshIdx], m_pMeshData->SingleVertexSize(), vertexBufferDeviceAddress, indexBufferDeviceAddress);
-}
-
 void SceneManager::BuildAllBLAS()
 {
 //  m_pBuilder->BuildBLAS(m_blasData);
@@ -506,12 +502,12 @@ void SceneManager::BuildTLAS()
     instance.transform = transform;
     if(inst.isAABB)
     {
-      assert(inst.aabb_id < m_aabbsInfo.size());
-      instance.instanceCustomIndex = inst.aabb_id | 0x80000000; // CRT_VULKAN_GEOM_MASK_AABB_BIT
+      assert(inst.mesh_id < m_aabbsInfo.size());
+      instance.instanceCustomIndex = inst.mesh_id | 0x80000000; // CRT_VULKAN_GEOM_MASK_AABB_BIT
       instance.mask                = 0xFF;
       instance.flags               = 0;
-      instance.instanceShaderBindingTableRecordOffset = 0;                                                                    // PASS OFFSET HERE !!!
-      instance.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(m_aabbsInfo[inst.aabb_id].blasId); 
+      instance.instanceShaderBindingTableRecordOffset = 0;                                                                   
+      instance.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(m_aabbsInfo[inst.mesh_id].blasId); 
     }
     else
     {
@@ -519,7 +515,7 @@ void SceneManager::BuildTLAS()
       instance.mask                = 0xFF;
       instance.instanceShaderBindingTableRecordOffset = 0;
       instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-      instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(inst.mesh_id); // #TODO: extract correct blasID, same as for AABBS
+      instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(m_meshInfos[inst.mesh_id].blasId);
     }
 
     geometryInstances.push_back(instance);
