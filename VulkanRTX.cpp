@@ -83,7 +83,7 @@ uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
 
 uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
 {
-  return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS((const SceneManager::AABB8f*)boxMinMaxF8, a_boxNumber) | CRT_VULKAN_GEOM_MASK_AABB_BIT;
+  return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS((const SceneManager::AABB8f*)boxMinMaxF8, a_boxNumber) | CRT_GEOM_MASK_AABB_BIT;
 }
 
 void VulkanRTX::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
@@ -104,9 +104,9 @@ void VulkanRTX::ClearScene()
 
 uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)
 {
-  if((a_geomId & CRT_VULKAN_GEOM_MASK_AABB_BIT) != 0)
+  if((a_geomId & CRT_GEOM_MASK_AABB_BIT) != 0)
   {
-    const uint32_t aabbGeomId = (a_geomId & CRT_VULKAN_GEOM_MASK_AABB_BIT_RM);
+    const uint32_t aabbGeomId = (a_geomId & CRT_GEOM_MASK_AABB_BIT_RM);
     return m_pScnMgr->InstanceAABB(aabbGeomId, a_matrix);
   }
   else
@@ -134,12 +134,10 @@ uint32_t VulkanRTX::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x
 
 void VulkanRTX::CommitScene(uint32_t options)
 {
-  auto sbtRecords = GetSBTRecordOffsets();
-
   if(options & MOTION_BLUR)
-    m_pScnMgr->BuildTLAS_MotionBlur(sbtRecords.data(), sbtRecords.size());
+    m_pScnMgr->BuildTLAS_MotionBlur(m_sbtRecordOffsets.data(), m_sbtRecordOffsets.size());
   else
-    m_pScnMgr->BuildTLAS(sbtRecords.data(), sbtRecords.size());
+    m_pScnMgr->BuildTLAS(m_sbtRecordOffsets.data(), m_sbtRecordOffsets.size());
     
   m_accel = m_pScnMgr->GetTLAS();
 }  

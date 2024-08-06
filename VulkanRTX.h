@@ -9,12 +9,6 @@
 #include "CrossRT.h"
 #include "LiteScene/scene_mgr.h" // RTX implementation of acceleration structures
 
-enum GeomTypeMasks
-{
-  CRT_VULKAN_GEOM_MASK_AABB_BIT    = 0x80000000, // 1000 0000 ... 
-  CRT_VULKAN_GEOM_MASK_AABB_BIT_RM = 0x7fffffff  // 0111 1111 ... 
-};
-
 class VulkanRTX : public ISceneObject
 {
 public:
@@ -47,15 +41,18 @@ public:
   bool     RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time= 0.0f) override;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
+  
 
   void SetSceneAccelStruct(VkAccelerationStructureKHR handle) { m_accel = handle; }
   VkAccelerationStructureKHR GetSceneAccelStruct() const { return m_accel; }
   std::shared_ptr<SceneManager> GetSceneManager() const { return m_pScnMgr; }
 
   static constexpr size_t VERTEX_SIZE = sizeof(float) * 4;
-protected:
-  VkAccelerationStructureKHR m_accel = VK_NULL_HANDLE;
-  std::shared_ptr<SceneManager> m_pScnMgr;
+  
+  virtual void SetSBTRecordOffsets(const std::vector<uint32_t>& a_recordOffsets) { m_sbtRecordOffsets = a_recordOffsets; }
 
-  virtual std::vector<uint32_t> GetSBTRecordOffsets() const { return std::vector<uint32_t>(); } // should be overrided in derived class for useful application
+protected:
+  VkAccelerationStructureKHR    m_accel = VK_NULL_HANDLE;
+  std::shared_ptr<SceneManager> m_pScnMgr;
+  std::vector<uint32_t>         m_sbtRecordOffsets;
 };
