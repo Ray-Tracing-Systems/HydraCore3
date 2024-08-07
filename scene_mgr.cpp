@@ -171,17 +171,17 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   return idx;
 }
 
-uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const SceneManager::AABB8f* boxMinMaxF8, size_t a_boxNumber)
+uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber)
 {
   AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber, 0, 0};
-  m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(SceneManager::AABB8f), boxMinMaxF8, currBatch.size*sizeof(SceneManager::AABB8f));
+  m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(VkAabbPositionsKHR), boxes6f, currBatch.size*sizeof(VkAabbPositionsKHR));
   m_aabbsTotal += a_boxNumber;
   
   uint32_t idx = 0;
   if(m_config.build_acc_structs)
   {
     VkDeviceOrHostAddressConstKHR aabbBufferDeviceAddress{};
-    aabbBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_aabbBuf) + currBatch.start*sizeof(SceneManager::AABB8f);
+    aabbBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_aabbBuf) + currBatch.start*sizeof(VkAabbPositionsKHR);
     currBatch.blasId = m_pBuilderV2->AddBLAS(aabbBufferDeviceAddress, a_boxNumber); 
   }
 
@@ -255,7 +255,7 @@ void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum
 {
   const VkDeviceSize vertexBufSize  = m_pMeshData->SingleVertexSize() * a_totalVertNum;
   const VkDeviceSize indexBufSize   = m_pMeshData->SingleIndexSize() * a_totalIndicesNum;
-  const VkDeviceSize aabbBufferSize = 65536*sizeof(float)*8;                             //#TODO: set this buffer size some-whow from outside
+  const VkDeviceSize aabbBufferSize = 65536*sizeof(VkAabbPositionsKHR);   //#TODO: set this buffer size some-whow from outside
 
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   if(m_useRTX)

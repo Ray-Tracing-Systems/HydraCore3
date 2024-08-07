@@ -78,12 +78,7 @@ struct SceneManager
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
   uint32_t AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshData);
 
-  struct AABB8f
-  {
-    float4 boxMin;
-    float4 boxMax;
-  };
-  uint32_t AddGeomFromAABBAndQueueBuildAS(const AABB8f* boxMinMaxF8, size_t a_boxNumber);
+  uint32_t AddGeomFromAABBAndQueueBuildAS(const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber);
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
                         const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
