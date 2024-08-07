@@ -83,7 +83,18 @@ uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
 
 uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
 {
-  return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS((const SceneManager::AABB8f*)boxMinMaxF8, a_boxNumber) | CRT_GEOM_MASK_AABB_BIT;
+  std::vector<VkAabbPositionsKHR> tempBuffer(a_boxNumber);
+  for(size_t i=0;i<a_boxNumber;i++) 
+  {
+    tempBuffer[i].minX = boxMinMaxF8[i].boxMin.x;
+    tempBuffer[i].minY = boxMinMaxF8[i].boxMin.y;
+    tempBuffer[i].minZ = boxMinMaxF8[i].boxMin.z;
+    tempBuffer[i].maxX = boxMinMaxF8[i].boxMax.x;
+    tempBuffer[i].maxY = boxMinMaxF8[i].boxMax.y;
+    tempBuffer[i].maxZ = boxMinMaxF8[i].boxMax.z;
+  }
+
+  return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS(tempBuffer.data(), tempBuffer.size()) | CRT_GEOM_MASK_AABB_BIT;
 }
 
 void VulkanRTX::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
