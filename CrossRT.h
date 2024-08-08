@@ -46,7 +46,8 @@ struct ISceneObject
   ISceneObject(){}
   virtual ~ISceneObject(){} 
 
-  virtual const char* Name() const { return ""; }
+  virtual const char*   Name() const { return ""; }
+  virtual ISceneObject* UnderlyingImpl(uint32_t a_implId) { return this; }
 
   /**
   \brief clear everything 
