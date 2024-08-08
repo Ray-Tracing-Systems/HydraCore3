@@ -14,7 +14,7 @@ class VulkanRTX : public ISceneObject
 public:
   VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr);
   VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
-            uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, bool build_as_add);
+            uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, bool build_as_add, bool derrered_tlas_build = false);
   ~VulkanRTX();
   const char* Name() const override { return "VulkanRTX"; }
   
@@ -42,17 +42,25 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
   
-
   void SetSceneAccelStruct(VkAccelerationStructureKHR handle) { m_accel = handle; }
-  VkAccelerationStructureKHR GetSceneAccelStruct() const { return m_accel; }
+  VkAccelerationStructureKHR GetSceneAccelStruct() const 
+  {
+    if(m_haveToBuildTLAS || m_accel == nullptr)
+      std::cout << "[VulkanRTX::GetSceneAccelStruct]: ERROR, TLAS WAS NOT BUILD YET in deffered mode, please use 'CommitScene(BUILD_NOW)' !" << std::endl;
+    return m_accel; 
+  }
   std::shared_ptr<SceneManager> GetSceneManager() const { return m_pScnMgr; }
 
   static constexpr size_t VERTEX_SIZE = sizeof(float) * 4;
   
   virtual void SetSBTRecordOffsets(const std::vector<uint32_t>& a_recordOffsets) { m_sbtRecordOffsets = a_recordOffsets; }
 
+  size_t   GetBLASCount() const { return m_pScnMgr->GetBLASCount(); }
+
 protected:
   VkAccelerationStructureKHR    m_accel = VK_NULL_HANDLE;
   std::shared_ptr<SceneManager> m_pScnMgr;
   std::vector<uint32_t>         m_sbtRecordOffsets;
+  bool                          m_deferredTLASBuild = false;
+  bool                          m_haveToBuildTLAS   = false;
 };

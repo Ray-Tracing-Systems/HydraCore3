@@ -6,7 +6,7 @@ ISceneObject* CreateVulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) { return 
 
 ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
                               uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
-                              bool build_as_add)
+                              bool build_as_add, bool deferred_tlas_build = false)
 {
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
   VkQueue queue;
@@ -14,7 +14,7 @@ ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, 
 
   auto copyHelper = std::make_shared<vk_utils::PingPongCopyHelper>(a_physDevice, a_device, queue, a_graphicsQId, STAGING_MEM_SIZE);
 
-  return new VulkanRTX(a_device, a_physDevice, a_graphicsQId, copyHelper,a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, build_as_add);
+  return new VulkanRTX(a_device, a_physDevice, a_graphicsQId, copyHelper,a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, build_as_add, deferred_tlas_build);
 }
 
 VulkanRTX::VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) : m_pScnMgr(a_pScnMgr)
@@ -23,15 +23,16 @@ VulkanRTX::VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) : m_pScnMgr(a_pScn
 
 VulkanRTX::VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
                      uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
-                     bool build_as_add)
+                     bool build_as_add, bool deferred_tlas_build)
 {
   LoaderConfig conf = {};
   conf.load_geometry = true;
   conf.load_materials = MATERIAL_LOAD_MODE::NONE;
   conf.build_acc_structs = true;
   conf.build_acc_structs_while_loading_scene = build_as_add;
-  conf.builder_type = BVH_BUILDER_TYPE::RTX;
-  conf.mesh_format  = MESH_FORMATS::MESH_4F;
+  conf.builder_type    = BVH_BUILDER_TYPE::RTX;
+  conf.mesh_format     = MESH_FORMATS::MESH_4F;
+  m_deferredTLASBuild  = deferred_tlas_build;
 
   m_pScnMgr = std::make_shared<SceneManager>(a_device, a_physDevice, a_graphicsQId, a_pCopyHelper, conf);
   m_pScnMgr->InitEmptyScene(a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh);
@@ -145,12 +146,19 @@ uint32_t VulkanRTX::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x
 
 void VulkanRTX::CommitScene(uint32_t options)
 {
+  if(m_deferredTLASBuild && (options & BUILD_NOW) == 0)
+  {
+    m_haveToBuildTLAS = true;
+    return;
+  }
+
   if(options & MOTION_BLUR)
     m_pScnMgr->BuildTLAS_MotionBlur(m_sbtRecordOffsets.data(), m_sbtRecordOffsets.size());
   else
     m_pScnMgr->BuildTLAS(m_sbtRecordOffsets.data(), m_sbtRecordOffsets.size());
     
   m_accel = m_pScnMgr->GetTLAS();
+  m_haveToBuildTLAS = false;
 }  
 
 void VulkanRTX::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix)

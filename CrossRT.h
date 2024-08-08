@@ -7,13 +7,14 @@ using LiteMath::float4;
 
 enum BuildOptions 
 {
-    NONE                   = 0x00000000, 
-    BUILD_LOW              = 0x00000001,
-    BUILD_MEDIUM           = 0x00000002,
-    BUILD_HIGH             = 0x00000004,
-    BUILD_REFIT            = 0x00000008,  
-    MOTION_BLUR            = 0x00000010,
-    BUILD_OPTIONS_MAX_ENUM = 0x7FFFFFFF
+  NONE                   = 0x00000000, //
+  BUILD_LOW              = 0x00000001, //
+  BUILD_MEDIUM           = 0x00000002, //
+  BUILD_HIGH             = 0x00000004, //
+  BUILD_REFIT            = 0x00000008, //
+  MOTION_BLUR            = 0x00000010, //
+  BUILD_NOW              = 32,         // this is for internal usage normally 
+  BUILD_OPTIONS_MAX_ENUM = 0x7FFFFFFF
 };
 
 /**
