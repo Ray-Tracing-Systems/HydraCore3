@@ -120,6 +120,8 @@ struct SceneManager
   void BuildTLAS(const uint32_t* a_sbtRecordOffset = nullptr, size_t a_recordNum = 0);
   void BuildTLAS_MotionBlur(const uint32_t* a_sbtRecordOffset = nullptr, size_t a_recordNum = 0);
 
+  size_t   GetBLASCount() const { return m_pBuilderV2->GetBLASCount(); }
+
 private:
   const std::string missingTextureImgPath = "../resources/data/missing_texture.png";
   LoaderConfig m_config;
