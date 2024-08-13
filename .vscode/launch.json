@@ -148,6 +148,34 @@
     },
 
     {
+        "name": "test_35 (debug)",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/bin-debug/hydra",
+        "args": ["--cpu", 
+                 "-in", "scenes/test_035/statex_00001.xml",
+                 "-integrator", "mispt",
+                 //"--qmc",
+                 "-width", "512",
+                 "-height", "512",
+                 "-spp", "1",
+                 "-grad", "1",
+                 "-out", "z_render.bmp"],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+            {
+                "description": "Enable pretty-printing for gdb",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+            }
+        ]
+    },
+
+    {
         "name": "test_35_motion",
         "type": "cppdbg",
         "request": "launch",

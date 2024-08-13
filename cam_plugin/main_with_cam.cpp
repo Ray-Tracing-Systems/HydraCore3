@@ -101,9 +101,13 @@ int main(int argc, const char** argv)
 
   std::vector<float4>   realColor(WIN_WIDTH*WIN_HEIGHT);             ///<! frame buffer, always float4 in this demo
   std::fill(realColor.begin(), realColor.end(), LiteMath::float4{}); // clear frame buffer
+  
+  SceneInfo sceneInfo = {};
+  sceneInfo.spectral  = spectral_mode;
+  auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo);
 
   {
-    pRender = std::make_shared<Integrator>(MEGA_TILE_SIZE, spectral_mode);
+    pRender = std::make_shared<Integrator>(MEGA_TILE_SIZE, features);
 
     if(camType == 0)
       pCamImpl = std::make_shared<CamPinHole>(); // (WIN_WIDTH*WIN_HEIGHT);

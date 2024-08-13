@@ -38,7 +38,7 @@ class Integrator // : public DataClass, IRenderer
 {
 public:
 
-  Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_enabledFeatures(a_features)
+  Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_enabledFeatures(a_features), m_maxThreadId(a_maxThreads)
   {
     InitRandomGens(a_maxThreads);
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );

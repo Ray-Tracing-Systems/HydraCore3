@@ -48,16 +48,18 @@ void CamPinHole::AddSamplesContributionBlock(float* out_color4f, const float* co
 
 void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, int subPassId)
 {
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
     const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
     
-    //if(x == 512 && y == 1023-100) // to debug target pixel
-    //{
-    //  int a = 2;
-    //}
+    if(x == 256 && y == 256) // to debug target pixel
+    {
+      int a = 2;
+    }
 
     float3 rayDir = EyeRayDirNormalized(float(x+0.5f)/float(m_width), float(y+0.5f)/float(m_height), m_projInv);
     float3 rayPos = float3(0,0,0);
@@ -92,7 +94,9 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosAnd
 
 void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float* in_color, float* out_color, int subPassId)
 {
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
