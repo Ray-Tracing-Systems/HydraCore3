@@ -54,7 +54,7 @@ void CamPinHole::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosAnd
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
-    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
+    const int y = (tid + subPassId*in_blockSize) / m_width; // subPas is just a uniform slitting of image along the lines
     
     if(x == 256 && y == 256) // to debug target pixel
     {
@@ -100,7 +100,7 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float* in_color,
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
-    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
+    const int y = (tid + subPassId*in_blockSize) / m_width; // subPas is just a uniform slitting of image along the lines
 
     //float4 color = float4(in_color[4*tid+0], in_color[4*tid+1], in_color[4*tid+2], in_color[4*tid+3]); // always float4
     float4 color;   

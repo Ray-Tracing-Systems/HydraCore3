@@ -219,7 +219,7 @@ void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosA
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
-    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
+    const int y = (tid + subPassId*in_blockSize) / m_width; // subPas is just a uniform slitting of image along the lines
     
     auto genLocal = m_randomGens[tid];
     const float4 rands = rndFloat4_Pseudo(&genLocal);
@@ -286,7 +286,7 @@ void CamTableLens::kernel1D_ContribSample(int in_blockSize, const float* in_colo
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout
-    const int y = (tid + subPassId*in_blockSize) / m_height; // subPas is just a uniform slitting of image along the lines
+    const int y = (tid + subPassId*in_blockSize) / m_width; // subPas is just a uniform slitting of image along the lines
 
     //float4 color = in_color[tid]*m_storedCos4[tid];
     float4 color;   
