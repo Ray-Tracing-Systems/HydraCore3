@@ -147,8 +147,6 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
 
   m_totalVertices += meshData.VerticesNum();
   m_totalIndices  += meshData.IndicesNum();
-
-  m_blasType.push_back(0);
   m_meshInfos.push_back(info);
 
   return static_cast<uint32_t>(m_meshInfos.size() - 1);
@@ -177,8 +175,7 @@ uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(uint32_t a_typeId, const V
   AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber, 0, a_typeId};
   m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(VkAabbPositionsKHR), boxes6f, currBatch.size*sizeof(VkAabbPositionsKHR));
   m_aabbsTotal += a_boxNumber;
-  
-  m_blasType.push_back(a_typeId);
+
 
   uint32_t idx = 0;
   if(m_config.build_acc_structs)
@@ -474,7 +471,6 @@ void SceneManager::DestroyScene()
   m_totalIndices  = 0u;
   m_meshInfos.clear();
   m_aabbsInfo.clear();
-  m_blasType.clear();
   m_aabbsTotal = 0;
   m_pMeshData = nullptr;
   m_instanceInfos.clear();
@@ -500,19 +496,11 @@ void SceneManager::BuildTLAS(const uint32_t* a_sbtRecordOffset, size_t a_recordN
   std::vector<VkAccelerationStructureInstanceKHR> geometryInstances;
   geometryInstances.reserve(m_instanceInfos.size());
 
-  if(m_aabbsInfo.size() != 0 && (a_sbtRecordOffset == nullptr || a_recordNum == 0))
-  {
-    a_sbtRecordOffset = m_blasType.data();
-    a_recordNum       = m_blasType.size();
-  }
-
   for(const auto& inst : m_instanceInfos)
   {
     auto transform = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
     VkAccelerationStructureInstanceKHR instance{};
     instance.transform = transform;
-    
-    const uint32_t sbtRecordOffset = (a_sbtRecordOffset != nullptr && inst.inst_id < a_recordNum) ? a_sbtRecordOffset[inst.inst_id] : 0;
 
     if(inst.isAABB)
     {
@@ -520,14 +508,14 @@ void SceneManager::BuildTLAS(const uint32_t* a_sbtRecordOffset, size_t a_recordN
       instance.instanceCustomIndex = inst.mesh_id; // TODO: put object type in high bits
       instance.mask                = 0xFF;
       instance.flags               = 0;
-      instance.instanceShaderBindingTableRecordOffset = sbtRecordOffset;                                                                   
+      instance.instanceShaderBindingTableRecordOffset = (a_sbtRecordOffset != nullptr && inst.inst_id < a_recordNum) ? a_sbtRecordOffset[inst.inst_id] : m_aabbsInfo[inst.mesh_id].typeId;                                                                   
       instance.accelerationStructureReference         = m_pBuilderV2->GetBLASDeviceAddress(m_aabbsInfo[inst.mesh_id].blasId); 
     }
     else
     {
       instance.instanceCustomIndex = inst.mesh_id;
       instance.mask                = 0xFF;
-      instance.instanceShaderBindingTableRecordOffset = sbtRecordOffset;
+      instance.instanceShaderBindingTableRecordOffset = (a_sbtRecordOffset != nullptr && inst.inst_id < a_recordNum) ? a_sbtRecordOffset[inst.inst_id] : 0;
       instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
       instance.accelerationStructureReference = m_pBuilderV2->GetBLASDeviceAddress(m_meshInfos[inst.mesh_id].blasId);
     }

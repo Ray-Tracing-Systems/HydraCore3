@@ -146,7 +146,6 @@ private:
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;
   std::vector<AABBBatchInfo> m_aabbsInfo;
   size_t                     m_aabbsTotal = 0;
-  std::vector<uint32_t>      m_blasType;
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};
