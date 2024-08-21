@@ -78,7 +78,7 @@ struct SceneManager
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
   uint32_t AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshData);
 
-  uint32_t AddGeomFromAABBAndQueueBuildAS(const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber);
+  uint32_t AddGeomFromAABBAndQueueBuildAS(uint32_t a_typeId, const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber);
 
   uint32_t InstanceMesh(uint32_t meshId, const LiteMath::float4x4 &matrix, bool hasMotion = false, 
                         const LiteMath::float4x4 end_matrix = {}, bool markForRender = true);
@@ -139,12 +139,14 @@ private:
     size_t   start;
     size_t   size;
     uint32_t blasId;
-    uint32_t dummy;
+    uint32_t typeId;
   }; 
+
   std::vector<MeshInfo>      m_meshInfos = {};
   std::shared_ptr<IMeshData> m_pMeshData = nullptr;
   std::vector<AABBBatchInfo> m_aabbsInfo;
   size_t                     m_aabbsTotal = 0;
+  std::vector<uint32_t>      m_blasType;
 
   std::vector<InstanceInfo> m_instanceInfos = {};
   std::vector<LiteMath::float4x4> m_instanceMatrices = {};

@@ -148,6 +148,7 @@ uint32_t SceneManager::AddMeshFromData(cmesh::SimpleMesh &meshData)
   m_totalVertices += meshData.VerticesNum();
   m_totalIndices  += meshData.IndicesNum();
 
+  m_blasType.push_back(0);
   m_meshInfos.push_back(info);
 
   return static_cast<uint32_t>(m_meshInfos.size() - 1);
@@ -171,20 +172,23 @@ uint32_t SceneManager::AddMeshFromDataAndQueueBuildAS(cmesh::SimpleMesh &meshDat
   return idx;
 }
 
-uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber)
+uint32_t SceneManager::AddGeomFromAABBAndQueueBuildAS(uint32_t a_typeId, const VkAabbPositionsKHR* boxes6f, size_t a_boxNumber)
 {
-  AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber, 0, 0};
+  AABBBatchInfo currBatch{m_aabbsTotal, a_boxNumber, 0, a_typeId};
   m_pCopyHelper->UpdateBuffer(m_aabbBuf, currBatch.start*sizeof(VkAabbPositionsKHR), boxes6f, currBatch.size*sizeof(VkAabbPositionsKHR));
   m_aabbsTotal += a_boxNumber;
   
+  m_blasType.push_back(a_typeId);
+
   uint32_t idx = 0;
   if(m_config.build_acc_structs)
   {
     VkDeviceOrHostAddressConstKHR aabbBufferDeviceAddress{};
     aabbBufferDeviceAddress.deviceAddress = vk_rt_utils::getBufferDeviceAddress(m_device, m_aabbBuf) + currBatch.start*sizeof(VkAabbPositionsKHR);
     currBatch.blasId = m_pBuilderV2->AddBLAS(aabbBufferDeviceAddress, a_boxNumber); 
+    currBatch.typeId = a_typeId;
   }
-
+  
   m_aabbsInfo.push_back(currBatch);
   return uint32_t(m_aabbsInfo.size()-1);
 }
@@ -470,6 +474,7 @@ void SceneManager::DestroyScene()
   m_totalIndices  = 0u;
   m_meshInfos.clear();
   m_aabbsInfo.clear();
+  m_blasType.clear();
   m_aabbsTotal = 0;
   m_pMeshData = nullptr;
   m_instanceInfos.clear();
@@ -495,6 +500,12 @@ void SceneManager::BuildTLAS(const uint32_t* a_sbtRecordOffset, size_t a_recordN
   std::vector<VkAccelerationStructureInstanceKHR> geometryInstances;
   geometryInstances.reserve(m_instanceInfos.size());
 
+  if(m_aabbsInfo.size() != 0 && (a_sbtRecordOffset == nullptr || a_recordNum == 0))
+  {
+    a_sbtRecordOffset = m_blasType.data();
+    a_recordNum       = m_blasType.size();
+  }
+
   for(const auto& inst : m_instanceInfos)
   {
     auto transform = transformMatrixFromFloat4x4(m_instanceMatrices[inst.inst_id]);
@@ -506,7 +517,7 @@ void SceneManager::BuildTLAS(const uint32_t* a_sbtRecordOffset, size_t a_recordN
     if(inst.isAABB)
     {
       assert(inst.mesh_id < m_aabbsInfo.size());
-      instance.instanceCustomIndex = inst.mesh_id | 0x80000000; // CRT_VULKAN_GEOM_MASK_AABB_BIT
+      instance.instanceCustomIndex = inst.mesh_id; // TODO: put object type in high bits
       instance.mask                = 0xFF;
       instance.flags               = 0;
       instance.instanceShaderBindingTableRecordOffset = sbtRecordOffset;                                                                   
