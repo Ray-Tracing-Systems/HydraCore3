@@ -171,6 +171,7 @@ set(CORE_SRC
         integrator_pt_scene_tex.cpp
         integrator_gbuffer.cpp
         integrator_spectrum.cpp
+        spherical_integrator_pt.cpp
         mlt/integrator_qmc.cpp
         mlt/integrator_kmlt.cpp
         mlt/rnd_qmc.cpp
