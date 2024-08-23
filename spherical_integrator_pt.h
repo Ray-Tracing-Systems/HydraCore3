@@ -19,5 +19,10 @@ public:
     {}
   EyeRayData SampleCameraRay(RandomGen* pGen, uint tid) override;
 
+  uint32_t getOptimialHeight() const
+  {
+    return ((m_mode == Mode::PanoramaSphere || m_mode == Mode::Sphere) ? 2 : 1) * m_fbWidth;
+  }
+
   Mode m_mode = Mode::Hemisphere;
 };
