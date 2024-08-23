@@ -9,6 +9,8 @@ public:
   {
     Hemisphere,
     Sphere,
+    PanoramaHemisphere,
+    PanoramaSphere,
   };
 
   SphericalIntegrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}, Mode mode = Mode::Hemisphere) :
