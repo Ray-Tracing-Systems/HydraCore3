@@ -187,3 +187,97 @@ bool VulkanRTX::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::flo
 {
   return false;
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void RTX_Proxy::ClearGeom() 
+{ 
+  for(auto impl : m_imps) 
+    impl->ClearGeom(); 
+} 
+
+uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) 
+{
+  uint32_t res = 0;
+  for(auto impl : m_imps) 
+    res = impl->AddGeom_Triangles3f(a_vpos3f, a_vertNumber, a_triIndices, a_indNumber, a_flags, vByteStride);
+  return res;
+}
+                               
+void RTX_Proxy::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride)
+{
+  for(auto impl : m_imps) 
+    impl->UpdateGeom_Triangles3f(a_geomId, a_vpos3f, a_vertNumber, a_triIndices, a_indNumber, a_flags, vByteStride);
+}
+  
+uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+{
+  uint32_t res = 0;
+  for(auto impl : m_imps) 
+    res = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber);
+  return res;
+}
+  
+void RTX_Proxy::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+{
+  for(auto impl : m_imps) 
+    impl->UpdateGeom_AABB(a_geomId, a_typeId, boxMinMaxF8, a_boxNumber);
+}
+
+void RTX_Proxy::ClearScene()  
+{ 
+  for(auto impl : m_imps) 
+    impl->ClearScene(); 
+} 
+
+void RTX_Proxy::CommitScene(uint32_t options)  
+{ 
+  for(auto impl : m_imps) 
+    impl->CommitScene(options); 
+}
+
+uint32_t RTX_Proxy::AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber)  
+{ 
+  uint32_t res = 0;
+  for(auto impl : m_imps) 
+    res = impl->AddInstanceMotion(a_geomId, a_matrices, a_matrixNumber);
+  return res; 
+}
+
+uint32_t RTX_Proxy::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)  
+{ 
+  uint32_t res = 0;
+  for(auto impl : m_imps) 
+    res = impl->AddInstance(a_geomId, a_matrix);
+  return res; 
+}
+
+void RTX_Proxy::UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix) 
+{ 
+  for(auto impl : m_imps) 
+    impl->UpdateInstance(a_instanceId, a_matrix); 
+}
+
+CRT_Hit RTX_Proxy::RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)  
+{ 
+  return m_imps[0]->RayQuery_NearestHit(posAndNear, dirAndFar); 
+}
+
+bool RTX_Proxy::RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)  
+{ 
+  return m_imps[0]->RayQuery_AnyHit(posAndNear, dirAndFar);
+}  
+
+CRT_Hit RTX_Proxy::RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)  
+{ 
+  return m_imps[0]->RayQuery_NearestHit(posAndNear, dirAndFar); 
+}
+
+bool RTX_Proxy::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time) 
+{ 
+  return m_imps[0]->RayQuery_AnyHit(posAndNear, dirAndFar); 
+}
+

@@ -57,3 +57,35 @@ protected:
   std::shared_ptr<SceneManager> m_pScnMgr;
   std::vector<uint32_t>         m_sbtRecordOffsets;
 };
+
+struct RTX_Proxy : public ISceneObject
+{
+public:
+  RTX_Proxy(std::shared_ptr<ISceneObject> a, std::shared_ptr<ISceneObject> b) { m_imps[0] = a; m_imps[1] = b; }  
+  
+  const char* Name() const override { return "RTX_Proxy"; }
+  ISceneObject* UnderlyingImpl(uint32_t a_implId) override { return (a_implId < 2) ? m_imps[a_implId].get() : nullptr; }
+
+  void ClearGeom() override;
+
+  uint32_t AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) override;
+  void UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) override;
+  
+  uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) override;
+  void UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) override;
+  void     ClearScene() override;
+  void     CommitScene(uint32_t options) override;
+
+  uint32_t AddInstanceMotion(uint32_t a_geomId, const LiteMath::float4x4* a_matrices, uint32_t a_matrixNumber) override;
+  uint32_t AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)          override;
+
+  void    UpdateInstance(uint32_t a_instanceId, const LiteMath::float4x4& a_matrix)    override;
+  CRT_Hit RayQuery_NearestHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar) override;
+  bool    RayQuery_AnyHit(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar)     override;
+
+  CRT_Hit RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time) override;
+  bool    RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)     override;
+
+protected:
+  std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
+};
