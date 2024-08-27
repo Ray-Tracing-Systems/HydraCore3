@@ -81,7 +81,7 @@ uint32_t VulkanRTX::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
   return idx;
 }
 
-uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
   std::vector<VkAabbPositionsKHR> tempBuffer(a_boxNumber);
   for(size_t i=0;i<a_boxNumber;i++) 
@@ -97,7 +97,7 @@ uint32_t VulkanRTX::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
   return m_pScnMgr->AddGeomFromAABBAndQueueBuildAS(a_typeId, tempBuffer.data(), tempBuffer.size()) | CRT_GEOM_MASK_AABB_BIT;
 }
 
-void VulkanRTX::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+void VulkanRTX::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
   std::cout << "[VulkanRTX::UpdateGeom_AABB]: not implemented" << std::endl;
 }
@@ -213,18 +213,18 @@ void RTX_Proxy::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f,
     impl->UpdateGeom_Triangles3f(a_geomId, a_vpos3f, a_vertNumber, a_triIndices, a_indNumber, a_flags, vByteStride);
 }
   
-uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
   uint32_t res = 0;
   for(auto impl : m_imps) 
-    res = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber);
+    res = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
   return res;
 }
   
-void RTX_Proxy::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber) 
+void RTX_Proxy::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
   for(auto impl : m_imps) 
-    impl->UpdateGeom_AABB(a_geomId, a_typeId, boxMinMaxF8, a_boxNumber);
+    impl->UpdateGeom_AABB(a_geomId, a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
 }
 
 void RTX_Proxy::ClearScene()  
