@@ -215,16 +215,49 @@ void RTX_Proxy::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f,
   
 uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
-  uint32_t res = 0;
+  uint32_t geomId = 0;
   for(auto impl : m_imps) 
-    res = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
-  return res;
+    geomId = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
+  
+  {
+    auto pRemap = m_remapTables.find(a_typeId); 
+    if(pRemap == m_remapTables.end()) 
+    {
+      RemapTableData tableData;
+      auto insertRes = m_remapTables.insert(std::make_pair(a_typeId, tableData));
+      pRemap = insertRes.first;
+    }
+    
+    const size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
+      
+    size_t oldSize      = pRemap->second.primCount;
+    size_t oldTableSize = pRemap->second.table.size();
+    pRemap->second.table.resize(oldTableSize + a_boxNumber);
+    const uint32_t div = uint32_t(a_boxNumber/actualPrimsCount);
+    for(size_t i = oldTableSize; i < pRemap->second.table.size(); i++)
+      pRemap->second.table[i] = oldSize + (i-oldTableSize)/div;
+    
+    pRemap->second.primCount += actualPrimsCount;
+    pRemap->second.startSizeByGeomId[geomId] = std::make_pair(uint32_t(oldTableSize), uint32_t(pRemap->second.table.size() - oldTableSize));
+  }
+
+  return geomId;
 }
   
 void RTX_Proxy::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) 
 {
   for(auto impl : m_imps) 
     impl->UpdateGeom_AABB(a_geomId, a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
+}
+
+RTX_Proxy::PrimitiveRemapTable RTX_Proxy::GetAABBToPrimTable(uint32_t a_typeId) const
+{
+  PrimitiveRemapTable res;
+  res.table = nullptr;
+  res.pairs = nullptr;
+  res.tableSize = 0;
+  res.pairsSize = 0;
+  return res;
 }
 
 void RTX_Proxy::ClearScene()  

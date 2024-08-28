@@ -73,6 +73,7 @@ public:
   
   uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) override;
   void     UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs, size_t a_customPrimCount) override;
+  
   void     ClearScene() override;
   void     CommitScene(uint32_t options) override;
 
@@ -85,7 +86,38 @@ public:
 
   CRT_Hit RayQuery_NearestHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time) override;
   bool    RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::float4 dirAndFar, float time)     override;
+  
+  // internal functions further
+  //
+  /**
+  \brief In the case when single primitive is represented with several bounding boxes, aabbId --> primId map is needed
+  */
+  struct PrimitiveRemapTable
+  {
+    const uint32_t* table;      ///<! primId = table[aabbId]
+    const uint32_t* pairs;      ///<! subTableStart = pairs[geomId*2+0], subTableSize = pairs[geomId*2+1]
+    uint32_t        tableSize;  ///<! count of elements in table array
+    uint32_t        pairsSize;  ///<! count of elements in pairs array
+  };
+
+  /**
+  \brief for target custom geometry type get teble which remap bounding box id to primitive id
+  \param a_typeId - internal geometry typeId 
+  */
+  virtual PrimitiveRemapTable GetAABBToPrimTable(uint32_t a_typeId) const; 
+
 
 protected:
+
   std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
+
+  struct RemapTableData
+  {
+    RemapTableData(){}
+    size_t primCount = 0;
+    std::vector<uint32_t> table;
+    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t> > startSizeByGeomId;
+  };
+
+  std::unordered_map<uint32_t, RemapTableData> m_remapTables;
 };
