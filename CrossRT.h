@@ -170,6 +170,19 @@ struct ISceneObject
 
 };
 
+/**
+\brief 'fixed-function' intersection data which is passed to custom intersection function
+*/
+struct CRT_LeafInfo 
+{
+  uint32_t aabbId; ///<! id of aabb/box inside current blas 
+  uint32_t instId; ///<! instance id
+  uint32_t geomId; ///<! id of geometry for specific geometry type
+  uint32_t rayxId; ///<! unique ray id (x coord on image)
+  uint32_t rayyId; ///<! unique ray id (y coord on image)
+};
+
+
 ISceneObject* CreateEmbreeRT();
 //ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_transferQId, uint32_t a_graphicsQId);
 
