@@ -175,9 +175,10 @@ struct ISceneObject
 */
 struct CRT_LeafInfo 
 {
-  uint32_t aabbId; ///<! id of aabb/box inside current blas 
+  uint32_t aabbId; ///<! id of aabb/box  inside BLAS
+  uint32_t primId; ///<! id of primitive inside BLAS
   uint32_t instId; ///<! instance id
-  uint32_t geomId; ///<! id of geometry for specific geometry type
+  uint32_t geomId; ///<! end-to-end index of custom geometry processerd with AABB
   uint32_t rayxId; ///<! unique ray id (x coord on image)
   uint32_t rayyId; ///<! unique ray id (y coord on image)
 };
