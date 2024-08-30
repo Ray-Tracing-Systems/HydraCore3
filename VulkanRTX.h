@@ -94,25 +94,21 @@ public:
   */
   struct PrimitiveRemapTable
   {
-    const uint32_t* table;      ///<! primId = table[aabbId]
-    const uint32_t* pairs;      ///<! subTableStart = pairs[geomId*2+0], subTableSize = pairs[geomId*2+1]
-    uint32_t        tableSize;  ///<! count of elements in table array
-    uint32_t        pairsSize;  ///<! count of elements in pairs array
+    const LiteMath::uint2* table;  ///<! primId = table[aabbId]
+    uint32_t tableSize;            ///<! count of elements in table array
   };
 
   /**
   \brief for target custom geometry type get teble which remap bounding box id to primitive id
   \param a_typeId - internal geometry typeId 
   */
-  virtual PrimitiveRemapTable GetAABBToPrimTable(uint32_t a_typeId) const; 
+  virtual PrimitiveRemapTable GetAABBToPrimTable() const; 
 
 protected:
 
   std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
 
-  size_t m_totalAABBPrimCount;
-  std::vector<LiteMath::uint2> m_aabbBLASIdToObjId;
-  std::vector<uint32_t>        m_aabbIdToPrimId;
+  std::vector<LiteMath::uint2> m_remapTable;
   std::unordered_map<uint32_t, LiteMath::uint2> m_offsetByTag;
 
 };

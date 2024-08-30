@@ -198,10 +198,8 @@ void RTX_Proxy::ClearGeom()
   for(auto impl : m_imps) 
     impl->ClearGeom(); 
 
-  m_aabbIdToPrimId.clear();
-  m_aabbBLASIdToObjId.clear();
+  m_remapTable.clear();
   m_offsetByTag.clear();
-  m_totalAABBPrimCount = 0;
 } 
 
 uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) 
@@ -225,28 +223,15 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
     geomId = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
   
   {
-    uint32_t aabbBLASId = (geomId & CRT_GEOM_MASK_AABB_BIT_RM); // remove AABB flag from actual geomId to get 'AABB BLAS ID'
+    size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
+    uint32_t div            = uint32_t(a_boxNumber/actualPrimsCount);
+
     auto pRemapOffset = m_offsetByTag.find(a_typeId);
     if(pRemapOffset == m_offsetByTag.end()) 
-    {
-      uint32_t offsetToObject     = uint32_t(m_aabbBLASIdToObjId.size());
-      uint32_t offsetToRemapTable = uint32_t(m_aabbIdToPrimId.size());
-
-      pRemapOffset = m_offsetByTag.insert(std::make_pair(a_typeId, LiteMath::uint2(offsetToObject, offsetToRemapTable))).first;
-    }
+      pRemapOffset = m_offsetByTag.insert(std::make_pair(a_typeId, LiteMath::uint2(0,div))).first;
     
-    m_aabbBLASIdToObjId.push_back(pRemapOffset->second);
-    
-    const size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
-    const size_t oldSize          = m_totalAABBPrimCount;
-    const size_t oldTableSize     = m_aabbIdToPrimId.size();
-
-    m_aabbIdToPrimId.resize(oldTableSize + a_boxNumber);
-    const size_t div = a_boxNumber/actualPrimsCount;
-    for(size_t i = oldTableSize; i < m_aabbIdToPrimId.size(); i++)
-      m_aabbIdToPrimId[i] = oldSize + (i-oldTableSize)/div;
-    
-    m_totalAABBPrimCount += actualPrimsCount;
+    m_remapTable.push_back(pRemapOffset->second);
+    pRemapOffset->second.x += uint32_t(actualPrimsCount);
   }
 
   return geomId;
@@ -258,13 +243,11 @@ void RTX_Proxy::UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_
     impl->UpdateGeom_AABB(a_geomId, a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
 }
 
-RTX_Proxy::PrimitiveRemapTable RTX_Proxy::GetAABBToPrimTable(uint32_t a_typeId) const
+RTX_Proxy::PrimitiveRemapTable RTX_Proxy::GetAABBToPrimTable() const
 {
   PrimitiveRemapTable res;
-  res.table = nullptr;
-  res.pairs = nullptr;
-  res.tableSize = 0;
-  res.pairsSize = 0;
+  res.table     = m_remapTable.data();
+  res.tableSize = uint32_t(m_remapTable.size());
   return res;
 }
 
