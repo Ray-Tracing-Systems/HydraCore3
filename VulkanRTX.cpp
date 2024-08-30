@@ -230,6 +230,7 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
     if(pRemapOffset == m_offsetByTag.end()) 
       pRemapOffset = m_offsetByTag.insert(std::make_pair(a_typeId, LiteMath::uint2(0,div))).first;
     
+    pRemapOffset->second.y = div;
     m_remapTable.push_back(pRemapOffset->second);
     pRemapOffset->second.x += uint32_t(actualPrimsCount);
   }
