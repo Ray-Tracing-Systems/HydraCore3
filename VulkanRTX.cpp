@@ -197,6 +197,11 @@ void RTX_Proxy::ClearGeom()
 { 
   for(auto impl : m_imps) 
     impl->ClearGeom(); 
+
+  m_aabbIdToPrimId.clear();
+  m_aabbBLASIdToObjId.clear();
+  m_offsetByTag.clear();
+  m_totalAABBPrimCount = 0;
 } 
 
 uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) 
@@ -220,25 +225,28 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
     geomId = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
   
   {
-    auto pRemap = m_remapTables.find(a_typeId); 
-    if(pRemap == m_remapTables.end()) 
+    uint32_t aabbBLASId = (geomId & CRT_GEOM_MASK_AABB_BIT_RM); // remove AABB flag from actual geomId to get 'AABB BLAS ID'
+    auto pRemapOffset = m_offsetByTag.find(a_typeId);
+    if(pRemapOffset == m_offsetByTag.end()) 
     {
-      RemapTableData tableData;
-      auto insertRes = m_remapTables.insert(std::make_pair(a_typeId, tableData));
-      pRemap = insertRes.first;
+      uint32_t offsetToObject     = uint32_t(m_aabbBLASIdToObjId.size());
+      uint32_t offsetToRemapTable = uint32_t(m_aabbIdToPrimId.size());
+
+      pRemapOffset = m_offsetByTag.insert(std::make_pair(a_typeId, LiteMath::uint2(offsetToObject, offsetToRemapTable))).first;
     }
     
-    const size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
-      
-    size_t oldSize      = pRemap->second.primCount;
-    size_t oldTableSize = pRemap->second.table.size();
-    pRemap->second.table.resize(oldTableSize + a_boxNumber);
-    const uint32_t div = uint32_t(a_boxNumber/actualPrimsCount);
-    for(size_t i = oldTableSize; i < pRemap->second.table.size(); i++)
-      pRemap->second.table[i] = oldSize + (i-oldTableSize)/div;
+    m_aabbBLASIdToObjId.push_back(pRemapOffset->second);
     
-    pRemap->second.primCount += actualPrimsCount;
-    pRemap->second.startSizeByGeomId[geomId] = std::make_pair(uint32_t(oldTableSize), uint32_t(pRemap->second.table.size() - oldTableSize));
+    const size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
+    const size_t oldSize          = m_totalAABBPrimCount;
+    const size_t oldTableSize     = m_aabbIdToPrimId.size();
+
+    m_aabbIdToPrimId.resize(oldTableSize + a_boxNumber);
+    const size_t div = a_boxNumber/actualPrimsCount;
+    for(size_t i = oldTableSize; i < m_aabbIdToPrimId.size(); i++)
+      m_aabbIdToPrimId[i] = oldSize + (i-oldTableSize)/div;
+    
+    m_totalAABBPrimCount += actualPrimsCount;
   }
 
   return geomId;

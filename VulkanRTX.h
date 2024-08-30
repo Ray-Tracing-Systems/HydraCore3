@@ -106,18 +106,13 @@ public:
   */
   virtual PrimitiveRemapTable GetAABBToPrimTable(uint32_t a_typeId) const; 
 
-
 protected:
 
   std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
 
-  struct RemapTableData
-  {
-    RemapTableData(){}
-    size_t primCount = 0;
-    std::vector<uint32_t> table;
-    std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t> > startSizeByGeomId;
-  };
+  size_t m_totalAABBPrimCount;
+  std::vector<LiteMath::uint2> m_aabbBLASIdToObjId;
+  std::vector<uint32_t>        m_aabbIdToPrimId;
+  std::unordered_map<uint32_t, LiteMath::uint2> m_offsetByTag;
 
-  std::unordered_map<uint32_t, RemapTableData> m_remapTables;
 };
