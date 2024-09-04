@@ -14,7 +14,7 @@ class VulkanRTX : public ISceneObject
 public:
   VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr);
   VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
-            uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, bool build_as_add);
+            uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, bool build_as_add, bool has_aabb);
   ~VulkanRTX();
   const char* Name() const override { return "VulkanRTX"; }
   

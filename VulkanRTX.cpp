@@ -6,7 +6,7 @@ ISceneObject* CreateVulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) { return 
 
 ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
                               uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
-                              bool build_as_add)
+                              bool build_as_add, bool has_aabb)
 {
   static constexpr uint64_t STAGING_MEM_SIZE = 16 * 16 * 1024u;
   VkQueue queue;
@@ -14,7 +14,7 @@ ISceneObject* CreateVulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, 
 
   auto copyHelper = std::make_shared<vk_utils::PingPongCopyHelper>(a_physDevice, a_device, queue, a_graphicsQId, STAGING_MEM_SIZE);
 
-  return new VulkanRTX(a_device, a_physDevice, a_graphicsQId, copyHelper,a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, build_as_add);
+  return new VulkanRTX(a_device, a_physDevice, a_graphicsQId, copyHelper,a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, build_as_add, has_aabb);
 }
 
 VulkanRTX::VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) : m_pScnMgr(a_pScnMgr)
@@ -23,7 +23,7 @@ VulkanRTX::VulkanRTX(std::shared_ptr<SceneManager> a_pScnMgr) : m_pScnMgr(a_pScn
 
 VulkanRTX::VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t a_graphicsQId, std::shared_ptr<vk_utils::ICopyEngine> a_pCopyHelper,
                      uint32_t a_maxMeshes, uint32_t a_maxTotalVertices, uint32_t a_maxTotalPrimitives, uint32_t a_maxPrimitivesPerMesh,
-                     bool build_as_add)
+                     bool build_as_add, bool has_aabb)
 {
   LoaderConfig conf = {};
   conf.load_geometry = true;
@@ -34,7 +34,7 @@ VulkanRTX::VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t 
   conf.mesh_format     = MESH_FORMATS::MESH_4F;
 
   m_pScnMgr = std::make_shared<SceneManager>(a_device, a_physDevice, a_graphicsQId, a_pCopyHelper, conf);
-  m_pScnMgr->InitEmptyScene(a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh);
+  m_pScnMgr->InitEmptyScene(a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, has_aabb ? a_maxPrimitivesPerMesh/2 : 10);
 }
 
 
@@ -223,7 +223,7 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
     geomId = impl->AddGeom_AABB(a_typeId, boxMinMaxF8, a_boxNumber, a_customPrimPtrs, a_customPrimCount);
   
   {
-    size_t actualPrimsCount = (a_customPrimPtrs == nullptr) ? a_boxNumber : a_customPrimCount;
+    size_t actualPrimsCount = (a_customPrimCount == 0) ? a_boxNumber : a_customPrimCount;
     uint32_t div            = uint32_t(a_boxNumber/actualPrimsCount);
 
     auto pRemapOffset = m_offsetByTag.find(a_typeId);
