@@ -72,7 +72,7 @@ struct SceneManager
   bool LoadScene(const std::string &scenePath); // guess scene type by extension
 //  void LoadSingleTriangle(); // TODO: rework
 
-  bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh);
+  bool InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, uint32_t maxAbbbPerMesh = 0);
 
   uint32_t AddMeshFromFile(const std::string& meshPath);
   uint32_t AddMeshFromData(cmesh::SimpleMesh &meshData);
@@ -127,7 +127,7 @@ private:
   LoaderConfig m_config;
 
   vk_utils::VulkanImageMem LoadSpecialTexture();
-  void InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum);
+  void InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum, uint32_t maxPrimitivesPerMesh);
   void LoadOneMeshOnGPU(uint32_t meshIdx);
   void LoadCommonGeoDataOnGPU();
   void LoadInstanceDataOnGPU();

@@ -252,11 +252,11 @@ void SceneManager::InitMeshCPU(MESH_FORMATS format)
     m_pMeshData = std::make_shared<Mesh4F>();
 }
 
-void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum)
+void SceneManager::InitGeoBuffersGPU(uint32_t a_meshNum, uint32_t a_totalVertNum, uint32_t a_totalIndicesNum, uint32_t maxPrimitivesPerMesh)
 {
   const VkDeviceSize vertexBufSize  = m_pMeshData->SingleVertexSize() * a_totalVertNum;
   const VkDeviceSize indexBufSize   = m_pMeshData->SingleIndexSize() * a_totalIndicesNum;
-  const VkDeviceSize aabbBufferSize = 65536*sizeof(VkAabbPositionsKHR);   //#TODO: set this buffer size some-whow from outside
+  const VkDeviceSize aabbBufferSize = maxPrimitivesPerMesh*sizeof(VkAabbPositionsKHR);  
 
   VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   if(m_useRTX)
@@ -654,15 +654,12 @@ void SceneManager::BuildTLAS_MotionBlur(const uint32_t* a_sbtRecordOffset, size_
   }
 }
 
-bool SceneManager::InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh)
+bool SceneManager::InitEmptyScene(uint32_t maxMeshes, uint32_t maxTotalVertices, uint32_t maxTotalPrimitives, uint32_t maxPrimitivesPerMesh, uint32_t maxAbbbPerMesh)
 {
   InitMeshCPU(m_config.mesh_format);
-
-  InitGeoBuffersGPU(maxMeshes, maxTotalVertices, maxTotalPrimitives * 3);
+  InitGeoBuffersGPU(maxMeshes, maxTotalVertices, maxTotalPrimitives * 3, maxPrimitivesPerMesh);
   if(m_config.build_acc_structs)
-  {
-    m_pBuilderV2->Init(maxTotalVertices, maxPrimitivesPerMesh, maxTotalPrimitives, m_pMeshData->SingleVertexSize());
-  }
-
+    m_pBuilderV2->Init(maxTotalVertices, maxPrimitivesPerMesh, maxTotalPrimitives, m_pMeshData->SingleVertexSize(), 
+                       false, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, maxAbbbPerMesh);
   return true;
 }
