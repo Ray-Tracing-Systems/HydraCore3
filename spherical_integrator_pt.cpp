@@ -33,6 +33,8 @@ Integrator::EyeRayData SphericalIntegrator::SampleCameraRay(RandomGen* pGen, uin
     float yWeight = yCoordNormalized * 2.0f - 1.0f;
 
     float3 forward = to_float3(float4(0, 0, isBackside ? 1.0f : -1.0f, 0));
+    if (m_unit == Unit::Irradiance)
+      forward *= -1.0f;
     float3 right   = to_float3(float4(1, 0, 0, 0));
     float3 up      = to_float3(float4(0, 1, 0, 0));
     const bool validPixel = xWeight * xWeight + yWeight * yWeight < 1.0f;
@@ -49,11 +51,15 @@ Integrator::EyeRayData SphericalIntegrator::SampleCameraRay(RandomGen* pGen, uin
     const float theta = (1 - yCoordNormalized) * M_PI;
     const float phi = (m_mode == Mode::PanoramaHemisphere ? (xCoordNormalized + 1) : xCoordNormalized * 2.0f) * M_PI;
     float x_coord = std::sin(theta) * std::cos(phi);
-    float y_coord = std::sin(theta) * std::sin(phi);
-    float z_coord = std::cos(theta);
+    float z_coord = std::sin(theta) * std::sin(phi);
+    float y_coord = std::cos(theta);
+    if (m_unit == Unit::Irradiance)
+      z_coord *= -1.0f;
     rayDir = normalize(float3(x_coord, y_coord, z_coord));
     rayPos = float3(0, 0, 0);
   }
+  if (m_unit == Unit::Irradiance)
+    rayPos -= rayDir * 0.0001f;
 
   EyeRayData res;
   {
