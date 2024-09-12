@@ -86,6 +86,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
   //// list reauired material features
   //
+  size_t num_materials = 0u;
   for(auto materialNode : g_lastScene.MaterialNodes())
   {
     auto mat_type = materialNode.attribute(L"type").as_string();
@@ -138,8 +139,11 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
 
     if(materialNode.child(L"displacement") != nullptr)
       features[KSPEC_BUMP_MAPPING] = 1;
+
+    num_materials++;
   }
 
+  size_t num_lights = 0u;
   for(auto lightInst : g_lastScene.InstancesLights())
   {
     const std::wstring ltype = lightInst.lightNode.attribute(L"type").as_string();
@@ -154,6 +158,8 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     }
     else if(lightInst.lightNode.child(L"projective") != nullptr)
       features[KSPEC_LIGHT_PROJECTIVE] = 1;
+
+    num_lights++;
   }
 
   for(auto settings : g_lastScene.Settings())
@@ -181,6 +187,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   g_lastSceneInfo.maxPrimitivesPerMesh = 1'000'000;
 
   g_lastSceneInfo.memTextures = 0;
+  size_t num_textures = 0u;
   for(auto texNode : g_lastScene.TextureNodes())
   {
     uint32_t width  = texNode.attribute(L"width").as_uint();
@@ -198,10 +205,11 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     //  byteSize = width*height*4;  //
 
     g_lastSceneInfo.memTextures += uint64_t(byteSize);
+    num_textures++;
   }
 
   g_lastSceneInfo.memGeom = 0;
-  uint32_t meshesNum = 0;
+  uint32_t num_meshes = 0u;
   uint64_t maxTotalVertices = 0;
   uint64_t maxTotalPrimitives = 0;
 
@@ -215,7 +223,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       g_lastSceneInfo.maxPrimitivesPerMesh = trisNum;
     maxTotalVertices   += uint64_t(vertNum);
     maxTotalPrimitives += uint64_t(trisNum);
-    meshesNum          += 1;
+    num_meshes          += 1;
     g_lastSceneInfo.memGeom += byteSize;
   }
 
@@ -226,6 +234,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   g_lastSceneInfo.memTextures += uint64_t(4*1024*1024); // reserve mem for tex
 
 
+  size_t num_instances = 0u;
   for(auto inst : g_lastScene.InstancesGeom())
   {
     if(inst.hasMotion)
@@ -233,7 +242,18 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
       features[KSPEC_MOTION_BLUR] = 1;
       break;
     }
+    num_instances++;
   }
+
+  std::cout << "Scene analysis:\n" 
+            << "\tTotal meshes = "     << num_meshes << "\n"
+            << "\tTotal instances = "  << num_instances << "\n"
+            << "\tTotal primitives = " << maxTotalPrimitives << "\n"
+            << "\tTotal vertices = "   << maxTotalVertices << "\n"
+            << "\tTotal lights = "     << num_lights << "\n"
+            << "\tTotal materials = "  << num_materials << "\n"
+            << "\tTotal textures = "   << num_textures << "\n";
+
 
   (*pSceneInfo) = g_lastSceneInfo;
   return features;
