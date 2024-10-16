@@ -7,6 +7,7 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_MAT_TYPE_GLTF      : return "GLTF_LITE";
     case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
     case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
+    case KSPEC_MAT_TYPE_THIN_FILM : return "THIN_FILM";
     case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
     case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
     case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
@@ -24,7 +25,14 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
     case KSPEC_BLEND_STACK_SIZE   :
     {
       std::stringstream strout;
-      strout << "STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
+      strout << "BLEND_STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
+      return strout.str();
+    }
+
+    case KSPEC_FILMS_STACK_SIZE   :
+    {
+      std::stringstream strout;
+      strout << "FILMS_STACK_SIZE = " << m_enabledFeatures[KSPEC_FILMS_STACK_SIZE];
       return strout.str();
     }
     
@@ -42,6 +50,7 @@ SceneInfo   Integrator::g_lastSceneInfo;
 static const std::wstring hydraOldMatTypeStr       {L"hydra_material"};
 static const std::wstring hydraGLTFTypeStr         {L"gltf"};
 static const std::wstring roughConductorMatTypeStr {L"rough_conductor"};
+static const std::wstring thinFilmMatTypeStr       {L"thin_film"};
 static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
 static const std::wstring plasticMatTypeStr        {L"plastic"};
@@ -74,6 +83,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   for(auto& feature : features)         //
     feature = 0;                        //
   features[KSPEC_BLEND_STACK_SIZE]   = 1; // set smallest possible stack size for blends (i.e. blends are disabled!)
+  features[KSPEC_FILMS_STACK_SIZE]   = 1; // set smallest possible stack size for films
   features[KSPEC_SPECTRAL_RENDERING] = (pSceneInfo->spectral == 0) ? 0 : 1;
   
   for(auto specNode : g_lastScene.SpectraNodes())
@@ -118,6 +128,14 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     else if(mat_type == roughConductorMatTypeStr)
     {
       features[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
+    }
+    else if(mat_type == thinFilmMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_THIN_FILM] = 1;
+      uint layers = 0;
+      for (auto layerNode : materialNode.child(L"layers").children()) layers++;
+      if (layers > features[KSPEC_FILMS_STACK_SIZE])
+        features[KSPEC_FILMS_STACK_SIZE] = layers; // set appropriate stack size for blends
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
@@ -319,6 +337,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   for(auto& feature : m_actualFeatures)              //
     feature = 0;                                      //
   m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
+  m_actualFeatures[KSPEC_FILMS_STACK_SIZE] = 1;
   m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
   //// 
 
@@ -367,7 +386,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // std::vector<SpectrumInfo> spectraInfo;
   // spectraInfo.reserve(100);
-  if(m_spectral_mode != 0)
+  if(m_spectral_mode != 0 || true)
   {  
     for(auto specNode : scene.SpectraNodes())
     {
@@ -536,6 +555,16 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
+    }
+    else if (mat_type == thinFilmMatTypeStr)
+    {
+      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
+                                 m_spec_values, m_spec_offset_sz, m_cie_x, m_cie_y, m_cie_z, m_spectral_mode);
+      m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
+      uint layers = 0;
+      for (auto layerNode : materialNode.child(L"layers").children()) layers++;
+      if (layers > m_actualFeatures[KSPEC_FILMS_STACK_SIZE])
+        m_actualFeatures[KSPEC_FILMS_STACK_SIZE] = layers; // set stack size for films (one additional layer for medium)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {

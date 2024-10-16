@@ -13,3 +13,6 @@
 [submodule "external/CrossRT"]
 	path = external/CrossRT
 	url = https://github.com/msu-graphics-group/CrossRT.git
+[submodule "external/spectral"]
+	path = external/spectral
+	url = https://github.com/Ray-Tracing-Systems/spectral_upsampling.git

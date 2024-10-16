@@ -252,3 +252,91 @@ Examples:
   </material>
 </materials_lib>
 ```
+
+### Thin film
+
+Models material consisting of thin layers with complex Fresnel IOR: eta (refractive index) and k (extinction coefficient). 
+Generally, should be used in *spectral* rendering mode (pass `--spectral` in command line). In RGB mode colors are preintegrated for D65 source.
+
+Spectra can be found, for example, [here](https://refractiveindex.info/)
+
+| Node | Attributes | Texture | Spectrum |
+| --- | --- | --- | --- |
+| bsdf  | `type` - bsdf model, possible values - `ggx` | - | - |
+| alpha  | `val` - microfacet roughness, used to set `alpha_u` and `alpha_v` to the same value, possible values - 1 float | yes | no |
+| eta  | `val` - internal refractive index, possible values - 1 float | no | yes |
+| k  | `val` - internal extinction coefficient, possible values - 1 float | no | yes |
+| ext_ior  | `val` - external index of refraction, possible values - 1 float | no | no |
+| thickness_map  | `min` and `max` - limits of thickness for 1-layer film, possible values - 1 float | yes | no |
+| transparent  | `val` - on/off transparency, possible values - `1` and `0` | no | yes |
+
+Layers are stacked in <layers> block and have these parameters:
+| eta  | `val` - refractive index, possible values - 1 float | no | yes |
+| k  | `val` - extinction coefficient, possible values - 1 float | no | yes |
+| thickness  | `val` - thickness of layer, possible values - 1 float | no | yes |
+
+Examples:
+
+```
+<materials_lib>
+  <material id="0" name="thin_film_0" type="thin_film">
+    <bsdf type="ggx" />
+    <ext_ior val="1"/>
+    <alpha val="0.0" />
+    <transparent val="0"/>
+    <eta val="1.0">
+    </eta>
+    <k val="0.0">
+    </k>
+    <layers>
+      <layer>
+        <thickness val="300" />
+        <eta val="2.0">
+        </eta>
+        <k val="0.0">
+        </k>
+      </layer>
+      <layer>
+        <thickness val="5" />
+        <eta val="1.0">
+          <spectrum id="1" type="ref"/>
+        </eta>
+        <k val="1.0">
+          <spectrum id="2" type="ref"/>
+        </k>
+      </layer>
+      <layer>
+        <thickness val="1000" />
+        <eta val="1.6">
+        </eta>
+        <k val="2.0">
+        </k>
+      </layer>
+    </layers>
+  </material>
+  <material id="1" name="thin_film_1" type="thin_film">
+    <bsdf type="ggx" />
+    <alpha val="0.01" />
+		<eta val="1.0">
+			<spectrum id="3" type="ref"/>
+		</eta>
+		<k val="0.0">
+			<spectrum id="4" type="ref"/>
+		</k>
+    <thickness_map min="100" max="550">
+      <texture id="1" type="texref" matrix="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" addressing_mode_u="wrap" addressing_mode_v="wrap" input_gamma="2.20000005" input_alpha="rgb" />
+    </thickness_map>
+    <layers>
+      <layer>
+        <thickness val="550" />
+        <eta val="1.33">
+          <spectrum id="1" type="ref"/>
+        </eta>
+        <k val="0.0">
+          <spectrum id="2" type="ref"/>
+        </k>
+      </layer>
+    </layers>
+  </material>
+</materials_lib>
+```

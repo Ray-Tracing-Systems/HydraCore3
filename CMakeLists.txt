@@ -56,6 +56,10 @@ endif()
 
 find_package(OpenMP)
 
+#LIBSPECTRAL
+include(libspectral.cmake)
+#//////////
+
 if(USE_VULKAN)
 
   if(CMAKE_SYSTEM_NAME STREQUAL Windows)
@@ -249,7 +253,7 @@ else()
   set(CUSTOM_OMP "")
 endif()
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser spectral)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})

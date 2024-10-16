@@ -142,6 +142,15 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
                              const std::vector<uint2> &spec_offsets, std::vector<uint2> &spec_tex_ids_wavelengths,
                              const std::vector<uint2> &spec_tex_offset_sz, std::set<uint32_t> &loadedSpectralTextures);
 
+Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                              std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
+                              std::vector<float> &precomputed_film, std::vector<float> &thickness_vec,
+                              std::vector<uint> &spec_id_vec, std::vector<float> &eta_k_vec,
+                              const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets,
+                              const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z,
+                              const int spectral_mode);
+                              
 LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const std::string& sceneFolder, bool a_spectral_mode,
                                     const std::vector<TextureInfo>& texturesInfo, 
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,

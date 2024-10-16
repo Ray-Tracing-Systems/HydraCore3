@@ -40,6 +40,7 @@ enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_PLASTIC       = 5,
                       MAT_TYPE_BLEND         = 6,
                       MAT_TYPE_DIELECTRIC    = 7,
+                      MAT_TYPE_THIN_FILM     = 8,
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {
@@ -152,9 +153,34 @@ static constexpr uint BLEND_COLOR_LAST_IND = 0;
 static constexpr uint BLEND_WEIGHT          = 0;
 static constexpr uint BLEND_CUSTOM_LAST_IND = BLEND_WEIGHT;
 
+// Conductor
+// colors
+static constexpr uint FILM_COLOR             = 0;
+static constexpr uint FILM_COLOR_LAST_IND    = FILM_COLOR;
+
+// custom
+static constexpr uint FILM_ROUGH_U           = 0;
+static constexpr uint FILM_ROUGH_V           = 1;
+static constexpr uint FILM_PRECOMP_FLAG      = 2;
+static constexpr uint FILM_PRECOMP_OFFSET    = 3;
+static constexpr uint FILM_ETA_OFFSET        = 4;
+static constexpr uint FILM_K_OFFSET          = 5;
+static constexpr uint FILM_ETA_SPECID_OFFSET = 6;
+static constexpr uint FILM_K_SPECID_OFFSET   = 7;
+static constexpr uint FILM_ETA_EXT           = 8;
+static constexpr uint FILM_THICKNESS_OFFSET  = 9;
+static constexpr uint FILM_THICKNESS_MIN     = 10;
+static constexpr uint FILM_THICKNESS_MAX     = 11;
+static constexpr uint FILM_THICKNESS_MAP     = 12;
+static constexpr uint FILM_THICKNESS         = 13;
+static constexpr uint FILM_LAYERS_COUNT      = 14;
+static constexpr uint FILM_TRANSPARENT       = 15;
+static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TRANSPARENT;
+
+
 // The size is taken according to the largest indexes
 static constexpr uint COLOR_DATA_SIZE  = 4;  // std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;
-static constexpr uint CUSTOM_DATA_SIZE = 12; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
+static constexpr uint CUSTOM_DATA_SIZE = 16; // std::max(std::max(GLTF_CUSTOM_LAST_IND, GLASS_CUSTOM_LAST_IND), CONDUCTOR_CUSTOM_LAST_IND) + 1;
 
 struct Material
 {
@@ -699,6 +725,21 @@ static inline float lerp_gather(const float *data, float x, size_t size)
   return lerp(v0, v1, x - float(index));
 }
 
+static inline float lerp_gather_2d(const float *data, float x, float y, size_t size1, size_t size2)
+{
+  x *= float(size1 - 1);
+  y *= float(size2 - 1);
+  uint32_t index1 = std::min(uint32_t(x), uint32_t(size1 - 2));
+  uint32_t index2 = std::min(uint32_t(y), uint32_t(size2 - 2));
+
+  float alpha = x - float(index1);
+  float beta = y - float(index2);
+  float v0 = lerp(data[index1 * size2 + index2], data[(index1 + 1) * size2 + index2], alpha);
+  float v1 = lerp(data[index1 * size2 + index2 + 1], data[(index1 + 1) * size2 + index2 + 1], alpha);
+
+  return lerp(v0, v1, beta);
+}
+
 
 //////////////////////
 // GGX from Mitsuba3
@@ -904,6 +945,92 @@ static inline MatIdWeightPair make_weight_pair(MatIdWeight a, MatIdWeight b)
   res.first  = a;
   res.second = b;
   return res;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static inline float sum(float4 v) {return v.x + v.y + v.z + v.w;}
+
+static inline complex conjugate(complex c) {return {c.re, -c.im};}
+
+static constexpr uint PolarizationS = 0;
+static constexpr uint PolarizationP = 1;
+
+struct FrReflRefr
+{
+  float refl, refr;
+};
+
+static inline float getRefractionFactor(float cosThetaI, complex cosThetaT, complex iorI, complex iorT)
+{
+  complex mult = cosThetaT * iorT;
+  if (cosThetaI <= 1e-6f || mult.im > 1e-6f)
+  {
+    return 0;
+  }
+  return mult.re / (iorI.re * cosThetaI);
+}
+
+static inline float getRefractionFactorS(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT)
+{
+  if (complex_norm(cosThetaI) <= 1e-6f)
+  {
+    return 0;
+  }
+  return (iorT * cosThetaT).re / (iorI * cosThetaI).re;
+}
+
+static inline float getRefractionFactorP(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT)
+{
+  if (complex_norm(cosThetaI) <= 1e-6f)
+  {
+    return 0;
+  }
+  return (iorT * conjugate(cosThetaT)).re / (iorI * conjugate(cosThetaI)).re;
+}
+
+static inline complex FrComplexRefl(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT, uint polarization)
+{
+  if (complex_norm(cosThetaI) < 1e-6f) //approximated
+  {
+    return {-1, 0};
+  }
+  if (polarization == PolarizationS)
+  {
+    return (iorI * cosThetaI - iorT * cosThetaT) / (iorI * cosThetaI + iorT * cosThetaT);
+  }
+  else if (polarization == PolarizationP)
+  {
+    return (iorT * cosThetaI - iorI * cosThetaT) / (iorT * cosThetaI + iorI * cosThetaT);
+  }
+  return 1.0f;
+}
+
+static inline complex FrComplexRefr(complex cosThetaI, complex cosThetaT, complex iorI, complex iorT, uint polarization)
+{
+  if (complex_norm(cosThetaI) < 1e-6f) //approximated
+  {
+    if (complex_norm(iorI - iorT) < 1e-6f)
+    {
+      return {1, 0};
+    }
+    return {0, 0};
+  }
+  if (polarization == PolarizationS)
+  {
+    return (2 * iorI * cosThetaI) / (iorI * cosThetaI + iorT * cosThetaT);
+  }
+  else if (polarization == PolarizationP)
+  {
+    return (2 * iorI * cosThetaI) / (iorT * cosThetaI + iorI * cosThetaT);
+  }
+  return 0.f;
+}
+
+static inline complex filmPhaseDiff(complex cosTheta, complex eta, float thickness, float lambda)
+{
+  return 4 * M_PI * eta * cosTheta * thickness / complex(lambda);
 }
 
 #endif
