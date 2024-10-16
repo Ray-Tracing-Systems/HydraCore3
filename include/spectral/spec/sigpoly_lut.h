@@ -16,7 +16,7 @@ namespace spec {
 
         SigpolyLUT(unsigned step) : step{step}, size{256 / step + (255 % step != 0)}, data(size * size * size) {}
 
-        SigpolyLUT(const SigpolyLUT &) = delete;
+        SigpolyLUT(const SigpolyLUT &) = default;
         SigpolyLUT &operator=(const SigpolyLUT &) = delete;
 
         SigpolyLUT(SigpolyLUT &&other) : step{}, size{}, data{}
