@@ -18,7 +18,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   {
     n = -1 * n;
   }
-  if (dot(n, v) < 0.f && intIOR.im < 0.001)
+  if (dot(n, v) < 0.f && intIOR.im < 0.001f)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * 2;
@@ -34,7 +34,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   CoordinateSystemV2(n, &s, &t);
   float3 wi = float3(dot(v, s), dot(v, t), dot(v, n));
 
-  float cosThetaI = clamp(fabs(wi.z), 0.0001, 1.0f);
+  float cosThetaI = clamp(std::abs(wi.z), 0.0001f, 1.0f);
   float ior = intIOR.re / extIOR;
   float4 R = float4(0.0f), T = float4(0.0f);
 
@@ -43,7 +43,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
     if (precomputed)
     {
       float w = clamp((a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN), 0.f, 1.f);
-      float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+      float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
       w *= FILM_LENGTH_RES - 1;
       theta *= FILM_ANGLE_RES - 1;
       uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
@@ -78,7 +78,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   }
   else
   {
-    float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+    float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
     if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
     {
@@ -142,7 +142,7 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
     }
   }
 
-  if (intIOR.im > 0.001 || transparFlag == 0)
+  if (intIOR.im > 0.001f || transparFlag == 0)
   {
     float3 wo = float3(-wi.x, -wi.y, wi.z);
     pRes->val = R;
@@ -193,7 +193,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
     n = -1 * n;
   }
 
-  if (dot(v, n) < 0.f && intIOR.im < 0.001)
+  if (dot(v, n) < 0.f && intIOR.im < 0.001f)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * 2;
@@ -221,7 +221,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
 
   const float3 wm = trSample(wi, float2(rands.x, rands.y), alpha);
 
-  float cosThetaI = clamp(fabs(dot(wi, wm)), 0.00001, 1.0f);
+  float cosThetaI = clamp(std::abs(dot(wi, wm)), 0.00001f, 1.0f);
   float4 R = float4(0.0f), T = float4(0.0f);
 
   if (spectral_mode)
@@ -229,7 +229,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
     if (precomputed)
     {
       float w = clamp((a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN), 0.f, 1.f);
-      float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+      float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
       w *= FILM_LENGTH_RES - 1;
       theta *= FILM_ANGLE_RES - 1;
       uint32_t index1 = std::min(uint32_t(w), uint32_t(FILM_LENGTH_RES - 2));
@@ -264,7 +264,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
   }
   else
   {
-    float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+    float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
     if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
     {
@@ -328,7 +328,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
     }
   }
   
-  if (intIOR.im > 0.001 || transparFlag == 0)
+  if (intIOR.im > 0.001f || transparFlag == 0)
   {
     float3 wo = reflect((-1.0f) * wi, wm);
     if (wi.z < 0.f || wo.z <= 0.f)
@@ -386,7 +386,7 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       }
       const float cos_theta_i = std::max(wi.z, EPSILON_32);
       const float cos_theta_o = std::min(wo.z, -EPSILON_32);
-      if (fabs(eta_it - 1.f) <= 1e-6f)
+      if (std::abs(eta_it - 1.f) <= 1e-6f)
       {
         pRes->pdf = trPDF(wi, wm, alpha) / (4.0f * std::abs(dot(wi, wm))) * sum(T) / (sum(R) + sum(T));
         pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T / (4.0f * -cos_theta_i * cos_theta_o);
@@ -394,9 +394,9 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       else
       {
         float denom = sqr(dot(wo, wm) + dot(wi, wm) / eta_it);
-        float dwm_dwi = fabs(dot(wo, wm)) / denom;
+        float dwm_dwi = std::abs(dot(wo, wm)) / denom;
         pRes->pdf = trPDF(wi, wm, alpha) * dwm_dwi * sum(T) / (sum(R) + sum(T));
-        pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T * fabs(dot(wi, wm) * dot(wo, wm) / (cos_theta_i * cos_theta_o * denom));
+        pRes->val = trD(wm, alpha) * microfacet_G(wi, wo, wm, alpha) * T * std::abs(dot(wi, wm) * dot(wo, wm) / (cos_theta_i * cos_theta_o * denom));
       }
       if (reversed)
       {
@@ -414,7 +414,7 @@ static void filmRoughEval(const Material* a_materials,
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc,
         float3 alpha_tex, BsdfEval* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
 {
-  if (intIOR.im < 0.001)
+  if (intIOR.im < 0.001f)
   {
     return;
   }
@@ -423,7 +423,7 @@ static void filmRoughEval(const Material* a_materials,
   uint32_t refr_offset;
 
   bool reversed = false;
-  if (dot(v, n) < 0.f && intIOR.im < 0.001)
+  if (dot(v, n) < 0.f && intIOR.im < 0.001f)
   {
     reversed = true;
     refl_offset = FILM_ANGLE_RES * 2;
@@ -435,8 +435,8 @@ static void filmRoughEval(const Material* a_materials,
     refr_offset = FILM_ANGLE_RES;
   }
 
-  const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
-                              min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
+  const float2 alpha = float2(std::min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
+                              std::min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
@@ -455,7 +455,7 @@ static void filmRoughEval(const Material* a_materials,
     ior = 1.f / ior;
   }
 
-  float cosThetaI = clamp(fabs(dot(wo, wm)), 0.00001, 1.0f);
+  float cosThetaI = clamp(std::abs(dot(wo, wm)), 0.00001f, 1.0f);
   
   float4 R = float4(0.0f);
   if (spectral_mode)
@@ -463,7 +463,7 @@ static void filmRoughEval(const Material* a_materials,
     if (precomputed)
     {
       float w = clamp((a_wavelengths[0] - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN), 0.f, 1.f);
-      float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+      float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
       //result.refl = lerp_gather_2d(reflectance, w, theta, FILM_LENGTH_RES, FILM_ANGLE_RES);
       w *= FILM_LENGTH_RES - 1;
       theta *= FILM_ANGLE_RES - 1;
@@ -491,7 +491,7 @@ static void filmRoughEval(const Material* a_materials,
   }
   else
   {
-    float theta = clamp(acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
+    float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
     if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
     {

@@ -23,7 +23,7 @@ static inline float FrFilmRefl(float cosThetaI, complex etaI, complex etaF, comp
     complex FrReflI = FrComplexRefl(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
     complex FrReflF = FrComplexRefl(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
-    complex FrRefl  = FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
+    complex FrRefl  = FrReflF * std::exp(-phaseDiff.im) * complex(std::cos(phaseDiff.re), std::sin(phaseDiff.re));
     FrRefl          = (FrReflI + FrRefl) / (1 + FrReflI * FrRefl);
     result += complex_norm(FrRefl);
   }
@@ -51,8 +51,8 @@ static inline float FrFilmRefr(float cosThetaI, complex etaI, complex etaF, comp
     complex FrRefrI = FrComplexRefr(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
     complex FrRefrF = FrComplexRefr(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
-    complex nom    = FrRefrI * FrRefrF * exp(-phaseDiff.im / 2) * complex(cos(phaseDiff.re / 2), sin(phaseDiff.re / 2));
-    complex denom = 1 + FrReflI * FrReflF * exp(-phaseDiff.im) * complex(cos(phaseDiff.re), sin(phaseDiff.re));
+    complex nom    = FrRefrI * FrRefrF * std::exp(-phaseDiff.im / 2) * complex(std::cos(phaseDiff.re / 2), std::sin(phaseDiff.re / 2));
+    complex denom = 1 + FrReflI * FrReflF * std::exp(-phaseDiff.im) * complex(std::cos(phaseDiff.re), std::sin(phaseDiff.re));
     result += complex_norm(nom / denom);
   }
   result *= getRefractionFactor(cosThetaI, cosThetaT, etaI, etaT);
@@ -79,7 +79,7 @@ static inline FrReflRefr FrFilm(float cosThetaI, complex etaI, complex etaF, com
     complex FrRefrI = FrComplexRefr(cosThetaI, cosThetaF, etaI, etaF, polarization[p]);
     complex FrRefrF = FrComplexRefr(cosThetaF, cosThetaT, etaF, etaT, polarization[p]);
 
-    complex exp_1 = exp(-phaseDiff.im / 2) * complex(cos(phaseDiff.re / 2), sin(phaseDiff.re / 2));
+    complex exp_1 = std::exp(-phaseDiff.im / 2) * complex(std::cos(phaseDiff.re / 2), std::sin(phaseDiff.re / 2));
     complex exp_2 = exp_1 * exp_1;
 
     complex denom = 1 + FrReflI * FrReflF * exp_2;
@@ -107,7 +107,7 @@ static inline FrReflRefr calculateMultFrFilmForward(const complex *a_cosTheta, c
   {
     complex FrReflI = FrComplexRefl(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
     complex FrRefrI = FrComplexRefr(a_cosTheta[i], a_cosTheta[i + 1], a_ior[i], a_ior[i + 1], p);
-    complex exp_1 = exp(-a_phaseDiff[i].im / 2.f) * complex(cos(a_phaseDiff[i].re / 2.f), sin(a_phaseDiff[i].re / 2.f));
+    complex exp_1 = std::exp(-a_phaseDiff[i].im / 2.f) * complex(std::cos(a_phaseDiff[i].re / 2.f), std::sin(a_phaseDiff[i].re / 2.f));
 
     FrRefr = FrRefrI * FrRefr * exp_1;
     FrRefl = FrRefl * exp_1 * exp_1;
@@ -136,7 +136,7 @@ static inline FrReflRefr calculateMultFrFilmBackward(const complex *a_cosTheta, 
   {
     complex FrReflI = FrComplexRefl(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
     complex FrRefrI = FrComplexRefr(a_cosTheta[i + 1], a_cosTheta[i], a_ior[i + 1], a_ior[i], p);
-    complex exp_1 = exp(-a_phaseDiff[i - 1].im / 2.f) * complex(cos(a_phaseDiff[i - 1].re / 2.f), sin(a_phaseDiff[i - 1].re / 2.f));
+    complex exp_1 = std::exp(-a_phaseDiff[i - 1].im / 2.f) * complex(std::cos(a_phaseDiff[i - 1].re / 2.f), std::sin(a_phaseDiff[i - 1].re / 2.f));
     FrRefr = FrRefrI * FrRefr * exp_1;
     FrRefl = FrRefl * exp_1 * exp_1;
 
