@@ -105,6 +105,8 @@ struct SceneManager
   std::vector<VkSampler> GetTextureSamplers() const { return m_samplers; }
   std::vector<VkImageView>  GetTextureViews() const { return m_textureViews; }
 
+  std::shared_ptr<IMeshData> GetMeshData() {return m_pMeshData; }
+
   uint32_t MeshesNum()    const {return static_cast<uint32_t>(m_meshInfos.size());}
   uint32_t InstancesNum() const {return static_cast<uint32_t>(m_instanceInfos.size());}
 
