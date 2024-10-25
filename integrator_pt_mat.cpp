@@ -5,6 +5,7 @@
 #include "include/cmat_gltf.h"
 #include "include/cmat_conductor.h"
 #include "include/cmat_glass.h"
+#include "include/cmat_film.h"
 #include "include/cmat_diffuse.h"
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
@@ -193,6 +194,60 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
         conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
     }
     break;
+    case MAT_TYPE_THIN_FILM:
+    if(KSPEC_MAT_TYPE_THIN_FILM != 0)
+    {
+      const float3 alphaTex = to_float3(texColor);  
+      const float2 alpha = float2(m_materials[currMatId].data[FILM_ROUGH_V], m_materials[currMatId].data[FILM_ROUGH_U]);
+
+      uint t_offset = as_uint(m_materials[currMatId].data[FILM_THICKNESS_OFFSET]);
+      uint layers = as_uint(m_materials[currMatId].data[FILM_LAYERS_COUNT]);
+      const bool spectral_mode = wavelengths[0] > 0.0f;
+      // sampling 3 wavelengths for naive RGB method
+      float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(645.f, 525.f, 445.f, 0.0f);
+      float4 wavelengths_sample = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(525.f, 0.f, 0.f, 0.0f);
+      float extIOR = m_materials[currMatId].data[FILM_ETA_EXT];
+      complex intIOR = complex(
+        SampleFilmsSpectrum(currMatId, wavelengths_sample, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
+        SampleFilmsSpectrum(currMatId, wavelengths_sample, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
+      );
+      complex filmIOR = complex(
+        SampleFilmsSpectrum(currMatId, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, 0)[0],
+        SampleFilmsSpectrum(currMatId, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, 0)[0]
+      );
+
+      float thickness;
+      if (as_uint(m_materials[currMatId].data[FILM_THICKNESS_MAP]) > 0u)
+      {
+        const uint texId  = m_materials[currMatId].texid[2];
+        const float2 texCoord = mulRows2x4(m_materials[currMatId].row0[2], m_materials[currMatId].row1[2], tc);
+        const float4 thickness_val = m_textures[texId]->sample(texCoord);
+        float thickness_max = m_materials[currMatId].data[FILM_THICKNESS_MAX];
+        float thickness_min = m_materials[currMatId].data[FILM_THICKNESS_MIN];
+        thickness = (thickness_max - thickness_min) * thickness_val.x + thickness_min;
+        //std::cout << fourScalarMatParams.x << " " << fourScalarMatParams.y << " " << fourScalarMatParams.z << " " << fourScalarMatParams.w << std::endl;
+      }
+      else
+      {
+        thickness = m_materials[currMatId].data[FILM_THICKNESS];
+      }
+
+      bool precomp_flag = as_uint(m_materials[currMatId].data[FILM_PRECOMP_FLAG]) > 0u;
+
+      uint precomp_offset = precomp_flag ? as_uint(m_materials[currMatId].data[FILM_PRECOMP_OFFSET]) : 0;
+      if(trEffectivelySmooth(alpha))
+        filmSmoothSampleAndEval(m_materials.data() + currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, &res,
+                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+      else
+        filmRoughSampleAndEval(m_materials.data() + currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
+                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+
+      //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
+      res.flags |= RAY_FLAG_WAVES_DIVERGED;
+
+      a_misPrev->ior = res.ior;
+    }
+    break;
     case MAT_TYPE_DIFFUSE:
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
@@ -358,6 +413,55 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
           const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
           conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
+        }
+
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+      }
+      break;
+      case MAT_TYPE_THIN_FILM: 
+      if(KSPEC_MAT_TYPE_THIN_FILM != 0)
+      {
+        const float3 alphaTex = to_float3(texColor);  
+        const float2 alpha = float2(m_materials[currMat.id].data[FILM_ROUGH_V], m_materials[currMat.id].data[FILM_ROUGH_U]);
+
+        if(!trEffectivelySmooth(alpha))
+        {
+          uint t_offset = as_uint(m_materials[currMat.id].data[FILM_THICKNESS_OFFSET]);
+          uint layers = as_uint(m_materials[currMat.id].data[FILM_LAYERS_COUNT]);
+          const bool spectral_mode = wavelengths[0] > 0.0f;
+          // sampling 3 wavelengths for naive RGB method
+          float4 wavelengths_spec = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(700.f, 525.f, 450.f, 0.0f);
+          float4 wavelengths_sample = spectral_mode? float4(wavelengths[0], 0.0f, 0.0f, 0.0f) : float4(525.f, 0.f, 0.f, 0.0f);
+          float extIOR = m_materials[currMat.id].data[FILM_ETA_EXT];
+          complex intIOR = complex(
+            SampleFilmsSpectrum(currMat.id, wavelengths_sample, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, layers - 1)[0],
+            SampleFilmsSpectrum(currMat.id, wavelengths_sample, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, layers - 1)[0]
+          );      
+          complex filmIOR = complex(
+            SampleFilmsSpectrum(currMat.id, wavelengths, FILM_ETA_OFFSET, FILM_ETA_SPECID_OFFSET, 0)[0],
+            SampleFilmsSpectrum(currMat.id, wavelengths, FILM_K_OFFSET, FILM_K_SPECID_OFFSET, 0)[0]
+          );
+
+          float thickness;
+          if (as_uint(m_materials[currMat.id].data[FILM_THICKNESS_MAP]) > 0u)
+          {
+            const uint texId  = m_materials[currMat.id].texid[2];
+            const float2 texCoord = mulRows2x4(m_materials[currMat.id].row0[2], m_materials[currMat.id].row1[2], tc);
+            const float4 thickness_val = m_textures[texId]->sample(texCoord);
+            float thickness_max = m_materials[currMat.id].data[FILM_THICKNESS_MAX];
+            float thickness_min = m_materials[currMat.id].data[FILM_THICKNESS_MIN];
+            thickness = (thickness_max - thickness_min) * thickness_val.x + thickness_min;
+          }
+          else
+          {
+            thickness = m_materials[currMat.id].data[FILM_THICKNESS];
+          }
+
+          bool precomp_flag = as_uint(m_materials[currMat.id].data[FILM_PRECOMP_FLAG]) > 0u;
+          uint precomp_offset = precomp_flag ? as_uint(m_materials[currMat.id].data[FILM_PRECOMP_OFFSET]) : 0;
+          filmRoughEval(m_materials.data() + currMat.id, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, l, v, n, tc, alphaTex, &currVal,
+                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
         }
 
         res.val += currVal.val * currMat.weight * bumpCosMult;

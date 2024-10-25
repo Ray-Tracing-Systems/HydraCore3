@@ -37,6 +37,14 @@
 bin-debug/
 bin-release/
 build_generated/
+build/
+shaders_generated/
 out/
 
 # Files
+integrator_pt_generated.cpp
+integrator_pt_generated.h
+integrator_pt_generated_ds.cpp
+integrator_pt_generated_init.cpp
+integrator_pt_temp.cpp
+include/Integrator_generated_ubo.h

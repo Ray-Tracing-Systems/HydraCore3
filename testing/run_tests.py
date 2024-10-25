@@ -539,6 +539,14 @@ if __name__ == '__main__':
                                            PATH_TO_HYDRA3_SCENS + "/Tests/Glass/0003/Images/quartz-prism-rough-0-cornell-mitsuba.png"],
                                            imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"]))
 
+  reqs.append( REQ_HX("mat_thin_film", [PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0000/Knob-spectral-1-layer-hydra3.xml",
+                                        PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0001/Knob-spectral-Cd-Au-hydra3.xml",
+                                        PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0002/Knob-spectral-8-layers-hydra3.xml"],
+                                       [PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0000/Images/Knob-spectral-1-layer-hydra3.png",
+                                        PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0001/Images/Knob-spectral-Cd-Au-hydra3.png",
+                                        PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0002/Images/Knob-spectral-8-layers-hydra3.png"],
+                                        imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"], is_spectral = True))
+
   reqs.append( REQ_HX("motion_blur", [PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0001/spectral-motion-blur-hydra3.xml",
                                       PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0002/spectral-motion-blur-hydra3.xml"],
                                      [PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0001/Images/spectral-motion-blur-hydra3.png",

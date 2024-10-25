@@ -126,6 +126,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* ray
                                     float4* accumColor,    float4* accumuThoroughput,
                                     RandomGen* gen, uint* rayFlags, MisData* misData, float* time) // 
 {
+
   if(tid >= m_maxThreadId)
     return;
 
