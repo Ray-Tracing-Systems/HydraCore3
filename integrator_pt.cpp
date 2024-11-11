@@ -60,47 +60,9 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
   const float xCoordNormalized = (fx + float(m_winStartX))/float(m_fbWidth);
   const float yCoordNormalized = (fy + float(m_winStartY))/float(m_fbHeight);
 
-  //const float xCoordNormalized = ( fx*0.5f + float(m_winStartX)*(1.0f + 0.5f))/float(m_fbWidth);
-  //const float yCoordNormalized = ( fy*1.0f + float(m_winStartY))/float(m_fbHeight);
-
   float3 rayDir = EyeRayDirNormalized(xCoordNormalized, yCoordNormalized, m_projInv);
   float3 rayPos = float3(0,0,0);
-  
-  if (m_camLensRadius > 0.0f)
-  {
-    const float tFocus         = m_camTargetDist / (-rayDir.z);
-    const float3 focusPosition = rayPos + rayDir*tFocus;
-    const float2 xy            = m_camLensRadius*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
-    rayPos.x += xy.x;
-    rayPos.y += xy.y;
-    rayDir = normalize(focusPosition - rayPos);
-  }
-  else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0)  
-  {
-    const float2 xy = 0.25f*m_physSize*float2(2.0f*xCoordNormalized - 1.0f, 2.0f*yCoordNormalized - 1.0f);
     
-    rayPos = float3(xy.x, xy.y, 0);
-    
-    const float2 rareSam  = LensRearRadius()*2.0f*MapSamplesToDisc(float2(pixelOffsets.z - 0.5f, pixelOffsets.w - 0.5f));
-    const float3 shootTo  = float3(rareSam.x, rareSam.y, LensRearZ());
-    const float3 ray_dirF = normalize(shootTo - rayPos);
-    
-    float cosTheta = std::abs(ray_dirF.z);
-    rayDir         = ray_dirF;
-    bool success   = TraceLensesFromFilm(rayPos, rayDir);
-    
-    if (!success) 
-    {
-      rayPos = float3(0,-10000000.0,0.0); // shoot ray under the floor
-      rayDir = float3(0,-1,0);
-    }
-    else
-    {
-      rayDir = float3(-1,-1,-1)*normalize(rayDir);
-      rayPos = float3(-1,-1,-1)*rayPos;
-    }
-  }
-
   EyeRayData res;
   {
     res.rayPos = rayPos;
@@ -109,10 +71,6 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     res.y      = y;
     res.timeSam = 0.0f;
     res.waveSam = 1.0f;
-    if(m_normMatrices2.size() != 0)
-      res.timeSam = GetRandomNumbersTime(tid, pGen);
-    if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-      res.waveSam = GetRandomNumbersSpec(tid, pGen);
     res.cosTheta = 1.0f;
   }
   
@@ -138,10 +96,7 @@ void Integrator::kernel_InitEyeRay2(uint tid, float4* rayPosAndNear, float4* ray
 
   EyeRayData r = SampleCameraRay(&genLocal, tid);
   
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-    *wavelengths = SampleWavelengths(r.waveSam, LAMBDA_MIN, LAMBDA_MAX);
-  else
-    *wavelengths = float4(0.0f);
+  *wavelengths = float4(0.0f);
 
   *time = r.timeSam;
  
@@ -164,9 +119,6 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
   *rayFlags          = 0;
   *misData           = makeInitialMisData();  
 
-  //const int x = int(tid) % m_winWidth;
-  //const int y = int(tid) / m_winHeight;
-
   const RayPosAndW rayPosData = in_rayPosAndNear[tid];
   const RayDirAndT rayDirData = in_rayDirAndFar[tid];
 
@@ -174,20 +126,7 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
   float3 rayDir = float3(rayDirData.direction[0], rayDirData.direction[1], rayDirData.direction[2]);
   transform_ray3f(m_worldViewInv, &rayPos, &rayDir);
 
-  if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
-  {
-    *wavelengths = float4(rayPosData.wave);
-    //const uint2 wavesXY = unpackXY1616(rayPosData.waves01);
-    //const uint2 wavesZW = unpackXY1616(rayDirData.waves23);
-    //const float scale = (1.0f/65535.0f)*(LAMBDA_MAX - LAMBDA_MIN);
-    //*wavelengths = float4(float(wavesXY[0])*scale + LAMBDA_MIN,
-    //                      float(wavesXY[1])*scale + LAMBDA_MIN,
-    //                      float(wavesZW[0])*scale + LAMBDA_MIN,
-    //                      float(wavesZW[1])*scale + LAMBDA_MIN);
-  }
-  else
-    *wavelengths = float4(0,0,0,0);
-
+  *wavelengths = float4(0,0,0,0);
   *rayPosAndNear = to_float4(rayPos, 0.0f);
   *rayDirAndFar  = to_float4(rayDir, FLT_MAX);
   *time          = rayDirData.time;
@@ -253,15 +192,6 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
     //
     hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
     hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
-
-    if(m_normMatrices2.size() > 0)
-    {
-      float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
-      float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
-
-      hitNorm = lerp(hitNorm, hitNorm2, time);
-      hitTang = lerp(hitTang, hitTang2, time);
-    }
 
     hitNorm = normalize(hitNorm);
     hitTang = normalize(hitTang);
@@ -555,38 +485,11 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   float4 tmpVal      = specSamples*m_camRespoceRGB;
   float3 rgb         = to_float3(tmpVal);
 
-  if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
-  {
-    const float4 waves   = *wavelengths;
-    const uint rayFlags2 = *rayFlags; 
-    rgb = SpectralCamRespoceToRGB(specSamples, waves, rayFlags2);
-  }
-
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   
-  if(channels == 1) // monochromatic spectral
-  {
-    // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-    out_color[y * m_winWidth + x] += specSamples.x * m_exposureMult;
-  } 
-  else if(channels <= 4) 
-  {
-    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
-    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
-    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
-  }
-  else // always spectral rendering
-  {
-    auto waves = (*wavelengths);
-    auto color = (*a_accumColor)*m_exposureMult;
-    for(int i=0;i<4;i++) {
-      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
-      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
-      const int offsetPixel = int(y)*m_winWidth + int(x);
-      const int offsetLayer = channelId*m_winWidth*m_winHeight;
-      out_color[offsetLayer + offsetPixel] += color[i];
-    }
-  }
+  out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+  out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+  out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
 
 }
 
