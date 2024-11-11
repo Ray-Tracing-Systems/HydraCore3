@@ -70,7 +70,8 @@ if(USE_VULKAN)
     set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_MACOS_MVK)
   endif()
 
-  add_subdirectory(external/volk)
+  add_subdirectory(external/volk
+                   external/volk/build)
 
   add_compile_definitions(USE_VOLK)
   add_compile_definitions(USE_VULKAN)
