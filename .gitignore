@@ -48,3 +48,8 @@ integrator_pt_generated_ds.cpp
 integrator_pt_generated_init.cpp
 integrator_pt_temp.cpp
 include/Integrator_generated_ubo.h
+
+CMakeCache.txt
+**/CMakeFiles/*
+Makefile
+cmake_install.cmake
