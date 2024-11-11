@@ -9,3 +9,8 @@ util/__pycache__
 util/venv
 
 run_comp.sh
+
+CMakeCache.txt
+**/CMakeFiles/*
+Makefile
+cmake_install.cmake
