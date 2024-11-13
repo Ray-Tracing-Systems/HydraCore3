@@ -13,7 +13,11 @@
 #include <utility>
 #include <cfloat>
 
-#include "CrossRT.h" // special include for ray tracing
+//#ifndef LITERT_RENDERER
+//#include "CrossRT.h" // special include for ray tracing
+//#else
+#include "../../ISceneObject.h" // special include for ray tracing
+//#endif
 #include "Image2d.h" // special include for textures
 
 #include "spectrum.h"
@@ -21,6 +25,7 @@
 
 using LiteImage::ICombinedImageSampler;
 
+#ifndef KERNEL_SLICER
 struct SceneInfo
 {
   int width;
@@ -33,6 +38,7 @@ struct SceneInfo
   uint64_t memGeom;
   uint64_t memTextures;
 };
+#endif
 
 class Integrator // : public DataClass, IRenderer
 {
