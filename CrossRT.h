@@ -56,6 +56,11 @@ struct ISceneObject
   virtual void ClearGeom() = 0; 
 
   /**
+  \brief Read given file and add geometry of a custom type to 'internal geometry library' and return geometry id
+  */
+  virtual uint32_t AddCustomGeom_FromFile(const char *geom_type_name, const char *filename, ISceneObject *fake_this) { return 0; }
+
+  /**
   \brief Add geometry of type 'Triangles' to 'internal geometry library' of scene object and return geometry id
   \param a_vpos3f       - input vertex data;
   \param a_vertNumber   - vertices number. The total size of 'a_vpos4f' array is assumed to be qual to 4*a_vertNumber

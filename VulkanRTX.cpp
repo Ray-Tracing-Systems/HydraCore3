@@ -34,7 +34,7 @@ VulkanRTX::VulkanRTX(VkDevice a_device, VkPhysicalDevice a_physDevice, uint32_t 
   conf.mesh_format     = MESH_FORMATS::MESH_4F;
 
   m_pScnMgr = std::make_shared<SceneManager>(a_device, a_physDevice, a_graphicsQId, a_pCopyHelper, conf);
-  m_pScnMgr->InitEmptyScene(a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, has_aabb ? a_maxPrimitivesPerMesh/2 : 10);
+  m_pScnMgr->InitEmptyScene(a_maxMeshes, a_maxTotalVertices, a_maxTotalPrimitives, a_maxPrimitivesPerMesh, has_aabb ? a_maxPrimitivesPerMesh : 10);
 }
 
 
