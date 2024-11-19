@@ -90,12 +90,14 @@ public:
   // internal functions further
   //
   /**
-  \brief In the case when single primitive is represented with several bounding boxes, aabbId --> primId map is needed
+  \brief In the case when single primitive is represented with several bounding boxes, (geomId,aabbId) --> primId map is needed
   */
   struct PrimitiveRemapTable
   {
-    const LiteMath::uint2* table;  ///<! primId = table[aabbId]
-    uint32_t tableSize;            ///<! count of elements in table array
+    const LiteMath::uint2* table; ///<! primId  = table[aabbId]
+    const uint32_t*    geomTable; ///<! primTag = geomTable[geomId]
+    uint32_t tableSize;           ///<! count of elements in table array
+    uint32_t geomSize;            ///<! count of elements in geomTable array
   };
 
   /**
@@ -108,6 +110,7 @@ protected:
 
   std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
 
+  std::vector<unsigned int>    m_geomTags;
   std::vector<LiteMath::uint2> m_remapTable;
   std::unordered_map<uint32_t, LiteMath::uint2> m_offsetByTag;
 

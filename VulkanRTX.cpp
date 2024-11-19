@@ -200,6 +200,10 @@ void RTX_Proxy::ClearGeom()
 
   m_remapTable.clear();
   m_offsetByTag.clear();
+  m_geomTags.clear();
+
+  m_remapTable.reserve(1000);
+  m_geomTags.reserve(1000);
 } 
 
 uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) 
@@ -207,6 +211,7 @@ uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
   uint32_t res = 0;
   for(auto impl : m_imps) 
     res = impl->AddGeom_Triangles3f(a_vpos3f, a_vertNumber, a_triIndices, a_indNumber, a_flags, vByteStride);
+  
   return res;
 }
                                
@@ -235,6 +240,10 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
     pRemapOffset->second.x += uint32_t(actualPrimsCount);
   }
 
+  const auto geomIdClean = geomId & (CRT_GEOM_MASK_AABB_BIT_RM);
+  assert(m_geomTags.size() == geomIdClean); // m_geomTags[geomIdClean] = a_typeId;
+  m_geomTags.push_back(a_typeId);           //
+
   return geomId;
 }
   
@@ -249,6 +258,8 @@ RTX_Proxy::PrimitiveRemapTable RTX_Proxy::GetAABBToPrimTable() const
   PrimitiveRemapTable res;
   res.table     = m_remapTable.data();
   res.tableSize = uint32_t(m_remapTable.size());
+  res.geomTable = m_geomTags.data();
+  res.geomSize  = uint32_t(m_geomTags.size());
   return res;
 }
 
