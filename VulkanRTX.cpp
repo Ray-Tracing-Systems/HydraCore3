@@ -110,7 +110,6 @@ void VulkanRTX::UpdateGeom_Triangles3f(uint32_t a_geomId, const float* a_vpos3f,
 
 void VulkanRTX::ClearScene()
 {
-  std::cout << "[VulkanRTX::ClearScene]: not implemented" << std::endl;
 } 
 
 uint32_t VulkanRTX::AddInstance(uint32_t a_geomId, const LiteMath::float4x4& a_matrix)
