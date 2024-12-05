@@ -294,6 +294,12 @@ public:
     m_worldViewInv = LiteMath::inverse4x4(m_worldView);
   }
   
+  void SetProj(const float4x4& a_mat) 
+  { 
+    m_proj = a_mat; 
+    m_projInv = LiteMath::inverse4x4(m_proj);
+  }
+  
   static constexpr uint32_t FB_COLOR    = 0;
   static constexpr uint32_t FB_DIRECT   = 1;
   static constexpr uint32_t FB_INDIRECT = 2;
