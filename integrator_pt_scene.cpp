@@ -262,7 +262,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     }
     num_instances++;
   }
-
+  #ifdef _DEBUG
   std::cout << "Scene analysis:\n" 
             << "\tTotal meshes = "     << num_meshes << "\n"
             << "\tTotal instances = "  << num_instances << "\n"
@@ -271,6 +271,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
             << "\tTotal lights = "     << num_lights << "\n"
             << "\tTotal materials = "  << num_materials << "\n"
             << "\tTotal textures = "   << num_textures << "\n";
+  #endif
 
 
   (*pSceneInfo) = g_lastSceneInfo;
@@ -891,6 +892,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
 
+#ifdef _DEBUG
   std::cout << "features = {";
   bool firstFeature = true;
   for(size_t i=0; i<m_enabledFeatures.size();i++)
@@ -905,6 +907,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
+#endif
 
   LoadSceneEnd();
   return true;
