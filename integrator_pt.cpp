@@ -194,6 +194,18 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
   *gen           = m_randomGens[RandomGenId(tid)];
 }
 
+float3 decode_normal(float2 e)
+{
+  float3 v = float3(e.x, e.y, 1.0f - std::abs(e.x) - std::abs(e.y));
+  if (v.z < 0) 
+  {
+    float vx = v.x;
+    v.x = (1.0f - std::abs(v.y)) * ((v.x >= 0.0) ? +1.0f : -1.0f);
+    v.y = (1.0f - std::abs( vx)) * ((v.y >= 0.0) ? +1.0f : -1.0f);
+  }
+  return normalize(v);
+}
+
 
 void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
                                   float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
@@ -319,13 +331,13 @@ const uint32_t type = (hit.geomId >> SH_TYPE);
       const float2 tc = float2(0,0);
 
       //normals for SDFs are calculated along with the hit calculation
-      const float3 n(hit.coords[2], hit.coords[3], sqrt(max(0.0f, 1-hit.coords[2]*hit.coords[2] - hit.coords[3]*hit.coords[3])));
+      const float3 n = decode_normal(float2(hit.coords[2], hit.coords[3]));
     
       const float len = length(n);
       const float3 hitNorm = len > 1e-9f ? n / len : float3(1.0f, 0.0f, 0.0f);
 
       //it is not always good, but we do not expect that tangent will be used at all
-      const float3 hitTang = float3(0.0f, 1.0f, 0.0f);
+      const float3 hitTang = normalize(cross(hitNorm, float3(0.0f, 1.0f, 0.0f)));
 
       *rayFlags              = packMatId(currRayFlags, matId);
       *out_hit1              = to_float4(hitPos,  tc.x); 
