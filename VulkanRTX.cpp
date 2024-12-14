@@ -316,3 +316,8 @@ bool RTX_Proxy::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::flo
   return m_imps[0]->RayQuery_AnyHit(posAndNear, dirAndFar); 
 }
 
+uint32_t RTX_Proxy::AddCustomGeom_FromFile(const char *geom_type_name, const char *filename, ISceneObject *fake_this)
+{
+  return m_imps[0]->AddCustomGeom_FromFile(geom_type_name, filename, fake_this);
+}
+
