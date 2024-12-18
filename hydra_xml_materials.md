@@ -3,7 +3,35 @@ Hydra Renderer uses XML representation for scenes. Older (used by [HydraCore2](h
 
 Here we will mainly describe scene components specific for HydraCore3.
 
-## Material models
+## Introduction
+
+In HydraCore3, we have implemented the core material models that align with physically accurate material models in rendering. Our implementation corresponds with similar models in physically correct rendering systems such as PBRT4 and Mitsuba3 (average PNSR is 40-45). 
+
+We categorize material models into (1) a universal material model and (2) specific materials. 
+
+1. The **Universal Material Model (UMM)** is a construct composed of individual BRDF components to represent the most commonly encountered materials characterized solely by reflection. It encompasses traditional capabilities such as diffuse reflection, conductors, dielectrics and coating. However, the basic components used in the universal material model can also be utilized as standalone materials.
+
+2. Specific material models, such as those for glass, thin films, hair, subsurface scattering and other, are intended for accurate modeling of particular phenomena.
+
+Please note that some BRDFs made only for RGB mode while others works correctly only for spectral renderinhg. If you are working with the universal material model, you must configure it **differently depending on whether the scene is spectral or not** (fig.1). Fortunately, we strive to implement spectrum upsampling automatically during scene loading if the rendering is initiated with the --spectral flag.
+
+### Universal Material Model (UMM)
+
+![Universal Material model setup in HydraCore3](doc_images/umm.jpg)
+*Figure 1: Universal Material model setup in HydraCore3*
+
+There are 3 ways (i.e. 3 levels of accurancy) of setting UMM model in HydraCore3. Each next level is a more accurate physical simulation of the same physical phenomena, so in general they does same thing. However with increasing accuracy the computational complexity is also increases.
+
+1. (Level 1) In RGB mode you can set up **HydraGLTF** model which is itself a simple and cheap physically correct analogue of gltf spec. The HydraGLTF model in fact is a blend of coated diffuse (called smooth plastic in Mitsuba 3) and Shlick-based metal. This is the most common situation for so called PBR/GLTF scenes (left part of fig. 1). The HydraGLTF model itself accounts for internal reflection between Lambert substrate and coating layer (with subsequent energy loss, fig.2). However this energly loss could be inaccurate when the coating layer became significantly rough (roughness > 0.75 or glossiness < 0.25). 
+
+2. (Level 2) In the case when you have rough coating layer, it is recommended to make manual blend of Plastic material (which corresponds to Mitsuba3 "Rough Plastic") with metallic compoment of HydraGLTF by setting metalness parameter equal to 1 in HydraGLTF (middle part of fig. 1).
+
+3. (Level 3) For rendering in spectrum you shoud replace metal component (which is modelled with HydraGLTF on level 2) with Conductor material (right part of fig. 1). This is due to the fact that the color of metal we observe is actually determined by its complex refractive index (and consequently its reflectivity), which varies with wavelength. Therefore, strictly speaking, if you want to accurately model metals, you need to simulate light transport in the spectral domain.
+
+<br><img src="doc_images/gltf_interreflections.jpg" alt="" width="50%"><br>
+*Figure 2: Accounted interreflections and energy loss in UMM components (HydraGLTF and Plastic)*
+
+## General xml scheme
 All materials in the scene are specified inside ```<materials_lib>``` parent node as ```<material>``` child nodes. Material type is set using *type* attribute.
 
 For example:
@@ -46,7 +74,9 @@ For example:
 </materials_lib>
 ```
 
-HydraCore3 impelements several material models:
+## List of materials
+
+HydraCore3 implements several material models:
 * lambertian diffuse
 * conductor 
 * dielectric with ideal reflection and refraction (glass)
@@ -54,7 +84,50 @@ HydraCore3 impelements several material models:
 * blend material (allows to combine two materials using a mask)
 * gltf-like material - mix of metallic, dielectric and diffuse reflections
 
-### Diffuse
+### GLTF / HydraGLTF [RGB]
+
+| Node | Attributes | Texture | Spectrum |
+| --- | --- | --- | --- |
+| color  | `val` - base color, 1, 3 or 4 floats | yes | no |
+| metalness   | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
+| coat        | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
+| glossiness  | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
+| fresnel_ior | `val` - float, possible values - 1.0 .. 50.0 | no | no |
+
+Examples:
+
+```
+<material id="4" name="plastic" type="gltf">
+  <color val="0.1 0.27 0.36" />
+  <metalness val = "0.0" />
+  <coat val = "1.0" />
+  <glossiness val= "0.75"/>
+  <fresnel_ior val="1.5" />
+</material>
+```
+
+In HydraGLTF you may pack several single-chennal textures to one RGB texture in fixed order (glossiness in red channel, metalness in green and coat strength in blue): 
+
+```
+<material id="4" name="plastic" type="gltf">
+  <color val="0.6 0.6 0.1" />
+  <glossiness_metalness_coat val="1.0">
+    <texture id="2" type="texref" ... />
+  </glossiness_metalness_coat> 
+  <fresnel_ior val="1.5" />
+</material>
+```
+
+![roughness](doc_images/gltf_roughness.jpg)
+*Figure 3: Various roughness values in HydraGLTF component of material. If glosiness set, glosiness equals to 1.0 - roughness*
+
+![metalness](doc_images/gltf_metalness.jpg)
+*Figure 4: Various metalness values in HydraGLTF component of material:*
+
+![coat](doc_images/gltf_coat.jpg)
+*Figure 5: Various coat values (coat strength) parameter in HydraGLTF component of material:*
+
+### Diffuse [RGB, Spectral]
 
 | Node | Attributes | Texture | Spectrum |
 | --- | --- | --- | --- |
@@ -88,7 +161,7 @@ Examples:
 </materials_lib>
 ```
 
-### Conductor
+### Conductor [Spectral]
 
 Models conductive materials with complex Fresnel IOR: eta (refractive index) and k (extinction coefficient). 
 Generally, should be used in *spectral* rendering mode (pass `--spectral` in command line). In RGB mode you can use *reflectance* parameter to specify color (not physically correct).
@@ -145,7 +218,7 @@ Examples:
 </materials_lib>
 ```
 
-### Ideal dielectric (glass)
+### Ideal dielectric (glass) [RGB, Spectral]
 
 Material with ideal specular reflection and refraction. Can be used with spectral refraction coefficient.
 
@@ -171,7 +244,7 @@ Examples:
 </materials_lib>
 ```
 
-### Plastic
+### Plastic [RGB, Spectral]
 
 This material model was ported from Mitsuba3 render. Essentially it represents a diffuse surface coated a thin dielectric layer.
 
@@ -206,7 +279,7 @@ Examples:
 </materials_lib>
 ```
 
-### Blend
+### Blend [RGB, Spectral]
 
 Meta-material used to combine two child materials (which can also be blends) using a mask.
 Materials are combined as:
@@ -253,7 +326,7 @@ Examples:
 </materials_lib>
 ```
 
-### Thin film
+### Thin film [Spectral]
 
 Models material consisting of thin layers with complex Fresnel IOR: eta (refractive index) and k (extinction coefficient). 
 Generally, should be used in *spectral* rendering mode (pass `--spectral` in command line). In RGB mode colors are preintegrated for D65 source.
@@ -340,3 +413,7 @@ Examples:
   </material>
 </materials_lib>
 ```
+
+![coat](doc_images/thinfilmexamples.jpg)
+*Figure 6: Various examples of thin film material*
+
