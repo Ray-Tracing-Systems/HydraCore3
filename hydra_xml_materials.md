@@ -27,9 +27,11 @@ There are 3 ways (i.e. 3 levels of accurancy) of setting UMM model in HydraCore3
 2. (Level 2) In the case when you have rough coating layer, it is recommended to make manual blend of Plastic material (which corresponds to Mitsuba3 "Rough Plastic") with metallic compoment of HydraGLTF by setting metalness parameter equal to 1 in HydraGLTF (middle part of fig. 1).
 
 3. (Level 3) For rendering in spectrum you shoud replace metal component (which is modelled with HydraGLTF on level 2) with Conductor material (right part of fig. 1). This is due to the fact that the color of metal we observe is actually determined by its complex refractive index (and consequently its reflectivity), which varies with wavelength. Therefore, strictly speaking, if you want to accurately model metals, you need to simulate light transport in the spectral domain.
-
+<div style="display: flex; justify-content: center;">
 <br><img src="doc_images/gltf_interreflections.jpg" alt="" width="50%"><br>
-*Figure 2: Accounted interreflections and energy loss in UMM components (HydraGLTF and Plastic)*
+</div>
+
+*Figure 2: Accounted interreflections and energy loss in UMM components (HydraGLTF and Plastic). We support a single smooth coat in the HydraGLTF material (level 1) and one rough coat in the Plastic material (levels 2 and 3). Currently, we do not support multilayer rough coats like PBRT 4 (let's call it level 4). However, in HydraCore3, there is a separate thin film material that models multilayer smooth coat accounting for interference.*
 
 ## General xml scheme
 All materials in the scene are specified inside ```<materials_lib>``` parent node as ```<material>``` child nodes. Material type is set using *type* attribute.
