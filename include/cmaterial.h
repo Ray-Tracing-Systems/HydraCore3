@@ -519,7 +519,7 @@ static inline float3 trSample(float3 wo, float2 rands, float2 alpha)
 
   // Warp hemispherical projection for visible normal sampling
   float h = safe_sqrt(1 - p.x * p.x);
-  p.y = lerp(h, p.y, (1 + wh.z) / 2);
+  p.y = LiteMath::lerp(h, p.y, (1 + wh.z) / 2);
 
   // Reproject to hemisphere and transform normal to ellipsoid configuration
   float pz = safe_sqrt(1.0f - dot(p, p));
@@ -722,7 +722,7 @@ static inline float lerp_gather(const float *data, float x, size_t size)
   float v0 = data[index];
   float v1 = data[index + 1];
 
-  return lerp(v0, v1, x - float(index));
+  return LiteMath::lerp(v0, v1, x - float(index));
 }
 
 static inline float lerp_gather_2d(const float *data, float x, float y, size_t size1, size_t size2)
@@ -734,10 +734,10 @@ static inline float lerp_gather_2d(const float *data, float x, float y, size_t s
 
   float alpha = x - float(index1);
   float beta = y - float(index2);
-  float v0 = lerp(data[index1 * size2 + index2], data[(index1 + 1) * size2 + index2], alpha);
-  float v1 = lerp(data[index1 * size2 + index2 + 1], data[(index1 + 1) * size2 + index2 + 1], alpha);
+  float v0 = LiteMath::lerp(data[index1 * size2 + index2], data[(index1 + 1) * size2 + index2], alpha);
+  float v1 = LiteMath::lerp(data[index1 * size2 + index2 + 1], data[(index1 + 1) * size2 + index2 + 1], alpha);
 
-  return lerp(v0, v1, beta);
+  return LiteMath::lerp(v0, v1, beta);
 }
 
 
@@ -859,7 +859,7 @@ static inline float2 sample_visible_11(float cos_theta_i, float2 samp)
   float2 p = square_to_uniform_disk_concentric(samp);
 
   float s = 0.5f * (1.f + cos_theta_i);
-  p.y = lerp(safe_sqrt(1.f - p.x * p.x), p.y, s);
+  p.y = LiteMath::lerp(safe_sqrt(1.f - p.x * p.x), p.y, s);
 
   // Project onto chosen side of the hemisphere
   float x = p.x, y = p.y,
