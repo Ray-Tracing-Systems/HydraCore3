@@ -13,7 +13,7 @@ We categorize material models into (1) a universal material model and (2) specif
 
 2. Specific material models, such as those for glass, thin films, hair, subsurface scattering and other, are intended for accurate modeling of particular phenomena.
 
-Please note that some BRDFs made only for RGB mode while others works correctly only for spectral renderinhg. If you are working with the universal material model, you must configure it **differently depending on whether the scene is spectral or not** (fig.1). Fortunately, we strive to implement spectrum upsampling automatically during scene loading if the rendering is initiated with the --spectral flag.
+Please note that some BRDFs made only for RGB mode while others works correctly only for spectral rendering. If you are working with the universal material model, you must configure it **differently depending on whether the scene is spectral or not** (fig.1). Fortunately, we strive to implement spectrum upsampling automatically during scene loading if the rendering is initiated with the --spectral flag.
 
 ### Universal Material Model (UMM)
 
@@ -90,7 +90,7 @@ HydraCore3 implements several material models:
 
 | Node | Attributes | Texture | Spectrum |
 | --- | --- | --- | --- |
-| color  | `val` - base color, 1, 3 or 4 floats | yes | no |
+| color  | `val` - base color, 3 floats | yes | no |
 | metalness   | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
 | coat        | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
 | glossiness  | `val` - float, possible values - 0.0 .. 1.0 | yes | no |
