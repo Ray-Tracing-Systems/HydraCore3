@@ -791,6 +791,13 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       uint32_t mat_id = mIter->attribute(L"mat_id").as_int(0);
       m_matIdByPrimId.push_back(mat_id);
       m_pAccelStruct->AddCustomGeom_FromFile(name.c_str(), dir.c_str(), m_pAccelStruct.get());
+
+      //we insert one fake triangle for each custom geometry, because m_matIdOffsets is also used to 
+      //index from m_triIndices list, i.e. we assume to have as many material Ids as triangles in total
+      //this fake triangle should never be accessed during rendering
+      m_triIndices.push_back(0);
+      m_triIndices.push_back(0);
+      m_triIndices.push_back(0);
     }
     mIter++;
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
