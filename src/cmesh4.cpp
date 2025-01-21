@@ -1,4 +1,4 @@
-#include "cmesh4.h"
+#include <LiteScene/cmesh4.h>
 
 #include <cmath>
 #include <cfloat>

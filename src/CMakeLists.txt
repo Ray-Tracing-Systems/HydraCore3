@@ -21,6 +21,8 @@ add_library(${MODULE_NAME}
     ${MODULE_SOURCES}
 )
 
+target_include_directories(${MODULE_NAME} PUBLIC ${LITESCENE_PROJECT_ROOT}/include)
+
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-error=unused-variable)
 
 target_link_libraries(${MODULE_NAME}

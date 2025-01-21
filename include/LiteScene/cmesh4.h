@@ -1,5 +1,5 @@
-#ifndef CMESH4_GEOM_H
-#define CMESH4_GEOM_H
+#ifndef INCLUDE_LITESCENE_CMESH4_GEOM_H_
+#define INCLUDE_LITESCENE_CMESH4_GEOM_H_
 
 #include <vector>
 #include <stdexcept>
