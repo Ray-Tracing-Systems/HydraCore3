@@ -1,6 +1,6 @@
 #ifndef INCLUDE_LITESCENE_SCENE_H_
 #define INCLUDE_LITESCENE_SCENE_H_
-#include <LiteScene/sceneobj.h>
+#include <LiteScene/material.h>
 #include <LiteScene/mesh.h>
 #include <vector>
 #include <string>
@@ -21,7 +21,7 @@ private:
     std::vector<SceneObject *> m_light_sources;
     std::vector<SceneObject *> m_spectra;
     std::vector<SceneObject *> m_textures;
-    std::vector<SceneObject *> m_materials;
+    std::vector<Material *> m_materials;
     std::vector<Mesh> m_geometry;
 };
 
