@@ -1,0 +1,5 @@
+#ifndef INCLUDE_LITESCENE_SCENEREF_H_
+#define INCLUDE_LITESCENE_SCENEREF_H_
+#include 
+
+#endif

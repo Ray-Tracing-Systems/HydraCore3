@@ -5,6 +5,13 @@
 
 namespace ls {
 
+template<typename T>
+struct SceneReference
+{
+    uint32_t id;
+};
+
+
 class SceneObject
 {
 public:
@@ -19,7 +26,6 @@ protected:
     uint32_t m_id;
     std::string m_name;
 };
-    
 
 }
 #endif

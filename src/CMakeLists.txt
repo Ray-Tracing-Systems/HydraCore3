@@ -1,18 +1,23 @@
 enable_language(CXX)
 enable_language(C)
 
-add_library(litescene_app_compile_options INTERFACE)
-target_link_libraries(litescene_app_compile_options INTERFACE litescene_project_compile_options)
-target_compile_options(litescene_app_compile_options INTERFACE -m64)
+add_library(litescene_lib_compile_options INTERFACE)
+target_link_libraries(litescene_lib_compile_options INTERFACE litescene_project_compile_options)
+target_compile_options(litescene_lib_compile_options INTERFACE -m64)
+
+
+if(LITESCENE_ENABLE_GLTF)
+    target_compile_definitions(litescene_lib_compile_options INTERFACE LITESCENE_ENABLE_GLTF)
+endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(litescene_app_compile_options INTERFACE -O0 -g)
+    target_compile_options(litescene_lib_compile_options INTERFACE -O0 -g)
 else()
-    target_compile_options(litescene_app_compile_options INTERFACE -O1)
+    target_compile_options(litescene_lib_compile_options INTERFACE -O1)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_options(litescene_app_compile_options INTERFACE -g)
+    target_compile_options(litescene_lib_compile_options INTERFACE -g)
 endif()
 
 include(properties.cmake)
@@ -26,5 +31,5 @@ target_include_directories(${MODULE_NAME} PUBLIC ${LITESCENE_PROJECT_ROOT}/inclu
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-error=unused-variable)
 
 target_link_libraries(${MODULE_NAME}
-    ${MODULE_LIBS} litescene_app_compile_options 
+    ${MODULE_LIBS} litescene_lib_compile_options 
 )
