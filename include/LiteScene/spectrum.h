@@ -5,11 +5,11 @@
 namespace ls
 {
 
-class Spectrum : public SceneObject
-{
-public:
-    using SceneObject::SceneObject;
-};
+    class Spectrum : public SceneObject
+    {
+    public:
+        using SceneObject::SceneObject;
+    };
 
 }
 

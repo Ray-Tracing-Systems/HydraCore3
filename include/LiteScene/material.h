@@ -1,7 +1,6 @@
 #ifndef INCLUDE_LITESCENE_MATERIAL_H_
 #define INCLUDE_LITESCENE_MATERIAL_H_
 
-
 #include <LiteScene/sceneobj.h>
 #include <LiteScene/texture.h>
 #include <LiteScene/spectrum.h>
@@ -14,178 +13,181 @@
 namespace ls {
 
 
-enum class MaterialType {
-    GLTF,
-    DIFFUSE,
-    CONDUCTOR,
-    DIELECTRIC,
-    PLASTIC,
-    BLEND,
-    THIN_FILM
-};
-
-
-class Material : public SceneObject
-{
-public:
-    using SceneObject::SceneObject;
-
-
-    virtual ~Material() = default;
-    virtual MaterialType type() const = 0;
-};
-
-
-enum class AddressMode { CLAMP, WRAP, MIRROR, BORDER, MIRROR_ONCE, WRAP; }
-struct TextureInstance
-{
-    SceneReference<Texture> texture;
-    AddressMode addressing_mode_u;
-    AddressMode addressing_mode_v;
-    LiteMath::float4x4 matrix;
-    //TODO
-};
-
-
-class GltfMaterial : public Material
-{
-public:
-    std::variant<LiteMath::float3, TextureInstance> color;
-    std::variant<float, TextureInstance> metalness;
-    std::variant<float, TextureInstance> coat;
-    std::variant<float, TextureInstance> glossiness;
-    std::variant<float, TextureInstance> fresnel_ior;
-
-    using SceneObject::SceneObject;
-
-    MaterialType type() const override
+    enum class MaterialType 
     {
-        return MaterialType::GLTF;
-    }
-};
+        GLTF,
+        DIFFUSE,
+        CONDUCTOR,
+        DIELECTRIC,
+        PLASTIC,
+        BLEND,
+        THIN_FILM
+    };
 
-class DiffuseMaterial : public Material
-{
-public:
-    enum class BSDF { LAMBERT };
 
-    std::variant<LiteMath::float3, TextureInstance, SceneReference<Spectrum>> reflectance;
-    BSDF bsdf_type;
-
-    using SceneObject::SceneObject;
-
-    MaterialType type() const override
+    class Material : public SceneObject
     {
-        return MaterialType::DIFFUSE;
-    }
-};
+    public:
+        using SceneObject::SceneObject;
 
-struct MiRoughness
-{
-    float alpha_u;
-    float alpha_v;
-};
 
-class ConductorMaterial : public Material
-{
-public:
-    enum class BSDF { GGX };
-    BSDF bsdf_type;
+        virtual ~Material() = default;
+        virtual MaterialType type() const = 0;
+    };
 
-    std::variant<MiRoughness, TextureInstance> alpha;
-    std::variant<float, SceneReference<Spectrum>> eta;
-    std::variant<float, SceneReference<Spectrum>> k;
-    std::optional<LiteMath::float3> reflectance;
 
-    using SceneObject::SceneObject;
-
-    MaterialType type() const override
+    enum class AddressMode { CLAMP, WRAP, MIRROR, BORDER, MIRROR_ONCE, WRAP; }
+    struct TextureInstance
     {
-        return MaterialType::CONDUCTOR;
-    }
-};
+        SceneReference<Texture> texture;
+        AddressMode addressing_mode_u;
+        AddressMode addressing_mode_v;
+        LiteMath::float4x4 matrix;
+        //TODO
+    };
 
-class DielectricMaterial : public Material
-{
-public:
-    std::variant<float, SceneReference<Spectrum>> int_ior;
-    float ext_ior;
 
-    using SceneObject::SceneObject;
-
-    MaterialType type() const override
+    class GltfMaterial : public Material
     {
-        return MaterialType::DIELECTRIC;
-    }
-};
+    public:
+        std::variant<LiteMath::float3, TextureInstance> color;
+        std::variant<float, TextureInstance> metalness;
+        std::variant<float, TextureInstance> coat;
+        std::variant<float, TextureInstance> glossiness;
+        std::variant<float, TextureInstance> fresnel_ior;
 
-class PlasticMaterial : public Material
-{
-public:
-    std::variant<LiteMath::float4, TextureInstance, SceneReference<Spectrum>> reflectance;
-    float int_ior;
-    float ext_ior;
-    float alpha;
-    bool nonlinear;
+        using SceneObject::SceneObject;
 
-    using SceneObject::SceneObject;
+        MaterialType type() const override
+        {
+            return MaterialType::GLTF;
+        }
+    };
 
-    MaterialType type() const override
+    class DiffuseMaterial : public Material
     {
-        return MaterialType::PLASTIC;
-    }
-};
+    public:
+        enum class BSDF { LAMBERT };
 
+        std::variant<LiteMath::float3, TextureInstance, SceneReference<Spectrum>> reflectance;
+        BSDF bsdf_type;
 
-class ThinFilmMaterial : public Material
-{
-public:
-    struct Layer
+        using SceneObject::SceneObject;
+
+        MaterialType type() const override
+        {
+            return MaterialType::DIFFUSE;
+        }
+    };
+
+    struct MiRoughness
     {
+        float alpha_u;
+        float alpha_v;
+    };
+
+    class ConductorMaterial : public Material
+    {
+    public:
+        enum class BSDF { GGX };
+        BSDF bsdf_type;
+
+        std::variant<MiRoughness, TextureInstance> alpha;
         std::variant<float, SceneReference<Spectrum>> eta;
         std::variant<float, SceneReference<Spectrum>> k;
-        float thickness;
+        std::optional<LiteMath::float3> reflectance;
+
+        using SceneObject::SceneObject;
+
+        MaterialType type() const override
+        {
+            return MaterialType::CONDUCTOR;
+        }
     };
-    struct ThicknessMap 
+
+    class DielectricMaterial : public Material
     {
-        float min;
-        float max;
-        TextureInstance texture;
+    public:
+        std::variant<float, SceneReference<Spectrum>> int_ior;
+        float ext_ior;
+
+        using SceneObject::SceneObject;
+
+        MaterialType type() const override
+        {
+            return MaterialType::DIELECTRIC;
+        }
     };
-    enum class BSDF { GGX };
 
-
-    BSDF bsdf_type;
-    std::variant<MiRoughness, TextureInstance> alpha;
-    std::variant<float, SceneReference<Spectrum>> eta;
-    std::variant<float, SceneReference<Spectrum>> k;
-    float ext_ior;
-    std::optional<ThicknessMap> thickness_map;
-    bool transparent;
-
-    std::vector<Layer> layers;
-
-    using SceneObject::SceneObject;
-
-    MaterialType type() const override
+    class PlasticMaterial : public Material
     {
-        return MaterialType::THIN_FILM;
-    }
-};
+    public:
+        std::variant<LiteMath::float4, TextureInstance, SceneReference<Spectrum>> reflectance;
+        float int_ior;
+        float ext_ior;
+        float alpha;
+        bool nonlinear;
 
-class BlendMaterial : public Material
-{
-public:
-    float weight;
-    SceneReference<Material> bsdf1;
-    SceneReference<Material> bsdf2;
+        using SceneObject::SceneObject;
 
-    using SceneObject::SceneObject;
+        MaterialType type() const override
+        {
+            return MaterialType::PLASTIC;
+        }
+    };
 
-    MaterialType type() const override
+
+    class ThinFilmMaterial : public Material
     {
-        return MaterialType::BLEND;
-    }
-};
+    public:
+        struct Layer
+        {
+            std::variant<float, SceneReference<Spectrum>> eta;
+            std::variant<float, SceneReference<Spectrum>> k;
+            float thickness;
+        };
+        struct ThicknessMap 
+        {
+            float min;
+            float max;
+            TextureInstance texture;
+        };
+        enum class BSDF { GGX };
+
+
+        BSDF bsdf_type;
+        std::variant<MiRoughness, TextureInstance> alpha;
+        std::variant<float, SceneReference<Spectrum>> eta;
+        std::variant<float, SceneReference<Spectrum>> k;
+        float ext_ior;
+        std::optional<ThicknessMap> thickness_map;
+        bool transparent;
+
+        std::vector<Layer> layers;
+
+        using SceneObject::SceneObject;
+
+        MaterialType type() const override
+        {
+            return MaterialType::THIN_FILM;
+        }
+    };
+
+    class BlendMaterial : public Material
+    {
+    public:
+        float weight;
+        SceneReference<Material> bsdf1;
+        SceneReference<Material> bsdf2;
+
+        using SceneObject::SceneObject;
+
+        MaterialType type() const override
+        {
+            return MaterialType::BLEND;
+        }
+    };
+
+}
 
 #endif

@@ -6,22 +6,14 @@
 
 namespace ls {
 
-class Texture : public SceneObject
-{
-public:
-    using SceneObject::SceneObject;
+    class Texture : public SceneObject
+    {
+    public:
+        using SceneObject::SceneObject;
 
-    std::shared_ptr<LiteImage::ICombinedImageSampler> sampler;
-};
+        std::shared_ptr<LiteImage::ICombinedImageSampler> sampler;
+    };
 
-enum class AddressMode { CLAMP, WRAP, MIRROR, BORDER, MIRROR_ONCE, WRAP; }
-
-struct TextureInstance
-{
-    SceneReference<Texture> texture;
-    AddressMode addressing_mode_u;
-    AddressMode addressing_mode_v;
-    
-};
+}
 
 #endif
