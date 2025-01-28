@@ -1,5 +1,5 @@
-#ifndef SRC_LITESCENE_INTERNAL_COMMON_FORMAT_H
-#define SRC_LITESCENE_INTERNAL_COMMON_FORMAT_H
+#ifndef SRC_LITESCENE_FORMAT_H_
+#define SRC_LITESCENE_FORMAT_H_
 #include <cstdio>
 #include <string>
 #include <iostream>

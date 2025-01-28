@@ -10,7 +10,7 @@ if(LITESCENE_ENABLE_GLTF)
     target_compile_definitions(litescene_lib_compile_options INTERFACE LITESCENE_ENABLE_GLTF)
 endif()
 if(LITESCENE_ENABLE_LOGGING)
-    #target_compile_definitions(litescene_lib_compile_options INTERFACE LITESCENE_ENABLE_LOGGING)
+    target_compile_definitions(litescene_lib_compile_options INTERFACE LITESCENE_ENABLE_LOGGING)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
