@@ -6,13 +6,12 @@
 #include <LiteScene/texture.h>
 #include <LiteScene/material.h>
 #include <LiteScene/geometry.h>
-
+#include <LiteScene/instances.h>
 #include <vector>
 #include <memory>
 #include <string>
 
 namespace ls {
-
 
     class HydraScene
     {
@@ -51,12 +50,20 @@ namespace ls {
         std::vector<Texture *> textures;
         std::vector<Material *> materials;
         std::vector<Geometry *> geometry;
-
+        std::vector<SceneInstance *> scene_instances;
     };
+
+    constexpr uint32_t SUCCESS = 0;
+    constexpr uint32_t ERROR_XML_LOADER = 1;
+    constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 2;
+
+
+
+
 
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_lightsource(const std::string &name, Args &&...args)
+    T *HydraScene::make_lightsource(const std::wstring &name, Args &&...args)
     {
         T *obj = new T(std::forward<Args>(args));
         light_sources.push_back(obj);
@@ -66,7 +73,7 @@ namespace ls {
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_spectrum(const std::string &name, Args &&...args)
+    T *HydraScene::make_spectrum(const std::wstring &name, Args &&...args)
     {
         T *obj = new T(std::forward<Args>(args));
         spectra.push_back(obj);
@@ -76,7 +83,7 @@ namespace ls {
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_texture(const std::string &name, Args &&...args)
+    T *HydraScene::make_texture(const std::wstring &name, Args &&...args)
     {
         T *obj = new T(std::forward<Args>(args));
         textures.push_back(obj);
@@ -86,7 +93,7 @@ namespace ls {
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_material(const std::string &name, Args &&...args)
+    T *HydraScene::make_material(const std::wstring &name, Args &&...args)
     {
         T *obj = new T(std::forward<Args>(args));
         materials.push_back(obj);
@@ -96,7 +103,7 @@ namespace ls {
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_geometry(const std::string &name, Args &&...args)
+    T *HydraScene::make_geometry(const std::wstring &name, Args &&...args)
     {
         T *obj = new T(std::forward<Args>(args));
         geometry.push_back(obj);

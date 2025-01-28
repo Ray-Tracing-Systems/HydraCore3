@@ -2,6 +2,7 @@
 #define INCLUDE_LITESCENE_LIGHT__SOURCE_H_
 #include <LiteScene/sceneobj.h>
 #include <LiteScene/material.h>
+#include <optional>
 
 namespace ls
 {
@@ -14,17 +15,26 @@ namespace ls
 
     enum class LightSourceDist
     {
-        LAMBERT, UNIFORM /* aka "omni", aka "ies" */, SPOT;
+        LAMBERT, OMNI /* aka "omni", aka "ies" */, SPOT;
+    };
+
+    struct IES
+    {
+        std::string file_path;
+        std::optional<LiteMath::float4x4> matrix;
+        bool point_area;
     };
 
     class LightSource : public SceneObject
     {
     public:
-        bool visible;
-        LightSourceDist distribution;
-        SceneReference<Material> material;
+       // bool visible;
+        LightSourceDist distribution = LightSourceDist::LAMBERT;
+        Material *material;
         ColorHolder color; //aka intensity.color
         float power; // aka intensity.multiplier
+        std::optional<float> radius;
+        std::optional<IES> ies;
 
         LightSource(LightSourceType type)
             : m_type(type) {}
@@ -39,11 +49,29 @@ namespace ls
     class LightSourceSky : public LightSource
     {
     public:
-        std::optional<SceneReference<Texture>> texture, camera_back;
+        std::optional<Texture *> texture, camera_back;
 
         LightSourceSky()
-            : LightSource(LightSourceType::SKY) {}
+            : LightSource(LightSourceType::SKY) { distribution = LightSourceDist::OMNI; }
     };
+
+    struct SpotProj
+    {
+        float fov;
+        float nearClipPlane;
+        float farClipPlane;
+        std::optional<Texture *> texture;
+    };
+
+    class LightSourceSpot : public LightSource
+    {
+    public:
+        float angle1, angle2;
+        std::optional<SpotProj> projective;
+
+        LightSourceSpot()
+            : LightSource(LightSourceType::POINT) { distribution = LightSourceDist::SPOT; }
+    }
 
 }
 
