@@ -1,20 +1,65 @@
 #include "loader.h"
+#include "format.h"
 
 namespace ls::internal {
 
-    Texture *find_texture(Scene &data, const pugi::xml_node &node)
+    uint32_t SceneLoader::find_texture(const pugi::xml_node &node, std::optional<Texture *> &opt)
     {
         uint32_t id = node.attribute(L"id").as_uint();
-        return data.textures[id];
+        if(id != SceneObject::INVALID_ID) {
+            auto it = textures.find(id);
+            if(it != textures.end()) {
+                opt = it->second;
+                return SUCCESS;
+            }
+        }
+        log_error("Unknown reference to texture %u", id);
+        return ERROR_BAD_REFERENCE;
     }
 
-    ColorHolder load_color_holder(const pugi::xml_node &node, bool allow_spectrum)
+    LiteMath::float4 SceneLoader::get_color(const pugi::xml_node& a_node)
     {
-
+        auto val = hydra_xml::readvalVariant(a_node);
+        if(std::holds_alternative<float>(val)) {
+            return float4(std::get<float>(val));
+        }
+        else if(std::holds_alternative<float3>(val)) {
+            return to_float4(std::get<float3>(val), 0.0f);
+        }
+        else {
+            return std::get<float4>(val);
+        }
     }
 
-    uint32_t preload_lightsources(Scene &data, const hydraxml::HydraScene &scene)
+    uint32_t SceneLoader::find_spectrum(const pugi::xml_node& node, std::optional<Spectrum *> &opt)
     {
+        uint32_t spec_id = node.attribute(L"id").as_uint();
+        if(spec_id != SceneObject::INVALID_ID) {
+            auto it = spectra.find(spec_id);
+            if(it != spectra.end()) {
+                opt = it->second;
+                return SUCCESS;
+            }
+        }
+        log_error("Invalid reference to spectrum %u", spec_id);
+        return ERROR_BAD_REFERENCE;
+    }
+
+    uint32_t SceneLoader::load_color_holder(const pugi::xml_node &node, bool allow_spectrum, ColorHolder &clr)
+    {
+        clr.color = get_color(node);
+        if(allow_spectrum) {
+            auto specNode = node.child(L"spectrum");
+            if(specNode) {
+                return find_spectrum(specNode, clr.spectrum);
+            }
+        }
+        return SUCCESS;
+    }
+
+    uint32_t SceneLoader::preload_lightsources(hydra_xml::HydraScene &scene)
+    {
+        uint32_t err;
         for(const auto &node : scene.LightNodes()) {
             const uint32_t id = node.attribute(L"id").as_uint();
 
@@ -22,16 +67,20 @@ namespace ls::internal {
             const std::wstring shape = node.attribute(L"shape").as_string();
             const std::wstring dist = node.attribute(L"distribution").as_string();
 
-            LightSource *&lgt = data.light_sources[id];
+            LightSource *&lgt = light_sources[id];
             if(type == L"sky") {
                 LightSourceSky *ptr = new LightSourceSky();
                 const auto &texNode = node.child(L"intensity").child(L"color").child(L"texture");
                 if(texNode) {
-                    ptr->texture = {find_texture(data, texNode)};
+                    if(err = find_texture(texNode, ptr->texture)) {
+                        return err;
+                    }
                 }
                 const auto &backNode = node.child(L"back");
                 if(backNode) {
-                    ptr->camera_back = {find_texture(data, backNode)};
+                    if(err = find_texture(backNode, ptr->camera_back)) {
+                        return err;
+                    }
                 }
 
                 lgt = ptr;
@@ -64,7 +113,9 @@ namespace ls::internal {
 
                         const auto &projTexNode = projNode.child(L"texture");
                         if(projTexNode) {
-                            proj.texture = {find_texture(projTexNode)};
+                            if(err = find_texture(projTexNode, proj.texture)) {
+                                return err;
+                            }
                         }
 
                         ptr->projective = {proj};
@@ -79,16 +130,18 @@ namespace ls::internal {
                 }
             }
             else {
+                log_error("Unknown light configuration : %s, %s", type.c_str(), shape.c_str());
                 return ERROR_LIGHTSOURCE_TYPE;
             }
 
-            lgt->color = load_color_holder(node.child(L"intensity").child(L"color"), true);
-
+            if(err = load_color_holder(node.child(L"intensity").child(L"color"), true, lgt->color)) {
+                return err;
+            }
 
             const auto &iesNode = node.child(L"ies");
             if(iesNode) {
                 IES ies;
-                ies.file_path = (scene.scene_dir / hydra_xml::ws2s(iesNode.attribute(L"loc").as_string())).string();
+                ies.file_path = (scene_dir / hydra_xml::ws2s(iesNode.attribute(L"loc").as_string())).string();
                 ies.point_area = iesNode.attribute(L"point_area").as_int() != 0;
                 const auto &matrixAttrib = iesNode.attribute(L"matrix");
                 if(matrixAttrib) {

@@ -15,7 +15,7 @@ namespace ls
 
     enum class LightSourceDist
     {
-        LAMBERT, OMNI /* aka "omni", aka "ies" */, SPOT;
+        LAMBERT, OMNI /* aka "omni", aka "ies" */, SPOT
     };
 
     struct IES
@@ -71,7 +71,7 @@ namespace ls
 
         LightSourceSpot()
             : LightSource(LightSourceType::POINT) { distribution = LightSourceDist::SPOT; }
-    }
+    };
 
 }
 

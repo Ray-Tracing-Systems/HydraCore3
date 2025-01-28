@@ -1,9 +1,5 @@
 #include <LiteScene/scene.h>
-#include "hydraxml.h"
-
-namespace {
-    uint32_t load_light_source()
-}
+#include "loader.h"
 
 namespace ls {
 
@@ -12,7 +8,7 @@ namespace ls {
         hydra_xml::HydraScene scene_xml;
         if(scene_xml.LoadState(path)) return ERROR_XML_LOADER;
         
-        
+        internal::SceneLoader loader;
 
     }
 

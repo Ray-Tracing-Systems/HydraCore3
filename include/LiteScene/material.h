@@ -25,7 +25,7 @@ namespace ls {
 
     struct ColorHolder {
         std::optional<LiteMath::float4> color;
-        std::optional<SceneReference<Spectrum>> spectrum;
+        std::optional<Spectrum *> spectrum;
     };
 
     class Material : public SceneObject
@@ -36,7 +36,7 @@ namespace ls {
     };
 
 
-    enum class AddressMode { CLAMP, WRAP, MIRROR, BORDER, MIRROR_ONCE, WRAP; }
+    enum class AddressMode { CLAMP, MIRROR, BORDER, MIRROR_ONCE, WRAP };
     struct TextureInstance
     {
         SceneReference<Texture> texture;
