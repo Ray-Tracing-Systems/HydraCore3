@@ -8,7 +8,7 @@ namespace ls
     class Spectrum : public SceneObject
     {
     public:
-        using SceneObject::SceneObject;
+
     };
 
 }

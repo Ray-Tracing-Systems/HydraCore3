@@ -8,7 +8,6 @@
 
 namespace ls {
 
-
     enum class GeometryType 
     {
         MESH
@@ -18,8 +17,6 @@ namespace ls {
     class Geometry : public SceneObject
     {
     public:
-        using SceneObject::SceneObject;
-
 
         virtual ~Geometry() = default;
         virtual GeometryType type() const = 0;

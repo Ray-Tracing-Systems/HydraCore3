@@ -8,6 +8,7 @@
 #include <LiteScene/geometry.h>
 
 #include <vector>
+#include <memory>
 #include <string>
 
 namespace ls {
@@ -16,29 +17,23 @@ namespace ls {
     class HydraScene
     {
     public:
-        std::vector<LightSource> light_sources;
-        std::vector<Spectrum> spectra;
-        std::vector<Texture> textures;
-        std::vector<Material *> materials;
-        std::vector<Geometry *> geometry;
 
+        template<typename T, typename ...Args>
+        T *make_lightsource(const std::string &name, Args &&...args);
+        template<typename T, typename ...Args>
+        T *make_spectrum(const std::string &name, Args &&...args);
+        template<typename T, typename ...Args>
+        T *make_texture(const std::string &name, Args &&...args);
+        template<typename T, typename ...Args>
+        T *make_material(const std::string &name, Args &&...args);
+        template<typename T, typename ...Args>
+        T *make_geometry(const std::string &name, Args &&...args);
 
-        LightSource &get(SceneReference<LightSource> r) { return light_sources[r.id]; }
-        const LightSource &get(SceneReference<LightSource> r) const { return light_sources[r.id]; }
-
-        Spectrum &get(SceneReference<Spectrum> r) { return spectra[r.id]; }
-        const Spectrum &get(SceneReference<Spectrum> r) const { return spectra[r.id]; }
-
-        Texture &get(SceneReference<Texture> r) { return textures[r.id]; }
-        const Texture &get(SceneReference<Texture> r) const { return textures[r.id]; }
-
-        Material *get(SceneReference<Material> r) { return materials[r.id]; }
-        const Material *get(SceneReference<Material> r) const { return materials[r.id]; }
-
-        Geometry *get(SceneReference<Geometry> r) { return geometry[r.id]; }
-        const Geometry *get(SceneReference<Geometry> r) const { return geometry[r.id]; }
-
-
+        const std::vector<LightSource *> &get_lightsources() { return light_sources; }
+        const std::vector<Spectrum *> &get_spectra() { return spectra; }
+        const std::vector<Texture *> &get_textures() { return textures; }
+        const std::vector<Material *> &get_materials() { return materials; }
+        const std::vector<Geometry *> &get_geometrys() { return geometry; }
 
         static uint32_t load(const std::string &path,       HydraScene &);
         static uint32_t save(const std::string &path, const HydraScene &);
@@ -48,7 +43,67 @@ namespace ls {
         static uint32_t save_gltf(const std::string &path, const HydraScene &);
     #endif
 
+    ~HydraScene();
+
+    private:
+        std::vector<LightSource *> light_sources;
+        std::vector<Spectrum *> spectra;
+        std::vector<Texture *> textures;
+        std::vector<Material *> materials;
+        std::vector<Geometry *> geometry;
+
     };
+
+
+    template<typename T, typename ...Args>
+    T *HydraScene::make_lightsource(const std::string &name, Args &&...args)
+    {
+        T *obj = new T(std::forward<Args>(args));
+        light_sources.push_back(obj);
+        obj->m_id = light_sources.size() - 1;
+        obj->m_name = name;
+        return obj;
+    }
+
+    template<typename T, typename ...Args>
+    T *HydraScene::make_spectrum(const std::string &name, Args &&...args)
+    {
+        T *obj = new T(std::forward<Args>(args));
+        spectra.push_back(obj);
+        obj->m_id = spectra.size() - 1;
+        obj->m_name = name;
+        return obj;
+    }
+
+    template<typename T, typename ...Args>
+    T *HydraScene::make_texture(const std::string &name, Args &&...args)
+    {
+        T *obj = new T(std::forward<Args>(args));
+        textures.push_back(obj);
+        obj->m_id = textures.size() - 1;
+        obj->m_name = name;
+        return obj;
+    }
+
+    template<typename T, typename ...Args>
+    T *HydraScene::make_material(const std::string &name, Args &&...args)
+    {
+        T *obj = new T(std::forward<Args>(args));
+        materials.push_back(obj);
+        obj->m_id = materials.size() - 1;
+        obj->m_name = name;
+        return obj;
+    }
+
+    template<typename T, typename ...Args>
+    T *HydraScene::make_geometry(const std::string &name, Args &&...args)
+    {
+        T *obj = new T(std::forward<Args>(args));
+        geometry.push_back(obj);
+        obj->m_id = geometry.size() - 1;
+        obj->m_name = name;
+        return obj;
+    }
 
 }
 

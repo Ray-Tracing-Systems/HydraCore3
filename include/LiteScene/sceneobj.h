@@ -17,14 +17,16 @@ namespace ls {
     public:
         static inline uint32_t INVALID_ID = 0xFFFFFFFF;
 
-        SceneObject(uint32_t id, const std::string &name) : m_id(id), m_name(name) {}
+        SceneObject() : m_id(INVALID_ID), m_name() {}
         virtual ~SceneObject() = default;
 
         uint32_t id() const { return m_id; }
         std::string name() const { return m_name; }
-    protected:
+    private:
         uint32_t m_id;
         std::string m_name;
+        
+        friend class HydraScene;
     };
 
 }

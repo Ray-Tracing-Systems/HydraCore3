@@ -12,7 +12,6 @@
 
 namespace ls {
 
-
     enum class MaterialType 
     {
         GLTF,
@@ -24,13 +23,14 @@ namespace ls {
         THIN_FILM
     };
 
+    struct ColorHolder {
+        std::optional<LiteMath::float4> color;
+        std::optional<SceneReference<Spectrum>> spectrum;
+    };
 
     class Material : public SceneObject
     {
     public:
-        using SceneObject::SceneObject;
-
-
         virtual ~Material() = default;
         virtual MaterialType type() const = 0;
     };
@@ -43,7 +43,7 @@ namespace ls {
         AddressMode addressing_mode_u;
         AddressMode addressing_mode_v;
         LiteMath::float4x4 matrix;
-        //TODO
+        //TODO ....
     };
 
 
@@ -56,8 +56,6 @@ namespace ls {
         std::variant<float, TextureInstance> glossiness;
         std::variant<float, TextureInstance> fresnel_ior;
 
-        using SceneObject::SceneObject;
-
         MaterialType type() const override
         {
             return MaterialType::GLTF;
@@ -69,10 +67,8 @@ namespace ls {
     public:
         enum class BSDF { LAMBERT };
 
-        std::variant<LiteMath::float3, TextureInstance, SceneReference<Spectrum>> reflectance;
+        std::variant<ColorHolder, TextureInstance> reflectance;
         BSDF bsdf_type;
-
-        using SceneObject::SceneObject;
 
         MaterialType type() const override
         {
@@ -97,8 +93,6 @@ namespace ls {
         std::variant<float, SceneReference<Spectrum>> k;
         std::optional<LiteMath::float3> reflectance;
 
-        using SceneObject::SceneObject;
-
         MaterialType type() const override
         {
             return MaterialType::CONDUCTOR;
@@ -111,8 +105,6 @@ namespace ls {
         std::variant<float, SceneReference<Spectrum>> int_ior;
         float ext_ior;
 
-        using SceneObject::SceneObject;
-
         MaterialType type() const override
         {
             return MaterialType::DIELECTRIC;
@@ -122,13 +114,11 @@ namespace ls {
     class PlasticMaterial : public Material
     {
     public:
-        std::variant<LiteMath::float4, TextureInstance, SceneReference<Spectrum>> reflectance;
+        std::variant<ColorHolder, TextureInstance> reflectance;
         float int_ior;
         float ext_ior;
         float alpha;
         bool nonlinear;
-
-        using SceneObject::SceneObject;
 
         MaterialType type() const override
         {
@@ -165,8 +155,6 @@ namespace ls {
 
         std::vector<Layer> layers;
 
-        using SceneObject::SceneObject;
-
         MaterialType type() const override
         {
             return MaterialType::THIN_FILM;
@@ -179,8 +167,6 @@ namespace ls {
         float weight;
         SceneReference<Material> bsdf1;
         SceneReference<Material> bsdf2;
-
-        using SceneObject::SceneObject;
 
         MaterialType type() const override
         {

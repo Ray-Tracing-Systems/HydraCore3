@@ -8,26 +8,41 @@ namespace ls
 
     enum class LightSourceType
     {
-        SKY, DIRECTIONAL, RECT, DISK, POINT, SPHERE
+        SKY, DIRECTIONAL,
+        RECT, DISK, POINT, SPHERE //all in "area"
     };
 
     enum class LightSourceDist
     {
-        LAMBERT, OMNI, SPOT;
+        LAMBERT, UNIFORM /* aka "omni", aka "ies" */, SPOT;
     };
 
     class LightSource : public SceneObject
     {
     public:
-        using SceneObject::SceneObject;
-
         bool visible;
         LightSourceDist distribution;
         SceneReference<Material> material;
+        ColorHolder color; //aka intensity.color
+        float power; // aka intensity.multiplier
+
+        LightSource(LightSourceType type)
+            : m_type(type) {}
 
 
         virtual ~LightSource() = default;
-        virtual LightSourceType type() const = 0;
+        LightSourceType type() const { return m_type; }
+    private:
+        LightSourceType m_type;
+    };
+
+    class LightSourceSky : public LightSource
+    {
+    public:
+        std::optional<SceneReference<Texture>> texture, camera_back;
+
+        LightSourceSky()
+            : LightSource(LightSourceType::SKY) {}
     };
 
 }
