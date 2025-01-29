@@ -19,15 +19,15 @@ namespace ls {
         static inline uint32_t INVALID_ID = 0xFFFFFFFF;
         static inline uint32_t INLINE_ID = 0xFFFFFFFE;
 
-        SceneObject() : m_id(INVALID_ID), m_name() {}
+        SceneObject(const std::string &name) : m_id(INVALID_ID), m_name(name) {}
         virtual ~SceneObject() = default;
 
         uint32_t id() const { return m_id; }
-        std::wstring name() const { return m_name; }
+        std::string name() const { return m_name; }
         
     private:
         uint32_t m_id;
-        std::wstring m_name;
+        std::string m_name;
 
         friend class HydraScene;
     };

@@ -13,9 +13,9 @@ namespace {
 
 namespace ls {
 
-    Mesh::Mesh(std::shared_ptr<cmesh4::SimpleMesh> mesh) : m_mesh(std::move(mesh)), m_header() {}
+    Mesh::Mesh(const std::string &name, std::shared_ptr<cmesh4::SimpleMesh> mesh) : Geometry(name), m_mesh(std::move(mesh)), m_header() {}
 
-    Mesh::Mesh(const std::string &path) : m_mesh(path), m_header(header(path)) {}
+    Mesh::Mesh(const std::string &name, const std::string &path) : Geometry(name), m_mesh(path), m_header(header(path)) {}
 
     std::shared_ptr<cmesh4::SimpleMesh const> Mesh::get_mesh() const
     {
@@ -27,6 +27,18 @@ namespace ls {
             const std::string &path = std::get<std::string>(m_mesh);
             cmesh4::SimpleMesh mesh = cmesh4::LoadMeshFromVSGF(path.c_str());
             return std::shared_ptr<cmesh4::SimpleMesh const>(new cmesh4::SimpleMesh(std::move(mesh)));
+        }
+    }
+
+    std::shared_ptr<cmesh4::SimpleMesh> Mesh::get_mesh()
+    {
+        if(std::holds_alternative<std::shared_ptr<cmesh4::SimpleMesh>>(m_mesh)) {
+            return std::get<std::shared_ptr<cmesh4::SimpleMesh>>(m_mesh);
+        }
+        else {
+            const std::string &path = std::get<std::string>(m_mesh);
+            cmesh4::SimpleMesh mesh = cmesh4::LoadMeshFromVSGF(path.c_str());
+            return std::shared_ptr<cmesh4::SimpleMesh>(new cmesh4::SimpleMesh(std::move(mesh)));
         }
     }
 

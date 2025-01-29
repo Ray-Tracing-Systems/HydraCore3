@@ -8,14 +8,11 @@
 #include <cassert>
 
 #include "LiteMath.h"
-//using namespace LiteMath;
 
 namespace cmesh4
 {
   using LiteMath::float4;
   using LiteMath::float2;
-
-
 
 
   struct Header

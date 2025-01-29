@@ -9,6 +9,7 @@ namespace ls {
     class Texture : public SceneObject
     {
     public:
+        using SceneObject::SceneObject;
         //std::shared_ptr<LiteImage::ICombinedImageSampler> sampler;
     };
 

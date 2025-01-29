@@ -19,6 +19,7 @@ namespace ls {
     class Geometry : public SceneObject
     {
     public:
+        using SceneObject::SceneObject;
 
         virtual ~Geometry() = default;
         virtual GeometryType type() const = 0;
@@ -28,14 +29,17 @@ namespace ls {
     class Mesh : public Geometry
     {
     public:
-        Mesh(std::shared_ptr<cmesh4::SimpleMesh> mesh);
-        Mesh(const std::string &path);
+        Mesh(const std::string &name, std::shared_ptr<cmesh4::SimpleMesh> mesh);
+        Mesh(const std::string &name, const std::string &path);
 
         std::shared_ptr<cmesh4::SimpleMesh const> get_mesh() const;
+        std::shared_ptr<cmesh4::SimpleMesh> get_mesh();
+
         void set_mesh(std::shared_ptr<cmesh4::SimpleMesh> new_mesh);
         void set_mesh(const std::string &file);
 
         const std::optional<cmesh4::Header> &metadata_if_file() const { return m_header; }
+        void load_if_file() { set_mesh(get_mesh()); }
 
         GeometryType type() const override { return GeometryType::MESH; }
 

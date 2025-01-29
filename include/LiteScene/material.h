@@ -31,6 +31,8 @@ namespace ls {
     class Material : public SceneObject
     {
     public:
+        Material(const std::string &name) : SceneObject(name) {}
+
         virtual ~Material() = default;
         virtual MaterialType type() const = 0;
     };
@@ -50,11 +52,14 @@ namespace ls {
     class GltfMaterial : public Material
     {
     public:
+
         std::variant<LiteMath::float3, TextureInstance> color;
         std::variant<float, TextureInstance> metalness;
         std::variant<float, TextureInstance> coat;
         std::variant<float, TextureInstance> glossiness;
         std::variant<float, TextureInstance> fresnel_ior;
+
+        using Material::Material;
 
         MaterialType type() const override
         {
@@ -69,6 +74,8 @@ namespace ls {
 
         std::variant<ColorHolder, TextureInstance> reflectance;
         BSDF bsdf_type;
+
+        using Material::Material;
 
         MaterialType type() const override
         {
@@ -93,6 +100,8 @@ namespace ls {
         std::variant<float, SceneReference<Spectrum>> k;
         std::optional<LiteMath::float3> reflectance;
 
+        using Material::Material;
+
         MaterialType type() const override
         {
             return MaterialType::CONDUCTOR;
@@ -104,6 +113,8 @@ namespace ls {
     public:
         std::variant<float, SceneReference<Spectrum>> int_ior;
         float ext_ior;
+
+        using Material::Material;
 
         MaterialType type() const override
         {
@@ -119,6 +130,8 @@ namespace ls {
         float ext_ior;
         float alpha;
         bool nonlinear;
+
+        using Material::Material;
 
         MaterialType type() const override
         {
@@ -152,8 +165,9 @@ namespace ls {
         float ext_ior;
         std::optional<ThicknessMap> thickness_map;
         bool transparent;
-
         std::vector<Layer> layers;
+
+        using Material::Material;
 
         MaterialType type() const override
         {
@@ -167,6 +181,8 @@ namespace ls {
         float weight;
         SceneReference<Material> bsdf1;
         SceneReference<Material> bsdf2;
+
+        using Material::Material;
 
         MaterialType type() const override
         {

@@ -12,6 +12,7 @@ namespace ls {
     class LightInstance : public SceneObject
     {
     public:
+        using SceneObject::SceneObject;
         LightSource *light;
         LiteMath::float4x4 matrix;
         uint32_t lgroup_id;

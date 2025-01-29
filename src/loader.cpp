@@ -63,13 +63,15 @@ namespace ls::internal {
         for(const auto &node : scene.LightNodes()) {
             const uint32_t id = node.attribute(L"id").as_uint();
 
+
+            const std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
             const std::wstring type = node.attribute(L"type").as_string();
             const std::wstring shape = node.attribute(L"shape").as_string();
             const std::wstring dist = node.attribute(L"distribution").as_string();
 
             LightSource *&lgt = light_sources[id];
             if(type == L"sky") {
-                LightSourceSky *ptr = new LightSourceSky();
+                LightSourceSky *ptr = new LightSourceSky(name);
                 const auto &texNode = node.child(L"intensity").child(L"color").child(L"texture");
                 if(texNode) {
                     if(err = find_texture(texNode, ptr->texture)) {
@@ -86,22 +88,22 @@ namespace ls::internal {
                 lgt = ptr;
             }
             else if(type == L"directional") {
-                lgt = new LightSource(LightSourceType::DIRECTIONAL);
+                lgt = new LightSource(name, LightSourceType::DIRECTIONAL);
             }
             else if(shape == L"rect") {
-                lgt = new LightSource(LightSourceType::RECT);
+                lgt = new LightSource(name, LightSourceType::RECT);
             }
             else if(shape == L"disk") {
-                lgt = new LightSource(LightSourceType::DISK);
+                lgt = new LightSource(name, LightSourceType::DISK);
                 lgt->radius = {node.child(L"size").attribute(L"radius").as_float()};
             }
             else if(shape == L"sphere") {
-                lgt = new LightSource(LightSourceType::SPHERE);
+                lgt = new LightSource(name, LightSourceType::SPHERE);
                 lgt->radius = {node.child(L"size").attribute(L"radius").as_float()};
             }
             else if(shape == L"point") {
                 if(dist == L"spot") {
-                    LightSourceSpot *ptr = new LightSourceSpot();
+                    LightSourceSpot *ptr = new LightSourceSpot(name);
                     ptr->angle1 = hydra_xml::readval1f(node.child(L"falloff_angle"));
                     ptr->angle2 = hydra_xml::readval1f(node.child(L"falloff_angle2"));
                     const auto &projNode = node.child(L"projective");
@@ -123,14 +125,14 @@ namespace ls::internal {
                     lgt = ptr;
                 }
                 else {
-                    lgt = new LightSource(LightSourceType::POINT);
+                    lgt = new LightSource(name, LightSourceType::POINT);
                     if(dist == L"uniform" || dist == L"omni" || dist == L"ies") {
                         lgt->distribution = LightSourceDist::OMNI;
                     }
                 }
             }
             else {
-                log_error("Unknown light configuration : %s, %s", type.c_str(), shape.c_str());
+                log_error("Unknown light configuration : %s, %s", hydra_xml::ws2s(type).c_str(), hydra_xml::ws2s(shape).c_str());
                 return ERROR_LIGHTSOURCE_TYPE;
             }
 
@@ -151,6 +153,25 @@ namespace ls::internal {
             }
         }
 
+        return SUCCESS;
+    }
+
+    uint32_t SceneLoader::preload_geometry(hydra_xml::HydraScene &scene)
+    {
+        for(const auto &node : scene.GeomNodes()) {
+            uint32_t id = node.attribute(L"id").as_uint();
+            std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
+
+            std::wstring type = node.attribute(L"type").as_string();
+            if(type == L"vsgf") {
+                std::string loc = hydra_xml::ws2s(node.attribute(L"loc").as_string());
+                geometry[id] = new Mesh(name, loc);
+            }
+            else {
+                log_error("Unknown geometry type : %s", hydra_xml::ws2s(type).c_str());
+                return ERROR_LIGHTSOURCE_TYPE;
+            }
+        }
         return SUCCESS;
     }
 

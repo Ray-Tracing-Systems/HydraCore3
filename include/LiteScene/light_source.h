@@ -36,8 +36,8 @@ namespace ls
         std::optional<float> radius;
         std::optional<IES> ies;
 
-        LightSource(LightSourceType type)
-            : m_type(type) {}
+        LightSource(const std::string &name, LightSourceType type)
+            : SceneObject(name), m_type(type) {}
 
 
         virtual ~LightSource() = default;
@@ -51,8 +51,8 @@ namespace ls
     public:
         std::optional<Texture *> texture, camera_back;
 
-        LightSourceSky()
-            : LightSource(LightSourceType::SKY) { distribution = LightSourceDist::OMNI; }
+        LightSourceSky(const std::string &name)
+            : LightSource(name, LightSourceType::SKY) { distribution = LightSourceDist::OMNI; }
     };
 
     struct SpotProj
@@ -69,8 +69,8 @@ namespace ls
         float angle1, angle2;
         std::optional<SpotProj> projective;
 
-        LightSourceSpot()
-            : LightSource(LightSourceType::POINT) { distribution = LightSourceDist::SPOT; }
+        LightSourceSpot(const std::string &name)
+            : LightSource(name, LightSourceType::POINT) { distribution = LightSourceDist::SPOT; }
     };
 
 }
