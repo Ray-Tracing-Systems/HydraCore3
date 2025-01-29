@@ -24,12 +24,12 @@ namespace ls {
 
         uint32_t id() const { return m_id; }
         std::string name() const { return m_name; }
+
+        void _set_id(uint32_t id) { m_id = id; }
         
     private:
         uint32_t m_id;
         std::string m_name;
-
-        friend class HydraScene;
     };
 
 }

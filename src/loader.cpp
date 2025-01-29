@@ -1,6 +1,10 @@
 #include "loader.h"
 #include "format.h"
 
+#define VALIDATE_ID(x) \
+    if((x) == SceneObject::INVALID_ID) { log_error("Id 0xFFFFFFFF is reserved"); return ERROR_BAD_ID; }
+
+
 namespace ls::internal {
 
     uint32_t SceneLoader::find_texture(const pugi::xml_node &node, std::optional<Texture *> &opt)
@@ -62,7 +66,7 @@ namespace ls::internal {
         uint32_t err;
         for(const auto &node : scene.LightNodes()) {
             const uint32_t id = node.attribute(L"id").as_uint();
-
+            VALIDATE_ID(id);
 
             const std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
             const std::wstring type = node.attribute(L"type").as_string();
@@ -160,6 +164,8 @@ namespace ls::internal {
     {
         for(const auto &node : scene.GeomNodes()) {
             uint32_t id = node.attribute(L"id").as_uint();
+            VALIDATE_ID(id);
+
             std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
 
             std::wstring type = node.attribute(L"type").as_string();
@@ -173,6 +179,18 @@ namespace ls::internal {
             }
         }
         return SUCCESS;
+    }
+
+
+    uint32_t SceneLoader::preload(hydra_xml::HydraScene &scene)
+    {
+        uint32_t err;
+        if(err = preload_geometry(scene)) return err;
+        if(err = preload_spectra(scene)) return err;
+        if(err = preload_textures(scene)) return err;
+        if(err = preload_materials(scene)) return err;
+        if(err = preload_lightsources(scene)) return err;
+        return preload_instances(scene);
     }
 
 }

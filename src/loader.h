@@ -12,19 +12,21 @@ namespace ls::internal {
     {
     public:
         std::filesystem::path scene_dir;
-        std::unordered_map<uint32_t, LightSource *> light_sources;
+        std::unordered_map<uint32_t, Geometry *> geometry;
         std::unordered_map<uint32_t, Spectrum *> spectra;
         std::unordered_map<uint32_t, Texture *> textures;
         std::unordered_map<uint32_t, Material *> materials;
-        std::unordered_map<uint32_t, Geometry *> geometry;
+        std::unordered_map<uint32_t, LightSource *> light_sources;
         std::unordered_map<uint32_t, SceneInstance *> scene_instances;
 
         uint32_t preload_lightsources(hydra_xml::HydraScene &scene);
-        uint32_t preload_spectra(hydra_xml::HydraScene &scene);
+        uint32_t preload_spectra(hydra_xml::HydraScene &scene) { return SUCCESS; }
         uint32_t preload_textures(hydra_xml::HydraScene &scene);
         uint32_t preload_materials(hydra_xml::HydraScene &scene);
         uint32_t preload_geometry(hydra_xml::HydraScene &scene);
         uint32_t preload_instances(hydra_xml::HydraScene &scene);
+
+        uint32_t preload(hydra_xml::HydraScene &scene);
 
     private:
         LiteMath::float4 get_color(const pugi::xml_node& node);

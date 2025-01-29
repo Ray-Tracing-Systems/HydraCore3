@@ -55,9 +55,10 @@ namespace ls {
 
     constexpr uint32_t SUCCESS = 0;
     constexpr uint32_t ERROR_XML_LOADER = 1;
-    constexpr uint32_t ERROR_BAD_REFERENCE = 2;
-    constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 3;
-    constexpr uint32_t ERROR_GEOMETRY_TYPE = 4;
+    constexpr uint32_t ERROR_BAD_ID = 2;
+    constexpr uint32_t ERROR_BAD_REFERENCE = 3;
+    constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 4;
+    constexpr uint32_t ERROR_GEOMETRY_TYPE = 5;
 
 
 
