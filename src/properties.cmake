@@ -5,6 +5,7 @@ set(MODULE_SOURCES
     hydraxml.cpp
     scene.cpp
     loader.cpp
+    geometry.cpp
 )
 
 set(MODULE_LIBS

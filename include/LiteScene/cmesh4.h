@@ -15,6 +15,27 @@ namespace cmesh4
   using LiteMath::float4;
   using LiteMath::float2;
 
+
+
+
+  struct Header
+  {
+    enum GEOM_FLAGS {
+      HAS_TANGENT    = 1,
+      UNUSED2        = 2,
+      UNUSED4        = 4,
+      HAS_NO_NORMALS = 8
+    };
+
+    uint64_t fileSizeInBytes;
+    uint32_t verticesNum;
+    uint32_t indicesNum;
+    uint32_t materialsNum;
+    uint32_t flags;
+  };
+
+  Header LoadHeader(std::istream &str);
+
   // very simple utility mesh representation for working with geometry on the CPU in C++
   //
   struct SimpleMesh
@@ -22,6 +43,13 @@ namespace cmesh4
     static const uint64_t POINTS_IN_TRIANGLE = 3;
     SimpleMesh(){}
     SimpleMesh(size_t a_vertNum, size_t a_indNum) { Resize(a_vertNum, a_indNum); }
+    SimpleMesh(SimpleMesh &&other)
+      : vPos4f(std::move(other.vPos4f)),
+        vNorm4f(std::move(other.vNorm4f)),
+        vTang4f(std::move(other.vTang4f)),
+        vTexCoord2f(std::move(other.vTexCoord2f)),
+        indices(std::move(other.indices)),
+        matIndices(std::move(other.matIndices)) {}
 
     inline size_t VerticesNum()  const { return vPos4f.size(); }
     inline size_t IndicesNum()   const { return indices.size();  }

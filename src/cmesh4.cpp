@@ -4,8 +4,10 @@
 #include <cfloat>
 #include <cstring>
 #include <fstream>
+#include <type_traits>
 
 namespace cmesh4 {
+
   std::vector<unsigned int> CreateQuadTriIndices(const int a_sizeX, const int a_sizeY)
   {
     std::vector<unsigned int> indicesData(a_sizeY*a_sizeX * 6);
@@ -26,6 +28,15 @@ namespace cmesh4 {
 
     return indicesData;
   }
+
+  Header LoadHeader(std::istream &str)
+  {
+    static_assert(std::is_trivial<Header>() && std::is_standard_layout<Header>(), "Requires being trivial standard layout object for loading");
+    Header header;
+    str.read((char*)&header, sizeof(Header)); // FIXME: ENDIANNES NOT CHECKED !!!
+    return header;
+  }
+  
 }
 
 cmesh4::SimpleMesh cmesh4::CreateQuad(const int a_sizeX, const int a_sizeY, const float a_size)
@@ -79,19 +90,7 @@ cmesh4::SimpleMesh cmesh4::CreateQuad(const int a_sizeX, const int a_sizeY, cons
   return res;
 }
 
-enum GEOM_FLAGS{ HAS_TANGENT    = 1,
-    UNUSED2        = 2,
-    UNUSED4        = 4,
-    HAS_NO_NORMALS = 8};
 
-struct Header
-{
-    uint64_t fileSizeInBytes;
-    uint32_t verticesNum;
-    uint32_t indicesNum;
-    uint32_t materialsNum;
-    uint32_t flags;
-};
 
 #if defined(__ANDROID__)
 cmesh4::SimpleMesh cmesh4::LoadMeshFromVSGF(AAssetManager* mgr, const char* a_fileName)
@@ -116,12 +115,12 @@ cmesh4::SimpleMesh cmesh4::LoadMeshFromVSGF(AAssetManager* mgr, const char* a_fi
 
   auto bytesRead = AAsset_read(asset, (char*)res.vPos4f.data(), res.vPos4f.size() * sizeof(float) * 4);
   
-  if(!(vsgf_header.flags & HAS_NO_NORMALS))
+  if(!(vsgf_header.flags & Header::HAS_NO_NORMALS))
     bytesRead = AAsset_read(asset, (char*)res.vNorm4f.data(), res.vNorm4f.size() * sizeof(float) * 4);
   else
     memset(res.vNorm4f.data(), 0, res.vNorm4f.size()*sizeof(float)*4);
   
-  if(vsgf_header.flags & HAS_TANGENT)
+  if(vsgf_header.flags & Header::HAS_TANGENT)
     bytesRead = AAsset_read(asset, (char*)res.vTang4f.data(), res.vTang4f.size() * sizeof(float) * 4);
   else
     memset(res.vTang4f.data(), 0, res.vTang4f.size()*sizeof(float)*4);
@@ -136,25 +135,25 @@ cmesh4::SimpleMesh cmesh4::LoadMeshFromVSGF(AAssetManager* mgr, const char* a_fi
 
 #else
 
+
+
 cmesh4::SimpleMesh cmesh4::LoadMeshFromVSGF(const char* a_fileName)
 {
   std::ifstream input(a_fileName, std::ios::binary);
   if(!input.is_open())
     return SimpleMesh();
 
-  Header header;
-
-  input.read((char*)&header, sizeof(Header));
+  Header header = LoadHeader(input); 
   SimpleMesh res(header.verticesNum, header.indicesNum);
 
   input.read((char*)res.vPos4f.data(),  res.vPos4f.size()*sizeof(float)*4);
   
-  if(!(header.flags & HAS_NO_NORMALS))
+  if(!(header.flags & Header::HAS_NO_NORMALS))
     input.read((char*)res.vNorm4f.data(), res.vNorm4f.size()*sizeof(float)*4);
   else
     std::fill(res.vNorm4f.begin(), res.vNorm4f.end(), LiteMath::float4{});   // #TODO: calc at flat normals in this case        
 
-  if(header.flags & HAS_TANGENT)
+  if(header.flags & Header::HAS_TANGENT)
     input.read((char*)res.vTang4f.data(), res.vTang4f.size()*sizeof(float)*4);
   else
     std::fill(res.vTang4f.begin(), res.vTang4f.end(), LiteMath::float4{});
@@ -181,10 +180,10 @@ void cmesh4::SaveMeshToVSGF(const char* a_fileName, const SimpleMesh& a_mesh)
   header.flags           = 0;
 
   if(a_mesh.vNorm4f.size() == 0)
-    header.flags |= HAS_NO_NORMALS;
+    header.flags |= Header::HAS_NO_NORMALS;
 
   if(a_mesh.vTang4f.size() != 0)
-    header.flags |= HAS_TANGENT;
+    header.flags |= Header::HAS_TANGENT;
 
   output.write((char*)&header, sizeof(Header));
   output.write((char*)a_mesh.vPos4f.data(), a_mesh.vPos4f.size() * sizeof(float) * 4);
