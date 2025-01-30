@@ -9,6 +9,9 @@ set(MODULE_SOURCES
 )
 
 set(MODULE_LIBS
-    LiteMath
     pugixml
+)
+
+set(MODULE_PUBLIC_LIBS
+    LiteMath
 )

@@ -34,5 +34,6 @@ target_include_directories(${MODULE_NAME} PUBLIC ${LITESCENE_PROJECT_ROOT}/inclu
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-error=unused-variable)
 
 target_link_libraries(${MODULE_NAME}
-    ${MODULE_LIBS} litescene_lib_compile_options 
+    PUBLIC ${MODULE_PUBLIC_LIBS}
+    PRIVATE ${MODULE_LIBS} litescene_lib_compile_options 
 )
