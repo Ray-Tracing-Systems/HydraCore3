@@ -14,6 +14,7 @@ namespace ls {
 
     enum class MaterialType 
     {
+        LIGHTSOURCE,
         GLTF,
         DIFFUSE,
         CONDUCTOR,
@@ -41,13 +42,28 @@ namespace ls {
     enum class AddressMode { CLAMP, MIRROR, BORDER, MIRROR_ONCE, WRAP };
     struct TextureInstance
     {
-        SceneReference<Texture> texture;
+        Texture *texture;
         AddressMode addressing_mode_u;
         AddressMode addressing_mode_v;
         LiteMath::float4x4 matrix;
         //TODO ....
     };
 
+    class LightSource;
+
+    class LightSourceMaterial : public Material
+    {
+    public:
+        std::optional<LightSource *> light;
+        std::variant<ColorHolder, TextureInstance> color;
+        float power = 1.0f;
+        using Material::Material;
+
+        MaterialType type() const override
+        {
+            return MaterialType::LIGHTSOURCE;
+        }
+    };
 
     class GltfMaterial : public Material
     {
@@ -96,8 +112,8 @@ namespace ls {
         BSDF bsdf_type;
 
         std::variant<MiRoughness, TextureInstance> alpha;
-        std::variant<float, SceneReference<Spectrum>> eta;
-        std::variant<float, SceneReference<Spectrum>> k;
+        std::variant<float, Spectrum *> eta;
+        std::variant<float, Spectrum *> k;
         std::optional<LiteMath::float3> reflectance;
 
         using Material::Material;
@@ -111,7 +127,7 @@ namespace ls {
     class DielectricMaterial : public Material
     {
     public:
-        std::variant<float, SceneReference<Spectrum>> int_ior;
+        std::variant<float, Spectrum *> int_ior;
         float ext_ior;
 
         using Material::Material;
@@ -145,8 +161,8 @@ namespace ls {
     public:
         struct Layer
         {
-            std::variant<float, SceneReference<Spectrum>> eta;
-            std::variant<float, SceneReference<Spectrum>> k;
+            std::variant<float, Spectrum *> eta;
+            std::variant<float, Spectrum *> k;
             float thickness;
         };
         struct ThicknessMap 
@@ -160,8 +176,8 @@ namespace ls {
 
         BSDF bsdf_type;
         std::variant<MiRoughness, TextureInstance> alpha;
-        std::variant<float, SceneReference<Spectrum>> eta;
-        std::variant<float, SceneReference<Spectrum>> k;
+        std::variant<float, Spectrum *> eta;
+        std::variant<float, Spectrum *> k;
         float ext_ior;
         std::optional<ThicknessMap> thickness_map;
         bool transparent;
@@ -179,8 +195,8 @@ namespace ls {
     {
     public:
         float weight;
-        SceneReference<Material> bsdf1;
-        SceneReference<Material> bsdf2;
+        Material *bsdf1;
+        Material *bsdf2;
 
         using Material::Material;
 

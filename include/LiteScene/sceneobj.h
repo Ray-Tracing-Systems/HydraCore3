@@ -6,12 +6,6 @@
 
 namespace ls {
 
-    template<typename T>
-    struct SceneReference
-    {
-        uint32_t id;
-    };
-
 
     class SceneObject
     {

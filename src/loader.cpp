@@ -136,7 +136,7 @@ namespace ls::internal {
                 }
             }
             else {
-                log_error("Unknown light configuration : %s, %s", hydra_xml::ws2s(type).c_str(), hydra_xml::ws2s(shape).c_str());
+                log_error("Unknown light configuration : %s, %s (%s)", hydra_xml::ws2s(type).c_str(), hydra_xml::ws2s(shape).c_str(), name.c_str());
                 return ERROR_LIGHTSOURCE_TYPE;
             }
 
