@@ -11,6 +11,7 @@ set(MODULE_SOURCES
 
 set(MODULE_LIBS
     pugixml
+    tinyobjloader
 )
 
 set(MODULE_PUBLIC_LIBS
