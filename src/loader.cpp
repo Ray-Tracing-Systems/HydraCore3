@@ -1,8 +1,8 @@
 #include "loader.h"
 #include "format.h"
 
-#define VALIDATE_ID(x) \
-    if((x) == SceneObject::INVALID_ID) { log_error("Id 0xFFFFFFFF is reserved"); return ERROR_BAD_ID; }
+#define VALIDATE_ID(x, name) \
+    if((x) == SceneObject::INVALID_ID) { log_error("Id 0xFFFFFFFF is reserved (%s)", (name)); return ERROR_BAD_ID; }
 
 
 namespace ls::internal {
@@ -66,9 +66,9 @@ namespace ls::internal {
         uint32_t err;
         for(const auto &node : scene.LightNodes()) {
             const uint32_t id = node.attribute(L"id").as_uint();
-            VALIDATE_ID(id);
-
             const std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
+            VALIDATE_ID(id, name.c_str());
+
             const std::wstring type = node.attribute(L"type").as_string();
             const std::wstring shape = node.attribute(L"shape").as_string();
             const std::wstring dist = node.attribute(L"distribution").as_string();
@@ -164,9 +164,9 @@ namespace ls::internal {
     {
         for(const auto &node : scene.GeomNodes()) {
             uint32_t id = node.attribute(L"id").as_uint();
-            VALIDATE_ID(id);
-
             std::string name = hydra_xml::ws2s(node.attribute(L"name").as_string());
+
+            VALIDATE_ID(id, name.c_str());
 
             std::wstring type = node.attribute(L"type").as_string();
             if(type == L"vsgf") {

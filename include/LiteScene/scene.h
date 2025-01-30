@@ -18,15 +18,15 @@ namespace ls {
     public:
 
         template<typename T, typename ...Args>
-        T *make_lightsource(const std::wstring &name, Args &&...args);
+        T *make_lightsource(Args &&...args);
         template<typename T, typename ...Args>
-        T *make_spectrum(const std::wstring &name, Args &&...args);
+        T *make_spectrum(Args &&...args);
         template<typename T, typename ...Args>
-        T *make_texture(const std::wstring &name, Args &&...args);
+        T *make_texture(Args &&...args);
         template<typename T, typename ...Args>
-        T *make_material(const std::wstring &name, Args &&...args);
+        T *make_material(Args &&...args);
         template<typename T, typename ...Args>
-        T *make_geometry(const std::wstring &name, Args &&...args);
+        T *make_geometry(Args &&...args);
 
         const std::vector<LightSource *> &get_lightsources() { return light_sources; }
         const std::vector<Spectrum *> &get_spectra() { return spectra; }
@@ -66,52 +66,47 @@ namespace ls {
 
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_lightsource(const std::wstring &name, Args &&...args)
+    T *HydraScene::make_lightsource(Args &&...args)
     {
         T *obj = new T(std::forward<Args...>(args...));
         light_sources.push_back(obj);
-        obj->m_id = light_sources.size() - 1;
-        obj->m_name = name;
+        obj->_set_id(light_sources.size() - 1);
         return obj;
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_spectrum(const std::wstring &name, Args &&...args)
+    T *HydraScene::make_spectrum(Args &&...args)
     {
         T *obj = new T(std::forward<Args...>(args...));
         spectra.push_back(obj);
-        obj->m_id = spectra.size() - 1;
-        obj->m_name = name;
+        obj->_set_id(spectra.size() - 1);
         return obj;
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_texture(const std::wstring &name, Args &&...args)
+    T *HydraScene::make_texture(Args &&...args)
     {
         T *obj = new T(std::forward<Args...>(args...));
         textures.push_back(obj);
-        obj->m_id = textures.size() - 1;
-        obj->m_name = name;
+        obj->_set_id(textures.size() - 1);
         return obj;
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_material(const std::wstring &name, Args &&...args)
+    T *HydraScene::make_material(Args &&...args)
     {
         T *obj = new T(std::forward<Args...>(args...));
         materials.push_back(obj);
-        obj->m_id = materials.size() - 1;
-        obj->m_name = name;
+        obj->_set_id(materials.size() - 1);
         return obj;
     }
 
     template<typename T, typename ...Args>
-    T *HydraScene::make_geometry(const std::wstring &name, Args &&...args)
+    T *HydraScene::make_geometry(Args &&...args)
     {
         T *obj = new T(std::forward<Args...>(args...));
         geometry.push_back(obj);
-        obj->m_id = geometry.size() - 1;
-        obj->m_name = name;
+        obj->_set_id(geometry.size() - 1);
         return obj;
     }
 

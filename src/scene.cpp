@@ -5,7 +5,7 @@
 namespace {
 
     template<typename T>
-    void move_map2vec(std::unordered_map<uint32_t, T *> &map, std::vector<T *> &vec)
+    inline void move_map2vec(std::unordered_map<uint32_t, T *> &map, std::vector<T *> &vec)
     {
         uint32_t vid = 0ul;
         for(const auto &[id, ptr] : map) {
@@ -38,7 +38,7 @@ namespace ls {
         move_map2vec(loader.materials, scene.materials);
         move_map2vec(loader.light_sources, scene.light_sources);
         move_map2vec(loader.scene_instances, scene.scene_instances);
-        
+
         return SUCCESS;
     }
 
