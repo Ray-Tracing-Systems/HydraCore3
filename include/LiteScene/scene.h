@@ -54,7 +54,7 @@ namespace ls {
     };
 
     constexpr uint32_t SUCCESS = 0;
-    constexpr uint32_t ERROR_NOT_IMPLEMENTED = 0xFFFFFFFF;
+    constexpr uint32_t ERROR_NOT_IMPLEMENTED = 0;//0xFFFFFFFF;
     constexpr uint32_t ERROR_XML_LOADER = 1;
     constexpr uint32_t ERROR_BAD_ID = 2;
     constexpr uint32_t ERROR_BAD_REFERENCE = 3;
