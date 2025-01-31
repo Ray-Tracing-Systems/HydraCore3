@@ -28,6 +28,7 @@ namespace ls::internal {
 
         uint32_t preload(hydra_xml::HydraScene &scene);
 
+        ~SceneLoader();
     private:
         LiteMath::float4 get_color(const pugi::xml_node& node);
         uint32_t find_texture(const pugi::xml_node &node, std::optional<Texture *> &); //textures must be preloaded

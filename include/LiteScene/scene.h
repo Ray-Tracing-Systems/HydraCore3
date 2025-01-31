@@ -44,11 +44,16 @@ namespace ls {
         Geometry *get_geometry(uint32_t id) { return geometry[id]; }
         const Geometry *get_geometry(uint32_t id) const { return geometry[id]; }
 
+        //NOTE: currently only one scene instance is supported
+        SceneInstance *get_scene(uint32_t id = 0) { return scene_instances[id]; }
+        const SceneInstance *get_scene(uint32_t id = 0) const { return scene_instances[id]; }
+
         const std::vector<LightSource *> &get_lightsources() { return light_sources; }
         const std::vector<Spectrum *> &get_spectra() { return spectra; }
         const std::vector<Texture *> &get_textures() { return textures; }
         const std::vector<Material *> &get_materials() { return materials; }
         const std::vector<Geometry *> &get_geometries() { return geometry; }
+        const std::vector<SceneInstance *> &get_scene_instances() { return scene_instances; }
 
         static uint32_t load(const std::string &path,       HydraScene &);
         static uint32_t save(const std::string &path, const HydraScene &);
@@ -78,6 +83,8 @@ namespace ls {
     constexpr uint32_t ERROR_GEOMETRY_TYPE = 100;
     constexpr uint32_t ERROR_MATERIAL_TYPE = 200;
     constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 300;
+    
+    constexpr uint32_t ERROR_BAD_RMAPLIST = 601;
 
 
 

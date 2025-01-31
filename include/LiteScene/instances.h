@@ -6,16 +6,18 @@
 #include <LiteMath.h>
 #include <optional>
 #include <vector>
+#include <unordered_map>
 
 namespace ls {
 
     class LightInstance : public SceneObject
     {
     public:
-        using SceneObject::SceneObject;
         LightSource *light;
         LiteMath::float4x4 matrix;
         uint32_t lgroup_id;
+
+        LightInstance() : SceneObject("") {}
     };
 
     class SceneInstance;
@@ -24,20 +26,32 @@ namespace ls {
     {
     public:
         Geometry *object;
-        uint32_t remap_id;
-        uint32_t scene_sid;
-        SceneInstance *scene_inst;
+        std::optional<uint32_t> remap;
+        //uint32_t scene_sid;
+        //SceneInstance *scene_inst;
         LiteMath::float4x4 matrix;
+        std::optional<LiteMath::float4x4> matrix_motion;
 
         std::optional<LightInstance *> light_inst;
+
+
+        GeometryInstance() : SceneObject("") {}
     };
 
     class SceneInstance : public SceneObject
     {
     public:
-        std::vector<std::vector<uint32_t>> remaps;
-        std::vector<LightInstance> light_instances;
-        std::vector<GeometryInstance> geometry_instances;
+        using SceneObject::SceneObject;
+
+        std::vector<std::unordered_map<uint32_t, uint32_t>> remaps;
+        std::vector<LightInstance *> light_instances;
+        std::vector<GeometryInstance *> geometry_instances;
+
+        ~SceneInstance()
+        {
+            for(auto *ptr : light_instances) delete ptr;
+            for(auto *ptr : geometry_instances) delete ptr;
+        }
     };
 
 

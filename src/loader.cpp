@@ -1,5 +1,6 @@
 #include "loader.h"
 #include "format.h"
+#include <memory>
 
 #define VALIDATE_ID(x, name) \
     if((x) == SceneObject::INVALID_ID) { log_error("Id 0xFFFFFFFF is reserved (%s)", (name)); return ERROR_BAD_ID; }
@@ -181,6 +182,106 @@ namespace ls::internal {
         return SUCCESS;
     }
 
+    uint32_t SceneLoader::preload_instances(hydra_xml::HydraScene &scene)
+    {
+        std::unique_ptr<SceneInstance> inst{new SceneInstance("scene0")};
+
+
+        for(const std::vector<int32_t> &rmap : scene.RemapLists()) { //TODO: check ordering
+            if(rmap.size() & 1) {
+                return ERROR_BAD_RMAPLIST;
+            }
+
+            std::unordered_map<uint32_t, uint32_t> remap;
+            for(uint32_t i = 0; i < rmap.size() / 2; ++i) {
+                remap[rmap[i * 2]] = rmap[i * 2 + 1]; 
+            }
+            inst->remaps.push_back(std::move(remap));
+        }
+
+
+        std::map<uint32_t, LightInstance *> light_instances;
+        std::map<uint32_t, GeometryInstance *> geometry_instances;
+
+        for(const hydra_xml::LightInstance &lnode : scene.InstancesLights()) {
+            uint32_t id = lnode.instId;
+            VALIDATE_ID(id, "light_instance");
+            std::unique_ptr<LightInstance> linst{new LightInstance()};
+
+            linst->lgroup_id = uint32_t(lnode.instNode.attribute(L"lgroup_id").as_int());  
+            linst->matrix = lnode.matrix;
+
+            if(lnode.lightId != SceneObject::INVALID_ID) {
+                auto it = light_sources.find(lnode.lightId);
+                if(it != light_sources.end()) {
+                    linst->light = it->second;
+                }
+                else {
+                    log_error("Unknown reference to light %u at light instance %u", lnode.lightId, id);
+                    return ERROR_BAD_REFERENCE;
+                }
+            }
+            else {
+                log_error("Unknown reference to light %u at light instance %u", lnode.lightId, id);
+                return ERROR_BAD_REFERENCE;
+            }
+            light_instances[id] = linst.release();
+        }
+
+        for(const hydra_xml::Instance &ginst : scene.InstancesGeom()) {
+            uint32_t id = ginst.instId;
+            VALIDATE_ID(id, "instance");
+            GeometryInstance *g_inst = new GeometryInstance();
+
+            uint32_t geom_id = ginst.geomId;
+            if(geom_id != SceneObject::INVALID_ID) {
+                auto it = geometry.find(geom_id);
+                if(it != geometry.end()) {
+                    g_inst->object = it->second;
+                }
+                else {
+                    log_error("Unknown reference to geometry %u at instance %u", geom_id, id);
+                    return ERROR_BAD_REFERENCE;
+                }
+            }
+            else {
+                log_error("Unknown reference to geometry %u at instance %u", geom_id, id);
+                return ERROR_BAD_REFERENCE;
+            }
+            
+            g_inst->matrix = ginst.matrix;
+            if(ginst.hasMotion) {
+                g_inst->matrix_motion = ginst.matrix_motion;
+            }
+
+
+            if(ginst.rmapId != SceneObject::INVALID_ID) {
+                g_inst->remap = ginst.rmapId;
+            }
+
+            uint32_t linst_id = ginst.lightInstId;
+            if(linst_id != SceneObject::INVALID_ID) {
+                auto it = light_instances.find(linst_id);
+                if(it != light_instances.end()) {
+                    g_inst->light_inst = it->second;
+                }
+                else {
+                    log_error("Unknown reference to light instance %u at instance %u", linst_id, id);
+                    return ERROR_BAD_REFERENCE;
+                }
+            }
+
+            geometry_instances[id] = g_inst;
+        }
+
+        move_map2vec(light_instances, inst->light_instances);
+        move_map2vec(geometry_instances, inst->geometry_instances);
+
+        scene_instances[0] = inst.release();
+
+        return SUCCESS;
+    }
+
 
     uint32_t SceneLoader::preload(hydra_xml::HydraScene &scene)
     {
@@ -191,6 +292,16 @@ namespace ls::internal {
         if(err = preload_materials(scene)) return err;
         if(err = preload_lightsources(scene)) return err;
         return preload_instances(scene);
+    }
+
+    SceneLoader::~SceneLoader()
+    {
+        for(auto &[id, obj] : light_sources) delete obj;
+        for(auto &[id, obj] : spectra) delete obj;
+        for(auto &[id, obj] : textures) delete obj;
+        for(auto &[id, obj] : materials) delete obj;
+        for(auto &[id, obj] : geometry) delete obj;
+        for(auto &[id, obj] : scene_instances) delete obj;
     }
 
 }
