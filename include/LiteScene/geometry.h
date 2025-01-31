@@ -7,14 +7,12 @@
 #include <memory>
 #include <optional>
 
-
 namespace ls {
 
     enum class GeometryType 
     {
         MESH
     };
-
 
     class Geometry : public SceneObject
     {
@@ -48,7 +46,6 @@ namespace ls {
             std::shared_ptr<cmesh4::SimpleMesh>,
             std::string
         > m_mesh;
-
         std::optional<cmesh4::Header> m_header;
     };
 

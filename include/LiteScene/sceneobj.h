@@ -6,7 +6,6 @@
 
 namespace ls {
 
-
     class SceneObject
     {
     public:

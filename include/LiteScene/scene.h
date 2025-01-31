@@ -7,6 +7,7 @@
 #include <LiteScene/material.h>
 #include <LiteScene/geometry.h>
 #include <LiteScene/instances.h>
+#include <unordered_map>
 #include <vector>
 #include <memory>
 #include <string>
@@ -28,21 +29,35 @@ namespace ls {
         template<typename T, typename ...Args>
         T *make_geometry(Args &&...args);
 
+        LightSource *get_lightsource(uint32_t id) { return light_sources[id]; }
+        const LightSource *get_lightsource(uint32_t id) const { return light_sources[id]; }
+
+        Spectrum *get_spectrum(uint32_t id) { return spectra[id]; }
+        const Spectrum *get_spectrum(uint32_t id) const { return spectra[id]; }
+
+        Texture *get_texture(uint32_t id) { return textures[id]; }
+        const Texture *get_texture(uint32_t id) const { return textures[id]; }
+
+        Material *get_material(uint32_t id) { return materials[id]; }
+        const Material *get_material(uint32_t id) const { return materials[id]; }
+
+        Geometry *get_geometry(uint32_t id) { return geometry[id]; }
+        const Geometry *get_geometry(uint32_t id) const { return geometry[id]; }
+
         const std::vector<LightSource *> &get_lightsources() { return light_sources; }
         const std::vector<Spectrum *> &get_spectra() { return spectra; }
         const std::vector<Texture *> &get_textures() { return textures; }
         const std::vector<Material *> &get_materials() { return materials; }
-        const std::vector<Geometry *> &get_geometrys() { return geometry; }
+        const std::vector<Geometry *> &get_geometries() { return geometry; }
 
         static uint32_t load(const std::string &path,       HydraScene &);
         static uint32_t save(const std::string &path, const HydraScene &);
 
-    #ifdef LITESCENE_ENABLE_GLTF
+#ifdef LITESCENE_ENABLE_GLTF
         static uint32_t load_gltf(const std::string &path,       HydraScene &);
         static uint32_t save_gltf(const std::string &path, const HydraScene &);
-    #endif
-
-    ~HydraScene();
+#endif
+        ~HydraScene();
 
     private:
         std::vector<LightSource *> light_sources;
@@ -58,12 +73,11 @@ namespace ls {
     constexpr uint32_t ERROR_XML_LOADER = 1;
     constexpr uint32_t ERROR_BAD_ID = 2;
     constexpr uint32_t ERROR_BAD_REFERENCE = 3;
-    constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 4;
-    constexpr uint32_t ERROR_GEOMETRY_TYPE = 5;
-    constexpr uint32_t ERROR_MATERIAL_TYPE = 6;
+    constexpr uint32_t ERROR_INCONSISTENT_ID = 4;
 
-
-
+    constexpr uint32_t ERROR_GEOMETRY_TYPE = 100;
+    constexpr uint32_t ERROR_MATERIAL_TYPE = 200;
+    constexpr uint32_t ERROR_LIGHTSOURCE_TYPE = 300;
 
 
 

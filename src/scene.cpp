@@ -1,21 +1,7 @@
 #include <LiteScene/scene.h>
 #include "loader.h"
 #include <filesystem>
-
-namespace {
-
-    template<typename T>
-    inline void move_map2vec(std::unordered_map<uint32_t, T *> &map, std::vector<T *> &vec)
-    {
-        uint32_t vid = 0ul;
-        for(const auto &[id, ptr] : map) {
-            ptr->_set_id(vid++);
-            vec.push_back(ptr);
-        }
-        map.clear();
-    }
-
-}
+#include <unordered_map>
 
 namespace ls {
 
@@ -32,12 +18,12 @@ namespace ls {
             return err;
         }
 
-        move_map2vec(loader.geometry, scene.geometry);
-        move_map2vec(loader.spectra, scene.spectra);
-        move_map2vec(loader.textures, scene.textures);
-        move_map2vec(loader.materials, scene.materials);
-        move_map2vec(loader.light_sources, scene.light_sources);
-        move_map2vec(loader.scene_instances, scene.scene_instances);
+        if(err = internal::move_map2vec(loader.geometry, scene.geometry)) return err;
+        if(err = internal::move_map2vec(loader.spectra, scene.spectra)) return err;
+        if(err = internal::move_map2vec(loader.textures, scene.textures)) return err;
+        if(err = internal::move_map2vec(loader.materials, scene.materials)) return err;
+        if(err = internal::move_map2vec(loader.light_sources, scene.light_sources)) return err;
+        if(err = internal::move_map2vec(loader.scene_instances, scene.scene_instances, false)) return err;
 
         return SUCCESS;
     }
