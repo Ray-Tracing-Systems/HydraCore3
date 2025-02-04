@@ -199,4 +199,7 @@ namespace LiteScene
     std::map<uint32_t, RenderSettings> render_settings;
     std::map<uint32_t, InstancedScene> scenes;
   };
+
+  std::wstring s2ws(const std::string& str);
+  std::string ws2s(const std::wstring& wstr);
 }
