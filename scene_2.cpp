@@ -302,10 +302,14 @@ namespace LiteScene
         cam.matrix = LiteMath::transpose(float4x4FromString(cam_node.child(L"matrix").attribute(L"val").as_string()));
         cam.has_matrix = true;
       }
+
+      cam.custom_data = cam_node;
+
       return true;
   }
 
-  bool load_cameras(HydraScene &scene, const pugi::xml_node &lib_node) {
+  bool load_cameras(HydraScene &scene, const pugi::xml_node &lib_node)
+  {
     bool ok = true;
 
     for (pugi::xml_node cam_node = lib_node.first_child(); cam_node != nullptr && ok; cam_node = cam_node.next_sibling())
@@ -322,6 +326,37 @@ namespace LiteScene
     return ok;
   }
 
+  bool load_render_settings(RenderSettings &settings, const pugi::xml_node &node)
+  {
+    settings.id = node.attribute(L"id").as_uint();
+    settings.name = ws2s(node.attribute(L"name").as_string());
+
+    settings.width  = hydra_xml::readval1u(node.child(L"width"));
+    settings.height = hydra_xml::readval1u(node.child(L"height"));
+    settings.depth  = hydra_xml::readval1u(node.child(L"trace_depth"));
+    settings.depthDiffuse = hydra_xml::readval1u(node.child(L"diff_trace_depth"));
+    settings.spp    = hydra_xml::readval1u(node.child(L"maxRaysPerPixel"));
+    settings.custom_data = node;
+    return true;
+  }
+
+  bool load_all_render_settings(HydraScene &scene, const pugi::xml_node &lib_node)
+  {
+    bool ok = true;
+
+    for (pugi::xml_node set_node = lib_node.first_child(); set_node != nullptr && ok; set_node = set_node.next_sibling())
+    {
+      if(std::wstring(set_node.name()) == L"camera")
+      {
+        RenderSettings settings;
+        if(!load_render_settings(settings, set_node)) return false;
+        scene.render_settings[settings.id] = std::move(settings);
+      }
+
+    }
+
+    return ok;
+  }
 
   bool load_instanced_scene(InstancedScene &scene, pugi::xml_node scene_node)
   {
@@ -557,11 +592,11 @@ namespace LiteScene
     bool g_loaded = load_geometry(*this, geometryLib);
     //load_lights(*this, lightsLib);
     //load_spectra(*this, spectraLib);
-    load_cameras(*this, cameraLib);
-    //load_render_settings(*this, settingsNode);
+    bool c_loaded = load_cameras(*this, cameraLib);
+    bool rs_loaded = load_all_render_settings(*this, settingsNode);
     bool s_loaded = load_all_instanced_scenes(*this, scenesNode);
 
-    return g_loaded && s_loaded;
+    return g_loaded && c_loaded && rs_loaded && s_loaded;
   }
 
   bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node lib_node)
