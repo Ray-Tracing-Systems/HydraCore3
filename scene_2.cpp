@@ -1,5 +1,5 @@
 #include "scene_2.h"
-
+#include "hydraxml.h"
 #include <sstream>
 #include <fstream>
 #include <locale>
@@ -277,6 +277,52 @@ namespace LiteScene
     return true;
   }
 
+  bool load_camera(Camera &cam, const pugi::xml_node &cam_node)
+  {
+      cam.id = cam_node.attribute(L"id").as_uint();
+      cam.name = ws2s(cam_node.attribute(L"name").as_string());
+
+      cam.fov       = hydra_xml::readval1f(cam_node.child(L"fov")); 
+      cam.nearPlane = hydra_xml::readval1f(cam_node.child(L"nearClipPlane"));
+      cam.farPlane  = hydra_xml::readval1f(cam_node.child(L"farClipPlane"));  
+
+      auto expNode = cam_node.child(L"exposure_mult");
+      if(expNode)
+        cam.exposureMult = hydra_xml::readval1f(expNode);  
+      else
+        cam.exposureMult = 1.0f;
+      
+      cam.pos    = hydra_xml::readval3f(cam_node.child(L"position"));
+      cam.lookAt = hydra_xml::readval3f(cam_node.child(L"look_at"));
+      cam.up     = hydra_xml::readval3f(cam_node.child(L"up"));
+
+      cam.has_matrix = false;
+      if(cam_node.child(L"matrix"))
+      {
+        cam.matrix = LiteMath::transpose(float4x4FromString(cam_node.child(L"matrix").attribute(L"val").as_string()));
+        cam.has_matrix = true;
+      }
+      return true;
+  }
+
+  bool load_cameras(HydraScene &scene, const pugi::xml_node &lib_node) {
+    bool ok = true;
+
+    for (pugi::xml_node cam_node = lib_node.first_child(); cam_node != nullptr && ok; cam_node = cam_node.next_sibling())
+    {
+      if(std::wstring(cam_node.name()) == L"camera")
+      {
+        Camera camera;
+        if(!load_camera(camera, cam_node)) return false;
+        scene.cameras[camera.id] = std::move(camera);
+      }
+
+    }
+
+    return ok;
+  }
+
+
   bool load_instanced_scene(InstancedScene &scene, pugi::xml_node scene_node)
   {
     bool ok = true;
@@ -424,6 +470,7 @@ namespace LiteScene
     return ok;
   }
 
+
   bool HydraScene::load(const std::string &filename)
   {
     clear();
@@ -510,7 +557,7 @@ namespace LiteScene
     bool g_loaded = load_geometry(*this, geometryLib);
     //load_lights(*this, lightsLib);
     //load_spectra(*this, spectraLib);
-    //load_cameras(*this, cameraLib);
+    load_cameras(*this, cameraLib);
     //load_render_settings(*this, settingsNode);
     bool s_loaded = load_all_instanced_scenes(*this, scenesNode);
 
@@ -682,4 +729,6 @@ namespace LiteScene
 
     return doc.save_file(filename.c_str());
   }
+
+
 }
