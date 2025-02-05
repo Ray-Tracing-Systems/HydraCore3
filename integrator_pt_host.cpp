@@ -1,5 +1,3 @@
-#pragma once
-
 #include "integrator_pt.h"
 #include "include/crandom.h"
 
