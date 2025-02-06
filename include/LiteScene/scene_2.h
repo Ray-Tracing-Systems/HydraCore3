@@ -1,5 +1,5 @@
 #pragma once
-#include "LiteMath/LiteMath.h"
+#include <LiteMath.h>
 #include "pugixml.hpp"
 #include "cmesh4.h"
 

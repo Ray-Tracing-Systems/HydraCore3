@@ -6,6 +6,7 @@ set(MODULE_SOURCES
     scene.cpp
     loader.cpp
     loader_mat.cpp
+    scene_2.cpp
     geometry.cpp
 )
 
