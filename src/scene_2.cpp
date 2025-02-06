@@ -8,11 +8,25 @@
 
 namespace LiteScene
 {
-  #define SET_VALUE(node, name, value) \
+  #define SET_ATTR(node, name, value) \
     {\
     if (node.attribute(name).empty()) node.append_attribute(name).set_value(value); \
     else node.attribute(name).set_value(value); \
     }
+
+  pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name, const std::wstring &value)
+  {
+    pugi::xml_node child = node.child(name).empty() ? node.child(name) : node.append_child(name);
+    child.text().set(value.c_str());
+    return child;
+  }
+
+  pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name)
+  {
+    pugi::xml_node child = node.child(name).empty() ? node.child(name) : node.append_child(name);
+    return child;
+  }
+
   std::wstring s2ws(const std::string& str)
   {
     using convert_typeX = std::codecvt_utf8<wchar_t>;
@@ -25,6 +39,24 @@ namespace LiteScene
     using convert_typeX = std::codecvt_utf8<wchar_t>;
     std::wstring_convert<convert_typeX, wchar_t> converterX;
     return converterX.to_bytes(wstr);
+  }
+
+  std::wstring LM_to_wstring(const LiteMath::float3 &v)
+  {
+    return std::to_wstring(v.x) + L" " + std::to_wstring(v.y) + L" " + std::to_wstring(v.z);
+  }
+
+  std::wstring LM_to_wstring(const LiteMath::float4 &v)
+  {
+    return std::to_wstring(v.x) + L" " + std::to_wstring(v.y) + L" " + std::to_wstring(v.z) + L" " + std::to_wstring(v.w);
+  }
+
+  std::wstring LM_to_wstring(const LiteMath::float4x4 &v)
+  {
+    return LM_to_wstring(v.get_row(0)) + L" "
+         + LM_to_wstring(v.get_row(1)) + L" " 
+         + LM_to_wstring(v.get_row(2)) + L" " 
+         + LM_to_wstring(v.get_row(3));
   }
 
   std::vector<std::string> split(std::string aStr, char aDelim)
@@ -122,10 +154,10 @@ namespace LiteScene
   {
     pugi::xml_node node = custom_data;
     
-    SET_VALUE(node, L"id", id);
-    SET_VALUE(node, L"bytesize", bytesize);
-    SET_VALUE(node, L"name", s2ws(name).c_str());
-    SET_VALUE(node, L"type", s2ws(type_name).c_str());
+    SET_ATTR(node, L"id", id);
+    SET_ATTR(node, L"bytesize", bytesize);
+    SET_ATTR(node, L"name", s2ws(name).c_str());
+    SET_ATTR(node, L"type", s2ws(type_name).c_str());
 
     return node;
   }
@@ -156,7 +188,7 @@ namespace LiteScene
     }
     pugi::xml_node node = save_node_base();
     node.set_name(L"mesh");
-    SET_VALUE(node, L"loc", s2ws(relative_file_path).c_str());
+    SET_ATTR(node, L"loc", s2ws(relative_file_path).c_str());
     return node;
   }
   bool MeshGeometry::load_data(const SceneMetadata &metadata)
@@ -346,7 +378,7 @@ namespace LiteScene
 
     for (pugi::xml_node set_node = lib_node.first_child(); set_node != nullptr && ok; set_node = set_node.next_sibling())
     {
-      if(std::wstring(set_node.name()) == L"camera")
+      if(std::wstring(set_node.name()) == L"render_settings")
       {
         RenderSettings settings;
         if(!load_render_settings(settings, set_node)) return false;
@@ -611,12 +643,12 @@ namespace LiteScene
     return !lib_node.empty();
   }
 
-  bool save_instanced_scene(const InstancedScene &scene, pugi::xml_node scene_node)
+  bool save_instanced_scene(const InstancedScene &scene, pugi::xml_node &scene_node)
   {
-    SET_VALUE(scene_node, L"id", scene.id);
+    SET_ATTR(scene_node, L"id", scene.id);
     std::wstring bbox_str = AABBToString(scene.bbox);
-    SET_VALUE(scene_node, L"bbox", bbox_str.c_str());
-    SET_VALUE(scene_node, L"name", s2ws(scene.name).c_str());
+    SET_ATTR(scene_node, L"bbox", bbox_str.c_str());
+    SET_ATTR(scene_node, L"name", s2ws(scene.name).c_str());
 
     if (scene.remap_lists.size() > 0)
     {
@@ -639,20 +671,20 @@ namespace LiteScene
       for (const auto &[id, instance] : scene.instances)
       {
         pugi::xml_node inst_node = scene_node.append_copy(instance.custom_data);
-        SET_VALUE(inst_node, L"id", id);
-        SET_VALUE(inst_node, L"mesh_id", instance.mesh_id);
-        SET_VALUE(inst_node, L"matrix", float4x4ToString(instance.matrix).c_str());
+        SET_ATTR(inst_node, L"id", id);
+        SET_ATTR(inst_node, L"mesh_id", instance.mesh_id);
+        SET_ATTR(inst_node, L"matrix", float4x4ToString(instance.matrix).c_str());
 
         if (instance.rmap_id != INVALID_ID)
-          SET_VALUE(inst_node, L"rmap_id", instance.rmap_id);
+          SET_ATTR(inst_node, L"rmap_id", instance.rmap_id);
         if (instance.scn_id != INVALID_ID)
-          SET_VALUE(inst_node, L"scn_id", instance.scn_id);
+          SET_ATTR(inst_node, L"scn_id", instance.scn_id);
         if (instance.scn_sid != INVALID_ID)
-          SET_VALUE(inst_node, L"scn_sid", instance.scn_sid);
+          SET_ATTR(inst_node, L"scn_sid", instance.scn_sid);
         if (instance.light_id != INVALID_ID)
-          SET_VALUE(inst_node, L"light_id", instance.light_id);
+          SET_ATTR(inst_node, L"light_id", instance.light_id);
         if (instance.linst_id != INVALID_ID)
-          SET_VALUE(inst_node, L"linst_id", instance.linst_id);
+          SET_ATTR(inst_node, L"linst_id", instance.linst_id);
       }
     }
 
@@ -661,15 +693,15 @@ namespace LiteScene
       for (const auto &[id, linst] : scene.light_instances)
       {
         pugi::xml_node linst_node = scene_node.append_copy(linst.custom_data);
-        SET_VALUE(linst_node, L"id", id);
-        SET_VALUE(linst_node, L"light_id", linst.light_id);
-        SET_VALUE(linst_node, L"matrix", float4x4ToString(linst.matrix).c_str());
+        SET_ATTR(linst_node, L"id", id);
+        SET_ATTR(linst_node, L"light_id", linst.light_id);
+        SET_ATTR(linst_node, L"matrix", float4x4ToString(linst.matrix).c_str());
 
         if (linst.mesh_id != INVALID_ID)
-          SET_VALUE(linst_node, L"mesh_id", linst.mesh_id);
+          SET_ATTR(linst_node, L"mesh_id", linst.mesh_id);
         
         if (linst.lgroup_id != INVALID_ID)
-          SET_VALUE(linst_node, L"lgroup_id", linst.lgroup_id);
+          SET_ATTR(linst_node, L"lgroup_id", linst.lgroup_id);
       }
     }
 
@@ -699,6 +731,75 @@ namespace LiteScene
     }
     return !lib_node.empty();
   }
+
+
+  bool save_camera(const Camera &cam, pugi::xml_node &cam_node)
+  {
+      SET_ATTR(cam_node, L"id", cam.id);
+      SET_ATTR(cam_node, L"name", s2ws(cam.name).c_str());
+
+      set_child(cam_node, L"fov", std::to_wstring(cam.fov));
+      set_child(cam_node, L"nearClipPlane", std::to_wstring(cam.nearPlane));
+      set_child(cam_node, L"farClipPlane", std::to_wstring(cam.farPlane));
+
+
+      if(cam.exposureMult != 1.0f) {
+        set_child(cam_node, L"exposure_mult", std::to_wstring(cam.exposureMult));
+      }
+
+      set_child(cam_node, L"position", LM_to_wstring(cam.pos));
+      set_child(cam_node, L"look_at", LM_to_wstring(cam.lookAt));
+      set_child(cam_node, L"up", LM_to_wstring(cam.up));
+
+      if(cam.has_matrix)
+      {
+        auto matrixNode = set_child(cam_node, L"matrix");
+        SET_ATTR(matrixNode, L"val", LM_to_wstring(LiteMath::transpose(cam.matrix)).c_str());
+      }
+
+
+      return true;
+  }
+
+
+  bool save_cameras(const HydraScene &scene, pugi::xml_node lib_node)
+  {
+    for (const auto &[id, cam] : scene.cameras)
+    {
+      auto cam_node = lib_node.append_copy(cam.custom_data);
+      if(!save_camera(cam, cam_node)) return false;
+    }
+    return !lib_node.empty();
+  }
+
+
+  bool save_render_settings(const RenderSettings &settings, pugi::xml_node &node)
+  {
+    SET_ATTR(node, L"id", settings.id);
+    SET_ATTR(node, L"name", s2ws(settings.name).c_str());
+    SET_ATTR(node, L"type", L"HydraModern");
+
+
+    set_child(node, L"width", std::to_wstring(settings.width));
+    set_child(node, L"height", std::to_wstring(settings.height));
+    set_child(node, L"trace_depth", std::to_wstring(settings.depth));
+    set_child(node, L"diff_trace_depth", std::to_wstring(settings.depthDiffuse));
+    set_child(node, L"maxRaysPerPixel", std::to_wstring(settings.spp));
+
+    return true;
+  }
+
+
+  bool save_all_render_settings(const HydraScene &scene, pugi::xml_node lib_node)
+  {
+    for (const auto &[id, sett] : scene.render_settings)
+    {
+      auto sett_node = lib_node.append_copy(sett.custom_data);
+      if(!save_render_settings(sett, sett_node)) return false;
+    }
+    return !lib_node.empty();
+  }
+
 
   bool HydraScene::save(const std::string &filename, const std::string &geometry_folder)
   {
@@ -750,10 +851,10 @@ namespace LiteScene
       return false;
     // if (!save_lights(*this, lightsLib))
     //   return false;
-    // if (!save_cameras(*this, cameraLib))
-    //   return false;
-    // if (!save_settings(*this, settingsLib))
-    //   return false;
+    if (!save_cameras(*this, cameraLib))
+      return false;
+    if (!save_all_render_settings(*this, settingsLib))
+      return false;
     if (!save_instanced_scenes(*this, scenesLib))
       return false;
 

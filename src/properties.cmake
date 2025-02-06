@@ -8,13 +8,15 @@ set(MODULE_SOURCES
     loader_mat.cpp
     scene_2.cpp
     geometry.cpp
+    mesh_load_obj.cpp
 )
 
 set(MODULE_LIBS
-    pugixml
-    tinyobjloader
+
 )
 
 set(MODULE_PUBLIC_LIBS
     LiteMath
+    tinyobjloader
+    pugixml
 )

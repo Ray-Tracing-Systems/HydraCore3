@@ -15,10 +15,10 @@ set(LITESCENE_EXTERNAL_DIR ${LITESCENE_PROJECT_ROOT}/3rd_party)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-
+set(LITESCENE_SCENE_MANAGER ${LITESCENE_PROJECT_ROOT}/scn_mgr/scene_mgr.cpp)
 #include(cmake/includes.cmake)
 
 add_subdirectory(3rd_party)
 
 add_subdirectory(${LITESCENE_SRC_DIR})
-add_subdirectory(scn_mgr)
+#add_subdirectory(scn_mgr)

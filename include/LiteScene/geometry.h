@@ -2,7 +2,7 @@
 #define INCLUDE_LITESCENE_GEOMETRY_H_
 
 #include <LiteScene/sceneobj.h>
-#include <LiteScene/cmesh4.h>
+#include <cmesh4.h>
 #include <variant>
 #include <memory>
 #include <optional>
