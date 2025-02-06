@@ -21,3 +21,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 add_subdirectory(3rd_party)
 
 add_subdirectory(${LITESCENE_SRC_DIR})
+add_subdirectory(scn_mgr)

@@ -1,8 +1,8 @@
-set(MODULE_NAME litescene)
+set(MODULE_NAME LiteScene)
 
 set(MODULE_SOURCES
     cmesh4.cpp
-    hydraxml.cpp
+    #hydraxml.cpp
     scene.cpp
     loader.cpp
     loader_mat.cpp

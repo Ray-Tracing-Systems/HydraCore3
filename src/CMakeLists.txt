@@ -23,6 +23,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(litescene_lib_compile_options INTERFACE -g)
 endif()
 
+add_library(hydra_xml INTERFACE)
+target_sources(hydra_xml INTERFACE hydraxml.cpp)
+
+
 include(properties.cmake)
 
 add_library(${MODULE_NAME}
@@ -34,6 +38,6 @@ target_include_directories(${MODULE_NAME} PUBLIC ${LITESCENE_PROJECT_ROOT}/inclu
 target_compile_options(${MODULE_NAME} PRIVATE -Wno-error=unused-variable)
 
 target_link_libraries(${MODULE_NAME}
-    PUBLIC ${MODULE_PUBLIC_LIBS}
+    PUBLIC ${MODULE_PUBLIC_LIBS} hydra_xml
     PRIVATE ${MODULE_LIBS} litescene_lib_compile_options 
 )
