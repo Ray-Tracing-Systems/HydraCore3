@@ -16,7 +16,7 @@
 //#ifndef LITERT_RENDERER
 //#include "CrossRT.h" // special include for ray tracing
 //#else
-#include "../../ISceneObject.h" // special include for ray tracing
+#include "../../core/ISceneObject.h" // special include for ray tracing
 #include "../../BVH/BVH2Common.h"
 //#endif
 #include "Image2d.h" // special include for textures
