@@ -17,14 +17,14 @@ namespace LiteScene
 
   pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name, const std::wstring &value)
   {
-    pugi::xml_node child = node.child(name).empty() ? node.child(name) : node.append_child(name);
+    pugi::xml_node child = node.child(name) ? node.child(name) : node.append_child(name);
     child.text().set(value.c_str());
     return child;
   }
 
   pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name)
   {
-    pugi::xml_node child = node.child(name).empty() ? node.child(name) : node.append_child(name);
+    pugi::xml_node child = node.child(name) ? node.child(name) : node.append_child(name);
     return child;
   }
 
