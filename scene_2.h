@@ -1,6 +1,6 @@
 #pragma once
-#include <LiteMath.h>
-#include <pugixml.hpp>
+#include "LiteMath.h"
+#include "3rd_party/pugixml.hpp"
 #include "cmesh4.h"
 
 #include <string>

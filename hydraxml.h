@@ -1,7 +1,7 @@
 #ifndef HYDRAXML_H
 #define HYDRAXML_H
 
-#include "pugixml.hpp"
+#include "3rd_party/pugixml.hpp"
 #include "LiteMath.h"
 using namespace LiteMath;
 

@@ -13,7 +13,7 @@ SimpleMesh LoadMeshFromObj(const char* a_fileName, bool aVerbose, const char* a_
 #else
 
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
+#include "3rd_party/tiny_obj_loader.h"
 
 struct TinyObjIndexEqual
 {

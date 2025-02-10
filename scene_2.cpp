@@ -1,5 +1,6 @@
-#include <LiteScene/scene_2.h>
-#include <hydraxml.h>
+#include "scene_2.h"
+#include "hydraxml.h"
+
 #include <sstream>
 #include <fstream>
 #include <locale>
