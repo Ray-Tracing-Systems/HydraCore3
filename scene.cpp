@@ -1,4 +1,4 @@
-#include "scene_2.h"
+#include "scene.h"
 #include "hydraxml.h"
 
 #include <sstream>
