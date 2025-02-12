@@ -3,6 +3,7 @@
 
 #include "3rd_party/pugixml.hpp"
 #include <LiteMath.h>
+#include <Image2d.h>
 #include <string>
 #include <variant>
 #include <optional>
@@ -49,14 +50,16 @@ namespace LiteScene {
     };
 
 
-    enum class AddressMode { CLAMP, MIRROR, BORDER, MIRROR_ONCE, WRAP };
     struct TextureInstance
     {
         uint32_t id;
-        AddressMode addressing_mode_u;
-        AddressMode addressing_mode_v;
+        LiteImage::Sampler::AddressMode addr_mode_u;
+        LiteImage::Sampler::AddressMode addr_mode_v;
+        LiteImage::Sampler::AddressMode addr_mode_w;
+        LiteImage::Sampler::Filter filter;
         LiteMath::float4x4 matrix;
-        //TODO ....
+        float input_gamma = 2.2f;
+        bool alpha_from_rgb = true;
     };
 
     class LightSourceMaterial : public Material

@@ -42,17 +42,6 @@ namespace LiteScene
         return res;
     }
 
-    std::vector<float> load_float_array_from_string(const std::wstring &str, int count)
-    {
-        std::vector<float> result(count);
-        std::wstringstream inputStream(str);
-        for (int i = 0; i < count; i++)
-        {
-            inputStream >> result[i];
-        }
-        return result;
-    }
-
     std::wstring save_float_array_to_string(const std::vector<float> &array)
     {
         std::wstringstream outputStream;
@@ -63,30 +52,19 @@ namespace LiteScene
         return outputStream.str();
     }
 
-    LiteMath::float4x4 float4x4FromString(const std::wstring &matrix_str)
-    {
-        auto data = load_float_array_from_string(matrix_str, 16);
-        LiteMath::float4x4 result;
-
-        result.set_row(0, LiteMath::float4(data[0],data[1], data[2], data[3]));
-        result.set_row(1, LiteMath::float4(data[4],data[5], data[6], data[7]));
-        result.set_row(2, LiteMath::float4(data[8],data[9], data[10], data[11]));
-        result.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15])); 
-
-        return result;
-    }
-
+  
     std::wstring float4x4ToString(const LiteMath::float4x4 &matrix)
     {
-        return save_float_array_to_string({ matrix.get_row(0).x, matrix.get_row(0).y, matrix.get_row(0).z, matrix.get_row(0).w,
+        return LM_to_wstring(matrix);
+        /*return save_float_array_to_string({ matrix.get_row(0).x, matrix.get_row(0).y, matrix.get_row(0).z, matrix.get_row(0).w,
                                                                              matrix.get_row(1).x, matrix.get_row(1).y, matrix.get_row(1).z, matrix.get_row(1).w,
                                                                              matrix.get_row(2).x, matrix.get_row(2).y, matrix.get_row(2).z, matrix.get_row(2).w,
                                                                              matrix.get_row(3).x, matrix.get_row(3).y, matrix.get_row(3).z, matrix.get_row(3).w });
-    }
+    */}
 
     AABB AABBFromString(const std::wstring &str)
     {
-        auto data = load_float_array_from_string(str, 6);
+        auto data = wstring_to_float_arr(str, 6);
         AABB result;
         result.boxMin = LiteMath::float3(data[0], data[1], data[2]);
         result.boxMax = LiteMath::float3(data[3], data[4], data[5]);
@@ -299,7 +277,7 @@ namespace LiteScene
             cam.has_matrix = false;
             if(cam_node.child(L"matrix"))
             {
-                cam.matrix = LiteMath::transpose(float4x4FromString(cam_node.child(L"matrix").attribute(L"val").as_string()));
+                cam.matrix = LiteMath::transpose(wstring_to_float4x4(cam_node.child(L"matrix").attribute(L"val").as_string()));
                 cam.has_matrix = true;
             }
 
@@ -437,7 +415,7 @@ namespace LiteScene
                 }
                 else
                 {
-                    inst.matrix = float4x4FromString(inst_node.attribute(L"matrix").as_string());
+                    inst.matrix = wstring_to_float4x4(inst_node.attribute(L"matrix").as_string());
                     scene.instances[inst.id] = inst;
                 }
             }
@@ -449,7 +427,7 @@ namespace LiteScene
                 inst.mesh_id = inst_node.attribute(L"mesh_id").as_uint(INVALID_ID);
                 inst.light_id = inst_node.attribute(L"light_id").as_uint(INVALID_ID);
                 inst.lgroup_id = inst_node.attribute(L"lgroup_id").as_int(INVALID_ID); //it can be -1
-                inst.matrix = float4x4FromString(inst_node.attribute(L"matrix").as_string());
+                inst.matrix = wstring_to_float4x4(inst_node.attribute(L"matrix").as_string());
 
                 if (inst.id == INVALID_ID || inst.light_id == INVALID_ID)
                 {
@@ -463,7 +441,7 @@ namespace LiteScene
                 }
                 else
                 {
-                    inst.matrix = float4x4FromString(inst_node.attribute(L"matrix").as_string());
+                    inst.matrix = wstring_to_float4x4(inst_node.attribute(L"matrix").as_string());
                     scene.light_instances[inst.id] = inst;
                 }
             }

@@ -5,6 +5,8 @@
 #include "LiteMath.h"
 #include <locale>
 #include <codecvt>
+#include <vector>
+#include <sstream>
 
 namespace LiteScene {
 
@@ -54,9 +56,41 @@ namespace LiteScene {
     inline std::wstring LM_to_wstring(const LiteMath::float4x4 &v)
     {
         return LM_to_wstring(v.get_row(0)) + L" "
-                 + LM_to_wstring(v.get_row(1)) + L" " 
-                 + LM_to_wstring(v.get_row(2)) + L" " 
-                 + LM_to_wstring(v.get_row(3));
+             + LM_to_wstring(v.get_row(1)) + L" " 
+             + LM_to_wstring(v.get_row(2)) + L" " 
+             + LM_to_wstring(v.get_row(3));
+    }
+/*
+    inline LiteMath::float3 to_float3(const std::wstring &str)
+    {
+        LiteMath::float3 res;
+        std::wstringstream ss{str};
+        ss >> res.x;
+    }
+*/
+
+    inline std::vector<float> wstring_to_float_arr(const std::wstring &str, int count)
+    {
+        std::vector<float> result(count);
+        std::wstringstream inputStream(str);
+        for (int i = 0; i < count; i++)
+        {
+            inputStream >> result[i];
+        }
+        return result;
+    }
+
+    inline LiteMath::float4x4 wstring_to_float4x4(const std::wstring &str)
+    {
+        auto data = wstring_to_float_arr(str, 16);
+        LiteMath::float4x4 result;
+
+        result.set_row(0, LiteMath::float4(data[0],data[1], data[2], data[3]));
+        result.set_row(1, LiteMath::float4(data[4],data[5], data[6], data[7]));
+        result.set_row(2, LiteMath::float4(data[8],data[9], data[10], data[11]));
+        result.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15])); 
+
+        return result;
     }
 
     inline float pop_attr_float(pugi::xml_node &node, const pugi::char_t *name)

@@ -9,20 +9,134 @@
 namespace LiteScene
 {
 
+    using LiteImage::Sampler;
+
+    Sampler::AddressMode addr_mode_from_str(const std::wstring& a_mode)
+    {
+        if(a_mode == L"clamp")
+            return Sampler::AddressMode::CLAMP;
+        else if(a_mode == L"wrap")
+            return Sampler::AddressMode::WRAP;
+        else if(a_mode == L"mirror")
+            return Sampler::AddressMode::MIRROR;
+        else if(a_mode == L"border")
+            return Sampler::AddressMode::BORDER;
+        else if(a_mode == L"mirror_once")
+            return Sampler::AddressMode::MIRROR_ONCE;
+        else
+            return Sampler::AddressMode::WRAP;
+    }
+
+    std::wstring addr_mode_to_str(Sampler::AddressMode mode)
+    {
+        switch(mode) {
+        case Sampler::AddressMode::CLAMP:
+            return L"clamp";
+        case Sampler::AddressMode::MIRROR:
+            return L"mirror";
+        case Sampler::AddressMode::BORDER:
+            return L"border";
+        case Sampler::AddressMode::MIRROR_ONCE:
+            return L"mirror_once";
+        default:
+            return L"wrap";
+        }
+    }
+
+    bool load_texture_inst(const pugi::xml_node &texNode, TextureInstance &inst)
+    {
+        inst.id = texNode.attribute(L"id").as_uint();
+
+        if(texNode.attribute(L"addressing_mode_u") != nullptr)
+        {
+            std::wstring addModeU = texNode.attribute(L"addressing_mode_u").as_string();
+            inst.addr_mode_u  = addr_mode_from_str(addModeU);
+        } 
+
+        if(texNode.attribute(L"addressing_mode_v") != nullptr)
+        {
+            std::wstring addModeV = texNode.attribute(L"addressing_mode_v").as_string();
+            inst.addr_mode_v  = addr_mode_from_str(addModeV);
+        }
+
+        if(texNode.attribute(L"addressing_mode_w") == nullptr)
+            inst.addr_mode_w  = inst.addr_mode_v;
+        else
+        {
+            std::wstring addModeW = texNode.attribute(L"addressing_mode_w").as_string();
+            inst.addr_mode_w  = addr_mode_from_str(addModeW);
+        }
+
+        inst.filter = Sampler::Filter::LINEAR;
+        if(texNode.attribute(L"filter") != nullptr)
+        {
+            std::wstring filterMode = texNode.attribute(L"filter").as_string();
+            if(filterMode == L"point" || filterMode == L"nearest")
+                inst.filter = Sampler::Filter::NEAREST;
+            else if(filterMode == L"cubic" || filterMode == L"bicubic")
+                inst.filter = Sampler::Filter::CUBIC;
+        }
+
+        if(texNode.attribute(L"input_gamma") != nullptr)
+            inst.input_gamma = texNode.attribute(L"input_gamma").as_float();
+
+        const std::wstring inputAlphaMode = texNode.attribute(L"input_alpha").as_string();
+        if(inputAlphaMode == L"alpha") {
+            inst.alpha_from_rgb = false;
+        }
+
+        inst.matrix = wstring_to_float4x4(texNode.attribute(L"matrix").as_string());
+        return true;
+    }
+
     bool find_texture(const pugi::xml_node &colorNode, TextureInstance &inst)
     {
         auto texNode = colorNode.child(L"texture");
         if(texNode) {
-            uint32_t id = texNode.attribute(L"id").as_uint();
-            inst.id = id;
-            return true;
+            return load_texture_inst(texNode, inst);
         }
         return false;
     }
 
     void set_texture(pugi::xml_node &colorNode, const TextureInstance &inst)
     {
+        auto node = set_child(colorNode, L"texture");
 
+
+        set_attr(node, L"id", inst.id);
+        set_attr(node, L"type", L"texref");
+
+        if(inst.addr_mode_u != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_u", addr_mode_to_str(inst.addr_mode_u));
+        }
+        if(inst.addr_mode_v != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_v", addr_mode_to_str(inst.addr_mode_v));
+        }
+        if(inst.addr_mode_w != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_w", addr_mode_to_str(inst.addr_mode_w));
+        }
+
+
+        switch(inst.filter) {
+        case Sampler::Filter::CUBIC:
+            set_attr(node, L"filter", L"cubic");
+            break;
+        case Sampler::Filter::NEAREST:
+            set_attr(node, L"filter", L"nearest");
+            break;
+        default:
+            break;
+        }
+
+        if(inst.input_gamma != 2.2f) {
+            set_attr(node, L"input_gamma", inst.input_gamma);
+        }
+
+        if(!inst.alpha_from_rgb) {
+            set_attr(node, L"input_alpha", L"alpha");
+        }
+
+        set_attr(node, L"matrix", LM_to_wstring(inst.matrix));
     }
 
     LiteMath::float4 get_color(const pugi::xml_node& a_node)
