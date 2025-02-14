@@ -177,7 +177,7 @@ namespace LiteScene
 
   struct HydraScene
   {
-    HydraScene() {}
+    HydraScene() { initialize_empty_scene(); }
     ~HydraScene() { clear(); }
     //load scene from .xml file
     bool load(const std::string &filename); 
@@ -188,6 +188,22 @@ namespace LiteScene
 
     //deletes all the data
     void clear();
+
+    //initializes empty scene, called in constructor
+    void initialize_empty_scene();
+
+    //adds custom geometry to the scene, returns id, takes ownership
+    //geometry MUST be initialized (with specific for your geometry init function)
+    uint32_t add_geometry(LiteScene::Geometry *geom);
+
+    //adds mesh to the scene, returns it's id
+    uint32_t add_mesh(const cmesh4::SimpleMesh &mesh);
+
+    //adds instance to the scene, geomId must be a valid geometry id, either from add_geometry or add_mesh
+    uint32_t add_instance(uint32_t geomId, LiteMath::float4x4 transform);
+    
+    //returns total number of primitives (triangles for meshes and num_primitives property for custom geometries)
+    unsigned get_total_number_of_primitives() const;
 
     SceneMetadata metadata;
 

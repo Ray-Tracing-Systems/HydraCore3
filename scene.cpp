@@ -259,6 +259,20 @@ namespace LiteScene
     return false;
   }
 
+  void HydraScene::initialize_empty_scene()
+  {
+    metadata.xml_doc.load_string(LR""""(
+      <?xml version="1.0"?>
+      <textures_lib />
+      <materials_lib />
+      <geometry_lib />
+      <lights_lib />
+      <cam_lib />
+      <render_lib />
+      <scenes />
+    )"""");
+  }
+
   void HydraScene::clear()
   {
     for (int i = 0; i < textures.size(); i++)
@@ -280,6 +294,8 @@ namespace LiteScene
     cameras.clear();
     render_settings.clear();
     scenes.clear();
+
+    initialize_empty_scene();
   }
 
   bool load_geometry(HydraScene &scene, pugi::xml_node lib_node)
@@ -893,5 +909,81 @@ namespace LiteScene
     return doc.save_file(filename.c_str());
   }
 
+  unsigned HydraScene::get_total_number_of_primitives() const
+  {
+    unsigned count = 0;
+    for (const auto &[id, geom] : geometries)
+    {
+      auto *mesh = dynamic_cast<const MeshGeometry *>(geom);
+      if (mesh != nullptr)
+      {
+        if (mesh->is_loaded)
+          count += mesh->mesh.TrianglesNum();
+        else
+          count += mesh->custom_data.attribute(L"triNum").as_uint(0);
+      }
+      else
+        count += geom->custom_data.attribute(L"num_primitives").as_uint(0);
+    }
+    return count;
+  }
 
+  uint32_t HydraScene::add_geometry(LiteScene::Geometry *geom)
+  {
+    uint32_t id = geometries.size();
+    geom->id = id;
+    geom->custom_data = metadata.xml_doc.child(L"geometry_lib").append_child(s2ws(geom->type_name).c_str());
+    geometries[id] = geom;
+    return id;
+  }
+
+  uint32_t HydraScene::add_mesh(const cmesh4::SimpleMesh &mesh)
+  {
+    uint32_t id = geometries.size();
+    MeshGeometry *geom = new MeshGeometry();
+
+    geom->mesh = mesh;
+    geom->type_id = Geometry::MESH_TYPE_ID;
+    geom->id = id;
+    geom->name = "unnamed_mesh_"+std::to_string(id);
+    geom->relative_file_path = "mesh_"+std::to_string(id) + ".vsgf";
+    geom->type_name = "vsgf";
+    geom->bytesize = mesh.SizeInBytes();
+    printf("doc print\n");
+    metadata.xml_doc.print(std::wcout);
+    geom->custom_data = metadata.xml_doc.child(L"geometry_lib").append_child(L"mesh");
+    geom->custom_data.append_attribute(L"vertNum").set_value(mesh.VerticesNum());
+    geom->custom_data.append_attribute(L"triNum").set_value(mesh.TrianglesNum());
+    geom->is_loaded = true;
+
+    geom->custom_data.print(std::wcout);
+
+    geometries[id] = geom;
+    return id;
+  }
+  
+  uint32_t HydraScene::add_instance(uint32_t geomId, LiteMath::float4x4 transform)
+  {
+    auto it = geometries.find(geomId);
+    if (it == geometries.end())
+    {
+      printf("add_instance error - trying to add instance to geomId=%u that does not exist!\n", geomId);
+      return uint32_t(-1);
+    }
+    else
+    {
+      if (scenes.empty())
+      {
+        scenes[0] = InstancedScene();
+        scenes[0].id = 0;
+        scenes[0].bbox.boxMin = LiteMath::float3(-1,-1,-1);
+        scenes[0].bbox.boxMax = LiteMath::float3( 1, 1, 1);
+      }
+      int instId = scenes[0].instances.size();
+      scenes[0].instances[instId] = Instance();
+      scenes[0].instances[instId].matrix = transform;
+      scenes[0].instances[instId].mesh_id = geomId;
+      return instId;
+    }
+  }
 }
