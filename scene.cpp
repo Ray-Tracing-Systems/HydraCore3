@@ -154,7 +154,6 @@ namespace LiteScene
   
   pugi::xml_node Geometry::save_node_base() const
   {
-    custom_data.print(std::wcout);
     pugi::xml_node node = custom_data;
     
     SET_ATTR(node, L"id", id);
@@ -189,7 +188,6 @@ namespace LiteScene
       printf("[MeshGeometry::save_node] No location is specified. Save data first\n");
       return pugi::xml_node();
     }
-    printf("ay~!\n");
     pugi::xml_node node = save_node_base();
     node.set_name(L"mesh");
     SET_ATTR(node, L"loc", s2ws(relative_file_path).c_str());
@@ -653,13 +651,11 @@ namespace LiteScene
 
   bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node lib_node)
   {
-    printf("geometries size: %d\n", (int)scene.geometries.size());
     for (const auto &[id, geom] : scene.geometries)
     {
       geom->load_data(scene.metadata);
       geom->save_data(save_metadata);
       pugi::xml_node geom_node = geom->save_node();
-      geom_node.print(std::wcout);
       lib_node.append_copy(geom_node);
     }
     return !lib_node.empty();
@@ -949,14 +945,10 @@ namespace LiteScene
     geom->relative_file_path = "mesh_"+std::to_string(id) + ".vsgf";
     geom->type_name = "vsgf";
     geom->bytesize = mesh.SizeInBytes();
-    printf("doc print\n");
-    metadata.xml_doc.print(std::wcout);
     geom->custom_data = metadata.xml_doc.child(L"geometry_lib").append_child(L"mesh");
     geom->custom_data.append_attribute(L"vertNum").set_value(mesh.VerticesNum());
     geom->custom_data.append_attribute(L"triNum").set_value(mesh.TrianglesNum());
     geom->is_loaded = true;
-
-    geom->custom_data.print(std::wcout);
 
     geometries[id] = geom;
     return id;
