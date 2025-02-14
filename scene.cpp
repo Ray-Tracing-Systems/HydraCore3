@@ -6,6 +6,7 @@
 #include <locale>
 #include <codecvt>
 #include <filesystem>
+#include <iostream>
 
 namespace LiteScene
 {
@@ -153,6 +154,7 @@ namespace LiteScene
   
   pugi::xml_node Geometry::save_node_base() const
   {
+    custom_data.print(std::wcout);
     pugi::xml_node node = custom_data;
     
     SET_ATTR(node, L"id", id);
@@ -187,6 +189,7 @@ namespace LiteScene
       printf("[MeshGeometry::save_node] No location is specified. Save data first\n");
       return pugi::xml_node();
     }
+    printf("ay~!\n");
     pugi::xml_node node = save_node_base();
     node.set_name(L"mesh");
     SET_ATTR(node, L"loc", s2ws(relative_file_path).c_str());
@@ -634,11 +637,13 @@ namespace LiteScene
 
   bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node lib_node)
   {
+    printf("geometries size: %d\n", (int)scene.geometries.size());
     for (const auto &[id, geom] : scene.geometries)
     {
       geom->load_data(scene.metadata);
       geom->save_data(save_metadata);
       pugi::xml_node geom_node = geom->save_node();
+      geom_node.print(std::wcout);
       lib_node.append_copy(geom_node);
     }
     return !lib_node.empty();
@@ -671,7 +676,11 @@ namespace LiteScene
     {
       for (const auto &[id, instance] : scene.instances)
       {
-        pugi::xml_node inst_node = scene_node.append_copy(instance.custom_data);
+        pugi::xml_node inst_node;
+        if (instance.custom_data)
+          inst_node = scene_node.append_copy(instance.custom_data);
+        else
+          inst_node = scene_node.append_child(L"instance");
         SET_ATTR(inst_node, L"id", id);
         SET_ATTR(inst_node, L"mesh_id", instance.mesh_id);
         SET_ATTR(inst_node, L"matrix", float4x4ToString(instance.matrix).c_str());
@@ -693,7 +702,12 @@ namespace LiteScene
     {
       for (const auto &[id, linst] : scene.light_instances)
       {
-        pugi::xml_node linst_node = scene_node.append_copy(linst.custom_data);
+
+        pugi::xml_node linst_node;
+        if (linst.custom_data)
+          linst_node = scene_node.append_copy(linst.custom_data);
+        else
+          linst_node = scene_node.append_child(L"instance_light");
         SET_ATTR(linst_node, L"id", id);
         SET_ATTR(linst_node, L"light_id", linst.light_id);
         SET_ATTR(linst_node, L"matrix", float4x4ToString(linst.matrix).c_str());
@@ -713,7 +727,11 @@ namespace LiteScene
   {
     for (const auto &[id, inst_scene] : scene.scenes)
     {
-      auto scene_node = lib_node.append_copy(inst_scene.custom_data);
+      pugi::xml_node scene_node;
+      if (inst_scene.custom_data)
+        scene_node = lib_node.append_copy(inst_scene.custom_data);
+      else
+        scene_node = lib_node.append_child(L"scene");
       
       //clear all instances, light_instances and remap lists, as they will be saved below
       pugi::xml_node child_node = scene_node.first_child();
@@ -767,7 +785,11 @@ namespace LiteScene
   {
     for (const auto &[id, cam] : scene.cameras)
     {
-      auto cam_node = lib_node.append_copy(cam.custom_data);
+      pugi::xml_node cam_node;
+      if (cam.custom_data)
+        cam_node = lib_node.append_copy(cam.custom_data);
+      else
+        cam_node = lib_node.append_child(L"camera");
       if(!save_camera(cam, cam_node)) return false;
     }
     return !lib_node.empty();
@@ -795,7 +817,11 @@ namespace LiteScene
   {
     for (const auto &[id, sett] : scene.render_settings)
     {
-      auto sett_node = lib_node.append_copy(sett.custom_data);
+      pugi::xml_node sett_node;
+      if (sett.custom_data)
+        sett_node = lib_node.append_copy(sett.custom_data);
+      else
+        sett_node = lib_node.append_child(L"render_settings");
       if(!save_render_settings(sett, sett_node)) return false;
     }
     return !lib_node.empty();
