@@ -50,31 +50,31 @@ namespace LiteScene
         if(texNode.attribute(L"addressing_mode_u") != nullptr)
         {
             std::wstring addModeU = texNode.attribute(L"addressing_mode_u").as_string();
-            inst.addr_mode_u  = addr_mode_from_str(addModeU);
+            inst.sampler.addr_mode_u  = addr_mode_from_str(addModeU);
         } 
 
         if(texNode.attribute(L"addressing_mode_v") != nullptr)
         {
             std::wstring addModeV = texNode.attribute(L"addressing_mode_v").as_string();
-            inst.addr_mode_v  = addr_mode_from_str(addModeV);
+            inst.sampler.addr_mode_v  = addr_mode_from_str(addModeV);
         }
 
         if(texNode.attribute(L"addressing_mode_w") == nullptr)
-            inst.addr_mode_w  = inst.addr_mode_v;
+            inst.sampler.addr_mode_w  = inst.sampler.addr_mode_v;
         else
         {
             std::wstring addModeW = texNode.attribute(L"addressing_mode_w").as_string();
-            inst.addr_mode_w  = addr_mode_from_str(addModeW);
+            inst.sampler.addr_mode_w  = addr_mode_from_str(addModeW);
         }
 
-        inst.filter = Sampler::Filter::LINEAR;
+        inst.sampler.filter = Sampler::Filter::LINEAR;
         if(texNode.attribute(L"filter") != nullptr)
         {
             std::wstring filterMode = texNode.attribute(L"filter").as_string();
             if(filterMode == L"point" || filterMode == L"nearest")
-                inst.filter = Sampler::Filter::NEAREST;
+                inst.sampler.filter = Sampler::Filter::NEAREST;
             else if(filterMode == L"cubic" || filterMode == L"bicubic")
-                inst.filter = Sampler::Filter::CUBIC;
+                inst.sampler.filter = Sampler::Filter::CUBIC;
         }
 
         if(texNode.attribute(L"input_gamma") != nullptr)
@@ -106,18 +106,18 @@ namespace LiteScene
         set_attr(node, L"id", inst.id);
         set_attr(node, L"type", L"texref");
 
-        if(inst.addr_mode_u != Sampler::AddressMode::WRAP) {
-            set_attr(node, L"addressing_mode_u", addr_mode_to_str(inst.addr_mode_u));
+        if(inst.sampler.addr_mode_u != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_u", addr_mode_to_str(inst.sampler.addr_mode_u));
         }
-        if(inst.addr_mode_v != Sampler::AddressMode::WRAP) {
-            set_attr(node, L"addressing_mode_v", addr_mode_to_str(inst.addr_mode_v));
+        if(inst.sampler.addr_mode_v != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_v", addr_mode_to_str(inst.sampler.addr_mode_v));
         }
-        if(inst.addr_mode_w != Sampler::AddressMode::WRAP) {
-            set_attr(node, L"addressing_mode_w", addr_mode_to_str(inst.addr_mode_w));
+        if(inst.sampler.addr_mode_w != Sampler::AddressMode::WRAP) {
+            set_attr(node, L"addressing_mode_w", addr_mode_to_str(inst.sampler.addr_mode_w));
         }
 
 
-        switch(inst.filter) {
+        switch(inst.sampler.filter) {
         case Sampler::Filter::CUBIC:
             set_attr(node, L"filter", L"cubic");
             break;

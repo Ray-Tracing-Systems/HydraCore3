@@ -1,6 +1,7 @@
 #ifndef LITESCENE_SCENE_H_
 #define LITESCENE_SCENE_H_
 #include "LiteMath.h"
+#include "Image2d.h"
 #include "3rd_party/pugixml.hpp"
 #include "cmesh4.h"
 #include "material.h"
@@ -8,6 +9,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <variant>
+#include <unordered_map>
 
 namespace LiteScene
 {
@@ -37,9 +40,34 @@ namespace LiteScene
 
     };
 
-    struct Texture
+    class Texture
     {
+    public:
+        struct Info
+        {
+            std::string path;
+            uint32_t width; 
+            uint32_t height;
+            uint32_t bpp;  
+        };
+
         uint32_t id = INVALID_ID;
+
+        std::shared_ptr<LiteImage::ICombinedImageSampler> get_combined_sampler(const TextureInstance &inst);
+
+        const Info &get_info() const { return info; }
+        void set_info(const Info &i) { tex_cache.clear(); info = i; }
+
+        bool load_info(pugi::xml_node &node, const std::string &scene_root);
+        bool save_info(pugi::xml_node &node, const std::string &scene_root) const;
+    private:
+        Info info;
+        std::shared_ptr<LiteImage::ICombinedImageSampler> sampler;
+        std::unordered_map<
+                            std::pair<TextureInstance::SamplerData, bool>,
+                            std::shared_ptr<LiteImage::ICombinedImageSampler>,
+                            TexSamplerHash
+                          > tex_cache;
     };
 
     class Geometry
@@ -193,7 +221,7 @@ namespace LiteScene
 
         SceneMetadata metadata;
 
-        std::map<uint32_t, Texture *> textures;  //HydraScene owns this data
+        std::map<uint32_t, Texture> textures;  //HydraScene owns this data
         std::map<uint32_t, Material *> materials;//HydraScene owns this data
         std::map<uint32_t, Geometry *> geometries; //HydraScene owns this data
         std::map<uint32_t, LightSource> light_sources;

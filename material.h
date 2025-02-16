@@ -13,6 +13,45 @@ namespace LiteScene {
 
     class Spectrum;
 
+    struct TextureInstance
+    {
+        struct SamplerData {
+            LiteImage::Sampler::AddressMode addr_mode_u;
+            LiteImage::Sampler::AddressMode addr_mode_v;
+            LiteImage::Sampler::AddressMode addr_mode_w;
+            LiteImage::Sampler::Filter filter;
+
+            bool operator==(const SamplerData &other) const
+            {
+                return addr_mode_u == other.addr_mode_u
+                    && addr_mode_v == other.addr_mode_v
+                    && addr_mode_w == other.addr_mode_w
+                    && filter == other.filter;
+            }
+        };
+
+        uint32_t id;
+
+        SamplerData sampler;
+        LiteMath::float4x4 matrix;
+        float input_gamma = 2.2f;
+        bool alpha_from_rgb = true;
+    };
+
+    struct TexSamplerHash
+    {
+        std::size_t operator()(const std::pair<TextureInstance::SamplerData, bool> &s) const 
+        {
+            std::size_t res = std::hash<uint64_t>{}(static_cast<uint64_t>(s.first.addr_mode_u)) * 31ull
+                            + std::hash<uint64_t>{}(static_cast<uint64_t>(s.first.addr_mode_v)) * 31ull
+                            + std::hash<uint64_t>{}(static_cast<uint64_t>(s.first.addr_mode_w)) * 31ull
+                            + std::hash<uint64_t>{}(static_cast<uint64_t>(s.first.filter)) * 31ull
+                            + std::hash<bool>{}(s.second);
+
+            return res;
+        }
+    };
+
     template<typename T>
     struct SceneRef {
         uint32_t id;
@@ -47,19 +86,6 @@ namespace LiteScene {
         uint32_t id;
         std::string name;
         pugi::xml_node raw_xml;
-    };
-
-
-    struct TextureInstance
-    {
-        uint32_t id;
-        LiteImage::Sampler::AddressMode addr_mode_u;
-        LiteImage::Sampler::AddressMode addr_mode_v;
-        LiteImage::Sampler::AddressMode addr_mode_w;
-        LiteImage::Sampler::Filter filter;
-        LiteMath::float4x4 matrix;
-        float input_gamma = 2.2f;
-        bool alpha_from_rgb = true;
     };
 
     class LightSourceMaterial : public Material

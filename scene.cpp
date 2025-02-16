@@ -203,8 +203,8 @@ namespace LiteScene
 
     void HydraScene::clear()
     {
-        for (int i = 0; i < textures.size(); i++)
-            delete textures[i];
+        //for (int i = 0; i < textures.size(); i++)
+        //    delete textures[i];
 
         for (int i = 0; i < materials.size(); i++)
             delete materials[i];
@@ -335,6 +335,25 @@ namespace LiteScene
 
         return ok;
     }
+
+    bool load_textures(HydraScene &scene, const pugi::xml_node &lib_node)
+    {
+        bool ok = true;
+
+        for (pugi::xml_node tex_node = lib_node.first_child(); tex_node != nullptr && ok; tex_node = tex_node.next_sibling())
+        {
+            if(std::wstring(tex_node.name()) == L"texture")
+            {
+                Texture tex;
+                if(!tex.load_info(tex_node, scene.metadata.scene_xml_folder)) return false;
+                scene.textures[tex.id] = std::move(tex);
+            }
+
+        }
+
+        return ok;
+    }
+
 
     bool load_instanced_scene(InstancedScene &scene, pugi::xml_node scene_node)
     {
@@ -566,8 +585,8 @@ namespace LiteScene
         if (!all_part_found)
             return false;
         
-        //load_textures(*this, texturesLib);
-        load_materials(*this, materialsLib);
+        bool t_loaded = load_textures(*this, texturesLib);
+        bool m_loaded = load_materials(*this, materialsLib);
         bool g_loaded = load_geometry(*this, geometryLib);
         //load_lights(*this, lightsLib);
         //load_spectra(*this, spectraLib);
@@ -575,7 +594,7 @@ namespace LiteScene
         bool rs_loaded = load_all_render_settings(*this, settingsNode);
         bool s_loaded = load_all_instanced_scenes(*this, scenesNode);
 
-        return g_loaded && c_loaded && rs_loaded && s_loaded;
+        return t_loaded && m_loaded && g_loaded && c_loaded && rs_loaded && s_loaded;
     }
 
     bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node lib_node)
@@ -748,7 +767,19 @@ namespace LiteScene
     }
 
 
+    bool save_textures(const HydraScene &scene, pugi::xml_node lib_node)
+    {
+        for (const auto &[id, tex] : scene.textures)
+        {
+            //auto tex_node = lib_node.append_copy(tex.custom_data);
+            auto tex_node = lib_node.append_child(L"texture");
+            if(!tex.save_info(tex_node, scene.metadata.scene_xml_folder)) return false;
+        }
+        return !lib_node.empty();
+    }
+
     bool save_materials(const HydraScene &scene, pugi::xml_node lib_node);
+
     bool HydraScene::save(const std::string &filename, const std::string &geometry_folder)
     {
         std::filesystem::file_status file_status = std::filesystem::status(filename);
@@ -791,8 +822,8 @@ namespace LiteScene
         pugi::xml_node settingsLib = doc.append_child(L"render_lib");
         pugi::xml_node scenesLib   = doc.append_child(L"scenes");
 
-        // if (!save_textures(*this, texturesLib))
-        //   return false;
+         if (!save_textures(*this, texturesLib))
+           return false;
         if (!save_materials(*this, materialsLib))
            return false;
         if (!save_geometry(*this, save_metadata, geometryLib))
