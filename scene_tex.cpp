@@ -9,10 +9,8 @@
 #include <algorithm>
 #include <numeric>
 
-#ifndef LITESCENE_NOTINYEXR
 #define TINYEXR_IMPLEMENTATION
-#endif
-#include "tinyexr.h"
+#include "3rd_party/tinyexr/tinyexr.h"
 
 namespace fs = std::filesystem;
 using LiteImage::Image2D;
