@@ -134,7 +134,7 @@ set(VULKAN_CAM2
         cam_plugin/CamTableLens_tablelens_gpu_init.cpp
         cam_plugin/CamTableLens_tablelens_gpu_ds.cpp )
 
-add_library(miniz external/tinyexr/miniz.c)
+add_library(miniz external/LiteScene/3rd_party/tinyexr/miniz.c)
 
 set(LOADER_EXTERNAL_SRC
         external/LiteScene/3rd_party/pugixml.cpp
