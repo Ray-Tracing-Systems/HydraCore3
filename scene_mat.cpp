@@ -255,8 +255,9 @@ namespace LiteScene
             return load_gltf_mat(id, name, node);
         }
         else {
-            printf("Material not supported\n");
-            return nullptr;
+            Material *mat = new CustomMaterial(id, name);
+            mat->raw_xml = node;
+            return mat;
         }
 
     }
@@ -270,7 +271,7 @@ namespace LiteScene
             std::wstring type = node.attribute(L"type").as_string();
 
 
-            if(std::wstring(node.name()) == L"material" && type == L"gltf")
+            if(std::wstring(node.name()) == L"material")
             {   
                 Material *mat;
                 if(!(mat = load_material(node))) return false;
@@ -332,7 +333,7 @@ namespace LiteScene
             set_attr(node, L"type", L"gltf");
             return save_gltf_mat(static_cast<const GltfMaterial *>(mat), node);
         default:
-            return false;
+            return true;
         }
 
         return true;

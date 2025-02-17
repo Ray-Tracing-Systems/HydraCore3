@@ -208,6 +208,9 @@ namespace LiteScene
 
     bool Texture::load_info(pugi::xml_node &node, const std::string &scene_root)
     {
+        id = node.attribute(L"id").as_uint();
+        name = ws2s(node.attribute(L"name").as_string());
+
         if(node.attribute(L"loc").empty()) {
             info.path = ws2s(std::wstring(node.attribute(L"path").as_string()));
         }
@@ -253,6 +256,9 @@ namespace LiteScene
 
     bool Texture::save_info(pugi::xml_node &node, const std::string &scene_root) const
     {
+        set_attr(node, L"id", id);
+        set_attr(node, L"name", s2ws(name));
+
         fs::path path = get_relative_if_possible(fs::path(scene_root), fs::path(info.path));
         if(path.is_absolute()) {
             set_attr(node, L"path", s2ws(path));

@@ -52,6 +52,7 @@ namespace LiteScene
         };
 
         uint32_t id = INVALID_ID;
+        std::string name;
 
         std::shared_ptr<LiteImage::ICombinedImageSampler> get_combined_sampler(const TextureInstance &inst);
 

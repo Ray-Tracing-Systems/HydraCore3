@@ -60,6 +60,7 @@ namespace LiteScene {
 
     enum class MaterialType 
     {
+        CUSTOM,
         LIGHTSOURCE,
         GLTF,
         DIFFUSE,
@@ -86,6 +87,17 @@ namespace LiteScene {
         uint32_t id;
         std::string name;
         pugi::xml_node raw_xml;
+    };
+
+    class CustomMaterial : public Material
+    {
+    public:
+        using Material::Material;
+
+        MaterialType type() const override
+        {
+            return MaterialType::CUSTOM;
+        }
     };
 
     class LightSourceMaterial : public Material
