@@ -1,5 +1,5 @@
-#ifndef HYDRAXML_H
-#define HYDRAXML_H
+#ifndef LITESCENE_HYDRAXML_H
+#define LITESCENE_HYDRAXML_H
 
 #include "3rd_party/pugixml.hpp"
 #include "LiteMath.h"
