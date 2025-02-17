@@ -49,6 +49,8 @@ namespace LiteScene
             uint32_t width; 
             uint32_t height;
             uint32_t bpp;  
+
+            size_t offset;
         };
 
         uint32_t id = INVALID_ID;
@@ -60,7 +62,7 @@ namespace LiteScene
         void set_info(const Info &i) { tex_cache.clear(); info = i; }
 
         bool load_info(pugi::xml_node &node, const std::string &scene_root);
-        bool save_info(pugi::xml_node &node, const std::string &scene_root) const;
+        bool save_info(pugi::xml_node &node, const std::string &old_scene_root, const SceneMetadata &newmeta) const;
     private:
         Info info;
         std::shared_ptr<LiteImage::ICombinedImageSampler> sampler;
@@ -124,6 +126,9 @@ namespace LiteScene
     struct LightSource
     {
         uint32_t id = INVALID_ID;
+        std::string name;
+
+        pugi::xml_node raw_xml;
     };
 
     struct Camera

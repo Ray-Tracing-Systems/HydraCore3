@@ -219,6 +219,7 @@ namespace LiteScene
             info.path = (fs::path(scene_root) / loc).string();
         }
         
+        info.offset = node.attribute(L"offset").as_ullong();
         info.width = node.attribute(L"width").as_uint();
         info.height = node.attribute(L"height").as_uint();
         if(info.width != 0 && info.height != 0) {
@@ -254,19 +255,25 @@ namespace LiteScene
     }
     // =======
 
-    bool Texture::save_info(pugi::xml_node &node, const std::string &scene_root) const
+    bool Texture::save_info(pugi::xml_node &node, const std::string &old_scene_root, const SceneMetadata &newmeta) const
     {
         set_attr(node, L"id", id);
         set_attr(node, L"name", s2ws(name));
 
-        fs::path path = get_relative_if_possible(fs::path(scene_root), fs::path(info.path));
-        if(path.is_absolute()) {
-            set_attr(node, L"path", s2ws(path));
+        fs::path path = fs::path(info.path);
+        fs::path abs_new_path = fs::path(newmeta.geometry_folder) / path.filename();
+        fs::path rel_new_path = get_relative_if_possible(fs::path(newmeta.scene_xml_folder), abs_new_path);
+
+        if(rel_new_path.is_absolute()) {
+            set_attr(node, L"path", s2ws(path.string()));
         }
         else {
-            set_attr(node, L"loc", s2ws(path));
-        }
+            fs::copy(fs::path(info.path), abs_new_path, fs::copy_options::update_existing
+                                                      | fs::copy_options::recursive);
 
+            set_attr(node, L"loc", s2ws(rel_new_path.string()));
+        }
+        set_attr(node, L"offset", info.offset);
         set_attr(node, L"height", info.height);
         set_attr(node, L"width", info.width);
         if(info.width != 0 && info.height != 0) {
