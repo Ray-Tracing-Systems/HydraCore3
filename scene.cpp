@@ -7,9 +7,6 @@
 #include <iostream>
 #include <locale>
 #include <codecvt>
-#include <filesystem>
-
-namespace fs = std::filesystem;
 
 namespace LiteScene
 {
@@ -228,6 +225,10 @@ namespace LiteScene
 
         for (int i = 0; i < geometries.size(); i++)
             delete geometries[i];
+        
+        for (int i = 0; i < light_sources.size(); i++)
+            delete light_sources[i];
+
 
         metadata = SceneMetadata();
 
@@ -373,13 +374,108 @@ namespace LiteScene
         return ok;
     }
 
-    bool load_lightsource(LightSource &lgt, const pugi::xml_node &node)
-    {   
-        lgt.id = node.attribute(L"id").as_uint();
-        lgt.name = ws2s(node.attribute(L"name").as_string());
-        
-        lgt.raw_xml = node;
-        return true;
+    bool find_texture(const pugi::xml_node &colorNode, TextureInstance &inst);
+    bool load_color_holder(const pugi::xml_node &node, bool allow_spectrum, ColorHolder &clr);
+
+    LightSource *load_lightsource(pugi::xml_node &node, const SceneMetadata &meta)
+    {
+        const uint32_t id = node.attribute(L"id").as_uint();
+        const std::string name = ws2s(node.attribute(L"name").as_string());
+        const uint32_t mat_id = node.attribute(L"mat_id").as_uint();
+
+        const std::wstring type = node.attribute(L"type").as_string();
+        const std::wstring shape = node.attribute(L"shape").as_string();
+        const std::wstring dist = node.attribute(L"distribution").as_string();
+
+        std::unique_ptr<LightSource> lgt;
+        if(type == L"sky") {
+            LightSourceSky *ptr = new LightSourceSky();
+            const auto &colNode = node.child(L"intensity").child(L"color");
+            if(colNode) {
+                TextureInstance inst;
+                if(find_texture(colNode, inst)) {
+                    ptr->texture = std::move(inst);
+                }
+            }
+            const auto &backNode = node.child(L"back");
+            if(backNode) {
+                TextureInstance inst;
+                if(find_texture(backNode, inst)) {
+                    ptr->camera_back = std::move(inst);
+                }
+            }
+
+            lgt.reset(ptr);
+        }
+        else if(type == L"directional") {
+            lgt.reset(new LightSource(LightSource::Type::DIRECTIONAL));
+        }
+        else if(shape == L"rect") {
+            lgt.reset(new LightSource(LightSource::Type::RECT));
+        }
+        else if(shape == L"disk") {
+            lgt.reset(new LightSource(LightSource::Type::DISK));
+            lgt->radius = node.child(L"size").attribute(L"radius").as_float();
+        }
+        else if(shape == L"sphere") {
+            lgt.reset(new LightSource(LightSource::Type::SPHERE));
+            lgt->radius = node.child(L"size").attribute(L"radius").as_float();
+        }
+        else if(shape == L"point") {
+            if(dist == L"spot") {
+                LightSourceSpot *ptr = new LightSourceSpot();
+                ptr->angle1 = hydra_xml::readval1f(node.child(L"falloff_angle"));
+                ptr->angle2 = hydra_xml::readval1f(node.child(L"falloff_angle2"));
+                const auto &projNode = node.child(L"projective");
+                if(projNode) {
+                    LightSourceSpot::Proj proj;
+                    proj.fov = hydra_xml::readval1f(projNode.child(L"fov"));
+                    proj.nearClipPlane = hydra_xml::readval1f(projNode.child(L"nearClipPlane"));
+                    proj.farClipPlane = hydra_xml::readval1f(projNode.child(L"farClipPlane"));
+
+                    const auto &projTexNode = projNode.child(L"texture");
+                    if(projTexNode) {
+                        TextureInstance inst;
+                        if(find_texture(projNode, inst)) {
+                            proj.texture = std::move(inst);
+                        }
+                    }
+
+                    ptr->projective = std::move(proj);
+                }
+                lgt.reset(ptr);
+            }
+            else {
+                lgt.reset(new LightSource(LightSource::Type::POINT));
+                if(dist == L"uniform" || dist == L"omni" || dist == L"ies") {
+                    lgt->distribution = LightSource::Dist::OMNI;
+                }
+            }
+        }
+        else {
+            return nullptr;
+        }
+
+        if(!load_color_holder(node.child(L"intensity").child(L"color"), true, lgt->color)) {
+            return nullptr;
+        }
+
+        const auto &iesNode = node.child(L"ies");
+        if(iesNode) {
+            LightSource::IES ies;
+            ies.file_path = (fs::path(meta.scene_xml_folder) / ws2s(iesNode.attribute(L"loc").as_string())).string();
+            ies.point_area = iesNode.attribute(L"point_area").as_int() != 0;
+            const auto &matrixAttrib = iesNode.attribute(L"matrix");
+            if(matrixAttrib) {
+                ies.matrix = wstring_to_float4x4(matrixAttrib.as_string());
+            }
+            lgt->ies = std::move(ies);
+        }
+
+        lgt->id = id;
+        lgt->name = std::move(name);
+        lgt->mat_id = mat_id;
+        return lgt.release();
     }
 
     bool load_lightsources(HydraScene &scene, const pugi::xml_node &lib_node)
@@ -390,9 +486,10 @@ namespace LiteScene
         {
             if(std::wstring(node.name()) == L"light")
             {
-                LightSource lgt;
-                if(!load_lightsource(lgt, node)) return false;
-                scene.light_sources[lgt.id] = std::move(lgt);
+                LightSource *lgt;
+                if((lgt = load_lightsource(node, scene.metadata)) == nullptr) return false;
+                lgt->raw_xml = node;
+                scene.light_sources[lgt->id] = lgt;
             }
 
         }
@@ -549,7 +646,7 @@ namespace LiteScene
     }
 
     bool load_materials(HydraScene &scene, const pugi::xml_node &lib_node);
-    
+
     bool HydraScene::load(const std::string &filename)
     {
         clear();
@@ -643,7 +740,7 @@ namespace LiteScene
         return t_loaded && m_loaded && g_loaded && l_loaded && c_loaded && rs_loaded && s_loaded;
     }
 
-    bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node lib_node)
+    bool save_geometry(const HydraScene &scene, const SceneMetadata &save_metadata, pugi::xml_node &lib_node)
     {
         for (const auto &[id, geom] : scene.geometries)
         {
@@ -651,6 +748,116 @@ namespace LiteScene
             geom->save_data(save_metadata);
             pugi::xml_node geom_node = geom->save_node();
             lib_node.append_copy(geom_node);
+        }
+        return !lib_node.empty();
+    }
+
+    void set_texture(pugi::xml_node &colorNode, const TextureInstance &inst);
+    void save_color_holder(pugi::xml_node &node, const ColorHolder &clr, bool allow_spectrum = true);
+
+    bool save_lightsource(const LightSource *lgt, const SceneMetadata &newmeta, pugi::xml_node &node) {
+
+        set_attr(node, L"id", lgt->id);
+        set_attr(node, L"name", s2ws(lgt->name));
+        set_attr(node, L"mat_id", lgt->mat_id);
+
+        auto intNode = set_child(node, L"intensity");
+        auto colNode = set_child(intNode, L"color");
+        switch(lgt->type()) {
+        case LightSource::Type::SKY:
+            {
+                set_attr(node, L"type", L"sky");
+                //set_attr(node, L"shape", L"point"); is it necessary?
+                set_attr(node, L"distribution", L"uniform");
+
+                const LightSourceSky *sptr = static_cast<const LightSourceSky *>(lgt);
+                if(sptr->texture) {
+                    set_texture(colNode, *sptr->texture);
+                }
+                if(sptr->camera_back) {
+                    auto backNode = set_child(node, L"back");
+                    set_texture(backNode, *sptr->camera_back);
+                }
+
+            } break;
+        case LightSource::Type::DIRECTIONAL:
+            set_attr(node, L"type", L"directional"); 
+            break;
+        case LightSource::Type::RECT:
+            set_attr(node, L"type", L"area"); 
+            set_attr(node, L"shape", L"rect");
+            break;
+        case LightSource::Type::DISK:
+            set_attr(node, L"type", L"area");
+            set_attr(node, L"shape", L"disk");
+            set_attr(set_child(node, L"size"), L"radius", *lgt->radius);
+            break;
+        case LightSource::Type::SPHERE:
+            set_attr(node, L"type", L"area");
+            set_attr(node, L"shape", L"sphere");
+            set_attr(set_child(node, L"size"), L"radius", *lgt->radius);
+        case LightSource::Type::POINT:
+            set_attr(node, L"type", L"point");
+            set_attr(node, L"shape", L"point");
+            if(lgt->distribution == LightSource::Dist::SPOT) {
+                set_attr(node, L"distribution", L"spot");
+
+                const LightSourceSpot *ptr = static_cast<const LightSourceSpot *>(lgt);
+                set_attr(set_child(node, L"falloff_angle"), L"val", ptr->angle1);
+                set_attr(set_child(node, L"falloff_angle2"), L"val", ptr->angle2);
+
+                if(ptr->projective) {
+                    auto &proj = *ptr->projective;
+                    auto projNode = set_child(node, L"projective");
+                    set_attr(set_child(projNode, L"fov"), L"val", proj.fov);
+                    set_attr(set_child(projNode, L"nearClipPlane"), L"val", proj.nearClipPlane);
+                    set_attr(set_child(projNode, L"farClipPlane"), L"val", proj.farClipPlane);
+
+                    if(proj.texture) {
+                        auto projTexNode = set_child(projNode, L"texture");
+                        set_texture(projTexNode, *proj.texture);
+                    }
+                }
+            }
+            else {
+                if(lgt->distribution == LightSource::Dist::LAMBERT) {
+                    set_attr(node, L"distribution", "lambert");
+                }
+                else if(lgt->distribution == LightSource::Dist::OMNI) {
+                    set_attr(node, L"distribution", "uniform");
+                }
+                else return false; //error
+            }
+            break;
+        }
+
+        save_color_holder(colNode, lgt->color, true);
+
+        if(lgt->ies) {
+            auto iesNode = set_child(node, L"ies");
+            const auto &ies = *lgt->ies; 
+
+            fs::path path{ies.file_path}; //is always absolute
+            fs::path abs_new_path = fs::path(newmeta.geometry_folder) / "ies" / path.filename();
+            fs::path rel_new_path = get_relative_if_possible(fs::path(newmeta.scene_xml_folder), abs_new_path);
+            fs::copy(path, abs_new_path, fs::copy_options::update_existing
+                                                          | fs::copy_options::recursive);
+            set_attr(iesNode, L"loc", s2ws(rel_new_path.string()));
+
+            set_attr(iesNode, L"point_area", int(ies.point_area));
+            if(ies.matrix) {
+                set_attr(iesNode, L"matrix", LM_to_wstring(*ies.matrix));
+            }
+        }
+        return true;
+    }
+
+    bool save_lightsources(const HydraScene &scene, const SceneMetadata &meta, pugi::xml_node &lib_node)
+    {
+        for (const auto &[id, lgt] : scene.light_sources)
+        {
+            pugi::xml_node node = lgt->raw_xml ? lib_node.append_copy(lgt->raw_xml) : lib_node.append_child(L"light");
+            if(!save_lightsource(lgt, meta, node)) return false;
         }
         return !lib_node.empty();
     }
@@ -854,16 +1061,6 @@ namespace LiteScene
         return !lib_node.empty();
     }
 
-    bool save_lightsources(const HydraScene &scene, pugi::xml_node lib_node)
-    {
-        for (const auto &[id, lgt] : scene.light_sources)
-        {
-            auto lgt_node = lib_node.append_copy(lgt.raw_xml);
-            //if(!lgt.save_info(tex_node, scene.metadata.scene_xml_folder)) return false;
-        }
-        return !lib_node.empty();
-    }
-
     bool save_materials(const HydraScene &scene, pugi::xml_node lib_node);
 
     bool HydraScene::save(const std::string &filename, const std::string &geometry_folder)
@@ -915,7 +1112,7 @@ namespace LiteScene
            return false;
         if (!save_geometry(*this, save_metadata, geometryLib))
             return false;
-        if (!save_lightsources(*this, lightsLib))
+        if (!save_lightsources(*this, save_metadata, lightsLib))
            return false;
         if (!save_cameras(*this, cameraLib))
             return false;

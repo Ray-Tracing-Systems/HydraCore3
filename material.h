@@ -1,42 +1,12 @@
 #ifndef LITESCENE_MATERIAL_H_
 #define LITESCENE_MATERIAL_H_
-
-#include "3rd_party/pugixml.hpp"
-#include <LiteMath.h>
-#include <Image2d.h>
+#include "scene_common.h"
 #include <string>
 #include <variant>
 #include <optional>
 
 
 namespace LiteScene {
-
-    class Spectrum;
-
-    struct TextureInstance
-    {
-        struct SamplerData {
-            LiteImage::Sampler::AddressMode addr_mode_u;
-            LiteImage::Sampler::AddressMode addr_mode_v;
-            LiteImage::Sampler::AddressMode addr_mode_w;
-            LiteImage::Sampler::Filter filter;
-
-            bool operator==(const SamplerData &other) const
-            {
-                return addr_mode_u == other.addr_mode_u
-                    && addr_mode_v == other.addr_mode_v
-                    && addr_mode_w == other.addr_mode_w
-                    && filter == other.filter;
-            }
-        };
-
-        uint32_t id;
-
-        SamplerData sampler;
-        LiteMath::float4x4 matrix;
-        float input_gamma = 2.2f;
-        bool alpha_from_rgb = true;
-    };
 
     struct TexSamplerHash
     {
@@ -52,11 +22,7 @@ namespace LiteScene {
         }
     };
 
-    template<typename T>
-    struct SceneRef {
-        uint32_t id;
-        operator uint32_t() const { return id; }
-    };
+
 
     enum class MaterialType 
     {
@@ -69,11 +35,6 @@ namespace LiteScene {
         PLASTIC,
         BLEND,
         THIN_FILM
-    };
-
-    struct ColorHolder {
-        std::optional<LiteMath::float4> color;
-        uint32_t spec_id;
     };
 
     class Material
@@ -250,8 +211,8 @@ namespace LiteScene {
     {
     public:
         float weight;
-        Material *bsdf1;
-        Material *bsdf2;
+        uint32_t bsdf1_id;
+        uint32_t bsdf2_id;
 
         using Material::Material;
 

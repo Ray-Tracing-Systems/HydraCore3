@@ -1,13 +1,11 @@
 #include "scene.h"
 #include "loadutil.h"
 
-#include <filesystem>
 #include <fstream>
 #include <cstdio>
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <numeric>
 
 #define TINYEXR_IMPLEMENTATION
 #include "3rd_party/tinyexr/tinyexr.h"
@@ -227,31 +225,6 @@ namespace LiteScene
         return true;
     }
 
-    //https://stackoverflow.com/questions/60530422/how-to-check-a-file-is-contained-in-a-folder-with-c
-    // =======
-    fs::path normalized_trimed(const fs::path& p)
-    {
-        auto r = p.lexically_normal();
-        if (r.has_filename()) return r;
-        return r.parent_path();
-    }
-
-    fs::path get_relative_if_possible(const fs::path& dir, const fs::path& target)
-    {   
-        if(!dir.empty()) {
-            auto base = normalized_trimed(dir);
-            auto sub = normalized_trimed(target).parent_path();
-            auto m = std::mismatch(base.begin(), base.end(), 
-                                   sub.begin(), sub.end());
-
-            if(m.first == base.end()) { // dir contains target
-                fs::path rel_path = std::accumulate(m.second, sub.end(), fs::path{}, std::divides{}) / target.filename();
-                return rel_path.lexically_normal();
-            }
-        }
-        return target.lexically_normal();
-    }
-    // =======
 
     bool Texture::save_info(pugi::xml_node &node, const std::string &old_scene_root, const SceneMetadata &newmeta) const
     {
