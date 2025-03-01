@@ -80,7 +80,7 @@ static const double IE_Cosine[] =
 
 static BOOL IE_CalcCoeff( IE_CALC *, double, double, double, double );
 static BOOL IE_GetArray( FILE *, float *, int );
-static BOOL IE_GetList( FILE *, char *, ... );
+static BOOL IE_GetList( FILE *, const char *, ... );
 static BOOL IE_ReadTilt( IE_DATA *, FILE * );
 static char *IE_CopyString( char * );
 static char *IE_GetLine( char *, int, FILE * );
@@ -1131,12 +1131,12 @@ double IE_CalcCU( IE_CALC *pcalc, double g, double p1, double p2,
  *************************************************************************
  */
 
-static BOOL IE_GetList( FILE *pfile, char *format, ... )
+static BOOL IE_GetList( FILE *pfile, const char *format, ... )
 {
   char c;               /* Scratch variable                             */
   char type;            /* Format specifier                             */
   char *pbuf;           /* Input buffer pointer                         */
-  char *pfmt = format;  /* Format string pointer                        */
+  const char *pfmt = format;  /* Format string pointer                        */
   int itemp;            /* Temporary integer variable                   */
   float ftemp;          /* Temporary floating point variable            */
   va_list pvla;         /* Variable list argument pointer               */
