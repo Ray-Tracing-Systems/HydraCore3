@@ -28,6 +28,7 @@ namespace LiteScene {
     {
         CUSTOM,
         EMISSIVE,
+        HYDRA_OLD,
         GLTF,
         DIFFUSE,
         CONDUCTOR,
@@ -61,12 +62,11 @@ namespace LiteScene {
         }
     };
 
-    class EmissiveMaterial : public Material
+    class EmissiveMaterial : public Material // Old Hydra for light sources
     {
     public:
         uint32_t light_id;
         std::variant<ColorHolder, TextureInstance> color;
-        float power = 1.0f;
         bool visible = true;
 
         using Material::Material;
@@ -74,6 +74,35 @@ namespace LiteScene {
         MaterialType type() const override
         {
             return MaterialType::EMISSIVE;
+        }
+    };
+
+    class OldHydraMaterial : public Material // Old Hydra for other materials
+    {
+    public:
+        using Material::Material;
+        enum class BSDF { LAMBERT, OPEN_NAYAR, NONE };
+        enum class ReflBRDF { TORRANSE_SPARROW, PHONG, NONE };
+
+        struct Data {
+            LiteMath::float4 color;
+            float glossiness;
+            float ior;
+        }; 
+
+        std::variant<LiteMath::float4, TextureInstance> color = LiteMath::float4(0.0f, 0.0f, 0.0f, 0.0f);
+        std::optional<float> diffuse_roughness;
+        BSDF diffuse_bsdf_type = BSDF::NONE;
+        ReflBRDF refl_brdf_type = ReflBRDF::NONE;
+
+       
+        std::optional<Data> reflectivity;
+        std::optional<Data> transparency;
+
+
+        MaterialType type() const override
+        {
+            return MaterialType::HYDRA_OLD;
         }
     };
 
@@ -103,9 +132,10 @@ namespace LiteScene {
     class DiffuseMaterial : public Material
     {
     public:
-        enum class BSDF { LAMBERT };
+        enum class BSDF { LAMBERT, OPEN_NAYAR };
 
         std::variant<ColorHolder, TextureInstance> reflectance;
+        float roughness = 0.0f;
         BSDF bsdf_type;
 
         using Material::Material;

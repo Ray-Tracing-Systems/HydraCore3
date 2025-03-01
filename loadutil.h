@@ -47,6 +47,16 @@ namespace LiteScene {
         set_attr<const pugi::char_t *>(node, name, value.c_str());
     }
 
+    template<typename T>
+    inline void set_val_child(pugi::xml_node node, const pugi::char_t *name, T value)
+    {
+        set_attr(set_child(node, name), L"val", value);
+    }
+
+    inline void set_val_child(pugi::xml_node node, const pugi::char_t *name, const std::wstring &value)
+    {
+        set_attr(set_child(node, name), L"val", value);
+    }
 
     inline std::wstring LM_to_wstring(const LiteMath::float3 &v)
     {
