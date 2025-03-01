@@ -27,7 +27,7 @@ namespace LiteScene {
     enum class MaterialType 
     {
         CUSTOM,
-        LIGHTSOURCE,
+        EMISSIVE,
         GLTF,
         DIFFUSE,
         CONDUCTOR,
@@ -61,18 +61,19 @@ namespace LiteScene {
         }
     };
 
-    class LightSourceMaterial : public Material
+    class EmissiveMaterial : public Material
     {
     public:
         uint32_t light_id;
         std::variant<ColorHolder, TextureInstance> color;
         float power = 1.0f;
+        bool visible = true;
 
         using Material::Material;
 
         MaterialType type() const override
         {
-            return MaterialType::LIGHTSOURCE;
+            return MaterialType::EMISSIVE;
         }
     };
 

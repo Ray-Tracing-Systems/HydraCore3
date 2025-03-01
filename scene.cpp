@@ -412,6 +412,9 @@ namespace LiteScene
         }
         else if(shape == L"rect") {
             lgt.reset(new LightSource(LightSource::Type::RECT));
+            auto sizeNode = node.child(L"size");
+            lgt->half_width = sizeNode.attribute(L"half_width").as_float();
+            lgt->half_length = sizeNode.attribute(L"half_length").as_float();
         }
         else if(shape == L"disk") {
             lgt.reset(new LightSource(LightSource::Type::DISK));
@@ -456,9 +459,11 @@ namespace LiteScene
             return nullptr;
         }
 
-        if(!load_color_holder(node.child(L"intensity").child(L"color"), true, lgt->color)) {
+        auto intNode = node.child(L"intensity");
+        if(!load_color_holder(intNode.child(L"color"), true, lgt->color)) {
             return nullptr;
         }
+        lgt->power = intNode.child(L"multiplier").attribute(L"val").as_float();
 
         const auto &iesNode = node.child(L"ies");
         if(iesNode) {
@@ -645,7 +650,7 @@ namespace LiteScene
         return ok;
     }
 
-    bool load_materials(HydraScene &scene, const pugi::xml_node &lib_node);
+    bool load_materials(HydraScene &scene, pugi::xml_node &lib_node);
 
     bool HydraScene::load(const std::string &filename)
     {
@@ -784,18 +789,23 @@ namespace LiteScene
             set_attr(node, L"type", L"directional"); 
             break;
         case LightSource::Type::RECT:
-            set_attr(node, L"type", L"area"); 
-            set_attr(node, L"shape", L"rect");
+            {   
+                set_attr(node, L"type", L"area"); 
+                set_attr(node, L"shape", L"rect");
+                auto sizeNode = set_child(node, L"size");
+                set_attr(sizeNode, L"half_length", lgt->half_width);
+                set_attr(sizeNode, L"half_length", lgt->half_length);
+            }
             break;
         case LightSource::Type::DISK:
             set_attr(node, L"type", L"area");
             set_attr(node, L"shape", L"disk");
-            set_attr(set_child(node, L"size"), L"radius", *lgt->radius);
+            set_attr(set_child(node, L"size"), L"radius", lgt->radius);
             break;
         case LightSource::Type::SPHERE:
             set_attr(node, L"type", L"area");
             set_attr(node, L"shape", L"sphere");
-            set_attr(set_child(node, L"size"), L"radius", *lgt->radius);
+            set_attr(set_child(node, L"size"), L"radius", lgt->radius);
         case LightSource::Type::POINT:
             set_attr(node, L"type", L"point");
             set_attr(node, L"shape", L"point");
@@ -832,6 +842,7 @@ namespace LiteScene
         }
 
         save_color_holder(colNode, lgt->color, true);
+        set_attr(set_child(intNode, L"multiplier"), L"val", lgt->power);
 
         if(lgt->ies) {
             auto iesNode = set_child(node, L"ies");

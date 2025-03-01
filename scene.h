@@ -145,9 +145,23 @@ namespace LiteScene
         uint32_t mat_id;
         ColorHolder color; //aka intensity.color
         float power; // aka intensity.multiplier
-        std::optional<float> radius;
         std::optional<IES> ies;
 
+        /*
+            DISK,SPHERE: radius
+            RECT       : half_width, half_length
+        */
+        union {
+            float sizes[2];
+            struct {
+                float radius;
+            };
+            struct {
+                float half_width;
+                float half_length;
+            };
+
+        };
         uint32_t id = INVALID_ID;
         std::string name;
         pugi::xml_node raw_xml;

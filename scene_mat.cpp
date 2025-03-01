@@ -245,7 +245,25 @@ namespace LiteScene
         return mat.release();
     }
 
-    Material *load_material(const pugi::xml_node &node)
+    Material *convert_old_hydra(uint32_t id, const std::string &name, pugi::xml_node &node) {
+
+        auto nodeEmiss = node.child(L"emission");
+        if(nodeEmiss) { //Emissive
+            std::unique_ptr<EmissiveMaterial> mat{new EmissiveMaterial(id, name)};
+
+            
+
+            return mat.release();
+        }
+
+        auto nodeDiffuse = node.child(L"diffuse");
+        if(nodeDiffuse) { //Diffuse mat
+
+        }
+
+    }
+
+    Material *load_material(pugi::xml_node &node)
     {
         uint32_t id = node.attribute(L"id").as_uint();
         std::string name = ws2s(node.attribute(L"name").as_string());
@@ -262,7 +280,7 @@ namespace LiteScene
 
     }
 
-    bool load_materials(HydraScene &scene, const pugi::xml_node &lib_node)
+    bool load_materials(HydraScene &scene, pugi::xml_node &lib_node)
     {
         bool ok = true;
 
