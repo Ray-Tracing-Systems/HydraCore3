@@ -11,7 +11,7 @@
 
 namespace LiteScene {
 
-    class Spectrum;
+    struct Spectrum;
 
     struct TextureInstance
     {
