@@ -3,45 +3,60 @@
 #include "3rd_party/pugixml.hpp"
 #include "hydraxml.h"
 #include "LiteMath.h"
+#include <type_traits>
 #include <locale>
 #include <codecvt>
 #include <vector>
 #include <sstream>
+#include <filesystem>
+#include <numeric>
+
+namespace fs = std::filesystem;
 
 namespace LiteScene {
 
-    inline pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name)
+    inline pugi::xml_node set_child(pugi::xml_node node, const pugi::char_t *name)
     {
         pugi::xml_node child = node.child(name) ? node.child(name) : node.append_child(name);
         return child;
     }
 
     template<typename T>
-    inline pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name, T value)
+    inline pugi::xml_node set_child(pugi::xml_node node, const pugi::char_t *name, T value)
     {
         auto child = set_child(node, name);
         child.text().set(value);
         return child;
     }
 
-    inline pugi::xml_node set_child(pugi::xml_node &node, const pugi::char_t *name, const std::wstring &value)
+    inline pugi::xml_node set_child(pugi::xml_node node, const pugi::char_t *name, const std::wstring &value)
     {
         return set_child<const pugi::char_t *>(node, name, value.c_str());
     }
 
 
     template<typename T>
-    inline void set_attr(pugi::xml_node &node, const pugi::char_t *name, T value)
+    inline void set_attr(pugi::xml_node node, const pugi::char_t *name, T value)
     {
         if (node.attribute(name).empty()) node.append_attribute(name).set_value(value); 
         else node.attribute(name).set_value(value); 
     }
 
-    inline void set_attr(pugi::xml_node &node, const pugi::char_t *name, const std::wstring &value)
+    inline void set_attr(pugi::xml_node node, const pugi::char_t *name, const std::wstring &value)
     {
         set_attr<const pugi::char_t *>(node, name, value.c_str());
     }
 
+    template<typename T>
+    inline void set_val_child(pugi::xml_node node, const pugi::char_t *name, T value)
+    {
+        set_attr(set_child(node, name), L"val", value);
+    }
+
+    inline void set_val_child(pugi::xml_node node, const pugi::char_t *name, const std::wstring &value)
+    {
+        set_attr(set_child(node, name), L"val", value);
+    }
 
     inline std::wstring LM_to_wstring(const LiteMath::float3 &v)
     {
@@ -114,5 +129,31 @@ namespace LiteScene {
         return std::wstring(val);
     }
 
+
+    //https://stackoverflow.com/questions/60530422/how-to-check-a-file-is-contained-in-a-folder-with-c
+    // =======
+    inline fs::path normalized_trimed(const fs::path& p)
+    {
+        auto r = p.lexically_normal();
+        if (r.has_filename()) return r;
+        return r.parent_path();
+    }
+
+    inline fs::path get_relative_if_possible(const fs::path& dir, const fs::path& target)
+    {   
+        if(!dir.empty()) {
+            auto base = normalized_trimed(dir);
+            auto sub = normalized_trimed(target).parent_path();
+            auto m = std::mismatch(base.begin(), base.end(), 
+                                   sub.begin(), sub.end());
+
+            if(m.first == base.end()) { // dir contains target
+                fs::path rel_path = std::accumulate(m.second, sub.end(), fs::path{}, std::divides{}) / target.filename();
+                return rel_path.lexically_normal();
+            }
+        }
+        return target.lexically_normal();
+    }
+    // =======
 }
 #endif

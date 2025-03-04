@@ -1,42 +1,12 @@
 #ifndef LITESCENE_MATERIAL_H_
 #define LITESCENE_MATERIAL_H_
-
-#include "3rd_party/pugixml.hpp"
-#include <LiteMath.h>
-#include <Image2d.h>
+#include "scene_common.h"
 #include <string>
 #include <variant>
 #include <optional>
 
 
 namespace LiteScene {
-
-    struct Spectrum;
-
-    struct TextureInstance
-    {
-        struct SamplerData {
-            LiteImage::Sampler::AddressMode addr_mode_u;
-            LiteImage::Sampler::AddressMode addr_mode_v;
-            LiteImage::Sampler::AddressMode addr_mode_w;
-            LiteImage::Sampler::Filter filter;
-
-            bool operator==(const SamplerData &other) const
-            {
-                return addr_mode_u == other.addr_mode_u
-                    && addr_mode_v == other.addr_mode_v
-                    && addr_mode_w == other.addr_mode_w
-                    && filter == other.filter;
-            }
-        };
-
-        uint32_t id;
-
-        SamplerData sampler;
-        LiteMath::float4x4 matrix;
-        float input_gamma = 2.2f;
-        bool alpha_from_rgb = true;
-    };
 
     struct TexSamplerHash
     {
@@ -52,16 +22,13 @@ namespace LiteScene {
         }
     };
 
-    template<typename T>
-    struct SceneRef {
-        uint32_t id;
-        operator uint32_t() const { return id; }
-    };
+
 
     enum class MaterialType 
     {
         CUSTOM,
-        LIGHTSOURCE,
+        EMISSIVE,
+        HYDRA_OLD,
         GLTF,
         DIFFUSE,
         CONDUCTOR,
@@ -69,11 +36,6 @@ namespace LiteScene {
         PLASTIC,
         BLEND,
         THIN_FILM
-    };
-
-    struct ColorHolder {
-        std::optional<LiteMath::float4> color;
-        uint32_t spec_id;
     };
 
     class Material
@@ -100,18 +62,47 @@ namespace LiteScene {
         }
     };
 
-    class LightSourceMaterial : public Material
+    class EmissiveMaterial : public Material // Old Hydra for light sources
     {
     public:
         uint32_t light_id;
         std::variant<ColorHolder, TextureInstance> color;
-        float power = 1.0f;
+        bool visible = true;
 
         using Material::Material;
 
         MaterialType type() const override
         {
-            return MaterialType::LIGHTSOURCE;
+            return MaterialType::EMISSIVE;
+        }
+    };
+
+    class OldHydraMaterial : public Material // Old Hydra for other materials
+    {
+    public:
+        using Material::Material;
+        enum class BSDF { LAMBERT, OPEN_NAYAR, NONE };
+        enum class ReflBRDF { TORRANSE_SPARROW, PHONG, NONE };
+
+        struct Data {
+            LiteMath::float4 color;
+            float glossiness;
+            float ior;
+        }; 
+
+        std::variant<LiteMath::float4, TextureInstance> color = LiteMath::float4(0.0f, 0.0f, 0.0f, 0.0f);
+        std::optional<float> diffuse_roughness;
+        BSDF diffuse_bsdf_type = BSDF::NONE;
+        ReflBRDF refl_brdf_type = ReflBRDF::NONE;
+
+       
+        std::optional<Data> reflectivity;
+        std::optional<Data> transparency;
+
+
+        MaterialType type() const override
+        {
+            return MaterialType::HYDRA_OLD;
         }
     };
 
@@ -141,9 +132,10 @@ namespace LiteScene {
     class DiffuseMaterial : public Material
     {
     public:
-        enum class BSDF { LAMBERT };
+        enum class BSDF { LAMBERT, OPEN_NAYAR };
 
         std::variant<ColorHolder, TextureInstance> reflectance;
+        float roughness = 0.0f;
         BSDF bsdf_type;
 
         using Material::Material;
@@ -250,8 +242,8 @@ namespace LiteScene {
     {
     public:
         float weight;
-        Material *bsdf1;
-        Material *bsdf2;
+        uint32_t bsdf1_id;
+        uint32_t bsdf2_id;
 
         using Material::Material;
 

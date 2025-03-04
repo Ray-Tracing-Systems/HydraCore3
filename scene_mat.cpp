@@ -245,7 +245,92 @@ namespace LiteScene
         return mat.release();
     }
 
-    Material *load_material(const pugi::xml_node &node)
+    Material *convert_old_hydra(uint32_t id, const std::string &name, pugi::xml_node &node) {
+
+        auto nodeEmiss = node.child(L"emission");
+        if(nodeEmiss) { //Emissive
+            std::unique_ptr<EmissiveMaterial> mat{new EmissiveMaterial(id, name)};
+            mat->raw_xml = node;
+
+            mat->light_id = node.attribute(L"light_id").as_uint(); //???
+            mat->visible = bool(node.attribute(L"visible").as_int());
+
+            auto colorNode = nodeEmiss.child(L"color");
+            TextureInstance inst;
+            if(find_texture(colorNode, inst)) {
+                mat->color = std::move(inst);
+            }
+            else {
+                ColorHolder h;
+                if(!load_color_holder(colorNode, true, h)) {
+                    return nullptr;
+                }
+                mat->color = std::move(h);
+            }
+
+            return mat.release();
+        }
+
+        //Not light source
+
+        std::unique_ptr<OldHydraMaterial> mat{new OldHydraMaterial(id, name)};
+        mat->raw_xml = node;
+
+        auto nodeDiffuse = node.child(L"diffuse");
+        if(nodeDiffuse) { 
+            std::wstring bsdf_type = nodeDiffuse.attribute(L"brdf_type"/*sic!*/).as_string();
+            if(bsdf_type == L"opennayar") {
+                mat->diffuse_bsdf_type = OldHydraMaterial::BSDF::OPEN_NAYAR;
+                auto nodeDiffRough = nodeDiffuse.child(L"roughness");
+                if(nodeDiffRough) {
+                    mat->diffuse_roughness = nodeDiffRough.attribute(L"val").as_float();
+                }
+            }
+            else if(bsdf_type == L"lambert") {
+                mat->diffuse_bsdf_type = OldHydraMaterial::BSDF::LAMBERT;
+            }
+
+            auto colorNode = nodeDiffuse.child(L"color");
+            TextureInstance inst;
+            if(find_texture(colorNode, inst)) {
+                mat->color = std::move(inst);
+            }
+            else {
+                mat->color = get_color(colorNode);
+            }
+
+        }
+
+        auto nodeRefl = node.child(L"reflectivity");
+        if(nodeRefl) {
+            OldHydraMaterial::Data refl;
+            refl.color = get_color(nodeRefl.child(L"color"));
+            refl.glossiness = nodeRefl.child(L"glossiness").attribute(L"val").as_float();
+            refl.ior = nodeRefl.child(L"fresnel_ior").attribute(L"val").as_float();
+            mat->reflectivity = std::move(refl);
+
+            std::wstring brdf_type = nodeRefl.attribute(L"brdf_type").as_string();
+            if(brdf_type == L"torranse_sparrow") {
+                mat->refl_brdf_type = OldHydraMaterial::ReflBRDF::TORRANSE_SPARROW;
+            }
+            else if(brdf_type == L"phong") {
+                mat->refl_brdf_type = OldHydraMaterial::ReflBRDF::PHONG;
+            }
+
+        }
+
+        auto nodeTransp = node.child(L"transparency");
+        if(nodeTransp) {
+            OldHydraMaterial::Data transp;
+            transp.color = get_color(nodeTransp.child(L"color"));
+            transp.glossiness = nodeTransp.child(L"glossiness").attribute(L"val").as_float();
+            transp.ior = nodeTransp.child(L"ior").attribute(L"val").as_float();
+            mat->transparency = std::move(transp);
+        }
+        return mat.release();
+    }
+
+    Material *load_material(pugi::xml_node &node)
     {
         uint32_t id = node.attribute(L"id").as_uint();
         std::string name = ws2s(node.attribute(L"name").as_string());
@@ -253,6 +338,9 @@ namespace LiteScene
         const std::wstring type = node.attribute(L"type").as_string();
         if(type == L"gltf") {
             return load_gltf_mat(id, name, node);
+        }
+        if(type == L"hydra_material") {
+            return convert_old_hydra(id, name, node);
         }
         else {
             Material *mat = new CustomMaterial(id, name);
@@ -262,7 +350,7 @@ namespace LiteScene
 
     }
 
-    bool load_materials(HydraScene &scene, const pugi::xml_node &lib_node)
+    bool load_materials(HydraScene &scene, pugi::xml_node &lib_node)
     {
         bool ok = true;
 
@@ -318,10 +406,89 @@ namespace LiteScene
             set_texture(gmcNode, std::get<TextureInstance>(mat->color));
         }
 
-        auto fresNode = set_child(node, L"fresnel_ior");
-        set_attr(fresNode, L"val", mat->fresnel_ior);
+        set_val_child(node, L"fresnel_ior", mat->fresnel_ior);
         return true;
     }
+
+    bool save_emissive_mat(const EmissiveMaterial *mat, pugi::xml_node &node)
+    {
+        set_attr(node, L"light_id", int(mat->light_id));
+        set_attr(node, L"visible", int(mat->visible));
+
+        auto nodeEmiss = set_child(node, L"emission");
+
+        auto colorNode = set_child(nodeEmiss, L"color");
+        if(std::holds_alternative<ColorHolder>(mat->color)) {
+            save_color_holder(colorNode, std::get<ColorHolder>(mat->color), true);
+        }
+        else {
+            set_texture(colorNode, std::get<TextureInstance>(mat->color));
+        }
+
+        return true;
+    }
+
+    bool has_default_color(const std::variant<LiteMath::float4, TextureInstance> &color)
+    {
+        return std::holds_alternative<LiteMath::float4>(color) && LiteMath::all_of(std::get<LiteMath::float4>(color) == LiteMath::float4(0, 0, 0, 0));
+    }
+
+    bool save_old_hydra_mat(const OldHydraMaterial *mat, pugi::xml_node &node)
+    {   
+        bool defColor = has_default_color(mat->color);
+        if(mat->diffuse_bsdf_type != OldHydraMaterial::BSDF::NONE || !defColor) {
+            auto nodeDiffuse = set_child(node, L"diffuse");
+            if(mat->diffuse_bsdf_type == OldHydraMaterial::BSDF::LAMBERT) {
+                set_attr(nodeDiffuse, L"brdf_type"/*sic!*/, L"lambert");   
+            }
+            else if(mat->diffuse_bsdf_type == OldHydraMaterial::BSDF::OPEN_NAYAR) {
+                set_attr(nodeDiffuse, L"brdf_type", L"opennayar");  
+                if(mat->diffuse_roughness) {
+                    set_val_child(nodeDiffuse, L"roughness", *mat->diffuse_roughness);
+                }
+            }
+
+            if(!defColor) {
+                auto colorNode = set_child(nodeDiffuse, L"color");
+                if(std::holds_alternative<LiteMath::float4>(mat->color)) {
+                    set_color(colorNode, std::get<LiteMath::float4>(mat->color));
+                }
+                else {
+                    set_texture(colorNode, std::get<TextureInstance>(mat->color));
+                }
+            }
+        }
+
+        if(mat->reflectivity) {
+            auto reflNode = set_child(node, L"reflectivity");
+            const auto &refl = *mat->reflectivity;
+            auto reflColorNode = set_child(reflNode, L"color");
+            set_color(reflColorNode, refl.color);
+            set_val_child(reflNode, L"glossiness", refl.glossiness);
+            set_val_child(reflNode, L"fresnel_ior", refl.ior);
+
+            if(mat->refl_brdf_type == OldHydraMaterial::ReflBRDF::TORRANSE_SPARROW) {
+                set_attr(reflNode, L"brdf_type", L"torranse_sparrow");   
+            }
+            else if(mat->refl_brdf_type == OldHydraMaterial::ReflBRDF::PHONG) {
+                set_attr(reflNode, L"brdf_type", L"phong");  
+            }
+
+        }
+
+        if(mat->transparency) {
+            auto transpNode = set_child(node, L"transparency");
+            const auto &transp = *mat->transparency;
+            auto transpColorNode = set_child(transpNode, L"color");
+            set_color(transpColorNode, transp.color);
+            set_val_child(transpNode, L"glossiness", transp.glossiness);
+            set_val_child(transpNode, L"ior", transp.ior);
+        }
+
+        return true;
+    }
+
+
 
     bool save_material(const Material *mat, pugi::xml_node &node)
     {   
@@ -332,6 +499,12 @@ namespace LiteScene
         case MaterialType::GLTF:
             set_attr(node, L"type", L"gltf");
             return save_gltf_mat(static_cast<const GltfMaterial *>(mat), node);
+        case MaterialType::EMISSIVE:
+            set_attr(node, L"type", L"hydra_material");
+            return save_emissive_mat(static_cast<const EmissiveMaterial *>(mat), node);
+        case MaterialType::HYDRA_OLD:
+            set_attr(node, L"type", L"hydra_material");
+            return save_old_hydra_mat(static_cast<const OldHydraMaterial *>(mat), node);
         default:
             return true;
         }

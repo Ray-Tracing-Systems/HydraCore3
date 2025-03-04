@@ -1,11 +1,8 @@
 #ifndef LITESCENE_SCENE_H_
 #define LITESCENE_SCENE_H_
-#include "LiteMath.h"
-#include "Image2d.h"
-#include "3rd_party/pugixml.hpp"
+#include "scene_common.h"
 #include "cmesh4.h"
 #include "material.h"
-
 #include <string>
 #include <vector>
 #include <map>
@@ -14,8 +11,6 @@
 
 namespace LiteScene
 {
-    constexpr uint32_t    INVALID_ID = 0xFFFFFFFF;
-    constexpr const char* INVALID_PATH = "INVALID_PATH";
     struct AABB
     {
         LiteMath::float3 boxMin;
@@ -122,12 +117,89 @@ namespace LiteScene
         bool save_data(const SceneMetadata &metadata) override;
     };
 
-    struct LightSource
+
+    class LightSource
     {
+    public:
+        enum class Type
+        {
+            SKY, DIRECTIONAL,
+            RECT, DISK, POINT, SPHERE //all in "area"
+        };
+
+        enum class Dist
+        {
+            LAMBERT, OMNI /* aka "omni", aka "ies" */, SPOT, DIFFUSE
+        };
+
+        struct IES
+        {
+            std::string file_path;
+            std::optional<LiteMath::float4x4> matrix;
+            bool point_area;
+        };
+
+       // bool visible;
+
+        Dist distribution = Dist::LAMBERT;
+        uint32_t mat_id;
+        ColorHolder color; //aka intensity.color
+        float power; // aka intensity.multiplier
+        std::optional<IES> ies;
+
+        /*
+            DISK,SPHERE: radius
+            RECT       : half_width, half_length
+        */
+        union {
+            float sizes[2];
+            struct {
+                float radius;
+            };
+            struct {
+                float half_width;
+                float half_length;
+            };
+
+        };
         uint32_t id = INVALID_ID;
         std::string name;
-
         pugi::xml_node raw_xml;
+
+        LightSource(Type type) : m_type(type) {}
+
+
+        virtual ~LightSource() = default;
+        Type type() const { return m_type; }
+    private:
+        Type m_type;
+    };
+
+    class LightSourceSky : public LightSource
+    {
+    public:
+        std::optional<TextureInstance> texture, camera_back;
+
+        LightSourceSky()
+            : LightSource(LightSource::Type::SKY) { distribution = LightSource::Dist::OMNI; }
+    };
+
+    class LightSourceSpot : public LightSource
+    {
+    public:
+        struct Proj
+        {
+            float fov;
+            float nearClipPlane;
+            float farClipPlane;
+            std::optional<TextureInstance> texture;
+        };
+
+
+        float angle1, angle2;
+        std::optional<Proj> projective;
+
+        LightSourceSpot() : LightSource(LightSource::Type::POINT) { distribution = LightSource::Dist::SPOT; }
     };
 
     struct Camera
@@ -244,7 +316,7 @@ namespace LiteScene
         std::map<uint32_t, Texture> textures;  //HydraScene owns this data
         std::map<uint32_t, Material *> materials;//HydraScene owns this data
         std::map<uint32_t, Geometry *> geometries; //HydraScene owns this data
-        std::map<uint32_t, LightSource> light_sources;
+        std::map<uint32_t, LightSource*> light_sources;
         std::map<uint32_t, Camera> cameras;
         std::map<uint32_t, RenderSettings> render_settings;
         std::map<uint32_t, InstancedScene> scenes;
