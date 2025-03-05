@@ -81,7 +81,7 @@ namespace LiteScene {
     {
     public:
         using Material::Material;
-        enum class BSDF { LAMBERT, OPEN_NAYAR, NONE };
+        enum class BSDF { LAMBERT, OREN_NAYAR, NONE };
         enum class ReflBRDF { TORRANSE_SPARROW, PHONG, NONE };
 
         struct Data {
@@ -132,10 +132,10 @@ namespace LiteScene {
     class DiffuseMaterial : public Material
     {
     public:
-        enum class BSDF { LAMBERT, OPEN_NAYAR };
+        enum class BSDF { LAMBERT, OREN_NAYAR };
 
         std::variant<ColorHolder, TextureInstance> reflectance;
-        float roughness = 0.0f;
+        float roughness = 0.0f; //Used only if BSDF::OPEN_NAYAR
         BSDF bsdf_type;
 
         using Material::Material;
