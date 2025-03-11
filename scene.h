@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <variant>
+#include <istream>
 #include <unordered_map>
 
 namespace LiteScene
@@ -321,8 +322,14 @@ namespace LiteScene
         std::map<uint32_t, RenderSettings> render_settings;
         std::map<uint32_t, InstancedScene> scenes;
     };
+
+
     std::wstring s2ws(const std::string& str);
     std::string ws2s(const std::wstring& wstr);
+
+    bool load_gltf_mesh(const std::string &filename, std::vector<Geometry *> &meshes, std::vector<std::vector<uint32_t>> *materials = nullptr);
+
+
 }
 
 #endif
