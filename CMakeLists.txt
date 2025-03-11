@@ -137,7 +137,7 @@ set(VULKAN_CAM2
 add_library(miniz external/tinyexr/miniz.c)
 
 set(LOADER_EXTERNAL_SRC
-        external/LiteScene/pugixml.cpp
+        external/LiteScene/3rd_party/pugixml.cpp
         external/LiteScene/hydraxml.cpp
         external/LiteScene/cmesh4.cpp)
 

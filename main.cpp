@@ -485,5 +485,9 @@ int main(int argc, const char** argv) // common hydra main
       SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst, gamma);
   }
 
+  pImpl = nullptr;
+  #ifdef USE_VULKAN
+  vk_utils::globalContextDestroy();
+  #endif
   return 0;
 }

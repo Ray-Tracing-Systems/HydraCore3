@@ -31,6 +31,35 @@
   },
 
   {
+    "name": "SpectralBlend (debug)",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/bin-debug/hydra",
+    "args": ["--gpu", "--spectral",
+             "-in", "../comparisonrender/Tests/Blend/0002/spectral-blend-sphere-hydra3.xml",
+             "-integrator", "mispt", 
+             //"--qmc",
+             "-width", "1024",
+             "-height", "1024",
+             //"-channels", "16",
+             "-spp", "1024",
+             "-scn_dir", "../comparisonrender",
+             "-out", "z_out.bmp"],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        }
+    ]
+},
+
+  {
       "name": "LambertRGB",
       "type": "cppdbg",
       "request": "launch",
