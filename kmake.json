@@ -1,0 +1,23 @@
+{
+    "mainClass"     : "Integrator", // must explicitly specify main class as main process 'unit' for slicer
+    "baseClasses"   : [],           // specify all base clases in  reverse order from leaf to root
+    "composClasses" : {},           // specify all classes for composition pattern 
+    
+    "options" : {
+        "-pattern"    : "rtv",
+        "-shaderCC"   : "glsl",
+        "-megakernel" : 1,
+        "enable_ray_tracing_pipeline" : 0,
+        "-enable_motion_blur"         : 0,
+        "end" : ""
+    },
+
+    "source" : ["integrator_pt.cpp", 
+                "integrator_pt_lgt.cpp",
+                "integrator_pt_mat.cpp",
+                "integrator_rt.cpp",
+                "integrator_spectrum.cpp"],
+    "includeIgnore"  : ["external/LiteMath", "external/LiteScene"],
+    "includeProcess" : ["external/CrossRT", "cam_plugin"],
+    "end" : ""
+}
