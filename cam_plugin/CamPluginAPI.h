@@ -13,6 +13,15 @@ struct CamParameters    ///<! add any parameter you like to this structure
   int   spectralMode;
   std::string opticFile;
 };
+#else
+struct CamParameters   
+{
+  float fov;
+  float aspect;
+  float nearPlane;
+  float farPlane;
+  int   spectralMode;
+};
 #endif
 
 struct RayPosAndW 
