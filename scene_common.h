@@ -52,7 +52,7 @@ namespace LiteScene
 
     class Texture;
     class Material;
-    class Spectrum;
+    struct Spectrum;
     class Geometry;
     class LightSource;
 }
