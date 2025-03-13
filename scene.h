@@ -76,9 +76,9 @@ namespace LiteScene
 
         virtual ~Geometry() {}
         bool load_node_base(pugi::xml_node node);
-        pugi::xml_node save_node_base() const;
+        void save_node_base(pugi::xml_node &node) const;
         virtual bool load_node(pugi::xml_node node) = 0;     // load properties from xml, no actual geometry data is loaded. Returns if loading was successful.
-        virtual pugi::xml_node save_node() const = 0;        // save properties to xml.
+        virtual bool save_node(pugi::xml_node &node) const = 0;        // save properties to xml.
         virtual bool load_data(const SceneMetadata &metadata) = 0;       // load actual data from file(s) (e.g. triangles from .vsgf file). Returns if loading was successful.
         virtual bool save_data(const SceneMetadata &metadata) = 0; // save actual data to file(s). Object should know how where to save. Returns if saving was successful.
         uint32_t id      = INVALID_ID;
@@ -96,7 +96,7 @@ namespace LiteScene
     public:
         virtual ~MeshGeometry() {}
         bool load_node(pugi::xml_node node) override;
-        pugi::xml_node save_node() const override;
+        bool save_node(pugi::xml_node &node) const override;
         bool load_data(const SceneMetadata &metadata) override;
         bool save_data(const SceneMetadata &metadata) override;
 
@@ -113,7 +113,7 @@ namespace LiteScene
     public:
         virtual ~CustomGeometry() {}
         bool load_node(pugi::xml_node node) override;
-        pugi::xml_node save_node() const override;
+        bool save_node(pugi::xml_node &node) const override;
         bool load_data(const SceneMetadata &metadata) override;
         bool save_data(const SceneMetadata &metadata) override;
     };
@@ -214,7 +214,7 @@ namespace LiteScene
         float fov;
         float nearPlane;
         float farPlane;
-        float exposureMult;
+        float exposureMult = 1.0f;
         LiteMath::float4x4 matrix;  // view matrix
         bool has_matrix;
         
@@ -327,8 +327,8 @@ namespace LiteScene
     std::wstring s2ws(const std::string& str);
     std::string ws2s(const std::wstring& wstr);
 
-    bool load_gltf_mesh(const std::string &filename, std::vector<Geometry *> &meshes, std::vector<std::vector<uint32_t>> *materials = nullptr);
-
+   // bool load_gltf_mesh(const std::string &filename, std::vector<Geometry *> &meshes);
+    bool load_gltf_scene(const std::string &filename, HydraScene &scene, bool only_geometry = false);
 
 }
 

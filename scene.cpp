@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <cassert>
 #include <locale>
 #include <codecvt>
 
@@ -94,16 +95,12 @@ namespace LiteScene
         return true;
     }
     
-    pugi::xml_node Geometry::save_node_base() const
-    {
-        pugi::xml_node node = custom_data;
-        
+    void Geometry::save_node_base(pugi::xml_node &node) const
+    {        
         set_attr(node, L"id", id);
         set_attr(node, L"bytesize", bytesize);
         set_attr(node, L"name", s2ws(name));
         set_attr(node, L"type", s2ws(type_name));
-
-        return node;
     }
 
 
@@ -125,17 +122,17 @@ namespace LiteScene
         return true;
     }
 
-    pugi::xml_node MeshGeometry::save_node() const
+    bool MeshGeometry::save_node(pugi::xml_node &node) const
     {
         if (relative_file_path == INVALID_PATH)
         {
             printf("[MeshGeometry::save_node] No location is specified. Save data first\n");
-            return pugi::xml_node();
+            return false;
         }
-        pugi::xml_node node = save_node_base();
+        save_node_base(node);
         node.set_name(L"mesh");
         set_attr(node, L"loc", s2ws(relative_file_path));
-        return node;
+        return true;
     }
     bool MeshGeometry::load_data(const SceneMetadata &metadata)
     {
@@ -185,9 +182,10 @@ namespace LiteScene
         return true;    
     }
 
-    pugi::xml_node CustomGeometry::save_node() const
+    bool CustomGeometry::save_node(pugi::xml_node &node) const
     {
-        return save_node_base();
+        save_node_base(node);
+        return true;
     }
     bool CustomGeometry::load_data(const SceneMetadata &metadata)
     {
@@ -277,33 +275,33 @@ namespace LiteScene
 
     bool load_camera(Camera &cam, const pugi::xml_node &cam_node)
     {
-            cam.id = cam_node.attribute(L"id").as_uint();
-            cam.name = ws2s(cam_node.attribute(L"name").as_string());
+        cam.id = cam_node.attribute(L"id").as_uint();
+        cam.name = ws2s(cam_node.attribute(L"name").as_string());
 
-            cam.fov       = hydra_xml::readval1f(cam_node.child(L"fov")); 
-            cam.nearPlane = hydra_xml::readval1f(cam_node.child(L"nearClipPlane"));
-            cam.farPlane  = hydra_xml::readval1f(cam_node.child(L"farClipPlane"));  
+        cam.fov       = hydra_xml::readval1f(cam_node.child(L"fov")); 
+        cam.nearPlane = hydra_xml::readval1f(cam_node.child(L"nearClipPlane"));
+        cam.farPlane  = hydra_xml::readval1f(cam_node.child(L"farClipPlane"));  
 
-            auto expNode = cam_node.child(L"exposure_mult");
-            if(expNode)
-                cam.exposureMult = hydra_xml::readval1f(expNode);  
-            else
-                cam.exposureMult = 1.0f;
-            
-            cam.pos    = hydra_xml::readval3f(cam_node.child(L"position"));
-            cam.lookAt = hydra_xml::readval3f(cam_node.child(L"look_at"));
-            cam.up     = hydra_xml::readval3f(cam_node.child(L"up"));
+        auto expNode = cam_node.child(L"exposure_mult");
+        if(expNode)
+            cam.exposureMult = hydra_xml::readval1f(expNode);  
+        else
+            cam.exposureMult = 1.0f;
+        
+        cam.pos    = hydra_xml::readval3f(cam_node.child(L"position"));
+        cam.lookAt = hydra_xml::readval3f(cam_node.child(L"look_at"));
+        cam.up     = hydra_xml::readval3f(cam_node.child(L"up"));
 
-            cam.has_matrix = false;
-            if(cam_node.child(L"matrix"))
-            {
-                cam.matrix = LiteMath::transpose(wstring_to_float4x4(cam_node.child(L"matrix").attribute(L"val").as_string()));
-                cam.has_matrix = true;
-            }
+        cam.has_matrix = false;
+        if(cam_node.child(L"matrix"))
+        {
+            cam.matrix = LiteMath::transpose(wstring_to_float4x4(cam_node.child(L"matrix").attribute(L"val").as_string()));
+            cam.has_matrix = true;
+        }
 
-            cam.custom_data = cam_node;
+        cam.custom_data = cam_node;
 
-            return true;
+        return true;
     }
 
     bool load_cameras(HydraScene &scene, const pugi::xml_node &lib_node)
@@ -749,10 +747,10 @@ namespace LiteScene
     {
         for (const auto &[id, geom] : scene.geometries)
         {
+            auto node = geom->custom_data ? lib_node.append_copy(geom->custom_data) : lib_node.append_child(L"geometry");
             geom->load_data(scene.metadata);
             geom->save_data(save_metadata);
-            pugi::xml_node geom_node = geom->save_node();
-            lib_node.append_copy(geom_node);
+            if(!geom->save_node(node)) return false;
         }
         return !lib_node.empty();
     }

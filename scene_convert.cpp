@@ -1,8 +1,10 @@
 #include "scene.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
+#include "loadutil.h"
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
@@ -15,6 +17,7 @@ namespace gltf = tinygltf;
 
 namespace LiteScene
 {
+    static constexpr int GLTF_INVALID_ID = -1;
 
     static void append_float3_as_float4(const gltf::Model &model, const gltf::Accessor& accessor, std::vector<LiteMath::float4> &target)
     {
@@ -68,7 +71,168 @@ namespace LiteScene
 
     }
 
-    bool load_gltf_meshes(const std::string &filename, std::vector<Geometry *> out_meshes, std::vector<std::vector<uint32_t>> *materials)
+    static bool load_gltf_meshes(const gltf::Model model, std::map<uint32_t, Geometry *> &geometries, bool only_geometry)
+    {
+        std::vector<std::unique_ptr<MeshGeometry>> meshes;
+        meshes.reserve(model.meshes.size());
+
+        uint32_t id = 0;
+        for(const auto &mesh : model.meshes) {
+            std::unique_ptr<MeshGeometry> mg{new MeshGeometry()};
+
+            std::cout << "Adding mesh" << id << std::endl;
+
+            mg->id = id;
+            mg->name = "gltf-mesh#" + std::to_string(id);
+            mg->relative_file_path = "data/gltf_mesh_" + std::to_string(id) + ".vsgf";
+
+            std::vector<uint32_t> prim_materials;
+
+            cmesh4::SimpleMesh &simpleMesh = mg->mesh; 
+            mg->is_loaded = true;
+
+            for(const auto &prim : mesh.primitives) {
+                if(prim.mode != TINYGLTF_MODE_TRIANGLES) {
+                    std::cerr << "[ERROR] Only triangle primitives are supported" << std::endl;
+                    return false;
+                }
+
+                const gltf::Accessor& posAccessor = model.accessors[prim.attributes.at("POSITION")];
+                const gltf::Accessor& normAccessor = model.accessors[prim.attributes.at("NORMAL")];
+                const gltf::Accessor& indAcessor  = model.accessors[prim.indices];
+                append_float3_as_float4(model, posAccessor, simpleMesh.vPos4f);
+                append_float3_as_float4(model, normAccessor, simpleMesh.vNorm4f);
+                append_indices(model, indAcessor, simpleMesh.indices);
+
+                simpleMesh.vTexCoord2f.resize(simpleMesh.vPos4f.size());
+                simpleMesh.vTang4f.resize(simpleMesh.vPos4f.size());
+                simpleMesh.matIndices.push_back(only_geometry ? 0 : prim.material);
+            }
+
+            geometries[id] = mg.release(); 
+            id += 1;
+        }
+
+        return true;
+    }
+
+    static void load_gltf_node_matrix(const gltf::Node &node, LiteMath::float4x4 &mat)
+    {
+        if(!node.matrix.empty()) {
+            std::vector<float> data{node.matrix.begin(), node.matrix.end()};
+            array_to_float4x4(data, mat);
+            return;
+        }
+
+        LiteMath::float4x4 rotation;
+        LiteMath::float4x4 scale;
+        LiteMath::float4x4 translation;
+
+        if(!node.rotation.empty()) {
+            double qw = node.rotation[0];
+            double qx = node.rotation[1];
+            double qy = node.rotation[2];
+            double qz = node.rotation[3];
+
+            double qx2 = qx * qx;
+            double qy2 = qy * qy;
+            double qz2 = qz * qz;
+
+            rotation(0, 0) = 1.0f - 2.0f * float(qy2 + qz2);
+            rotation(0, 1) = 2.0f * float(qx * qy - qz * qw);
+            rotation(0, 2) = 2.0f * float(qx * qz + qy * qw);
+            rotation(1, 0) = 2.0f * float(qx * qy + qz * qw);
+            rotation(1, 1) = 1.0f - 2.0f * float(qx2 + qz2);
+            rotation(1, 2) = 2.0f * float(qy * qz - qx * qw);
+            rotation(2, 0) = 2.0f * float(qx * qz - qy * qw);
+            rotation(2, 1) = 2.0f * float(qy * qz + qx * qw);
+            rotation(2, 2) = 1.0f - 2.0f * float(qx2 + qy2);
+        }
+
+        if(!node.scale.empty()) {
+            for(int i = 0; i < 3; ++i) scale(i, i) = node.scale[i];
+        }
+
+        if(!node.translation.empty()) {
+            for(int i = 0; i < 3; ++i) translation(i, 3) = -node.translation[i];
+        }
+
+        mat = translation * rotation * scale;
+    }
+
+    static std::optional<InstancedScene> load_gltf_scene_node(const gltf::Model &model, const gltf::Scene &scene, std::map<uint32_t, Camera> &cameras, uint32_t id)
+    {
+        InstancedScene out;
+        out.id = id;
+        out.name = "gltf-scene#" + std::to_string(id);
+
+        uint32_t inst_id = 0;
+        uint32_t linst_id = 0;
+        for(int node_id : scene.nodes) {
+            const gltf::Node &node = model.nodes[node_id];
+            LiteMath::float4x4 matrix;
+            load_gltf_node_matrix(node, matrix);
+            if(node.mesh != GLTF_INVALID_ID) {
+
+                Instance inst;
+                inst.id = inst_id++;
+                inst.mesh_id = uint32_t(node.mesh);
+                inst.scn_id = id;
+                inst.matrix = matrix;
+                out.instances[inst.id] = inst;
+            }
+            else if(node.light != GLTF_INVALID_ID) {
+                LightInstance linst;
+                linst.id = linst_id++;
+                linst.light_id = uint32_t(node.light);
+                linst.matrix = matrix;
+                out.light_instances[linst.id] = linst;
+            }
+            if(node.camera != GLTF_INVALID_ID) {
+                Camera &cam = cameras[node.camera];
+                cam.matrix = matrix;
+                cam.has_matrix = true;
+            }
+        }
+        return {std::move(out)};
+    }
+
+    static bool load_gltf_scenes(const gltf::Model &model, std::map<uint32_t, InstancedScene> &scenes, std::map<uint32_t, Camera> &cameras)
+    {
+        uint32_t i = 0;
+        for(const auto &scene : model.scenes) {
+            auto opt = load_gltf_scene_node(model, scene, cameras, i);
+            if(!opt) {
+                scenes.clear();
+                return false;
+            }
+            scenes[i++] = std::move(*opt);
+        }
+        return true;
+    }
+
+    static bool load_gltf_cameras(const gltf::Model &model, std::map<uint32_t, Camera> &cameras)
+    {
+        uint32_t id = 0;
+        if(!model.cameras.empty()) {
+            for(const auto &gltfCam : model.cameras) {
+                const auto &cam = gltfCam.perspective;
+                Camera camera;
+                camera.id = id;
+                camera.name = "gltf-camera#" + std::to_string(id);
+                id += 1;
+
+                camera.fov = cam.yfov;
+                camera.nearPlane = cam.znear;
+                camera.farPlane = cam.zfar;
+                cameras[camera.id] = std::move(camera);
+            }
+            return true;
+        }
+        return true;
+    }
+
+    bool load_gltf_scene(const std::string &filename, HydraScene &scene, bool only_geometry)
     {
         gltf::Model model;
         gltf::TinyGLTF loader;
@@ -87,45 +251,11 @@ namespace LiteScene
             return false;
         }
 
-        std::vector<std::unique_ptr<MeshGeometry>> meshes;
-        meshes.reserve(model.meshes.size());
-
-
-        for(const auto &mesh : model.meshes) {
-            meshes.emplace_back(new MeshGeometry());
-            MeshGeometry &mg = *(meshes.back());
-
-            std::vector<uint32_t> prim_materials;
-
-            cmesh4::SimpleMesh &simpleMesh = mg.mesh; 
-            mg.is_loaded = true;
-
-            for(const auto &prim : mesh.primitives) {
-                if(prim.mode != TINYGLTF_MODE_TRIANGLES) {
-                    std::cerr << "[ERROR] Only triangle primitives are supported" << std::endl;
-                    return false;
-                }
-
-                const gltf::Accessor& posAccessor = model.accessors[prim.attributes.at("POSITION")];
-                const gltf::Accessor& normAccessor = model.accessors[prim.attributes.at("NORMAL")];
-                const gltf::Accessor& indAcessor  = model.accessors[prim.indices];
-                append_float3_as_float4(model, posAccessor, simpleMesh.vPos4f);
-                append_float3_as_float4(model, normAccessor, simpleMesh.vNorm4f);
-                append_indices(model, indAcessor, simpleMesh.indices);
-
-                if(materials) {
-                    prim_materials.push_back(uint32_t(prim.material));
-                }
-            }
-            if(materials) {
-                materials->push_back(std::move(prim_materials));
-            }
-        }
-
-        for(auto &mesh : meshes) out_meshes.push_back(mesh.release());
+        if(!load_gltf_meshes(model, scene.geometries, only_geometry)) return false;
+        if(!load_gltf_cameras(model, scene.cameras)) return false;
+        if(!load_gltf_scenes(model, scene.scenes, scene.cameras)) return false;
 
         return true;
-
     }
 
 }

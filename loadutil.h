@@ -95,16 +95,25 @@ namespace LiteScene {
         return result;
     }
 
+    inline void array_to_float4x4(const std::vector<float> &data, LiteMath::float4x4 &mat)
+    {
+        mat.set_row(0, LiteMath::float4(data[0],data[1], data[2], data[3]));
+        mat.set_row(1, LiteMath::float4(data[4],data[5], data[6], data[7]));
+        mat.set_row(2, LiteMath::float4(data[8],data[9], data[10], data[11]));
+        mat.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15])); 
+    }
+
     inline LiteMath::float4x4 wstring_to_float4x4(const std::wstring &str)
     {
         auto data = wstring_to_float_arr(str, 16);
         LiteMath::float4x4 result;
-
+/*
         result.set_row(0, LiteMath::float4(data[0],data[1], data[2], data[3]));
         result.set_row(1, LiteMath::float4(data[4],data[5], data[6], data[7]));
         result.set_row(2, LiteMath::float4(data[8],data[9], data[10], data[11]));
         result.set_row(3, LiteMath::float4(data[12],data[13], data[14], data[15])); 
-
+*/
+        array_to_float4x4(data, result);
         return result;
     }
 
