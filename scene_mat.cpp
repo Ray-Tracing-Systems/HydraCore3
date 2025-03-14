@@ -146,7 +146,7 @@ namespace LiteScene
             return LiteMath::float4(std::get<float>(val));
         }
         else if(std::holds_alternative<float3>(val)) {
-            return LiteMath::to_float4(std::get<float3>(val), 0.0f);
+            return LiteMath::to_float4(std::get<float3>(val), 1.0f);
         }
         else {
             return std::get<float4>(val);
