@@ -157,7 +157,8 @@ namespace LiteScene {
                                    sub.begin(), sub.end());
 
             if(m.first == base.end()) { // dir contains target
-                fs::path rel_path = std::accumulate(m.second, sub.end(), fs::path{}, std::divides{}) / target.filename();
+                fs::path rel_path = std::accumulate(m.second, sub.end(), fs::path{},
+                    [](const auto& a, const auto& b){return a/b;}) / target.filename();
                 return rel_path.lexically_normal();
             }
         }
