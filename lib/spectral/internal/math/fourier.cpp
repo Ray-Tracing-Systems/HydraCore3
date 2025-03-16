@@ -142,7 +142,7 @@ namespace spec::math {
         Complex t = 0.0f;
         for(int i = 0; i <= M; ++i) t += INV_TWO_PI * q[i] * std::exp(-I * Float(i) * phase); 
 
-        Float div = std::fabs(t);
+        Float div = std::abs(t);
         div *= div;
 
         return (INV_TWO_PI * std::real(q[0])) / div;
