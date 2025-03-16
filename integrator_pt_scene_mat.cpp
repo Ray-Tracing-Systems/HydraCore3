@@ -835,7 +835,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
     }
     for (int j = 0; j < FILM_ANGLE_RES; ++j)
     {
-      float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
+      float theta = M_PI/2 / float(FILM_ANGLE_RES - 1) * j;
       
       float cosTheta = clamp(cosf(theta), 1e-3f, 1.f);
       FrReflRefr forward;
@@ -945,7 +945,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
       }
       for (int j = 0; j < FILM_ANGLE_RES; ++j)
       {
-        float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
+        float theta = M_PI/2 / float(FILM_ANGLE_RES - 1) * j;
         
         float cosTheta = clamp(cosf(theta), 1e-3f, 1.f);
         FrReflRefr forward;
