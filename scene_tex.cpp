@@ -10,6 +10,11 @@
 #define TINYEXR_IMPLEMENTATION
 #include "3rd_party/tinyexr/tinyexr.h"
 
+// Undefine macro from windows headers
+#ifdef LoadImage
+#undef LoadImage
+#endif
+
 namespace fs = std::filesystem;
 using LiteImage::Image2D;
 using namespace LiteMath;
