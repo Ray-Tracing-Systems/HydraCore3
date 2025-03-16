@@ -3,7 +3,10 @@ enable_language(C)
 
 add_library(spectral_lib_compile_options INTERFACE)
 target_link_libraries(spectral_lib_compile_options INTERFACE spectral_proj_compile_options)
-target_compile_options(spectral_lib_compile_options INTERFACE -m64 -fPIC)
+target_compile_options(spectral_lib_compile_options INTERFACE -m64)
+if(NOT WIN32)
+    target_compile_options(spectral_proj_compile_options INTERFACE -fPIC)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(spectral_lib_compile_options INTERFACE -Wno-inconsistent-missing-override)

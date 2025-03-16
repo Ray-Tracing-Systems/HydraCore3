@@ -11,6 +11,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     add_compile_options(-g)
 endif()
 
-add_compile_options(-fPIC)
+if(NOT WIN32)
+    add_compile_options(-fPIC)
+endif()
 
 include(properties.cmake)
