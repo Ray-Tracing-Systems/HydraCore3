@@ -143,7 +143,10 @@ set(LOADER_EXTERNAL_SRC
 
 set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
-        external/CrossRT/EmbreeRT.cpp)
+        external/CrossRT/EmbreeRT.cpp
+        # spectral OBJECT libs
+        $<TARGET_OBJECTS:spec>
+        $<TARGET_OBJECTS:imageutil>)
 
 if(USE_VULKAN)
   set (CAM_MAIN cam_plugin/main_with_cam_gpu.cpp)   
