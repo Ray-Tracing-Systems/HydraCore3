@@ -208,7 +208,7 @@ namespace spec
             if(!isa<BasicSpectrum>(lightsource)) return false;
 
 
-            save_spd(dir_path / "light.spd", static_cast<const BasicSpectrum &>(lightsource));
+            save_spd((dir_path / "light.spd").string(), static_cast<const BasicSpectrum &>(lightsource));
 
             SavingResult saving_result;
             for(Float w : image.get_wavelenghts()) {
@@ -272,12 +272,12 @@ namespace spec
             fs::path p{directory_path};
             if(isa<BasicSpectrum>(s)) {
                 const BasicSpectrum &spectrum = static_cast<const BasicSpectrum &>(s);
-                save_spd(p / (input_filename + ".spd"), spectrum);
+                save_spd((p / (input_filename + ".spd")).string(), spectrum);
                 return true;
             }
             if(isa<SigPolySpectrum>(s)) {
                 const SigPolySpectrum &spectrum = static_cast<const SigPolySpectrum &>(s);
-                return save_sigpoly(p / (input_filename + ".spspec"), spectrum);
+                return save_sigpoly((p / (input_filename + ".spspec")).string(), spectrum);
             }
             return false;
         }
@@ -289,12 +289,12 @@ namespace spec
             fs::path p{directory_path};
             if(isa<BasicSpectralImage>(s)) {
                 const BasicSpectralImage &img = static_cast<const BasicSpectralImage &>(s);
-                return save_as_png1(img, p / input_filename);
+                return save_as_png1(img, (p / input_filename).string());
                 
             }
             if(isa<SigPolySpectralImage>(s)) {
                 const SigPolySpectralImage &img = static_cast<const SigPolySpectralImage &>(s);
-                return save_sigpoly_img(p / (input_filename + ".sif"), img);
+                return save_sigpoly_img((p / (input_filename + ".sif")).string(), img);
             }
             return false;
         }

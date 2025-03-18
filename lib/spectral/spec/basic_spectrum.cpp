@@ -141,7 +141,7 @@ namespace spec {
         inline SaveFormat get_type_from_path(const std::string &path)
         {
             fs::path p = path;
-            std::string extension = p.extension();
+            fs::path extension = p.extension();
             if(extension.empty()) return PNG1;
             else if(extension == ".json") return PNG1_JSON;
             //else if(extension == ".zip") return PNG1_ZIP;
@@ -201,7 +201,7 @@ namespace spec {
                 target_directory = path;
             } else {
                 target_directory = fs::path(path).remove_filename().string();
-                target_file = fs::path(path).filename();
+                target_file = fs::path(path).filename().string();
             }
 
             std::cerr << "Target file: " << target_file << std::endl;

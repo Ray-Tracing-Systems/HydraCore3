@@ -147,7 +147,7 @@ namespace spec::util
             _load_from_file(p.parent_path(), meta, entry, image);
         }
 
-        lightsource.reset(new BasicSpectrum(load_spd(p.parent_path() / "light.spd")));
+        lightsource.reset(new BasicSpectrum(load_spd((p.parent_path() / "light.spd").string())));
 
         return image;
     }
@@ -364,7 +364,7 @@ namespace spec::util
     bool load_spectrum(const std::string path, ISpectrum::ptr &s, ISpectrum::csptr &lightsource)
     {
         fs::path p{path};
-        SpectrumFormat f = _guess_spec_format(p.extension());
+        SpectrumFormat f = _guess_spec_format(p.extension().string());
         switch(f) {
         case SpectrumFormat::SIGPOLY:
             s.reset(new SigPolySpectrum(load_sigpoly(path, lightsource)));
@@ -381,7 +381,7 @@ namespace spec::util
     {
         fs::path p{path};
 
-        SpectralImgFormat f = _guess_specimg_format(p.extension());
+        SpectralImgFormat f = _guess_specimg_format(p.extension().string());
         try {
             switch(f) {
             case SpectralImgFormat::SIGPOLY_SIF:
