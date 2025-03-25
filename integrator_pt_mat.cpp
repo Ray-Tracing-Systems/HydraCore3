@@ -9,6 +9,7 @@
 #include "include/cmat_diffuse.h"
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
+#include "include/cmat_neural_brdf.h"
 
 #include <chrono>
 #include <string>
@@ -284,6 +285,23 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
 
       a_misPrev->ior = res.ior;
+    }
+    break;
+    case MAT_TYPE_NEURAL_BRDF:
+    if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
+    {
+      uint weights_offset = m_neural_weights_offsets[currMatId];
+
+
+      const uint   ch1texId     = m_materials[a_materialId].texid[1];
+      const uint   ch2texId     = m_materials[a_materialId].texid[2];
+      const uint   ch3texId     = m_materials[a_materialId].texid[3];
+      const float4 ch1 = m_textures[ch1texId]->sample(texCoordT);
+      const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
+      const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
+
+      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, texColor, ch1, ch2, ch3, &res);
+
     }
     break;
     default:

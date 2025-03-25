@@ -86,6 +86,10 @@ Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::v
   std::wstring name = materialNode.attribute(L"name").as_string();
   uint32_t id = materialNode.attribute(L"id").as_uint();
   Material mat = {};
+  mat.mtype = MAT_TYPE_NEURAL_BRDF;
+  mat.lightId = uint(-1);
+  //TODO
+
 
   const auto nnNode = materialNode.child(L"nn");
   const auto texNode = nnNode.child(L"texture");
@@ -112,4 +116,7 @@ Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::v
     wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
   }
   m_neural_weights_offsets[id] = weights_offset;
+
+
+  return mat;
 }
