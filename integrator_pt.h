@@ -608,23 +608,25 @@ public:
   static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR  = 3;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE    = 4;
   static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC    = 5;
+
   static constexpr uint32_t KSPEC_MAT_TYPE_THIN_FILM  = 6;
- 
-  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 7;
-  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 8;
-  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 9;
-  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 10;
-  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 11;
+  static constexpr uint32_t KSPEC_MAT_TYPE_NEURAL_BRDF= 7;
+
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 8;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 9;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 10;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 11;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 12;
   
-  static constexpr uint32_t KSPEC_LIGHT_IES           = 12;
-  static constexpr uint32_t KSPEC_LIGHT_ENV           = 13;
+  static constexpr uint32_t KSPEC_LIGHT_IES           = 13;
+  static constexpr uint32_t KSPEC_LIGHT_ENV           = 14;
 
-  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
-  static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
-  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 16;
-  static constexpr uint32_t KSPEC_SPD_TEX             = 17;
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 15;  
+  static constexpr uint32_t KSPEC_OPTIC_SIM           = 16;
+  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 17;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 18;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 18; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 19; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

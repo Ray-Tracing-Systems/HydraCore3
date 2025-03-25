@@ -582,6 +582,7 @@ void Integrator::LoadSceneMaterials(hydra_xml::HydraScene& scene, std::unordered
       mat = LoadNeuralBrdfMaterial(materialNode, m_textureLoadInfo, texCache, m_textures,
                                    m_neural_tex_ids, m_neural_tex_offsets,
                                    m_neural_weights, m_neural_weights_offsets);
+      m_actualFeatures[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
     }
 
     if((mat.cflags & FLAG_FOUR_TEXTURES) != 0 )
