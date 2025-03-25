@@ -161,3 +161,14 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
 //std::string Integrator::GetFeatureName(uint32_t a_featureId);
 //std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 //bool                  Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir);
+
+
+
+/**
+ * m_neural_tex_offset_sz MUST have size >= (matId + 1)
+ */
+Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+                                std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
+                                std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
+                                std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
+                                std::vector<float> &m_neural_weights, std::vector<uint> &m_neural_weights_offsets);

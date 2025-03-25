@@ -1,5 +1,5 @@
-#ifndef TEST_CLASS_H
-#define TEST_CLASS_H
+#ifndef INTEGRATOR_PT_H_
+#define INTEGRATOR_PT_H_
 
 #include "include/cglobals.h" // We assume that all code that should pe passed to kernels will be just included both for CPU and OpenCL
 #include "include/crandom.h"
@@ -456,6 +456,12 @@ public:
   std::vector<uint> m_films_spec_id_vec;
   std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
+
+  std::vector<uint> m_neural_tex_ids;
+  std::vector<uint2> m_neural_tex_offsets; //x: offset, y: size
+  std::vector<float> m_neural_weights;
+  std::vector<uint> m_neural_weights_offsets;
+
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

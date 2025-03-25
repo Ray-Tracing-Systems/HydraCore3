@@ -1,4 +1,5 @@
 #include "integrator_pt_scene.h"
+#include <iterator>
 
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
@@ -55,6 +56,7 @@ static const std::wstring simpleDiffuseMatTypeStr  {L"diffuse"};
 static const std::wstring blendMatTypeStr          {L"blend"};
 static const std::wstring plasticMatTypeStr        {L"plastic"};
 static const std::wstring dielectricMatTypeStr     {L"dielectric"};
+static const std::wstring neuralBrdfMatTypeStr     {L"neural_brdf"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
@@ -527,8 +529,15 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   //// (2) load materials
   //
+  auto matNodes = scene.MaterialNodes();
+
+  size_t mat_count = std::distance(matNodes.begin(), matNodes.end());
   m_materials.resize(0);
-  m_materials.reserve(100);
+  m_materials.reserve(mat_count);
+
+  m_neural_tex_offsets.resize(mat_count, {0, 0});
+  m_neural_weights_offsets.resize(mat_count, 0);
+
 
   std::set<uint32_t> loadedSpectralTextures = {};
   for(auto materialNode : scene.MaterialNodes())
@@ -589,6 +598,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
+    }
+    else if(mat_type == neuralBrdfMatTypeStr)
+    {
+      mat = LoadNeuralBrdfMaterial(materialNode, texturesInfo, texCache, m_textures,
+                                   m_neural_tex_ids, m_neural_tex_offsets,
+                                   m_neural_weights, m_neural_weights_offsets);
     }
 
     if((mat.cflags & FLAG_FOUR_TEXTURES) != 0 )

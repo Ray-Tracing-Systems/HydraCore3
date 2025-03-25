@@ -169,11 +169,13 @@ set(CORE_SRC
         integrator_pt.cpp
         integrator_pt_lgt.cpp
         integrator_pt_mat.cpp
+        integrator_pt_nn.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
         integrator_pt_scene_mat.cpp
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp
+        integrator_pt_scene_nn.cpp
         integrator_gbuffer.cpp
         integrator_spectrum.cpp
         mlt/integrator_qmc.cpp
