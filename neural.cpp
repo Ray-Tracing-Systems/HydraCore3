@@ -22,16 +22,14 @@ namespace nn
     else next();
   }
 
-  bool WeightsLoader::load_next(std::vector<float> &weights, std::vector<float> &bias)
+  bool WeightsLoader::load_next(float *weights, float *bias)
   {
     if(layers == 0) return false;
 
     const uint32_t count = rows * cols;
-    weights.resize(count);
-    bias.resize(rows);
     if(count) {
-      file.read(reinterpret_cast<char *>(weights.data()), count * sizeof(float));
-      file.read(reinterpret_cast<char *>(bias.data()), rows * sizeof(float));
+      file.read(reinterpret_cast<char *>(weights), count * sizeof(float));
+      file.read(reinterpret_cast<char *>(bias), rows * sizeof(float));
     }
 
     if(!file) {
@@ -62,11 +60,10 @@ namespace nn
 
 
 
-  void Matmul(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
+  void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)
   {
-    out.resize(n * k);
-    std::fill_n(out.begin(), n * k, 0.0f);
+    std::fill_n(out, n * k, 0.0f);
     for(uint32_t i = 0; i < m; ++i) {
       for(uint32_t j = 0; j < k; ++j) {
         for(uint32_t p = 0; p < n; ++p) {
@@ -76,79 +73,54 @@ namespace nn
     }
   }
 
-  void Add(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
+  void Add(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n)
   {
-    if(m == 0 || n == 0) {
-      m = A.size();
-      n = 1;
-    }
     const uint32_t count = m * n; 
 
-    out.resize(count);
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = A[i] + B[i];
     }
   }
 
-  void Sub(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
+  void Sub(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n)
   {
-    if(m == 0 || n == 0) {
-      m = A.size();
-      n = 1;
-    }
     const uint32_t count = m * n; 
 
-    out.resize(count);
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = A[i] - B[i];
     }
   }
 
-  void Neg(const std::vector<float> &A, std::vector<float> &out,
+  void Neg(const float *A, float *out,
                       uint32_t m, uint32_t n)
   {
-    if(m == 0 || n == 0) {
-      m = A.size();
-      n = 1;
-    }
     const uint32_t count = m * n; 
 
-    out.resize(count);
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = -A[i];
     }
   }
 
-  void Mul(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
+  void Mul(const float *A, const float *B, float *out,
                       uint32_t m, uint32_t n)
   {
-    if(m == 0 || n == 0) {
-      m = A.size();
-      n = 1;
-    }
     const uint32_t count = m * n; 
 
-    out.resize(count);
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = A[i] * B[i];
     } 
   }
 
-  void FusedMulAdd(const std::vector<float> &A, const std::vector<float> &B, const std::vector<float> &C, std::vector<float> &out, 
+  void FusedMulAdd(const float *A, const float *B, const float *C, float *out, 
                       uint32_t m, uint32_t n)
   {
-    if(m == 0 || n == 0) {
-      m = A.size();
-      n = 1;
-    }
     const uint32_t count = m * n; 
 
-    out.resize(count);
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = std::fma(A[i], B[i], C[i]);
-    } 
+    }
   }
 
 

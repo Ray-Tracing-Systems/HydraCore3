@@ -31,7 +31,7 @@ namespace nn
 
     uint32_t next_rows() const { return rows; } //returns 0 on error
     uint32_t next_cols() const { return cols; } //returns 0 on error
-    bool load_next(std::vector<float> &weights, std::vector<float> &bias);
+    bool load_next(float *weights, float *bias);
     bool has_next() const { return layers != 0; }
   private:
     std::ifstream file;
@@ -45,20 +45,18 @@ namespace nn
   };
 
 
-  void Matmul(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
+  void Matmul(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n, uint32_t k = 1); // A: m x n, B: n x k, out: m x k
-
-  void Add(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
-                      uint32_t m = 0, uint32_t n = 0);
-  void Sub(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
-                      uint32_t m = 0, uint32_t n = 0);
-  void Mul(const std::vector<float> &A, const std::vector<float> &B, std::vector<float> &out, 
-                      uint32_t m = 0, uint32_t n = 0);
-  void FusedMulAdd(const std::vector<float> &A, const std::vector<float> &B, const std::vector<float> &C, std::vector<float> &out, 
-                      uint32_t m = 0, uint32_t n = 0);
-
-  void Neg(const std::vector<float> &A, std::vector<float> &out,
-                      uint32_t m = 0, uint32_t n = 0);
+  void Add(const float *A, const float *B, float *out, 
+                      uint32_t m, uint32_t n);
+  void Sub(const float *A, const float *B, float *out, 
+                      uint32_t m, uint32_t n);
+  void Mul(const float *A, const float *B, float *out, 
+                      uint32_t m, uint32_t n);
+  void FusedMulAdd(const float *A, const float *B, const float *C, float *out, 
+                      uint32_t m, uint32_t n);
+  void Neg(const float *A, float *out,
+                      uint32_t m, uint32_t n);
 
 }
 
