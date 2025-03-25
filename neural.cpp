@@ -1,6 +1,7 @@
 #include "neural.h"
 #include <algorithm>
 #include <cmath>
+#include <cassert>
 
 namespace nn
 {   
@@ -63,6 +64,8 @@ namespace nn
   void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)
   {
+    assert(A != out && B != out);
+
     std::fill_n(out, n * k, 0.0f);
     for(uint32_t i = 0; i < m; ++i) {
       for(uint32_t j = 0; j < k; ++j) {
@@ -123,5 +126,14 @@ namespace nn
     }
   }
 
+  void ReLU(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+    const uint32_t count = m * n; 
+
+    for(uint32_t i = 0; i < count; ++i) {
+      out[i] = std::max(A[i], 0.0f);
+    }
+  }
 
 }
