@@ -64,8 +64,9 @@ namespace nn
   void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)
   {
+#ifndef USE_VULKAN
     assert(A != out && B != out);
-
+#endif
     std::fill_n(out, n * k, 0.0f);
     for(uint32_t i = 0; i < m; ++i) {
       for(uint32_t j = 0; j < k; ++j) {
@@ -133,6 +134,19 @@ namespace nn
 
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = std::max(A[i], 0.0f);
+    }
+  }
+
+  void Transpose(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+#ifndef USE_VULKAN
+    assert(A != out);
+#endif
+    for(uint32_t i = 0; i < m; ++i) {
+      for(uint32_t j = 0; j < n; ++j) {
+        out[j * m + i] = A[i * n + j];
+      }
     }
   }
 

@@ -288,7 +288,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     }
     break;
     case MAT_TYPE_NEURAL_BRDF:
-    if(KSPEC_MAT_TYPE_DIELECTRIC != 0)
+    if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)
     {
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
@@ -300,7 +300,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
       const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
 
-      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, texColor, ch1, ch2, ch3, &res);
+      float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
+
+      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, v, buf, &res);
 
     }
     break;
@@ -532,6 +534,25 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           material_stack[top] = childMats.second; // remember second mat in stack
           top++;
         }
+      }
+      break;
+      case MAT_TYPE_NEURAL_BRDF:
+      if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)
+      {
+        uint weights_offset = m_neural_weights_offsets[currMat.id];
+
+
+        const uint   ch1texId     = m_materials[currMat.id].texid[1];
+        const uint   ch2texId     = m_materials[currMat.id].texid[2];
+        const uint   ch3texId     = m_materials[currMat.id].texid[3];
+        const float4 ch1 = m_textures[ch1texId]->sample(texCoordT);
+        const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
+        const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
+
+        float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
+
+        neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, v, l, buf, &res);
+
       }
       break;
       default:

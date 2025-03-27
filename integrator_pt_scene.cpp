@@ -5,32 +5,33 @@ std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
   switch(a_featureId)
   {
-    case KSPEC_MAT_TYPE_GLTF      : return "GLTF_LITE";
-    case KSPEC_MAT_TYPE_GLASS     : return "GLASS";
-    case KSPEC_MAT_TYPE_CONDUCTOR : return "CONDUCTOR";
-    case KSPEC_MAT_TYPE_THIN_FILM : return "THIN_FILM";
-    case KSPEC_MAT_TYPE_DIFFUSE   : return "DIFFUSE";
-    case KSPEC_MAT_TYPE_PLASTIC   : return "PLASTIC";
-    case KSPEC_SPECTRAL_RENDERING : return "SPECTRAL";
-    case KSPEC_MAT_TYPE_BLEND     : return "BLEND";
-    case KSPEC_BUMP_MAPPING       : return "BUMP";
-    case KSPEC_MAT_FOUR_TEXTURES  : return "4TEX";
-    case KSPEC_LIGHT_IES          : return "LGT_IES";
-    case KSPEC_LIGHT_ENV          : return "LGT_ENV";
-    case KSPEC_MOTION_BLUR        : return "MOTION_BLUR";
-    case KSPEC_OPTIC_SIM          : return "OPTIC_SIM";
-    case KSPEC_LIGHT_PROJECTIVE   : return "LGT_PROJ";
-    case KSPEC_SPD_TEX            : return "SPD_TEX";
-    case KSPEC_MAT_TYPE_DIELECTRIC: return "DIELECTRIC";
+    case KSPEC_MAT_TYPE_GLTF        : return "GLTF_LITE";
+    case KSPEC_MAT_TYPE_GLASS       : return "GLASS";
+    case KSPEC_MAT_TYPE_CONDUCTOR   : return "CONDUCTOR";
+    case KSPEC_MAT_TYPE_THIN_FILM   : return "THIN_FILM";
+    case KSPEC_MAT_TYPE_NEURAL_BRDF : return "NEURAL_BRDF";
+    case KSPEC_MAT_TYPE_DIFFUSE     : return "DIFFUSE";
+    case KSPEC_MAT_TYPE_PLASTIC     : return "PLASTIC";
+    case KSPEC_SPECTRAL_RENDERING   : return "SPECTRAL";
+    case KSPEC_MAT_TYPE_BLEND       : return "BLEND";
+    case KSPEC_BUMP_MAPPING         : return "BUMP";
+    case KSPEC_MAT_FOUR_TEXTURES    : return "4TEX";
+    case KSPEC_LIGHT_IES            : return "LGT_IES";
+    case KSPEC_LIGHT_ENV            : return "LGT_ENV";
+    case KSPEC_MOTION_BLUR          : return "MOTION_BLUR";
+    case KSPEC_OPTIC_SIM            : return "OPTIC_SIM";
+    case KSPEC_LIGHT_PROJECTIVE     : return "LGT_PROJ";
+    case KSPEC_SPD_TEX              : return "SPD_TEX";
+    case KSPEC_MAT_TYPE_DIELECTRIC  : return "DIELECTRIC";
     
-    case KSPEC_BLEND_STACK_SIZE   :
+    case KSPEC_BLEND_STACK_SIZE     :
     {
       std::stringstream strout;
       strout << "BLEND_STACK_SIZE = " << m_enabledFeatures[KSPEC_BLEND_STACK_SIZE];
       return strout.str();
     }
 
-    case KSPEC_FILMS_STACK_SIZE   :
+    case KSPEC_FILMS_STACK_SIZE     :
     {
       std::stringstream strout;
       strout << "FILMS_STACK_SIZE = " << m_enabledFeatures[KSPEC_FILMS_STACK_SIZE];
