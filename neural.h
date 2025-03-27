@@ -103,6 +103,14 @@ namespace nn
    */
   void Neg(const float *A, float *out,
                       uint32_t m, uint32_t n = 1);
+  /**
+   * A   : m x n
+   * out : n x m
+   * 
+   * assert(out != A)
+   */
+  void Transpose(const float *A, float *out,
+                      uint32_t m, uint32_t n);
 
   /**
    * A   : m x n
@@ -112,6 +120,8 @@ namespace nn
    */
   void ReLU(const float *A, float *out,
                       uint32_t m, uint32_t n = 1);
+
+
 
 
 }
