@@ -126,12 +126,11 @@ namespace LiteScene
         std::shared_ptr<LiteImage::ICombinedImageSampler> pResult;
 
         const bool disable_gamma = inst.input_gamma == 1.0f;
-        LiteImage::Sampler sampler {
-            .addressU = inst.sampler.addr_mode_u,
-            .addressV = inst.sampler.addr_mode_v,
-            .addressW = inst.sampler.addr_mode_w,
-            .filter = inst.sampler.filter
-        };
+        LiteImage::Sampler sampler ;
+        sampler.addressU = inst.sampler.addr_mode_u;
+        sampler.addressV = inst.sampler.addr_mode_v;
+        sampler.addressW = inst.sampler.addr_mode_w;
+        sampler.filter = inst.sampler.filter;
         const fs::path path{info.path};
         const std::string ex = path.extension().string();
 
