@@ -530,10 +530,10 @@ namespace LiteScene
     {
         auto bsdfNode = set_child(node, L"bsdf");
         if(mat->bsdf_type == DiffuseMaterial::BSDF::LAMBERT) {
-            set_attr(bsdfNode, L"type", "lambert");
+            set_attr(bsdfNode, L"type", L"lambert");
         }
         else {
-            set_attr(bsdfNode, L"type", "oren-nayar");
+            set_attr(bsdfNode, L"type", L"oren-nayar");
             if(mat->roughness != 0.0f) {
                 set_val_child(node, L"roughness", mat->roughness);
             }
