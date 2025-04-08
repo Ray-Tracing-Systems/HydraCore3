@@ -42,7 +42,7 @@
              "-width", "1024",
              "-height", "1024",
              //"-channels", "16",
-             "-spp", "1024",
+             "-spp", "32",
              "-scn_dir", "../comparisonrender",
              "-out", "z_out.bmp"],
     "stopAtEntry": false,

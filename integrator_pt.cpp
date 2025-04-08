@@ -743,10 +743,14 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
 
 static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
   // Find quadratic discriminant
-  double discrim = (double)B * (double)B - 4. * (double)A * (double)C;
-  if (discrim < 0.) 
+  //double discrim = (double)B * (double)B - 4. * (double)A * (double)C;
+  //if (discrim < 0.) 
+  //  return false;
+  //double rootDiscrim = std::sqrt(discrim);
+  float discrim = B * B - 4.0f * A * C;
+  if (discrim < 0.f) 
     return false;
-  double rootDiscrim = std::sqrt(discrim);
+  float rootDiscrim = std::sqrt(discrim);
   float floatRootDiscrim   = float(rootDiscrim);
   // Compute quadratic _t_ values
   float q;
