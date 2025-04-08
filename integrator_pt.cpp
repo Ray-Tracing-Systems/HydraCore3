@@ -547,7 +547,7 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   if(m_disableImageContrib !=0)
     return;
 
-  const uint XY = in_pakedXY[tid];
+  const uint XY = in_pakedXY[RTVPersistent_ThreadId(tid)];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
   
@@ -600,20 +600,15 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
     return;
 
   float4 color = *a_accumColor;
-  color = RTVPersistent_ReduceAdd4f(color);
-
-  if(RTVPersistent_IsFirst())
+  if(channels == 4)
   {
-    if(channels == 4)
-    {
-      out_color[tid*4+0] += color[0];
-      out_color[tid*4+1] += color[1];
-      out_color[tid*4+2] += color[2];
-      out_color[tid*4+3] += color[3];
-    }
-    else if(channels == 1)
-      out_color[tid] += color[0];
+    out_color[tid*4+0] += color[0];
+    out_color[tid*4+1] += color[1];
+    out_color[tid*4+2] += color[2];
+    out_color[tid*4+3] += color[3];
   }
+  else if(channels == 1)
+    out_color[tid] += color[0];
 
   m_randomGens[RandomGenId(tid)] = *gen;
 }
@@ -623,50 +618,56 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
 
 void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
 {
-  float4 accumColor, accumThroughput;
-  float4 rayPosAndNear, rayDirAndFar;
-  float4 wavelengths;
-  RandomGen gen; 
-  MisData   mis;
-  uint      rayFlags;
-  float     time;
-  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
-
-  for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
+  for(uint iter=0; iter < RTVPersistent_Iters(); iter++) 
   {
-    float4 shadeColor, hitPart1, hitPart2, hitPart3;
-    uint instId = 0;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
-                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
-    if(isDeadRay(rayFlags))
-      break;
-    
-    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
-    if(isDeadRay(rayFlags))
-      break;
+    RTVPersistent_SetIter(iter);
+
+    float4 accumColor, accumThroughput;
+    float4 rayPosAndNear, rayDirAndFar;
+    float4 wavelengths;
+    RandomGen gen; 
+    MisData   mis;
+    uint      rayFlags;
+    float     time;
+    kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  
+    for(uint depth = 0; depth < m_traceDepth + 1; ++depth) // + 1 due to NaivePT uses additional bounce to hit light 
+    {
+      float4 shadeColor, hitPart1, hitPart2, hitPart3;
+      uint instId = 0;
+      kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                       &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+      if(isDeadRay(rayFlags))
+        break;
+      
+      kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+                        &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+      if(isDeadRay(rayFlags))
+        break;
+    }
+  
+    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+                          &accumColor);
+  
+    kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
+                             out_color);
   }
-
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                        &accumColor);
-
-  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
-                           out_color);
 }
 
 void Integrator::PathTrace(uint tid, uint channels, float* out_color)
 {
-  float4 accumColor, accumThroughput;
-  float4 rayPosAndNear, rayDirAndFar;
-  float4 wavelengths;
-  RandomGen gen; 
-  MisData   mis;
-  uint      rayFlags;
-  float     time;
-
   for(uint iter=0; iter < RTVPersistent_Iters(); iter++) 
   {
     RTVPersistent_SetIter(iter);
+    
+    float4 accumColor, accumThroughput;
+    float4 rayPosAndNear, rayDirAndFar;
+    float4 wavelengths;
+    RandomGen gen; 
+    MisData   mis;
+    uint      rayFlags;
+    float     time;
+  
     kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
   
     for(uint depth = 0; depth < m_traceDepth; depth++) 
