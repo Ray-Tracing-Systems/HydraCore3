@@ -81,7 +81,9 @@ public:
   
   // related to persistent threads implementation
   inline uint   RTVPersistent_ThreadId(uint a_tid)      const { return a_tid; }
-  inline bool   RTVPersistent_IsFirst()                 const { return true; }
+  inline void   RTVPersistent_SetIter(uint a_pid)       const {               }
+  inline uint   RTVPersistent_Iters()                   const { return 1;     }
+  inline bool   RTVPersistent_IsFirst()                 const { return true;  }
   inline float4 RTVPersistent_ReduceAdd4f(float4 color) const { return color; }
   // \\ end of persistent threads
 

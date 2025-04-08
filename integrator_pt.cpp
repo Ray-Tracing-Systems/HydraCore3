@@ -663,31 +663,36 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
   MisData   mis;
   uint      rayFlags;
   float     time;
-  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
-  for(uint depth = 0; depth < m_traceDepth; depth++) 
+  for(uint iter=0; iter < RTVPersistent_Iters(); iter++) 
   {
-    float4   shadeColor, hitPart1, hitPart2, hitPart3;
-    uint instId;
-    kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
-                     &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
-    if(isDeadRay(rayFlags))
-      break;
-    
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
-                             depth, &gen, &shadeColor);
-
-    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
-                      &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
-
-    if(isDeadRay(rayFlags))
-      break;
+    RTVPersistent_SetIter(iter);
+    kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  
+    for(uint depth = 0; depth < m_traceDepth; depth++) 
+    {
+      float4   shadeColor, hitPart1, hitPart2, hitPart3;
+      uint instId;
+      kernel_RayTrace2(tid, depth, &rayPosAndNear, &rayDirAndFar, &time, 
+                       &hitPart1, &hitPart2, &hitPart3, &instId, &rayFlags);
+      if(isDeadRay(rayFlags))
+        break;
+      
+      kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
+                               depth, &gen, &shadeColor);
+  
+      kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+                        &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
+  
+      if(isDeadRay(rayFlags))
+        break;
+    }
+  
+    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+                          &accumColor);
+  
+    kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
   }
-
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                        &accumColor);
-
-  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
 void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, float* out_color)
