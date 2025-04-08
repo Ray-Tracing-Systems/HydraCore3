@@ -43,7 +43,7 @@ uint Integrator::RandomGenId(uint tid) { return tid; }
 
 Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
 {
-  const uint XY = m_packedXY[tid];
+  const uint XY = m_packedXY[RTVPersistent_ThreadId(tid)];
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
@@ -519,7 +519,7 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
   const uint camBackId = m_envCamBackId;
   if(exitZero && camBackId != uint(-1)) // apply camera back color to ray
   {
-    const uint XY = m_packedXY[tid];
+    const uint XY = m_packedXY[RTVPersistent_ThreadId(tid)];
     const uint x  = (XY & 0x0000FFFF);
     const uint y  = (XY & 0xFFFF0000) >> 16;
 
@@ -561,30 +561,34 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
     const uint rayFlags2 = *rayFlags; 
     rgb = SpectralCamRespoceToRGB(specSamples, waves, rayFlags2);
   }
-
-  float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   
-  if(channels == 1) // monochromatic spectral
+  float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
+  colorRes = RTVPersistent_ReduceAdd4f(colorRes);
+  
+  if(RTVPersistent_IsFirst())
   {
-    // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
-    out_color[y * m_winWidth + x] += specSamples.x * m_exposureMult;
-  } 
-  else if(channels <= 4) 
-  {
-    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
-    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
-    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
-  }
-  else // always spectral rendering
-  {
-    auto waves = (*wavelengths);
-    auto color = (*a_accumColor)*m_exposureMult;
-    for(int i=0;i<4;i++) {
-      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
-      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
-      const int offsetPixel = int(y)*m_winWidth + int(x);
-      const int offsetLayer = channelId*m_winWidth*m_winHeight;
-      out_color[offsetLayer + offsetPixel] += color[i];
+    if(channels == 1) // monochromatic spectral
+    {
+      // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+      out_color[y * m_winWidth + x] += specSamples.x * m_exposureMult;
+    } 
+    else if(channels <= 4) 
+    {
+      out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+      out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+      out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+    }
+    else // always spectral rendering
+    {
+      auto waves = (*wavelengths);
+      auto color = (*a_accumColor)*m_exposureMult;
+      for(int i=0;i<4;i++) {
+        const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+        const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
+        const int offsetPixel = int(y)*m_winWidth + int(x);
+        const int offsetLayer = channelId*m_winWidth*m_winHeight;
+        out_color[offsetLayer + offsetPixel] += color[i];
+      }
     }
   }
 
@@ -594,18 +598,22 @@ void Integrator::kernel_CopyColorToOutput(uint tid, uint channels, const float4*
 {
   if(tid >= m_maxThreadId)
     return;
-  
-  const float4 color = *a_accumColor;
 
-  if(channels == 4)
+  float4 color = *a_accumColor;
+  color = RTVPersistent_ReduceAdd4f(color);
+
+  if(RTVPersistent_IsFirst())
   {
-    out_color[tid*4+0] += color[0];
-    out_color[tid*4+1] += color[1];
-    out_color[tid*4+2] += color[2];
-    out_color[tid*4+3] += color[3];
+    if(channels == 4)
+    {
+      out_color[tid*4+0] += color[0];
+      out_color[tid*4+1] += color[1];
+      out_color[tid*4+2] += color[2];
+      out_color[tid*4+3] += color[3];
+    }
+    else if(channels == 1)
+      out_color[tid] += color[0];
   }
-  else if(channels == 1)
-    out_color[tid] += color[0];
 
   m_randomGens[RandomGenId(tid)] = *gen;
 }

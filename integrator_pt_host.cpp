@@ -61,9 +61,9 @@ void Integrator::PathTraceBlock(uint tid, uint channels, float* out_color, uint 
   ConsoleProgressBar progress(tid);
   progress.Start();
   auto start = std::chrono::high_resolution_clock::now();
-  #ifndef _DEBUG
+  //#ifndef _DEBUG
   #pragma omp parallel for default(shared)
-  #endif
+  //#endif
   for (int i = 0; i < tid; ++i) {
     for (int j = 0; j < a_passNum; ++j) {
       PathTrace(uint(i), channels, out_color);
