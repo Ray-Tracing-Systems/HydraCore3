@@ -42,7 +42,7 @@
              "-width", "1024",
              "-height", "1024",
              //"-channels", "16",
-             "-spp", "32",
+             "-spp", "256",
              "-scn_dir", "../comparisonrender",
              "-out", "z_out.bmp"],
     "stopAtEntry": false,
@@ -91,7 +91,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin-release/hydra",
-      "args": ["--cpu", 
+      "args": ["--gpu", 
                "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
                "-integrator", "mispt", 
                //"--qmc",
@@ -99,7 +99,7 @@
                //"-cam_id", "1",
                "-width", "1024",
                "-height", "1024",
-               "-spp", "16",
+               "-spp", "1024",
                "-fb_layer", "color",
                "-scn_dir", "../comparisonrender",
                "-out", "Z_OUT_LAMBERT_RGB_GPU.bmp"],
@@ -116,6 +116,32 @@
           }
       ]
   },
+
+  {
+    "name": "CrySponza (GPU)",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/bin-release/hydra",
+    "args": ["--gpu", 
+             "-in", "scenes/crytek_sponza/statex_00001.xml",
+             "-integrator", "mispt", 
+             "-width", "1024",
+             "-height", "1024",
+             "-spp", "1024",
+             "-out", "z_cry_sponza.bmp"],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        }
+    ]
+},
 
   {
       "name": "MotionBlurSpectral",
@@ -157,7 +183,7 @@
                "-width", "1024",
                "-height", "1024",
                //"-channels", "16",
-               "-spp", "3080",
+               "-spp", "1024",
                "-scn_dir", "../comparisonrender",
                "-out", "z_cornell_glass_bunny.bmp"],
       "stopAtEntry": false,
