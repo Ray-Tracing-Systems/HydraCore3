@@ -9,7 +9,7 @@
 namespace LiteScene
 {
     constexpr uint32_t INVALID_ID = 0xFFFFFFFF;
-    constexpr char* INVALID_PATH = "INVALID_PATH";
+    constexpr char INVALID_PATH[] = "INVALID_PATH";
 
     struct ColorHolder {
         std::optional<LiteMath::float4> color;
