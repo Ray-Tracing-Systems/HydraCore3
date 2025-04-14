@@ -14,12 +14,19 @@ static constexpr uint NBRDF_SIZE_LAYER   = NBRDF_SIZE_MAT + NBRDF_HIDDEN_DIM;
 static constexpr uint NBRDF_SIZE_MAT6    = NBRDF_HIDDEN_DIM * 6;
 
 
-static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, 
-                                            float3 vec, float *tex, BsdfSample* pRes)
+static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 rands, 
+                                            float3 vec, float3 n, float *tex, BsdfSample* pRes)
 {
+  const uint   cflags     = a_materials[0].cflags;
+  const float3 lambertDir = lambertSample(float2(rands.x, rands.y), vec, n);
+  const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
+  BsdfEval tRes;
+  neuralBrdfEval(a_materials, weights, lambertDir, vec, n, tex, &tRes);
 
-
-
+  pRes->dir   = lambertDir;
+  pRes->val   = tRes.val;
+  pRes->pdf   = lambertPdf;
+  pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
 
@@ -92,6 +99,7 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   nn::Add(weights + current_offset + 6 * 3,
           buf, buf, 3);
 
+  pRes->pdf = lambertEvalPDF(l, v, n);
   pRes->val = float4(buf[0], buf[1], buf[2], 1.0f);
 }
 
