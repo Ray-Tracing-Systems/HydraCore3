@@ -292,7 +292,6 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     {
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
-
       //const uint   ch1texId     = m_materials[a_materialId].texid[1];
       //const uint   ch2texId     = m_materials[a_materialId].texid[2];
       //const uint   ch3texId     = m_materials[a_materialId].texid[3];

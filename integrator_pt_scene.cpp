@@ -602,7 +602,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == neuralBrdfMatTypeStr)
     {
-      mat = LoadNeuralBrdfMaterial(materialNode, texturesInfo, texCache, m_textures,
+      mat = LoadNeuralBrdfMaterial(sceneDirStr, materialNode, texturesInfo, texCache, m_textures,
                                    m_neural_tex_ids, m_neural_tex_offsets,
                                    m_neural_weights, m_neural_weights_offsets);
       m_actualFeatures[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;

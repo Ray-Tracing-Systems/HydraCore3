@@ -44,6 +44,8 @@ namespace nn
 
   };
 
+
+
   /**
    * A   : m x n
    * B   : n x k
@@ -53,6 +55,20 @@ namespace nn
    */
   void Matmul(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n, uint32_t k = 1); 
+
+
+  /**
+   * A   : out_dim x in_dim
+   * B   : in_dim
+   * out : out_dim
+   * 
+   * assert(out != A && out != B)
+   */
+  inline void Linear(const float *A, const float *B, float *out, 
+                      uint32_t in_dim, uint32_t out_dim)
+  {
+    Matmul(A, B, out, out_dim, in_dim);
+  }
 
   /**
    * A   : m x n

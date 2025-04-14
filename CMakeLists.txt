@@ -189,6 +189,9 @@ set(CORE_SRC
         neural.cpp
         ies_parser/ies_render.cpp)
 
+add_executable(neural_tests tests/neural_tests.cpp neural.cpp)
+target_link_libraries(neural_tests PRIVATE project_options)
+
 if(HYDRA_CORE3_LIB)
   if(USE_VULKAN)    
     if(CAM_PLUGIN)

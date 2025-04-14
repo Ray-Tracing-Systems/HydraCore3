@@ -167,7 +167,8 @@ std::vector<float> PdfTableFromImage(std::shared_ptr<ICombinedImageSampler> a_im
 /**
  * m_neural_tex_offset_sz MUST have size >= (matId + 1)
  */
-Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
+                                const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,

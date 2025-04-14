@@ -3,12 +3,16 @@
 #include <algorithm>
 #include <cassert>
 #include <utility>
+#include <iostream>
+#include <filesystem>
 
+namespace fs = std::filesystem;
 //???
 std::vector<std::pair<HydraSampler, uint32_t>> LoadLatentTexturesFromNode(const pugi::xml_node texNode, 
                                 const std::vector<TextureInfo> &texturesInfo,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
-                                std::vector<std::shared_ptr<ICombinedImageSampler>> &textures)
+                                std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
+                                const std::string &scn_dir)
 {
 
   const auto refs_attr = texNode.attribute(L"ids");
@@ -77,7 +81,8 @@ std::vector<std::pair<HydraSampler, uint32_t>> LoadLatentTexturesFromNode(const 
 }
 
 
-Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
+Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
+                                const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
@@ -95,25 +100,33 @@ Material LoadNeuralBrdfMaterial(const pugi::xml_node& materialNode, const std::v
   const auto texNode = nnNode.child(L"texture");
 
   //Loading latent texture
-  std::vector<std::pair<HydraSampler, uint32_t>> loaded_tex = LoadLatentTexturesFromNode(texNode, texturesInfo, texCache, textures);
+  /*std::vector<std::pair<HydraSampler, uint32_t>> loaded_tex = LoadLatentTexturesFromNode(texNode, texturesInfo, texCache, textures, scn_dir);
   m_neural_tex_offsets[id] = {m_neural_tex_ids.size(), loaded_tex.size()};
   for(const auto &[sampler_out, loaded_tex_id] : loaded_tex)
   {
     m_neural_tex_ids.push_back(loaded_tex_id);
-  }
+  }*/
 
 
   //Loading weights
-  std::string weights_path = hydra_xml::ws2s(nnNode.attribute(L"weights_loc").as_string());
+  std::string weights_path = fs::path(scn_dir) / hydra_xml::ws2s(nnNode.attribute(L"weights_loc").as_string());
 
   size_t weights_offset = m_neural_weights.size();
+
   nn::WeightsLoader wloader{weights_path};
   while(wloader.has_next())
   {
-    size_t mat_size = wloader.next_rows() * wloader.next_cols();
-    size_t old_size = m_neural_weights.size();
+    const size_t rows = wloader.next_rows();
+    const size_t cols = wloader.next_cols();
+    const size_t mat_size = rows * cols;
+    const size_t old_size = m_neural_weights.size();
     m_neural_weights.resize(old_size + mat_size + wloader.next_rows());
-    wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
+    std::vector<float> weights;
+    weights.resize(mat_size);
+    wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
+    nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
+
+    //wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
   }
   m_neural_weights_offsets[id] = weights_offset;
 
