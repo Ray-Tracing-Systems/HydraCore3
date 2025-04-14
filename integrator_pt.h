@@ -150,7 +150,7 @@ public:
   
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
-  virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = 0xffffffff);
+  virtual bool LoadScene(const std::string &scene_dir, hydra_xml::HydraScene& scene, uint32_t a_flags = 0xffffffff);
   virtual void LoadScene_SetMeshPointers(const std::unordered_map<int, Mesh4fInput>& a_meshPtrs) { m_LSMeshPtrs = a_meshPtrs; }
   std::unordered_map<int, Mesh4fInput> m_LSMeshPtrs;
   #endif
@@ -654,7 +654,7 @@ public:
   void LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo);
   void LoadSceneSpectrumData(hydra_xml::HydraScene& scene);
   void LoadSceneLights      (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& a_texCache);
-  void LoadSceneMaterials   (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
+  void LoadSceneMaterials   (const std::string &scene_dir, hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                              const std::vector<float>& cie_x, const std::vector<float>& cie_y, const std::vector<float>& cie_z);
   void LoadSceneCamera(hydra_xml::HydraScene& scene);
   void LoadSceneGeometry(hydra_xml::HydraScene& scene);

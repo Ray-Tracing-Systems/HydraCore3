@@ -493,7 +493,8 @@ void Integrator::LoadSceneLights(hydra_xml::HydraScene& scene, std::unordered_ma
   }
 }
 
-void Integrator::LoadSceneMaterials(hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
+void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::HydraScene& scene,
+                                    std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
                                     const std::vector<float>& cie_x, const std::vector<float>& cie_y, const std::vector<float>& cie_z)
 {
   auto matNodes = scene.MaterialNodes();
@@ -580,7 +581,8 @@ void Integrator::LoadSceneMaterials(hydra_xml::HydraScene& scene, std::unordered
     }
     else if(mat_type == neuralBrdfMatTypeStr)
     {
-      mat = LoadNeuralBrdfMaterial(materialNode, m_textureLoadInfo, texCache, m_textures,
+
+      mat = LoadNeuralBrdfMaterial(scene_dir, materialNode, m_textureLoadInfo, texCache, m_textures,
                                    m_neural_tex_ids, m_neural_tex_offsets,
                                    m_neural_weights, m_neural_weights_offsets);
       m_actualFeatures[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
@@ -959,7 +961,7 @@ void Integrator::LoadSceneSettings(hydra_xml::HydraScene& scene)
   //todo: call SetFrameBufferSize
 }
 
-bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
+bool Integrator::LoadScene(const std::string &scene_dir, hydra_xml::HydraScene& scene, uint32_t a_flags)
 { 
   static const std::vector<float> cie_x = Get_CIE_X();
   static const std::vector<float> cie_y = Get_CIE_Y();
@@ -1001,7 +1003,7 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
     LoadSceneLights(scene, m_texCache);
 
   if((a_flags & SCN_UPDATE_MATERIALS) != 0)
-    LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
+    LoadSceneMaterials(scene_dir, scene, m_texCache, cie_x, cie_y, cie_z);
 
   if((a_flags & SCN_UPDATE_SETTINGS) != 0)
     LoadSceneSettings(scene);
@@ -1087,7 +1089,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
 
-  LoadScene(scene, SCN_UPDATE_ALL);
+  LoadScene(sceneDirStr, scene, SCN_UPDATE_ALL);
 
   return true;
 }

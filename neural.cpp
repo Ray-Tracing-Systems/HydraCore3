@@ -1,7 +1,10 @@
 #include "neural.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <cassert>
+#include <cerrno>
+#include <cstring>
 
 namespace nn
 {   
@@ -10,14 +13,18 @@ namespace nn
 
   void WeightsLoader::init()
   {
+
     char buf[sizeof(HEADER_STRING)];
     file.read(buf, sizeof(HEADER_STRING) - 1);
     buf[sizeof(HEADER_STRING) - 1] = '\0';
-    if(std::string(HEADER_STRING) != buf || !file.good()) return;
+    if(std::string(HEADER_STRING) != buf || !file.good()) {
+      return;
+    }
 
     file.read(reinterpret_cast<char *>(&layers), sizeof(uint32_t));
     if(!file.good()) {
       layers = 0;
+
       file.close();
     } 
     else next();
@@ -58,8 +65,6 @@ namespace nn
       layers = 0;
     }
   }
-
-
 
   void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)
