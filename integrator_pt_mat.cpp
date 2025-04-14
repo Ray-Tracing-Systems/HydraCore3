@@ -293,16 +293,16 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
 
-      const uint   ch1texId     = m_materials[a_materialId].texid[1];
-      const uint   ch2texId     = m_materials[a_materialId].texid[2];
-      const uint   ch3texId     = m_materials[a_materialId].texid[3];
-      const float4 ch1 = m_textures[ch1texId]->sample(texCoordT);
-      const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
-      const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
+      //const uint   ch1texId     = m_materials[a_materialId].texid[1];
+      //const uint   ch2texId     = m_materials[a_materialId].texid[2];
+      //const uint   ch3texId     = m_materials[a_materialId].texid[3];
+      const float4 ch1 = float4(0.0f, 0.0f, 0.0f, 0.0f);//m_textures[ch1texId]->sample(texCoordT);
+      const float4 ch2 = float4(0.0f, 0.0f, 0.0f, 0.0f);//m_textures[ch2texId]->sample(texCoordT);
+      const float4 ch3 = float4(0.0f, 0.0f, 0.0f, 0.0f);//m_textures[ch3texId]->sample(texCoordT);
 
       float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
 
-      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, v, buf, &res);
+      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, buf, &res);
 
     }
     break;
