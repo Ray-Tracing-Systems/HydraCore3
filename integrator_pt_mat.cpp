@@ -10,6 +10,7 @@
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
 #include "include/cmat_neural_brdf.h"
+#include "include/cmat_neural_spec.h"
 
 #include <chrono>
 #include <string>
@@ -301,7 +302,10 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
 
       float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
 
-      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, buf, &res);
+      if(m_spectral_mode == 0)
+        neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, buf, &res);
+      else
+        neuralSpecSmoothSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, v, n, wavelengths, buf, &res);
 
     }
     break;
