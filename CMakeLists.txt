@@ -210,6 +210,7 @@ set(CORE_SRC
         imageutils_gbuffer.cpp
         utils.cpp
         neural.cpp
+        neural_loader.cpp
         ies_parser/ies_render.cpp)
 
 if(USE_HEAVYRT)
