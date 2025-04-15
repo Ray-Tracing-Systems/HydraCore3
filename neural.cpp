@@ -6,6 +6,18 @@
 namespace nn
 {   
 
+  static inline float _sigmoid(float x)
+  {
+    if(x >= 0) {
+      return 1.0f / (1.0f + std::exp(-x));
+    }
+    else {
+      float e = std::exp(x);
+      return e / (1.0f + e);
+    }
+  }
+
+
   void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)
   {
@@ -72,15 +84,6 @@ namespace nn
     }
   }
 
-  void ReLU(const float *A, float *out,
-                      uint32_t m, uint32_t n)
-  {
-    const uint32_t count = m * n; 
-
-    for(uint32_t i = 0; i < count; ++i) {
-      out[i] = std::max(A[i], 0.0f);
-    }
-  }
 
   void Transpose(const float *A, float *out,
                       uint32_t m, uint32_t n)
@@ -92,6 +95,36 @@ namespace nn
       for(uint32_t j = 0; j < n; ++j) {
         out[j * m + i] = A[i * n + j];
       }
+    }
+  }
+
+  void Sigmoid(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+    for(uint32_t i = 0; i < m; ++i) {
+      for(uint32_t j = 0; j < n; ++j) {
+        out[i] = _sigmoid(A[i]);
+      }
+    }
+  }
+
+  void ReLU(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+    const uint32_t count = m * n; 
+
+    for(uint32_t i = 0; i < count; ++i) {
+      out[i] = std::max(A[i], 0.0f);
+    }
+  }
+
+  void SiLU(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+    const uint32_t count = m * n; 
+
+    for(uint32_t i = 0; i < count; ++i) {
+      out[i] = A[i] * _sigmoid(A[i]);
     }
   }
 

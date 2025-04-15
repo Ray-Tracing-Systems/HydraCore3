@@ -99,10 +99,27 @@ namespace nn
    * 
    * (A == out) is possible
    */
+  void Sigmoid(const float *A, float *out,
+                      uint32_t m, uint32_t n = 1);
+
+  /**
+   * A   : m x n
+   * out : m x n
+   * 
+   * (A == out) is possible
+   */
   void ReLU(const float *A, float *out,
                       uint32_t m, uint32_t n = 1);
 
 
+  /**
+   * A   : m x n
+   * out : m x n
+   * 
+   * (A == out) is possible
+   */
+  void SiLU(const float *A, float *out,
+                      uint32_t m, uint32_t n = 1);
 
 
 }

@@ -5,7 +5,7 @@
 
 #include <iostream>
 static constexpr uint NSPEC_INPUT_DIM = 7;
-static constexpr uint NSPEC_HIDDEN_DIM = 64;
+static constexpr uint NSPEC_HIDDEN_DIM = 24;
 
 static constexpr uint NSPEC_OFFSET_BIAS0 = NSPEC_INPUT_DIM * NSPEC_HIDDEN_DIM;
 static constexpr uint NSPEC_OFFSET1      = NSPEC_OFFSET_BIAS0 + NSPEC_HIDDEN_DIM;
@@ -13,8 +13,6 @@ static constexpr uint NSPEC_SIZE_MAT     = NSPEC_HIDDEN_DIM * NSPEC_HIDDEN_DIM;
 static constexpr uint NSPEC_SIZE_LAYER   = NSPEC_SIZE_MAT + NSPEC_HIDDEN_DIM;
 
 static constexpr uint NSPEC_SIZE_MAT6    = NSPEC_HIDDEN_DIM * 6;
-
-static bool isUsed = false;
 
 static inline void neuralSpecSmoothSampleAndEval(const Material* a_materials, const float *weights,
                                     float3 v, float3 n, float4 wavelengths, float *tex, BsdfSample* pRes)
@@ -35,7 +33,8 @@ static inline void neuralSpecSmoothSampleAndEval(const Material* a_materials, co
     return;
   }
 
-  float4 wl = (wavelengths - 380) / 400;
+  float4 wl = LiteMath::clamp((wavelengths - 360.0f) / (830.0f - 360.0f), 0.0f, 1.0f);
+
 
   float x[NSPEC_HIDDEN_DIM];
   float buf[NSPEC_HIDDEN_DIM];
@@ -49,46 +48,48 @@ static inline void neuralSpecSmoothSampleAndEval(const Material* a_materials, co
     x[3] = wi.x;
     x[4] = wi.y;
     x[5] = wi.z;
-    x[6] = wl[i];
+    x[6] = wl[i];    
 
     //Layer0
     nn::Linear(weights, x, buf, NSPEC_INPUT_DIM, NSPEC_HIDDEN_DIM);
-    nn::ReLU(buf, buf, NSPEC_HIDDEN_DIM);
+    nn::SiLU(buf, buf, NSPEC_HIDDEN_DIM);
 
     uint32_t current_offset = NSPEC_OFFSET1;
 
     //Layer1
     nn::Linear(weights + current_offset,
                 buf, x, NSPEC_HIDDEN_DIM, NSPEC_HIDDEN_DIM);
-    nn::ReLU(x, x, NSPEC_HIDDEN_DIM);
+    nn::SiLU(x, x, NSPEC_HIDDEN_DIM);
     current_offset += NSPEC_SIZE_LAYER;
 
     //Layer2
     nn::Linear(weights + current_offset,
                 x, buf, NSPEC_HIDDEN_DIM, NSPEC_HIDDEN_DIM);
-    nn::ReLU(buf, buf, NSPEC_HIDDEN_DIM);
+    nn::SiLU(buf, buf, NSPEC_HIDDEN_DIM);
     current_offset += NSPEC_SIZE_LAYER;
 
     //Layer3
     nn::Linear(weights + current_offset,
-                x, buf, NSPEC_HIDDEN_DIM, NSPEC_HIDDEN_DIM);
-    nn::ReLU(buf, buf, NSPEC_HIDDEN_DIM);
+                buf, x, NSPEC_HIDDEN_DIM, NSPEC_HIDDEN_DIM);
+    nn::SiLU(x, x, NSPEC_HIDDEN_DIM);
     current_offset += NSPEC_SIZE_LAYER;
 
     //Layer4
     nn::Linear(weights + current_offset,
-                buf, x, NSPEC_HIDDEN_DIM, 6);
-    nn::ReLU(x, x, 6);
+                x, buf, NSPEC_HIDDEN_DIM, 6);
+    nn::SiLU(buf, buf, 6);
     current_offset += NSPEC_SIZE_MAT6 + 6;
 
     //Layer5
     nn::Linear(weights + current_offset,
-                x, buf, 6, 1);
+                buf, x, 6, 1);
+    nn::ReLU(buf, buf, 1);
 
-    val[i] = buf[0];
-    //val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+    val[i] = x[0];
+    //std::cout << val[i] << " ";
+    val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
   }
-  
+  //std::cout << std::endl;
   pRes->val = val; 
   pRes->dir = dir;
   pRes->pdf = pdf;

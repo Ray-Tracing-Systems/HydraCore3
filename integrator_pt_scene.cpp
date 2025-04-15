@@ -157,6 +157,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     {
       features[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
+    else if(mat_type == dielectricMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
+    }
 
     if(materialNode.child(L"displacement") != nullptr)
       features[KSPEC_BUMP_MAPPING] = 1;
