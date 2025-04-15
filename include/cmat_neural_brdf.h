@@ -14,8 +14,7 @@ static constexpr uint NBRDF_SIZE_LAYER   = NBRDF_SIZE_MAT + NBRDF_HIDDEN_DIM;
 
 static constexpr uint NBRDF_SIZE_MAT6    = NBRDF_HIDDEN_DIM * 6;
 
-
-
+static bool isUsed = false;
 
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights,
                                     float3 l, float3 v, float3 n, float *tex, BsdfEval *pRes)
@@ -31,7 +30,7 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 
 
 
-  if (wi.z * wo.z < 0.f)
+  if (wi.z * wo.z < 0.0f)
   {
     return;
   }
@@ -52,9 +51,6 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 
   //Layer0
   nn::Linear(weights, x, buf, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
-
-  nn::Add(weights + NBRDF_OFFSET_BIAS0,
-          buf, buf, NBRDF_HIDDEN_DIM);
   nn::ReLU(buf, buf, NBRDF_HIDDEN_DIM);
 
   uint32_t current_offset = NBRDF_OFFSET1;
@@ -62,38 +58,29 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   //Layer1
   nn::Linear(weights + current_offset,
               buf, x, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
-  nn::Add(weights + current_offset + NBRDF_SIZE_MAT,
-          x, x, NBRDF_HIDDEN_DIM);
   nn::ReLU(x, x, NBRDF_HIDDEN_DIM);
   current_offset += NBRDF_SIZE_LAYER;
 
   //Layer2
   nn::Linear(weights + current_offset,
               x, buf, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
-  nn::Add(weights + current_offset + NBRDF_SIZE_MAT,
-          buf, buf, NBRDF_HIDDEN_DIM);
   nn::ReLU(buf, buf, NBRDF_HIDDEN_DIM);
   current_offset += NBRDF_SIZE_LAYER;
 
   //Layer3
   nn::Linear(weights + current_offset,
               buf, x, NBRDF_HIDDEN_DIM, 6);
-  nn::Add(weights + current_offset + NBRDF_SIZE_MAT6,
-          x, x, 6);
   nn::ReLU(x, x, 6);
   current_offset += NBRDF_SIZE_MAT6 + 6;
 
   //Layer4
   nn::Linear(weights + current_offset,
               x, buf, 6, 3);
-  nn::Add(weights + current_offset + 6 * 3,
-          buf, buf, 3);
 
 
   pRes->pdf = lambertEvalPDF(l, v, n);
-  pRes->val = float4(buf[0], buf[1], buf[2], 1.0f);
+  pRes->val = float4(buf[2], buf[1], buf[0], 1.0f);
 
-  //std::cout << buf[0] << " " << buf[1] << " " << buf[2] << std::endl;
 
 }
 

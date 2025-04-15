@@ -1,5 +1,5 @@
 #include "integrator_pt_scene.h"
-#include "neural.h"
+#include "neural_loader.h"
 #include <algorithm>
 #include <cassert>
 #include <utility>
@@ -118,18 +118,17 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
   {
     const size_t rows = wloader.next_rows();
     const size_t cols = wloader.next_cols();
+//std::cout<< "Rows, cols: " << rows << " " << cols << std::endl;
     const size_t mat_size = rows * cols;
     const size_t old_size = m_neural_weights.size();
     m_neural_weights.resize(old_size + mat_size + wloader.next_rows());
-    std::vector<float> weights;
-    weights.resize(mat_size);
-    wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
-    nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
+    //std::vector<float> weights;
+    //weights.resize(mat_size);
+    //wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
+    //nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
 
-    //wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
+    wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
   }
   m_neural_weights_offsets[id] = weights_offset;
-
-
   return mat;
 }

@@ -1,50 +1,9 @@
 #ifndef NEURAL_H_
 #define NEURAL_H_
-#include <vector>
-#include <string>
 #include <cinttypes>
-#include <fstream>
 
 namespace nn
 {
-
-
-  /**
-   * 
-   * "hydrann1"
-   * N: u32
-   * [
-   *  {
-   *    r: u32, c: u32
-   *    d: (r*c) f32
-   *    b: (r) f32
-   *  } 
-   *  ...
-   * ]
-   * 
-   */
-  class WeightsLoader
-  {
-  public:
-    WeightsLoader(const std::string &path)
-      : file(path) { init(); }
-
-    uint32_t next_rows() const { return rows; } //returns 0 on error
-    uint32_t next_cols() const { return cols; } //returns 0 on error
-    bool load_next(float *weights, float *bias);
-    bool has_next() const { return layers != 0; }
-  private:
-    std::ifstream file;
-    uint32_t rows = 0;
-    uint32_t cols = 0;
-    uint32_t layers = 0;
-
-    void init();
-    void next();
-
-  };
-
-
 
   /**
    * A   : m x n
@@ -56,19 +15,6 @@ namespace nn
   void Matmul(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n, uint32_t k = 1); 
 
-
-  /**
-   * A   : out_dim x in_dim
-   * B   : in_dim
-   * out : out_dim
-   * 
-   * assert(out != A && out != B)
-   */
-  inline void Linear(const float *A, const float *B, float *out, 
-                      uint32_t in_dim, uint32_t out_dim)
-  {
-    Matmul(A, B, out, out_dim, in_dim);
-  }
 
   /**
    * A   : m x n
@@ -127,6 +73,25 @@ namespace nn
    */
   void Transpose(const float *A, float *out,
                       uint32_t m, uint32_t n);
+
+
+
+
+
+   /**
+   * weights   : out_dim x in_dim + out_dim (matrix + bias)
+   * x   : in_dim
+   * out : out_dim
+   * 
+   * assert(out != A && out != B)
+   */
+  inline void Linear(const float *weights, const float *x, float *out, 
+                      uint32_t in_dim, uint32_t out_dim)
+  {
+    Matmul(weights, x, out, out_dim, in_dim);
+    Add(weights + in_dim * out_dim, out, out, out_dim);
+  }
+
 
   /**
    * A   : m x n

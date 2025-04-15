@@ -187,6 +187,7 @@ set(CORE_SRC
         imageutils_gbuffer.cpp
         utils.cpp
         neural.cpp
+        neural_loader.cpp
         ies_parser/ies_render.cpp)
 
 add_executable(neural_tests tests/neural_tests.cpp neural.cpp)
