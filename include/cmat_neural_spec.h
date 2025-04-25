@@ -5,7 +5,7 @@
 
 #include <iostream>
 static constexpr uint NSPEC_INPUT_DIM = 7;
-static constexpr uint NSPEC_HIDDEN_DIM = 24;
+static constexpr uint NSPEC_HIDDEN_DIM = 16;
 
 static constexpr uint NSPEC_OFFSET_BIAS0 = NSPEC_INPUT_DIM * NSPEC_HIDDEN_DIM;
 static constexpr uint NSPEC_OFFSET1      = NSPEC_OFFSET_BIAS0 + NSPEC_HIDDEN_DIM;

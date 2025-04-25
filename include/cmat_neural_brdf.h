@@ -19,6 +19,7 @@ static bool isUsed = false;
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights,
                                     float3 l, float3 v, float3 n, float *tex, BsdfEval *pRes)
 {
+  const float cosThetaOut = dot(l, n);
   l = LiteMath::normalize(l);
   v = LiteMath::normalize(v);
   n = LiteMath::normalize(n);
@@ -80,7 +81,6 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 
   pRes->pdf = lambertEvalPDF(l, v, n);
   pRes->val = float4(buf[2], buf[1], buf[0], 1.0f);
-
 
 }
 
