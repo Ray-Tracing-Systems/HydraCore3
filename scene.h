@@ -208,15 +208,15 @@ namespace LiteScene
         uint32_t id = INVALID_ID;
         std::string name;
 
-        LiteMath::float3 pos;
-        LiteMath::float3 lookAt;
-        LiteMath::float3 up;
-        float fov;
-        float nearPlane;
-        float farPlane;
+        LiteMath::float3 pos = LiteMath::float3(0,0,5);
+        LiteMath::float3 lookAt = LiteMath::float3(0,0,0);
+        LiteMath::float3 up = LiteMath::float3(0,1,0);
+        float fov = 60.0f; //degrees
+        float nearPlane = 0.01f;
+        float farPlane = 1000.0f;
         float exposureMult = 1.0f;
-        LiteMath::float4x4 matrix;  // view matrix
-        bool has_matrix;
+        LiteMath::float4x4 matrix = LiteMath::float4x4();  // view matrix
+        bool has_matrix = false;
         
         pugi::xml_node custom_data; //all properties from xml node that are not loaded to struct fields
     };
