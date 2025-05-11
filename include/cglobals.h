@@ -303,7 +303,9 @@ static inline MisData makeInitialMisData()
 {
   MisData data;
   data.matSamplePdf = 1.0f;
+  data.cosTheta     = 1.0f;
   data.ior          = 1.0f; // start from air
+  data.dummy        = 0.0f;
   return data;
 }
 
