@@ -264,13 +264,13 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
   }
 
   std::cout << "Scene analysis:\n" 
-            << "\tTotal meshes = "     << num_meshes << "\n"
-            << "\tTotal instances = "  << num_instances << "\n"
-            << "\tTotal primitives = " << maxTotalPrimitives << "\n"
-            << "\tTotal vertices = "   << maxTotalVertices << "\n"
-            << "\tTotal lights = "     << num_lights << "\n"
-            << "\tTotal materials = "  << num_materials << "\n"
-            << "\tTotal textures = "   << num_textures << "\n";
+            << "  Total meshes     = " << num_meshes << "\n"
+            << "  Total instances  = " << num_instances << "\n"
+            << "  Total primitives = " << maxTotalPrimitives << "\n"
+            << "  Total vertices   = " << maxTotalVertices << "\n"
+            << "  Total lights     = " << num_lights << "\n"
+            << "  Total materials  = " << num_materials << "\n"
+            << "  Total textures   = " << num_textures << "\n";
 
 
   (*pSceneInfo) = g_lastSceneInfo;

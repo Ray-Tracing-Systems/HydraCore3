@@ -2,6 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <string>
+#include <chrono>
 
 #include "imageutils.h"
 #include "integrator_pt.h"
@@ -161,7 +162,7 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
-
+  
   SceneInfo sceneInfo = {};
   sceneInfo.spectral  = spectral_mode;
   auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo);
@@ -187,6 +188,9 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
 
   std::vector<float> realColor(FB_WIDTH*FB_HEIGHT*FB_CHANNELS);
 
+  std::cout << "[main]: Create Integrator begin." << std::endl;
+  
+  auto before = std::chrono::high_resolution_clock::now();
   bool onGPU = args.hasOption("--gpu") && !evalGBuffer;
   #ifdef USE_VULKAN
   if(onGPU)
@@ -233,6 +237,11 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
     else
       pImpl = std::make_shared<Integrator>(FB_WIDTH*FB_HEIGHT,features);
   }
+
+  auto time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - before).count()/1000.f;
+  std::cout << "[main]: Create Integrator end: " << time << " ms" << std::endl;
+  std::cout.flush();
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
