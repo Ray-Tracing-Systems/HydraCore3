@@ -27,7 +27,7 @@ std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, std::vect
 void SaveGBufferImages(const std::string& imageOutClean, const std::string& imageOutFiExt, 
                        const std::vector<Integrator::GBufferPixel>& gbuffer, std::vector<float>& tmp, uint width, uint height);
 
-int main(int argc, const char** argv) // common hydra main
+int main(int argc, const char** argv) // common hydra main // may 21, 2025 
 {
   #ifndef NDEBUG
   bool enableValidationLayers = true;
