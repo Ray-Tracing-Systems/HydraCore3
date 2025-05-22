@@ -188,7 +188,9 @@ set(CORE_SRC
         utils.cpp
         neural.cpp
         neural_loader.cpp
-        ies_parser/ies_render.cpp)
+        ies_parser/ies_render.cpp
+        fourier/fourier.cpp
+        )
 
 add_executable(neural_tests tests/neural_tests.cpp neural.cpp)
 target_link_libraries(neural_tests PRIVATE project_options)
