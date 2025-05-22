@@ -3,11 +3,16 @@
 #include "LiteMath.h"
 #include <complex>
 #include <vector>
+#include "vecn.h"
 
 namespace fourier
-{
+{   
+    constexpr uint FOURIER_M = 8;
+    constexpr uint VEC_SIZE  = FOURIER_M + 1; 
 
     using Complex = std::complex<float>;
+    using fvec = vec<float, VEC_SIZE>;
+    using fvec_c = vec<Complex, VEC_SIZE>;
 
     constexpr Complex I{0.0f, 1.0f};
 
@@ -21,27 +26,27 @@ namespace fourier
         return wavelenghts;
     }
 
-    std::vector<float> real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
+    fvec real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
 
-    std::vector<Complex> fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
+    fvec_c fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
 
-    std::vector<Complex> precompute_mese_coeffs(const std::vector<Complex> &gamma);
-    std::vector<float> precompute_mese_coeffs(const std::vector<float> &gamma);
+    fvec_c precompute_mese_coeffs(const fvec_c &gamma);
+    fvec precompute_mese_coeffs(const fvec &gamma);
 
-    std::vector<Complex> lagrange_multipliers(const std::vector<float> &moments);
+    fvec_c lagrange_multipliers(const fvec &moments);
 
-    float bounded_mese_l(float phase, const std::vector<Complex> &lagrange_m);
+    float bounded_mese_l(float phase, const fvec_c &lagrange_m);
 
-    inline float bounded_mese_m(float phase, const std::vector<float> &moments)
+    inline float bounded_mese_m(float phase, const fvec &moments)
     {
         return bounded_mese_l(phase, lagrange_multipliers(moments));
     }
 
-    float mese_precomp(float phase, const std::vector<float> &moments);
+    float mese_precomp(float phase, const fvec &moments);
 
-    inline std::vector<float> mese(std::vector<float> phases, const std::vector<float> &moments)
+    inline std::vector<float> mese(std::vector<float> phases, const fvec &moments)
     {
-        std::vector<float> q = precompute_mese_coeffs(moments);
+        fvec q = precompute_mese_coeffs(moments);
 
         for(unsigned k = 0; k < phases.size(); ++k) {
             phases[k] = mese_precomp(phases[k], q);
@@ -49,7 +54,7 @@ namespace fourier
         return phases;
     }
 
-    inline float mese(float phase, const std::vector<float> &moments)
+    inline float mese(float phase, const fvec &moments)
     {
         return mese_precomp(phase, precompute_mese_coeffs(moments));
     }
