@@ -49,14 +49,14 @@ namespace fourier
         fvec q = precompute_mese_coeffs(moments);
 
         for(unsigned k = 0; k < phases.size(); ++k) {
-            phases[k] = mese_precomp(phases[k], q);
+            phases[k] = 0.5f * mese_precomp(phases[k], q);
         }
         return phases;
     }
 
     inline float mese(float phase, const fvec &moments)
     {
-        return mese_precomp(phase, precompute_mese_coeffs(moments));
+        return 0.5f * mese_precomp(phase, precompute_mese_coeffs(moments));
     }
 
 

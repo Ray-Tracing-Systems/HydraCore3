@@ -211,6 +211,20 @@ struct vec
         return std::sqrt(distance2(v1, v2));
     }
 
-
+    static vec convolve(const vec &a, const vec &b)
+    {
+        vec res;
+        for(int i = 0; i < N; ++i) {
+            for(int j = 0; j < N; ++j) {
+                if(i + j < N) {
+                    res[i + j] += T(0.5) * a[i] * b[j];
+                }
+                if(i - j >= 0 && i - j < N) {
+                    res[i - j] += T(0.5) * a[i] * b[j];
+                }
+            }
+        }
+        return res;
+    }
 
 };

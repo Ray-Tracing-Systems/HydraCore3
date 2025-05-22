@@ -20,12 +20,13 @@ namespace fourier
         assert(N == values.size());
         fvec moments;
         for(uint i = 0; i <= FOURIER_M; ++i) {
-            Complex val{0.0f, 0.0f};
+            float val = 0.0f;
             for(unsigned j = 0; j < N; ++j) {
-                val += values[j] * std::exp(-I * float(i) * phases[j]);
+                val += values[j] * std::cos(float(i) * phases[j]);
             }
-            moments[i] = std::real(val) / float(N);
+            moments[i] = val / float(N) * 2.f;
         }
+        moments[0] = moments[0] * 0.5f;
         return moments;
     }
 
@@ -39,8 +40,9 @@ namespace fourier
             for(unsigned j = 0; j < N; ++j) {
                 val += values[j] * std::exp(-I * float(i) * phases[j]);
             }
-            moments[i] = val / float(N);
+            moments[i] = val / float(N) * 2.f;
         }
+        moments[0] = moments[0] * 0.5f;
         return moments;
     }
 
