@@ -359,8 +359,9 @@ if __name__ == '__main__':
   reqs.append( REQ_H2("lgt_point_ies",       ["test_228"], integrators = ["mispt"]) )
   reqs.append( REQ_H2("lgt_area_ies",        ["test_206", "test_207", "test_208", "test_216", "test_232"], integrators = ["mispt"]) )
   reqs.append( REQ_H2("lgt_area_disk",       ["test_246"], naivemul = 4) )
-  reqs.append( REQ_H2("lgt_area_mis",        ["test_248"], integrators = ["naivept", "mispt"], naivemul = 4) )
 
+  reqs.append( REQ_H2("lgt_area_mis",        ["test_248"], integrators = ["naivept", "mispt"], naivemul = 4) )
+ 
   reqs.append( REQ_HX("lgt_direct",
                       [PATH_TO_HYDRA2_TESTS + "/tests_f/test_248/statex_00001.xml"],
                       [PATH_TO_HYDRA2_TESTS + "/tests_images/test_248/z_ref_0.png"],
@@ -545,8 +546,9 @@ if __name__ == '__main__':
                                         PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0001/Images/Knob-spectral-Cd-Au-hydra3.png",
                                         PATH_TO_HYDRA3_SCENS + "/Tests/Thin-Film/0002/Images/Knob-spectral-8-layers-hydra3.png"],
                                         imsize = [(1024, 1024), (1024, 1024), (1024, 1024)], naivemul = 4, integrators = ["naivept","mispt"], is_spectral = True))
-
-  '''reqs.append( REQ_HX("motion_blur", [PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0001/spectral-motion-blur-hydra3.xml",
+                                        
+  '''
+  reqs.append( REQ_HX("motion_blur", [PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0001/spectral-motion-blur-hydra3.xml",
                                       PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0002/spectral-motion-blur-hydra3.xml"],
                                      [PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0001/Images/spectral-motion-blur-hydra3.png",
                                       PATH_TO_HYDRA3_SCENS + "/Tests/Motion-blur/0002/Images/spectral-motion-blur-hydra3.png"],

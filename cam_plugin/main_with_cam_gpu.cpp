@@ -146,9 +146,11 @@ int main(int argc, const char** argv)
 
   // advanced way, init renderer
   //
-  auto pRender = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, spectral_mode, hydraFeatures); 
+  auto pRender  = std::make_shared<Integrator_Generated>(MEGA_TILE_SIZE, hydraFeatures); 
   auto pCamImpl = std::make_shared<CamTableLens_TABLELENS_GPU>();
   //auto pCamImpl = std::make_shared<CamPinHole_PINHOLE_GPU>();  
+  
+  pRender->SetSpectralMode(spectral_mode);
 
   pRender->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
   pCamImpl->InitVulkanObjects(ctx.device, ctx.physicalDevice, MEGA_TILE_SIZE); 
