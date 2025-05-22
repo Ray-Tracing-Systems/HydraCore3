@@ -214,8 +214,10 @@ bool CamTableLens::TraceLensesFromFilm(const float3 inRayPos, const float3 inRay
 
 
 void CamTableLens::kernel1D_MakeEyeRay(int in_blockSize, RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, int subPassId)
-{
+{ 
+  #ifndef _DEBUG
   #pragma omp parallel for default(shared)
+  #endif
   for(int tid = 0; tid < in_blockSize; tid++)
   {
     const int x = (tid + subPassId*in_blockSize) % m_width;  // pitch-linear layout

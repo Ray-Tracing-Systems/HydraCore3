@@ -64,12 +64,39 @@
     "type": "cppdbg",
     "request": "launch",
     "program": "${workspaceFolder}/bin-release/hydra",
-    "args": ["--cpu", 
+    "args": ["--gpu", 
              "-in", "../comparisonsampling/Tests/ORB/L1.3_cornell_box_hydra_v2_optics/scene_hydra3_optics.xml",
              "-integrator", "mispt", 
              "-width", "1024",
              "-height", "1024",
-             "-spp", "64",
+             "-spp", "1024",
+             //"-scn_dir", "../comparisonsampling",
+             "-out", "z_out_optics.bmp"],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        }
+    ]
+  },
+
+  {
+    "name": "OpticTest1 (debug)",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/bin-debug/hydra",
+    "args": ["--cpu", 
+             "-in", "../comparisonsampling/Tests/ORB/L1.3_cornell_box_hydra_v2_optics/scene_hydra3_optics.xml",
+             "-integrator", "mispt", 
+             "-width", "512",
+             "-height", "512",
+             "-spp", "1",
              //"-scn_dir", "../comparisonsampling",
              "-out", "z_out_optics.bmp"],
     "stopAtEntry": false,

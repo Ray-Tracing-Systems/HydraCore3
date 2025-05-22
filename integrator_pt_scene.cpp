@@ -897,14 +897,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
 void LoadOpticsFromNode(Integrator* self, pugi::xml_node opticalSys)
 {
-  float scale = 1.0f;
-  if(opticalSys.attribute(L"scale") != nullptr)
-    scale = opticalSys.attribute(L"scale").as_float();
+  float scale    = 1.0f;
+  float diagonal = 0.035f;
+  {
+    if(opticalSys.attribute(L"scale") != nullptr)
+      scale = opticalSys.attribute(L"scale").as_float();
+  
+    if(opticalSys.attribute(L"sensor_diagonal") != nullptr)
+      diagonal = opticalSys.attribute(L"sensor_diagonal").as_float();
+  }
+  
+  const float aspectGot = self->GetAspect();
 
-  self->SetDiagonal(opticalSys.attribute(L"sensor_diagonal").as_float());
   float2 physSize;
-  physSize.x = 2.0f*std::sqrt(self->GetDiagonal() * self->GetDiagonal() / (1.0f + self->GetAspect() * self->GetAspect()));
-  physSize.y = self->GetAspect() * physSize.x;
+  physSize.x = 2.0f*std::sqrt(diagonal * diagonal / (1.0f + aspectGot * aspectGot));
+  physSize.y = aspectGot * physSize.x;
+  
+  self->SetDiagonal(diagonal);
   self->SetPhysSize(physSize);
 
   struct LensElementInterfaceWithId 

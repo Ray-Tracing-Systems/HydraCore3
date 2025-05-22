@@ -260,7 +260,12 @@ public:
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   
-  void SetFrameBufferSize(int a_width, int a_height) { m_fbWidth = a_width; m_fbHeight = a_height; }
+  void SetFrameBufferSize(int a_width, int a_height) 
+  { 
+    m_fbWidth  = a_width; 
+    m_fbHeight = a_height; 
+    m_aspect   = float(a_width) / float(a_height);
+  }
 
   void SetViewport(int a_xStart, int a_yStart, int a_width, int a_height) 
   { 
@@ -287,6 +292,7 @@ public:
       m_tileSize = 1;
     
     m_maxThreadId = a_width*a_height;
+    m_aspect      = float(m_winWidth) / float(m_winHeight);
   }
   
   void SetWorldView(const float4x4& a_mat)
