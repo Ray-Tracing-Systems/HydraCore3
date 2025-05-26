@@ -32,14 +32,14 @@ namespace fourier
         std::vector<float> q = precompute_mese_coeffs(spec);
 
         for(unsigned k = 0; k < phases.size(); ++k) {
-            phases[k] = mese_precomp(phases[k], q);
+            phases[k] = 0.5f * mese_precomp(phases[k], q);
         }
         return phases;
     }
 
     inline float mese(float phase, const FourierSpec &spec)
     {
-        return mese_precomp(phase, precompute_mese_coeffs(spec));
+        return 0.5f * mese_precomp(phase, precompute_mese_coeffs(spec));
     }
 
 
