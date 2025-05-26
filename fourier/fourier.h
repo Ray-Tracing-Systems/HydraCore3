@@ -3,13 +3,12 @@
 #include "LiteMath.h"
 #include <complex>
 #include <vector>
+#include "fspec.h"
+
+//CPU-only
 
 namespace fourier
 {
-
-    using Complex = std::complex<float>;
-
-    constexpr Complex I{0.0f, 1.0f};
 
     float to_phase(float wl, float start, float end);
 
@@ -21,27 +20,16 @@ namespace fourier
         return wavelenghts;
     }
 
-    std::vector<float> real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
+    FourierSpec spectrum_to_fourier(const std::vector<float> &phases, const std::vector<float> &values, int n);
 
-    std::vector<Complex> fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values, int n);
 
-    std::vector<Complex> precompute_mese_coeffs(const std::vector<Complex> &gamma);
-    std::vector<float> precompute_mese_coeffs(const std::vector<float> &gamma);
+    std::vector<float> precompute_mese_coeffs(const FourierSpec &spec);
 
-    std::vector<Complex> lagrange_multipliers(const std::vector<float> &moments);
+    float mese_precomp(float phase, const std::vector<float> &q);
 
-    float bounded_mese_l(float phase, const std::vector<Complex> &lagrange_m);
-
-    inline float bounded_mese_m(float phase, const std::vector<float> &moments)
+    inline std::vector<float> mese(std::vector<float> phases, const FourierSpec &spec)
     {
-        return bounded_mese_l(phase, lagrange_multipliers(moments));
-    }
-
-    float mese_precomp(float phase, const std::vector<float> &moments);
-
-    inline std::vector<float> mese(std::vector<float> phases, const std::vector<float> &moments)
-    {
-        std::vector<float> q = precompute_mese_coeffs(moments);
+        std::vector<float> q = precompute_mese_coeffs(spec);
 
         for(unsigned k = 0; k < phases.size(); ++k) {
             phases[k] = mese_precomp(phases[k], q);
@@ -49,9 +37,9 @@ namespace fourier
         return phases;
     }
 
-    inline float mese(float phase, const std::vector<float> &moments)
+    inline float mese(float phase, const FourierSpec &spec)
     {
-        return mese_precomp(phase, precompute_mese_coeffs(moments));
+        return mese_precomp(phase, precompute_mese_coeffs(spec));
     }
 
 

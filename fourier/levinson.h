@@ -8,7 +8,7 @@ namespace fourier {
     template<typename T, typename P>
     std::vector<T> levinson(const std::vector<T> &data, const std::vector<P> &y)
     {
-        const int N = (data.size() - 1) / 2;
+        const int N = int((data.size() - 1) / 2);
 
         auto t = T(1.0) / data[N];
         std::vector<T> fn{t};
