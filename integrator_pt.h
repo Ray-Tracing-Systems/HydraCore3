@@ -19,6 +19,7 @@
 #include "spectrum.h"
 #include "cam_plugin/CamPluginAPI.h"
 
+#include "fourier/fspec.h"
 using LiteImage::ICombinedImageSampler;
 
 struct SceneInfo
@@ -57,7 +58,6 @@ public:
 
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
 
-
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
 
   void InitRandomGens(int a_maxThreads);
@@ -79,6 +79,9 @@ public:
                               const RayDirAndT* in_rayDirAndFar  [[size("tid*channels")]],
                               float*            out_color        [[size("tid*channels")]]);
   
+
+  void PathTraceF     (uint tid, uint channels, float* out_color [[size("tid*channels")]]);
+
   struct GBufferPixel
   {
     float   depth;
@@ -168,6 +171,9 @@ public:
 
   void SetResourcesDir(const std::string& a_dir) {m_resourcesDir = a_dir; }
 
+
+  void PathTraceBlockF(uint tid, uint channels, float* out_color, uint a_passNum);
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   void kernel_PackXY(uint tidX, uint tidY, uint* out_pakedXY);
@@ -219,6 +225,19 @@ public:
 
   void kernel_ContributeToImage3(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, float* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
+
+
+
+
+
+  void kernel_InitEyeRay2F(uint tid, float4* rayPosAndNear, float4* rayDirAndFar,
+                           FourierSpec* accumColor, FourierSpec* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
+
+  void kernel_SampleLightSourceF(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
+                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                 const uint* rayFlags, const float* a_time, uint bounce,
+                                 RandomGen* a_gen, FourierSpec* out_shadeColor);
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

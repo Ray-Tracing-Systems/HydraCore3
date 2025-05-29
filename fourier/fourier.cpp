@@ -2,12 +2,15 @@
 #include "levinson.h"
 #include <cassert>
 #include "LiteMath.h"
+#include <numeric>
 
 
 #include <iostream>
 
 namespace fourier
 {
+    ffunc_t fourier_function = fourier_series;
+
 
     using Complex = std::complex<float>;
     static constexpr Complex I{0.0f, 1.0f};
@@ -17,7 +20,7 @@ namespace fourier
         return std::fma(LiteMath::M_PI, (wl - start) / (end - start), -LiteMath::M_PI);
     }
 
-    FourierSpec spectrum_to_fourier(const std::vector<float> &phases, const std::vector<float> &values, int n)
+    FourierSpec real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values)
     {
         const size_t N = phases.size();
         assert(N == values.size());
@@ -32,7 +35,6 @@ namespace fourier
         spec[0] *= 0.5f;
         return spec;
     }
-
 
     std::vector<float> precompute_mese_coeffs(const FourierSpec &spec)
     {
@@ -57,6 +59,38 @@ namespace fourier
         div *= div;
 
         return (LiteMath::INV_TWOPI * std::real(q[0])) / div;
+    }
+
+    std::vector<float> mese(std::vector<float> phases, const FourierSpec &spec)
+    {
+        std::vector<float> q = precompute_mese_coeffs(spec);
+
+        for(unsigned k = 0; k < phases.size(); ++k) {
+            phases[k] = 0.5f * mese_precomp(phases[k], q);
+        }
+        return phases;
+    }
+
+    std::vector<float> fourier_series(std::vector<float> phases, const FourierSpec &spec)
+    {
+        return {};
+    }
+
+
+    void to_std_spectrum(const FourierSpec &spec, float *out_spectrum)
+    {
+        std::vector<float> phases(size_t(LAMBDA_MAX - LAMBDA_MIN + 1));
+        std::iota(phases.begin(), phases.end(), LAMBDA_MIN);
+        phases = wl_to_phases(phases, LAMBDA_MIN, LAMBDA_MAX);
+
+        std::vector<float> spectrum = fourier_function(phases, spec);
+        std::copy(spectrum.begin(), spectrum.end(), out_spectrum);
+
+    }
+
+    void set_calc_func(ffunc_t function)
+    {
+        fourier_function = function;
     }
 
 }

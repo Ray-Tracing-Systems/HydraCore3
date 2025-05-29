@@ -81,12 +81,13 @@ struct SpectrumInfo
 
 Spectrum LoadSPDFromFile(const std::filesystem::path &path, uint32_t spec_id);
 
-std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo);
+void LoadSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& a_node, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values);
 uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node);
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 

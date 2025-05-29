@@ -24,6 +24,10 @@ static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;
 
 
+static constexpr int SPECTRAL_MODE_DISABLED = 0;
+static constexpr int SPECTRAL_MODE_STD      = 1;
+static constexpr int SPECTRAL_MODE_FOURIER  = 2;
+
 using float4 = float4;
 static constexpr uint32_t SPECTRUM_SAMPLE_SZ = 4; //sizeof(float4) / sizeof(float); // srry, sizeof() evaluation not yet supported ... 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

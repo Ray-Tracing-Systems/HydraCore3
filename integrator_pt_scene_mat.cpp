@@ -93,18 +93,7 @@ HydraSampler ReadSamplerFromColorNode(const pugi::xml_node a_colorNodes, bool fr
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-std::optional<Spectrum> LoadSpectrumFromNode(const pugi::xml_node& a_node, const std::vector<SpectrumInfo> &spectraInfo)
-{
-  std::optional<Spectrum> spec;
-  auto specNode = a_node.child(L"spectrum");
-  if(specNode != nullptr)
-  {
-    uint32_t spec_id = specNode.attribute(L"id").as_uint();
-    spec = LoadSPDFromFile(spectraInfo[spec_id].path, spec_id);
-  }
 
-  return spec;
-}
 
 uint32_t GetSpectrumIdFromNode(const pugi::xml_node& a_node)
 {

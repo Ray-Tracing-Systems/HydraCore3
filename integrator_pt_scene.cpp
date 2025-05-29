@@ -1,5 +1,6 @@
 #include "integrator_pt_scene.h"
 #include <iterator>
+#include "fourier/fourier.h"
 
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
@@ -312,6 +313,118 @@ Spectrum ParseSpectrumStr(const std::string &specStr)
   return res;
 }
 
+static FourierSpec LoadFspec(const pugi::xml_node& spec_node)
+{
+  FourierSpec spec;
+  auto val_attr = spec_node.attribute(L"value");
+
+  if (val_attr) // spectrum is specified directly in XML
+  {
+    std::wstring wstr = val_attr.as_string();
+    std::stringstream ss(std::string(wstr.begin(), wstr.end()));
+    auto it = std::istream_iterator<float>(ss);
+    auto end = std::istream_iterator<float>();
+    int i = 0;
+    while(it != end && i < FourierSpec::SIZE) {
+      spec.v[i++] = *(it++); 
+    }
+  }
+  else
+  {
+    std::cout << "[LoadSpectrumFromNode]: ALERT! Fourier spectrum must have 'value' attribute!" << std::endl;
+  }
+  return spec;
+}
+
+static void LoadNormalSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& spec_node, const std::filesystem::path &scene_dir, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values)
+{ 
+  auto val_attr = spec_node.attribute(L"value");
+  if(spec_node.name() == L"fspectrum") {
+    FourierSpec spec = LoadFspec(spec_node);
+
+    uint32_t offset = uint32_t(spec_values.size());
+    const size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN + 1);
+
+    spec_values.resize(spec_values.size() + count);
+    fourier::to_std_spectrum(spec, spec_values.data() + offset);
+  
+    spec_offsets.push_back(uint2{offset, uint32_t(count)});
+  }
+  else {
+    Spectrum spec;
+    if (val_attr) // spectrum is specified directly in XML
+    {
+      std::wstring wstr = val_attr.as_string();
+      spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+    }
+    else
+    {
+      auto spec_path = scene_dir / spec_node.attribute(L"loc").as_string();
+
+      spec = LoadSPDFromFile(spec_path, spec_id);
+      if(spec.values.size() == 0) {
+        std::cout << "[LoadSpectrumFromNode]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
+      }
+    }
+    auto specValsUniform = spec.ResampleUniform();
+    
+    uint32_t offset = uint32_t(spec_values.size());
+    std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(spec_values));
+
+    spec_offsets.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+  }
+}
+
+static void LoadFourierSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& spec_node, const std::filesystem::path &scene_dir, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values)
+{
+  auto val_attr = spec_node.attribute(L"value");
+  if(spec_node.name() == L"fspectrum") {
+    FourierSpec spec = LoadFspec(spec_node);
+
+    uint32_t offset = uint32_t(spec_values.size());
+
+    std::copy(spec.v, spec.v + FourierSpec::SIZE, std::back_inserter(spec_values));
+  
+    spec_offsets.push_back(uint2{offset, uint32_t(FourierSpec::SIZE)});
+  }
+  else {
+    Spectrum spec;
+    if (val_attr) // spectrum is specified directly in XML
+    {
+      std::wstring wstr = val_attr.as_string();
+      spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+    }
+    else
+    {
+      auto spec_path = scene_dir / spec_node.attribute(L"loc").as_string();
+
+      spec = LoadSPDFromFile(spec_path, spec_id);
+      if(spec.values.size() == 0) {
+        std::cout << "[LoadSpectrumFromNode]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
+      }
+    }
+    //auto specValsUniform = spec.ResampleUniform(); //?
+    
+    FourierSpec fspec = fourier::spectrum_to_fourier(spec.wavelengths, spec.values);
+
+    uint32_t offset = uint32_t(spec_values.size());
+    std::copy(fspec.v, fspec.v + FourierSpec::SIZE, std::back_inserter(spec_values));
+
+    spec_offsets.push_back(uint2{offset, uint32_t(FourierSpec::SIZE)});
+  }
+}
+
+void LoadSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& spec_node, const std::filesystem::path &scene_dir, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values, int spectral_mode)
+{ 
+  if(spectral_mode == SPECTRAL_MODE_STD) {
+    LoadNormalSpectrumFromNode(spec_id, spec_node, scene_dir, spec_offsets, spec_values);
+  }
+  else if(spectral_mode == SPECTRAL_MODE_FOURIER) {
+    LoadFourierSpectrumFromNode(spec_id, spec_node, scene_dir, spec_offsets, spec_values);
+  }
+}
+
+
 bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 { 
   LoadSceneBegin();
@@ -393,14 +506,13 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // std::vector<SpectrumInfo> spectraInfo;
   // spectraInfo.reserve(100);
-  if(m_spectral_mode != 0 || true)
+  if(m_spectral_mode != 0)
   {  
     for(auto specNode : scene.SpectraNodes())
     {
       auto spec_id   = specNode.attribute(L"id").as_uint();
 
       auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-      auto val_attr = specNode.attribute(L"value");
       if(refs_attr)
       {
         auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
@@ -420,29 +532,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       }
       else
       {
-        Spectrum spec;
-        if (val_attr) // spectrum is specified directly in XML
-        {
-          std::wstring wstr = val_attr.as_string();
-          spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
-          
-        }
-        else
-        {
-          auto spec_path = std::filesystem::path(sceneFolder);
-          spec_path.append(specNode.attribute(L"loc").as_string());
-
-          spec = LoadSPDFromFile(spec_path, spec_id);
-          if(spec.values.size() == 0)
-            std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
-        }
-        
-        auto specValsUniform = spec.ResampleUniform();
-        
-        uint32_t offset = uint32_t(m_spec_values.size());
-        std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-
-        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+        LoadSpectrumFromNode(spec_id, specNode, std::filesystem::path(sceneFolder), m_spec_offset_sz, m_spec_values, m_spectral_mode);
         m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
       }
 
