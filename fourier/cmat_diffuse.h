@@ -1,8 +1,8 @@
 #ifndef FOURIER_CMAT__DIFFUSE_H_
 #define FOURIER_CMAT__DIFFUSE_H_
-#include "include/cglobals.h"
-#include "include/crandom.h"
-#include "include/cmaterial.h"
+#include "../include/cglobals.h"
+#include "../include/crandom.h"
+#include "../include/cmaterial.h"
 
 #include "fspec.h"
 

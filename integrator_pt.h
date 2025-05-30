@@ -559,7 +559,7 @@ public:
 
 
 
-
+  FourierSpec m_fourierEnvColor;
 
 
 
@@ -571,20 +571,26 @@ public:
                                  const uint* rayFlags, const float* a_time, uint bounce,
                                  RandomGen* a_gen, FourierSpec* out_shadeColor);
 
+  void kernel_HitEnvironmentF(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const FourierSpec* accumThoroughput,
+                              FourierSpec* accumColor);
+
 
   void kernel_NextBounceF(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
-                         const uint* in_instId, const FourierSpec* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
-                         FourierSpec* accumColor, FourierSpec* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
+                          const uint* in_instId, const FourierSpec* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                          FourierSpec* accumColor, FourierSpec* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
+
+
 
   FourierSpec LightIntensityF(uint a_lightId, float3 a_rayPos, float3 a_rayDir);
-
+  FourierSpec EnvironmentColorF(float3 a_dir, float& outPdf);
 
   BsdfEvalF MaterialEvalF(uint a_materialId, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+
   BsdfSampleF MaterialSampleAndEvalF(uint a_materialId, uint tid, uint bounce, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
-                                           MisData* a_misPrev, const uint a_currRayFlags);
+                                     MisData* a_misPrev, const uint a_currRayFlags);
                            
   uint32_t BlendSampleAndEvalF(uint a_materialId, uint tid, uint bounce, uint layer, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
-                              MisData* a_misPrev, BsdfSampleF* a_pRes);
+                               MisData* a_misPrev, BsdfSampleF* a_pRes);
 };
 
 #endif

@@ -13,10 +13,29 @@ struct FourierSpec
 
     float v[SIZE];
 
-    FourierSpec() : v{} { std::fill_n(v, SIZE, 0.0f); }
-    explicit FourierSpec(const float *ptr, int max_size = SIZE) : v{} { std::copy(ptr, ptr + std::min(SIZE, max_size), v); }
+    FourierSpec() : v{} 
+    {
+        for(int i = 0; i < SIZE; ++i) {
+            v[i] = 0.0f;
+        }
+    }
+
+    explicit FourierSpec(const float *ptr, int max_size = SIZE) : v{} 
+    { 
+        int sz = max_size < SIZE ? max_size : SIZE;
+        for(int i = 0; i < sz; ++i) {
+            v[i] = ptr[i];
+        }
+    }
+
     FourierSpec(const FourierSpec &other) = default;
-    explicit FourierSpec(float x) : v{} { v[0] = x; std::fill_n(v + 1, SIZE - 1, 0.0f); }
+
+    explicit FourierSpec(float x) : v{} {
+        v[0] = x; 
+        for(int i = 1; i < SIZE; ++i) {
+            v[i] = 0.0f;
+        }
+    }
 
     FourierSpec &operator=(const FourierSpec &other) = default;
 
@@ -144,12 +163,18 @@ struct FourierSpec
 
     bool operator==(const FourierSpec &other) const 
     {
-        return std::equal(v, v + SIZE, other.v);
+        for(int i = 0; i < SIZE; ++i) {
+            if(v[i] != other.v[i]) return false;
+        }
+        return true;
     }
 
     bool operator!=(const FourierSpec &other) const 
     {
-        return !(*this == other);
+        for(int i = 0; i < SIZE; ++i) {
+            if(v[i] != other.v[i]) return true;
+        }
+        return false;
     }
 
 

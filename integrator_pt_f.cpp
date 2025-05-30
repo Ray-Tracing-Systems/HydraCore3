@@ -43,8 +43,8 @@ void Integrator::PathTraceF(uint tid, uint channels, float* out_color)
       break;
   }
 
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                        &accumColor);
+  kernel_HitEnvironmentF(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+                         &accumColor);
 
   kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
@@ -153,6 +153,57 @@ void Integrator::kernel_SampleLightSourceF(uint tid, const float4* rayPosAndNear
   }
 }
 
+void Integrator::kernel_HitEnvironmentF(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const FourierSpec* accumThoroughput,
+                                        FourierSpec* accumColor)
+{
+  if(tid >= m_maxThreadId)
+    return;
+  const uint currRayFlags = *rayFlags;
+  if(!isOutOfScene(currRayFlags))
+    return;
+  
+  float envPdf = 1.0f;
+  FourierSpec envColor = EnvironmentColorF(to_float3(*rayDirAndFar), envPdf);
+
+  const auto misPrev  = *a_prevMisData;
+  const bool isSpec   = isSpecular(&misPrev);
+  const bool exitZero = (currRayFlags & RAY_FLAG_PRIME_RAY_MISS) != 0;
+
+  if(m_intergatorType == INTEGRATOR_MIS_PT && m_envEnableSam != 0 && !isSpec && !exitZero)
+  {
+    float lgtPdf    = LightPdfSelectRev(m_envLightId)*envPdf;
+    float bsdfPdf   = misPrev.matSamplePdf;
+    float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
+    envColor *= misWeight;    
+  }
+  else if(m_intergatorType == INTEGRATOR_SHADOW_PT && m_envEnableSam != 0)
+  {
+    envColor = FourierSpec(0.0f);
+  }
+  
+  /*
+  const uint camBackId = m_envCamBackId;
+  if(exitZero && camBackId != uint(-1)) // apply camera back color to ray
+  {
+    const uint XY = m_packedXY[tid];
+    const uint x  = (XY & 0x0000FFFF);
+    const uint y  = (XY & 0xFFFF0000) >> 16;
+
+    const float2 texCoord = float2((float(x) + 0.5f)/float(m_winWidth), 
+                                   (float(y) + 0.5f)/float(m_winHeight));
+
+    envColor = m_textures[camBackId]->sample(texCoord);
+  }*/
+ 
+  if(m_intergatorType == INTEGRATOR_STUPID_PT) {     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
+    *accumColor = (*accumThoroughput) * envColor;
+  }
+  else {
+    *accumColor += (*accumThoroughput) * envColor;
+  }
+}
+
+
 FourierSpec Integrator::LightIntensityF(uint a_lightId, float3 a_rayPos, float3 a_rayDir)
 {
   FourierSpec lightColor;// = m_lights[a_lightId].intensity;  
@@ -170,6 +221,39 @@ FourierSpec Integrator::LightIntensityF(uint a_lightId, float3 a_rayPos, float3 
   lightColor *= m_lights[a_lightId].mult;
   
   return lightColor;
+}
+
+FourierSpec Integrator::EnvironmentColorF(float3 a_dir, float& outPdf)
+{
+  FourierSpec color = m_fourierEnvColor;
+  
+  // apply tex color
+  //
+  /*
+  const uint envTexId = m_envTexId;
+  if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))
+  {
+    float sinTheta  = 1.0f;
+    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
+    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
+    
+    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT && m_envLightId != uint(-1))
+    {
+      const uint32_t offset = m_lights[m_envLightId].pdfTableOffset;
+      const uint32_t sizeX  = m_lights[m_envLightId].pdfTableSizeX;
+      const uint32_t sizeY  = m_lights[m_envLightId].pdfTableSizeY;
+
+      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
+      //
+      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, int(sizeX), int(sizeY));
+      outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
+    }
+
+    const float4 texColor = m_textures[envTexId]->sample(texCoordT); 
+    color *= texColor; 
+  }*/
+
+  return color;
 }
 
 
@@ -294,3 +378,4 @@ void Integrator::kernel_NextBounceF(uint tid, uint bounce, const float4* in_hitP
     nextFlags |= RAY_FLAG_FIRST_NON_SPEC;
   *rayFlags      = nextFlags;                                   
 }
+
