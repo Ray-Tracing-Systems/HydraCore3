@@ -190,8 +190,9 @@ set(CORE_SRC
         neural_loader.cpp
         ies_parser/ies_render.cpp
         fourier/fourier.cpp
-        #integrator_pt_f.cpp
-        #integrator_pt_f_host.cpp
+        integrator_pt_f.cpp
+        integrator_pt_f_host.cpp
+        integrator_pt_f_mat.cpp
         )
 
 add_executable(neural_tests tests/neural_tests.cpp neural.cpp)

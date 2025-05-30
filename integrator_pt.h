@@ -226,19 +226,6 @@ public:
   void kernel_ContributeToImage3(uint tid, uint channels, const float4* a_accumColor, const uint* in_pakedXY, float* out_color);                               
   void kernel_ContributePathRayToImage3(float4* out_color, const std::vector<float4>& a_rayColor, std::vector<float3>& a_rayPos);
 
-
-
-
-
-  void kernel_InitEyeRay2F(uint tid, float4* rayPosAndNear, float4* rayDirAndFar,
-                           FourierSpec* accumColor, FourierSpec* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
-
-  void kernel_SampleLightSourceF(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
-                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
-                                 const uint* rayFlags, const float* a_time, uint bounce,
-                                 RandomGen* a_gen, FourierSpec* out_shadeColor);
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   static constexpr uint INTEGRATOR_STUPID_PT = 0;
@@ -568,6 +555,36 @@ public:
   // {
   //   complex value[KSPEC_FILMS_STACK_SIZE];
   // };
+
+
+
+
+
+
+
+
+  void kernel_InitEyeRay2F(uint tid, float4* rayPosAndNear, float4* rayDirAndFar,
+                           FourierSpec* accumColor, FourierSpec* accumuThoroughput, RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
+
+  void kernel_SampleLightSourceF(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, 
+                                 const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                 const uint* rayFlags, const float* a_time, uint bounce,
+                                 RandomGen* a_gen, FourierSpec* out_shadeColor);
+
+
+  void kernel_NextBounceF(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3, 
+                         const uint* in_instId, const FourierSpec* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                         FourierSpec* accumColor, FourierSpec* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
+
+  FourierSpec LightIntensityF(uint a_lightId, float3 a_rayPos, float3 a_rayDir);
+
+
+  BsdfEvalF MaterialEvalF(uint a_materialId, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+  BsdfSampleF MaterialSampleAndEvalF(uint a_materialId, uint tid, uint bounce, RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+                                           MisData* a_misPrev, const uint a_currRayFlags);
+                           
+  uint32_t BlendSampleAndEvalF(uint a_materialId, uint tid, uint bounce, uint layer, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                              MisData* a_misPrev, BsdfSampleF* a_pRes);
 };
 
 #endif

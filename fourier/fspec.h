@@ -4,6 +4,8 @@
 #include <numeric>
 
 
+
+
 struct FourierSpec
 {
     static constexpr int SIZE = 8;
@@ -11,17 +13,17 @@ struct FourierSpec
 
     float v[SIZE];
 
-    FourierSpec() : v{} { std::fill_n(v, SIZE, float(0)); }
-    FourierSpec(const float *ptr) : v{} { std::copy(ptr, ptr + SIZE, v); }
+    FourierSpec() : v{} { std::fill_n(v, SIZE, 0.0f); }
+    explicit FourierSpec(const float *ptr, int max_size = SIZE) : v{} { std::copy(ptr, ptr + std::min(SIZE, max_size), v); }
     FourierSpec(const FourierSpec &other) = default;
-    FourierSpec(float x) : v{} { v[0] = x; }
+    explicit FourierSpec(float x) : v{} { v[0] = x; std::fill_n(v + 1, SIZE - 1, 0.0f); }
 
     FourierSpec &operator=(const FourierSpec &other) = default;
 
     FourierSpec operator+(const FourierSpec &other) const 
     {
         FourierSpec c(*this);
-        c += v;
+        c += other;
         return c;
     }
 
@@ -44,7 +46,7 @@ struct FourierSpec
     FourierSpec operator-(const FourierSpec &other) const 
     {
         FourierSpec c(*this);
-        c -= v;
+        c -= other;
         return c;
     }
 
@@ -52,6 +54,13 @@ struct FourierSpec
     {
         FourierSpec c(*this);
         c *= f;
+        return c;
+    }
+
+    FourierSpec operator/(float f) const 
+    {
+        FourierSpec c(*this);
+        c /= f;
         return c;
     }
 
@@ -111,6 +120,13 @@ struct FourierSpec
         return *this;
     }
 
+    FourierSpec &operator/=(float f) 
+    {
+        for(uint i = 0; i < SIZE; ++i) {
+            v[i] /= f;
+        }
+        return *this;
+    }
 
     FourierSpec &operator*=(const FourierSpec &other) 
     {
@@ -133,10 +149,31 @@ struct FourierSpec
 
     bool operator!=(const FourierSpec &other) const 
     {
-        return !(*this == v);
+        return !(*this == other);
     }
 
 
+};
+
+inline FourierSpec operator*(float f, const FourierSpec &spec)
+{
+    return spec * f;
+}
+
+
+struct BsdfEvalF
+{
+  FourierSpec val;
+  float  pdf; 
+};
+
+struct BsdfSampleF
+{
+  FourierSpec val;
+  float3 dir;
+  float  pdf; 
+  uint   flags;
+  float  ior;
 };
 
 #endif
