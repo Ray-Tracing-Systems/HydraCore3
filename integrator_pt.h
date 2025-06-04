@@ -21,6 +21,7 @@
 
 using LiteImage::ICombinedImageSampler;
 
+#ifndef KERNEL_SLICER
 struct SceneInfo
 {
   int width;
@@ -33,6 +34,7 @@ struct SceneInfo
   uint64_t memGeom;
   uint64_t memTextures;
 };
+#endif
 
 class Integrator // : public DataClass, IRenderer
 {
