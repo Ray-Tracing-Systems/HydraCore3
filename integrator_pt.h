@@ -579,7 +579,8 @@ public:
                           const uint* in_instId, const FourierSpec* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
                           FourierSpec* accumColor, FourierSpec* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
-
+  void kernel_ContributeToBufferF(uint tid, const uint* rayFlags, const FourierSpec* a_accumColor, const RandomGen* gen,
+                                          const uint* in_pakedXY, float* buffer);
 
   FourierSpec LightIntensityF(uint a_lightId, float3 a_rayPos, float3 a_rayDir);
   FourierSpec EnvironmentColorF(float3 a_dir, float& outPdf);

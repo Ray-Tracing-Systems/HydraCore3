@@ -16,7 +16,7 @@ using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
 
-void Integrator::PathTraceBlockF(uint tid, uint channels, float* out_color, uint a_passNum)
+void Integrator::PathTraceBlockF(uint tid, uint channels, float* fourierBuf, uint a_passNum)
 {
   ConsoleProgressBar progress(tid);
   progress.Start();
@@ -26,7 +26,7 @@ void Integrator::PathTraceBlockF(uint tid, uint channels, float* out_color, uint
   #endif
   for (int i = 0; i < tid; ++i) {
     for (int j = 0; j < a_passNum; ++j) {
-      PathTraceF(uint(i), channels, out_color);
+      PathTraceF(uint(i), fourierBuf);
     }
     progress.Update();
   }

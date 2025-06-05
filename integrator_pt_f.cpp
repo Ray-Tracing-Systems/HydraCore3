@@ -13,7 +13,7 @@ using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
 
-void Integrator::PathTraceF(uint tid, uint channels, float* out_color)
+void Integrator::PathTraceF(uint tid, uint channels, float* fourierBuf)
 {
   FourierSpec accumColor, accumThroughput;
   float4 rayPosAndNear, rayDirAndFar;
@@ -46,7 +46,7 @@ void Integrator::PathTraceF(uint tid, uint channels, float* out_color)
   kernel_HitEnvironmentF(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                          &accumColor);
 
-  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToBufferF(tid, &rayFlags, &accumColor, &gen, m_packedXY.data(), fourierBuf);
 }
 
 
@@ -379,3 +379,22 @@ void Integrator::kernel_NextBounceF(uint tid, uint bounce, const float4* in_hitP
   *rayFlags      = nextFlags;                                   
 }
 
+void Integrator::kernel_ContributeToBufferF(uint tid, const uint* rayFlags, const FourierSpec* a_accumColor, const RandomGen* gen,
+                                          const uint* in_pakedXY, float* buffer)
+{
+  if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
+    return;
+  
+  m_randomGens[RandomGenId(tid)] = *gen;
+  if(m_disableImageContrib !=0)
+    return;
+
+  const uint XY = in_pakedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+  FourierSpec accumCoeff = *a_accumColor;
+
+  for(int i=0;i<FourierSpec::SIZE;i++) 
+    buffer[(y*m_winWidth+x)*FourierSpec::SIZE + i] += accumCoeff[i];
+}
