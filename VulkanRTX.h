@@ -61,7 +61,7 @@ protected:
 struct RTX_Proxy : public ISceneObject
 {
 public:
-  RTX_Proxy(std::shared_ptr<ISceneObject> a, std::shared_ptr<ISceneObject> b) { m_imps[0] = a; m_imps[1] = b; }  
+  RTX_Proxy(std::shared_ptr<ISceneObject> a, std::shared_ptr<ISceneObject> b, bool a_IS2Mode = false) : m_IS2Mode(a_IS2Mode) { m_imps[0] = a; m_imps[1] = b; }  
   
   const char* Name() const override { return "RTX_Proxy"; }
   ISceneObject* UnderlyingImpl(uint32_t a_implId) override { return (a_implId < 2) ? m_imps[a_implId].get() : nullptr; }
@@ -96,10 +96,10 @@ public:
   */
   struct PrimitiveRemapTable
   {
-    const LiteMath::uint2* table; ///<! primId  = table[aabbId]
-    const uint32_t*    geomTable; ///<! primTag = geomTable[geomId]
-    uint32_t tableSize;           ///<! count of elements in table array
-    uint32_t geomSize;            ///<! count of elements in geomTable array
+    const LiteMath::uint2* table;  ///<! primId  = table[aabbId]
+    const uint32_t*    geomTable;  ///<! primTag = geomTable[geomId]
+    uint32_t tableSize;            ///<! count of elements in table array
+    uint32_t geomSize;             ///<! count of elements in geomTable array 
   };
 
   /**
@@ -111,9 +111,11 @@ public:
 protected:
 
   std::array<std::shared_ptr<ISceneObject>, 2> m_imps = {nullptr, nullptr};
+  bool m_IS2Mode;
 
   std::vector<unsigned int>    m_geomTags;
   std::vector<LiteMath::uint2> m_remapTable;
+  size_t                       m_totalPrimsIS2 = 0;
   std::unordered_map<uint32_t, LiteMath::uint2> m_offsetByTag;
 
 };

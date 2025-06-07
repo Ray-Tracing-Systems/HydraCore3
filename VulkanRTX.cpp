@@ -194,6 +194,7 @@ bool VulkanRTX::RayQuery_AnyHitMotion(LiteMath::float4 posAndNear, LiteMath::flo
 
 void RTX_Proxy::ClearGeom() 
 { 
+  m_totalPrimsIS2 = 0;
   for(auto impl : m_imps) 
     impl->ClearGeom(); 
 
@@ -202,7 +203,7 @@ void RTX_Proxy::ClearGeom()
   m_geomTags.clear();
 
   m_remapTable.reserve(1000);
-  m_geomTags.reserve(1000);
+  m_geomTags.reserve(m_remapTable.capacity());
 } 
 
 uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumber, const uint32_t* a_triIndices, size_t a_indNumber, uint32_t a_flags, size_t vByteStride) 
@@ -211,6 +212,9 @@ uint32_t RTX_Proxy::AddGeom_Triangles3f(const float* a_vpos3f, size_t a_vertNumb
   for(auto impl : m_imps) 
     res = impl->AddGeom_Triangles3f(a_vpos3f, a_vertNumber, a_triIndices, a_indNumber, a_flags, vByteStride);
   
+  //m_primOffsetIS2.push_back(uint32_t(m_totalPrimsIS2)); // do not store information for triangles
+  m_totalPrimsIS2 += a_indNumber/3;
+
   return res;
 }
                                
@@ -235,8 +239,14 @@ uint32_t RTX_Proxy::AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8,
       pRemapOffset = m_offsetByTag.insert(std::make_pair(a_typeId, LiteMath::uint2(0,div))).first;
     
     pRemapOffset->second.y = div;
+    if(m_IS2Mode)
+      pRemapOffset->second.x = m_totalPrimsIS2;
+    
     m_remapTable.push_back(pRemapOffset->second);
-    pRemapOffset->second.x += uint32_t(actualPrimsCount);
+    if(!m_IS2Mode)
+      pRemapOffset->second.x += uint32_t(actualPrimsCount);
+
+    m_totalPrimsIS2 += uint32_t(actualPrimsCount);
   }
 
   const auto geomIdClean = geomId & (CRT_GEOM_MASK_AABB_BIT_RM);
