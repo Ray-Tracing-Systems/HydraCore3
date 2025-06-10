@@ -85,7 +85,6 @@
       <color val="1">
         <spectrum id="4" type="ref"/>
       </color>
-      <multiplier val="1" />
     </intensity>
   </light>
 </lights_lib>

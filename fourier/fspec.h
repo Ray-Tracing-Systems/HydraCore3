@@ -54,8 +54,8 @@ struct FourierSpec
                 if(i + j < SIZE) {
                     res[i + j] += 0.5f * a[i] * b[j];
                 }
-                if(i - j >= 0 && i - j < SIZE) {
-                    res[i - j] += 0.5f * a[i] * b[j];
+                if(std::abs(i - j) < SIZE) {
+                    res[std::abs(i - j)] += 0.5f * a[i] * b[j];
                 }
             }
         }

@@ -513,7 +513,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       auto spec_id   = specNode.attribute(L"id").as_uint();
 
       auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-      if(refs_attr)
+      if(refs_attr && specNode.name() == L"spectrum")
       {
         auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
 

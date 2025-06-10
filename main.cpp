@@ -7,6 +7,8 @@
 #include "integrator_pt.h"
 #include "ArgParser.h"
 #include "mi_materials.h"
+#include "fourier/fourier.h"
+
 
 float4x4 ReadMatrixFromString(const std::string& str);
 std::shared_ptr<Integrator> CreateIntegratorQMC(int a_maxThreads = 1, std::vector<uint32_t> a_features = {});
@@ -133,6 +135,8 @@ int main(int argc, const char** argv) // common hydra main
   }
   
   int  spectral_mode = args.hasOption("--spectral") ? 1 : 0;
+  if(args.hasOption("--fourier")) spectral_mode = 2; //SPECTRAL_MODE_FOURIER;
+
   bool qmcIsEnabled  = args.hasOption("--qmc");
   bool mltIsEnabled  = false;
   if(integratorType == "mlt" || integratorType == "kmlt" || integratorType == "kelemen_mlt")
@@ -157,7 +161,6 @@ int main(int argc, const char** argv) // common hydra main
   const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
   const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
   const bool enablePRT      = (integratorType == "primary" || integratorType == "prt");
-
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
@@ -175,13 +178,20 @@ int main(int argc, const char** argv) // common hydra main
     FB_WIDTH = args.getOptionValue<int>("-width");
   if(args.hasOption("-height"))
     FB_HEIGHT = args.getOptionValue<int>("-height");
-  if(args.hasOption("-channels"))
+  if(args.hasOption("-channels")) {
     FB_CHANNELS = args.getOptionValue<int>("-channels");
+    if(FB_CHANNELS == 2 || FB_CHANNELS == 3) { // we don't support these values currently
+      FB_CHANNELS = 4;
+    }
+  }
   if(args.hasOption("--spectral"))
-    spectral_mode = 1;
+    spectral_mode = 1; //aka SPECTRAL_MODE_STD
+  if(args.hasOption("--fourier")) {
+    spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
+    fourier::set_calc_func(fourier::fourier_series);
+  }
 
-  if(FB_CHANNELS == 2 || FB_CHANNELS == 3) // we don't support these values currently
-    FB_CHANNELS = 4;
+
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -198,7 +208,7 @@ int main(int argc, const char** argv) // common hydra main
     //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
     //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
 
-    size_t gpuAuxMemSize = FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 16 * 1024 * 1024; // reserve for frame buffer and other
+    size_t gpuAuxMemSize = FB_WIDTH * FB_HEIGHT * FB_CHANNELS * sizeof(float) + 16 * 1024 * 1024; // reserve for frame buffer and other
 
     // advanced way, init device with features which is required by generated class
     //
@@ -360,7 +370,7 @@ int main(int argc, const char** argv) // common hydra main
     } // end if enableNaivePT
 
     const float normConst = 1.0f/float(PASS_NUMBER);
-    if(enableShadowPT)
+    if(enableShadowPT && spectral_mode != 2)
     {
       std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
   
@@ -369,6 +379,30 @@ int main(int argc, const char** argv) // common hydra main
       pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
       pImpl->UpdateMembersPlainData();
       pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+      }
+    } // end if enableShadowPT
+
+    if(enableShadowPT && spectral_mode == 2)
+    {
+      std::cout << "[main]: PathTraceBlock(Shadow-PT, Fourier) ... " << std::endl;
+  
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
+      pImpl->UpdateMembersPlainData();
+      pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
   
       if(saveHDR)
       {

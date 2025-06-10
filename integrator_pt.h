@@ -80,7 +80,7 @@ public:
                               float*            out_color        [[size("tid*channels")]]);
   
 
-  void PathTraceF     (uint tid, uint channels, float* out_color [[size("tid*channels")]]);
+  void PathTraceF     (uint tid, uint channels, float* out_color [[size("channels")]]);
 
   struct GBufferPixel
   {
@@ -172,7 +172,7 @@ public:
   void SetResourcesDir(const std::string& a_dir) {m_resourcesDir = a_dir; }
 
 
-  void PathTraceBlockF(uint tid, uint channels, float* out_color, uint a_passNum);
+  void PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -580,7 +580,7 @@ public:
                           FourierSpec* accumColor, FourierSpec* accumThoroughput, RandomGen* a_gen, MisData* a_prevMisData, uint* rayFlags);
 
   void kernel_ContributeToBufferF(uint tid, const uint* rayFlags, const FourierSpec* a_accumColor, const RandomGen* gen,
-                                          const uint* in_pakedXY, float* buffer);
+                                  float* buffer);
 
   FourierSpec LightIntensityF(uint a_lightId, float3 a_rayPos, float3 a_rayDir);
   FourierSpec EnvironmentColorF(float3 a_dir, float& outPdf);

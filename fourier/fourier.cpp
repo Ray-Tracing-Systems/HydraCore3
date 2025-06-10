@@ -71,17 +71,33 @@ namespace fourier
         return phases;
     }
 
+    static float fourier_series(float phase, const FourierSpec &spec)
+    {
+        float res = 0.0f;
+        for(int i = 0; i < FourierSpec::SIZE; ++i) {
+            res += spec[i] * std::cos(phase * i);
+        }
+        return res;
+    }
+
     std::vector<float> fourier_series(std::vector<float> phases, const FourierSpec &spec)
     {
-        return {};
+        std::vector<float> res(phases.size());
+        for(int i = 0; i < phases.size(); ++i) {
+            res[i] = fourier_series(phases[i], spec);
+        }
+        return res;
     }
 
 
     void to_std_spectrum(const FourierSpec &spec, float *out_spectrum)
     {
         std::vector<float> phases(size_t(LAMBDA_MAX - LAMBDA_MIN + 1));
-        std::iota(phases.begin(), phases.end(), LAMBDA_MIN);
+        for(int i = 0; i < size_t(LAMBDA_MAX - LAMBDA_MIN + 1); ++i) {
+            phases[i] = LAMBDA_MIN + i;
+        }
         phases = wl_to_phases(phases, LAMBDA_MIN, LAMBDA_MAX);
+
 
         std::vector<float> spectrum = fourier_function(phases, spec);
         std::copy(spectrum.begin(), spectrum.end(), out_spectrum);

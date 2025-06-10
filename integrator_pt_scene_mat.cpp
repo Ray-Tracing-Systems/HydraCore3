@@ -143,6 +143,7 @@ void LoadSpectralTextures(const uint32_t specId, HydraSampler& a_sampler,
   auto offset = spec_tex_offset_sz[specId].x;
   if(textures_sz > 0 && loadedSpectralTextures.count(specId) == 0)
   {
+    std::cout << "spec: " <<  specId << std::endl;
     for(uint32_t i = 0; i < textures_sz; ++i)
     {
       uint32_t xml_tex_id = spec_tex_ids_wavelengths[offset + i].x;
