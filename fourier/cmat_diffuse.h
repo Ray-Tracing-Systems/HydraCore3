@@ -6,6 +6,8 @@
 
 #include "fspec.h"
 
+#include <iostream>
+
 
 static inline void diffuseSampleAndEvalF(const Material* a_materials, FourierSpec a_reflSpec, float4 rands, float3 v, 
                                         float3 n, float2 tc, BsdfSampleF* pRes)
@@ -19,6 +21,7 @@ static inline void diffuseSampleAndEvalF(const Material* a_materials, FourierSpe
   pRes->val   = lambertVal * a_reflSpec;
   pRes->pdf   = lambertPdf;
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
+
         
   if ((cflags & GLTF_COMPONENT_ORENNAYAR) != 0)
     pRes->val *= orennayarFunc(lambertDir, (-1.0f) * v, n, a_materials[0].data[DIFFUSE_ROUGHNESS]);

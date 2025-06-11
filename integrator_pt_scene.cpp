@@ -318,13 +318,15 @@ static FourierSpec LoadFspec(const pugi::xml_node& spec_node)
   FourierSpec spec;
   auto val_attr = spec_node.attribute(L"value");
 
+
   if (val_attr) // spectrum is specified directly in XML
   {
-    std::wstring wstr = val_attr.as_string();
-    std::stringstream ss(std::string(wstr.begin(), wstr.end()));
+    std::string str = hydra_xml::ws2s(val_attr.as_string());
+    std::stringstream ss(str);
     auto it = std::istream_iterator<float>(ss);
     auto end = std::istream_iterator<float>();
     int i = 0;
+
     while(it != end && i < FourierSpec::SIZE) {
       spec.v[i++] = *(it++); 
     }
@@ -378,7 +380,10 @@ static void LoadNormalSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& s
 static void LoadFourierSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& spec_node, const std::filesystem::path &scene_dir, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values)
 {
   auto val_attr = spec_node.attribute(L"value");
-  if(spec_node.name() == L"fspectrum") {
+  std::wstring nodeName = spec_node.name();
+
+  if(nodeName == L"fspectrum") {
+
     FourierSpec spec = LoadFspec(spec_node);
 
     uint32_t offset = uint32_t(spec_values.size());
@@ -403,12 +408,25 @@ static void LoadFourierSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& 
         std::cout << "[LoadSpectrumFromNode]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
       }
     }
-    //auto specValsUniform = spec.ResampleUniform(); //?
+    auto specValsUniform = spec.ResampleUniform(); //?
     
-    FourierSpec fspec = fourier::spectrum_to_fourier(spec.wavelengths, spec.values);
+
+
+      std::vector<float> wavelengths;
+      for(int i = int(LAMBDA_MIN); i <= int(LAMBDA_MAX); ++i) {
+        wavelengths.push_back(i);
+      }
+    FourierSpec fspec = fourier::spectrum_to_fourier(wavelengths, specValsUniform);
 
     uint32_t offset = uint32_t(spec_values.size());
     std::copy(fspec.v, fspec.v + FourierSpec::SIZE, std::back_inserter(spec_values));
+
+    std::string name = hydra_xml::ws2s(spec_node.attribute(L"name").as_string());
+    std::cout << name << std::endl;
+    for(int i = 0; i < FourierSpec::SIZE; ++i) {
+      std::cout << fspec[i] << " ";
+    }
+    std::cout << std::endl;
 
     spec_offsets.push_back(uint2{offset, uint32_t(FourierSpec::SIZE)});
   }

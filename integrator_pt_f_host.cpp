@@ -37,8 +37,17 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
   for (int i = 0; i < tid; ++i) {
     FourierSpec spec;
     for (int j = 0; j < a_passNum; ++j) {
-      PathTraceF(uint(i), FourierSpec::SIZE, spec.v);
+      FourierSpec tmp;
+      PathTraceF(uint(i), FourierSpec::SIZE, tmp.v);
+
+      spec += tmp;
     }
+
+    //#pragma omp critical
+    //for(int i = 0; i < FourierSpec::SIZE; ++i) {
+    //  std::cout << spec[i] << " "; 
+    //}
+    //std::cout << std::endl;
 
     std::vector<float> stdspec(wavelengths.size());
     fourier::to_std_spectrum(spec, stdspec.data());
@@ -50,7 +59,8 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
 
     //val += spectrum.get_or_interpolate(633);
 
-    spec::vec3 rgb = spec::xyz2rgb(spectre2xyz0(spectrum)) * a_passNum;
+    spec::vec3 rgb = spec::xyz2rgb_unsafe(spectre2xyz0(spectrum)) / 106.856895f;
+
     const uint XY = m_packedXY[i];
     const uint x  = (XY & 0x0000FFFF);
     const uint y  = (XY & 0xFFFF0000) >> 16;
@@ -68,6 +78,8 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
     out_color[(y*m_winWidth+x)*channels + 2] = rgb.z;
 
     progress.Update();
+    
+
   }
   //std::cout << val << std::endl;
   progress.Done();
