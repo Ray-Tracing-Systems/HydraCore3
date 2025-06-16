@@ -6,12 +6,13 @@
 #include <vector>
 #include "fspec.h"
 
+
 //CPU-only
 
 namespace fourier
 {
 
-    using ffunc_t = std::vector<float> (*)(std::vector<float>, const FourierSpec &);
+    using ffunc_t = std::vector<float> (*)(const FourierSpec &);
 
     float to_phase(float wl, float start, float end);
 
@@ -35,11 +36,15 @@ namespace fourier
 
     float mese_precomp(float phase, const std::vector<float> &q);
 
-    std::vector<float> mese(std::vector<float> phases, const FourierSpec &spec);
+    std::vector<float> mese(const std::vector<float> &phases, const FourierSpec &spec);
 
-    std::vector<float> fourier_series(std::vector<float> phases, const FourierSpec &spec);
+    std::vector<float> fourier_series(const std::vector<float> &phases, const FourierSpec &spec);
 
-    void to_std_spectrum(const FourierSpec &spec, float *out_spectrum);
+    std::vector<float> mese(const FourierSpec &spec);
+    std::vector<float> fourier_series(const FourierSpec &spec);
+    std::vector<float> fourier_series_lut(const FourierSpec &spec);
+
+    std::vector<float> to_std_spectrum(const FourierSpec &spec);
 
     void set_calc_func(ffunc_t function);
 

@@ -188,7 +188,7 @@ int main(int argc, const char** argv) // common hydra main
     spectral_mode = 1; //aka SPECTRAL_MODE_STD
   if(args.hasOption("--fourier")) {
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
-    fourier::set_calc_func(fourier::fourier_series);
+    fourier::set_calc_func(fourier::fourier_series_lut);
   }
 
 

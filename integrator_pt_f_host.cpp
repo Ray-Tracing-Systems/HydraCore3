@@ -5,6 +5,7 @@
 #include "include/cmat_gltf.h"
 #include "include/cmat_conductor.h"
 #include "utils.h"
+#include "spectrum.h"
 
 #include <chrono>
 #include <string>
@@ -16,9 +17,27 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-#include <spectral/spec/basic_spectrum.h>
-#include <spectral/spec/conversions.h>
 #include <iostream>
+
+static float3 fourier_to_rgb(const FourierSpec &spec)
+{
+  const std::vector<float> &cie_x = Get_CIE_X();
+  const std::vector<float> &cie_y = Get_CIE_Y();
+  const std::vector<float> &cie_z = Get_CIE_Z();
+
+  std::vector<float> stdspec = fourier::to_std_spectrum(spec);
+
+  float3 xyz;
+
+  for(size_t i = 0; i < cie_x.size(); ++i) {
+    xyz.x += cie_x[i] * stdspec[i];
+    xyz.y += cie_y[i] * stdspec[i];
+    xyz.z += cie_z[i] * stdspec[i];
+  }
+
+  return XYZToRGB(xyz) / 106.856895f;
+}
+
 
 void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum)
 {
@@ -43,23 +62,7 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
       spec += tmp;
     }
 
-    //#pragma omp critical
-    //for(int i = 0; i < FourierSpec::SIZE; ++i) {
-    //  std::cout << spec[i] << " "; 
-    //}
-    //std::cout << std::endl;
-
-    std::vector<float> stdspec(wavelengths.size());
-    fourier::to_std_spectrum(spec, stdspec.data());
-
-    spec::BasicSpectrum spectrum;
-    for(int i = 0; i < wavelengths.size(); i += 2) {
-      spectrum.set(wavelengths[i], stdspec[i]);
-    }
-
-    //val += spectrum.get_or_interpolate(633);
-
-    spec::vec3 rgb = spec::xyz2rgb_unsafe(spectre2xyz0(spectrum)) / 106.856895f;
+    float3 rgb = fourier_to_rgb(spec);
 
     const uint XY = m_packedXY[i];
     const uint x  = (XY & 0x0000FFFF);

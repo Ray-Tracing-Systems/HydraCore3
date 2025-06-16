@@ -348,7 +348,7 @@ static void LoadNormalSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& s
     const size_t count = size_t(LAMBDA_MAX - LAMBDA_MIN + 1);
 
     spec_values.resize(spec_values.size() + count);
-    fourier::to_std_spectrum(spec, spec_values.data() + offset);
+    fourier::to_std_spectrum(spec);
   
     spec_offsets.push_back(uint2{offset, uint32_t(count)});
   }

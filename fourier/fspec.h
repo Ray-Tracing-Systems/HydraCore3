@@ -8,7 +8,7 @@
 
 struct FourierSpec
 {
-    static constexpr int SIZE = 8;
+    static constexpr int SIZE = 10;
     static constexpr int M = SIZE - 1;
 
     float v[SIZE];
@@ -46,20 +46,20 @@ struct FourierSpec
         return c;
     }
 
-    static FourierSpec convolve_freq(const FourierSpec &a, const FourierSpec &b)
+    static FourierSpec  __attribute__((optimize("O3"))) convolve_freq(const FourierSpec &a, const FourierSpec &b)
     {
         FourierSpec res;
         for(int i = 0; i < SIZE; ++i) {
             for(int j = 0; j < SIZE; ++j) {
                 if(i + j < SIZE) {
-                    res[i + j] += 0.5f * a[i] * b[j];
+                    res[i + j] += a[i] * b[j];
                 }
                 if(std::abs(i - j) < SIZE) {
-                    res[std::abs(i - j)] += 0.5f * a[i] * b[j];
+                    res[std::abs(i - j)] += a[i] * b[j];
                 }
             }
         }
-        return res;
+        return res * 0.5f;
     }
 
     FourierSpec operator-(const FourierSpec &other) const 

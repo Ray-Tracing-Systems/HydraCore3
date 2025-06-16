@@ -4,21 +4,39 @@
 #include "LiteMath.h"
 #include <numeric>
 
+#include "../spectrum.h"
+
 
 #include <iostream>
 
 namespace fourier
 {
     ffunc_t fourier_function = fourier_series;
-
-
     using Complex = std::complex<float>;
     static constexpr Complex I{0.0f, 1.0f};
+
 
     float to_phase(float wl, float start, float end)
     {
         return std::fma(LiteMath::M_PI, (wl - start) / (end - start), -LiteMath::M_PI);
     }
+
+    static std::vector<float> compute_lut()
+    {   
+        std::vector<float> res;
+        const std::vector<float> &wavelenghts = Get_CIE_lambda();
+        res.reserve(wavelenghts.size() * FourierSpec::SIZE);
+        
+        for(int i = 0; i < wavelenghts.size(); ++i) {
+            for(int j = 0; j < FourierSpec::SIZE; ++j) {
+                float phase = to_phase(wavelenghts[i], LAMBDA_MIN, LAMBDA_MAX);
+                res.push_back(std::cos(j * phase));
+            }
+        }
+        return res;
+    }
+
+    static const std::vector<float> FOURIER_PRECOMP = compute_lut();
 
     FourierSpec real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values)
     {
@@ -61,14 +79,16 @@ namespace fourier
         return (LiteMath::INV_TWOPI * std::real(q[0])) / div;
     }
 
-    std::vector<float> mese(std::vector<float> phases, const FourierSpec &spec)
+    std::vector<float> mese(const std::vector<float> &phases, const FourierSpec &spec)
     {
         std::vector<float> q = precompute_mese_coeffs(spec);
 
+        std::vector<float> res(phases.size());
+
         for(unsigned k = 0; k < phases.size(); ++k) {
-            phases[k] = 0.5f * mese_precomp(phases[k], q);
+            res[k] = 0.5f * mese_precomp(phases[k], q);
         }
-        return phases;
+        return res;
     }
 
     static float fourier_series(float phase, const FourierSpec &spec)
@@ -80,7 +100,7 @@ namespace fourier
         return res;
     }
 
-    std::vector<float> fourier_series(std::vector<float> phases, const FourierSpec &spec)
+    std::vector<float> fourier_series(const std::vector<float> &phases, const FourierSpec &spec)
     {
         std::vector<float> res(phases.size());
         for(int i = 0; i < phases.size(); ++i) {
@@ -89,19 +109,33 @@ namespace fourier
         return res;
     }
 
+    std::vector<float> mese(const FourierSpec &spec) { return mese(wl_to_phases(Get_CIE_lambda()), spec); }
+    std::vector<float> fourier_series(const FourierSpec &spec) { return fourier_series(wl_to_phases(Get_CIE_lambda()), spec); }
 
-    void to_std_spectrum(const FourierSpec &spec, float *out_spectrum)
-    {
-        std::vector<float> phases(size_t(LAMBDA_MAX - LAMBDA_MIN + 1));
-        for(int i = 0; i < size_t(LAMBDA_MAX - LAMBDA_MIN + 1); ++i) {
-            phases[i] = LAMBDA_MIN + i;
+    std::vector<float> fourier_series_lut(const FourierSpec &spec)
+    {   
+        //compute_lut_if_needed();
+        static std::vector<float> phases = wl_to_phases(Get_CIE_lambda());
+
+        std::vector<float> result(phases.size());
+
+        for(int i = 0; i < phases.size(); ++i) {
+            const size_t offset = i * FourierSpec::SIZE;
+            float val = 0.0f;
+
+            for(int j = 0; j < FourierSpec::SIZE; ++j) {
+                val += FOURIER_PRECOMP[offset + j] * spec[j];
+            }
+            result[i] = val;
         }
-        phases = wl_to_phases(phases, LAMBDA_MIN, LAMBDA_MAX);
+        return result;
+    }
 
+    std::vector<float> to_std_spectrum(const FourierSpec &spec)
+    {
+        std::vector<float> phases = wl_to_phases(Get_CIE_lambda());
 
-        std::vector<float> spectrum = fourier_function(phases, spec);
-        std::copy(spectrum.begin(), spectrum.end(), out_spectrum);
-
+        return fourier_function(spec);
     }
 
     void set_calc_func(ffunc_t function)
