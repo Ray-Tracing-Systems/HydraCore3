@@ -709,7 +709,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == dielectricMatTypeStr)
     {
-      mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_precomp_dielectric, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
     else if(mat_type == neuralBrdfMatTypeStr)

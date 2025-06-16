@@ -124,8 +124,9 @@ Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vect
 
 Material LoadDielectricMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
+                                std::vector<float> &precomputed_film,
                                 std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
-                                bool is_spectral_mode);
+                                int spectral_mode);
 
 
 Material LoadBlendMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
@@ -174,3 +175,30 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
                                 std::vector<float> &m_neural_weights, std::vector<uint> &m_neural_weights_offsets);
+
+// Precomputation utils //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct ThinFilmPrecomputed
+{
+  std::vector<float> ext_reflectivity;
+  std::vector<float> ext_transmittivity;
+  std::vector<float> int_reflectivity;
+  std::vector<float> int_transmittivity;
+};
+
+ThinFilmPrecomputed precomputeThinFilmSpectral(
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
+        const float* a_thickness, int layers);
+
+ThinFilmPrecomputed precomputeThinFilmRGB(
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec, const float* a_thickness, int layers, 
+        const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z, 
+        const uint thickness_res = 1u, const float thickness_min = 0.f, const float thickness_max = 1000.f);\
+
+ThinFilmPrecomputed precomputeDielectricFourier(
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
+        const float* a_thickness, int layers);

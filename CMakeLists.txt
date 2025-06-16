@@ -172,6 +172,7 @@ set(CORE_SRC
         integrator_pt_nn.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
+        integrator_pt_scene_mat_utils.cpp
         integrator_pt_scene_mat.cpp
         integrator_pt_scene_lgt.cpp
         integrator_pt_scene_tex.cpp

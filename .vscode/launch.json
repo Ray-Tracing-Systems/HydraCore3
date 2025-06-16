@@ -91,6 +91,33 @@
   },
 
   {
+      "name": "FourierDiffuse",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--cpu", "--fourier",
+               "-in", "../Tests/fourier/scene_cornell.xml",
+               "-integrator", "shadowpt", 
+               "-width", "1024",
+               "-height", "1024",
+               "-spp", "16",
+               "-scn_dir", "../",
+               "-out", "FOURIER_DIFFUSE.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
+  {
       "name": "MotionBlurSpectral",
       "type": "cppdbg",
       "request": "launch",

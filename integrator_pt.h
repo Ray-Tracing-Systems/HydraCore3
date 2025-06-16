@@ -463,6 +463,9 @@ public:
   std::vector<float> m_films_eta_k_vec;
   std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
 
+  std::vector<float> m_precomp_dielectric; //frenel precomputed data for dielectrics
+  std::vector<float> m_precomp_conductor; //frenel precomputed data for conductors
+
   std::vector<uint> m_neural_tex_ids;
   std::vector<uint2> m_neural_tex_offsets; //x: offset, y: size
   std::vector<float> m_neural_weights;
