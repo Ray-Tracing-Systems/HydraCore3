@@ -370,7 +370,7 @@ int main(int argc, const char** argv) // common hydra main
     } // end if enableNaivePT
 
     const float normConst = 1.0f/float(PASS_NUMBER);
-    if(enableShadowPT && spectral_mode != 2)
+    if(enableShadowPT && spectral_mode < 2)
     {
       std::cout << "[main]: PathTraceBlock(Shadow-PT) ... " << std::endl;
   
@@ -418,7 +418,7 @@ int main(int argc, const char** argv) // common hydra main
       }
     } // end if enableShadowPT
 
-    if(enableMISPT)
+    if(enableMISPT && spectral_mode < 2)
     {
       std::cout << "[main]: PathTraceBlock(MIS-PT) ... " << std::endl;
       std::fill(realColor.begin(), realColor.end(), 0.0f);
@@ -430,6 +430,49 @@ int main(int argc, const char** argv) // common hydra main
       //std::fill(tileData.begin(), tileData.end(), 0.0f);
       
       pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+      
+      //// copy data from tile memory to FB memory
+      //for(int y=0;y<vpSizeY;y++){
+      //  const int yOffset1 = FB_WIDTH*(y+vpStartY);
+      //  const int yOffset2 = vpSizeX*y;
+      //  for(int x=0;x<vpSizeX;x++) {
+      //    for(int c=0;c<FB_CHANNELS;c++) {
+      //      realColor[(yOffset1 + x + vpStartX)*FB_CHANNELS + c] = tileData[(yOffset2 + x)*FB_CHANNELS + c];
+      //    }
+      //  }
+      //}
+  
+      pImpl->GetExecutionTime("PathTraceBlock", timings);
+      std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+      std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+      std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+  
+      if(saveHDR)
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+      }
+      else
+      {
+        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+      }
+    } // end if (enableMISPT)
+
+    if(enableMISPT && spectral_mode == 2)
+    {
+      std::cout << "[main]: PathTraceBlock(MIS-PT, Fourier) ... " << std::endl;
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+  
+      pImpl->SetIntegratorType(Integrator::INTEGRATOR_MIS_PT);
+      pImpl->UpdateMembersPlainData();
+      
+      //std::vector<float> tileData(vpSizeX*vpSizeY*FB_CHANNELS);
+      //std::fill(tileData.begin(), tileData.end(), 0.0f);
+      
+      pImpl->PathTraceBlockF(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
       
       //// copy data from tile memory to FB memory
       //for(int y=0;y<vpSizeY;y++){
