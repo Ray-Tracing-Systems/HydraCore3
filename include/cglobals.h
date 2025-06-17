@@ -19,6 +19,7 @@ static constexpr uint32_t MI_ROUGH_TRANSMITTANCE_RES = 64;
 static constexpr uint32_t FILM_ANGLE_RES = 180;
 static constexpr uint32_t FILM_LENGTH_RES = 94;
 static constexpr uint32_t FILM_THICKNESS_RES = 32;
+static constexpr uint32_t FOURIER_ANGLE_RES = 180; // Constant for precomputation of fourier materials
 static constexpr float LAMBDA_MIN = 360.0f;
 static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;

@@ -3,6 +3,7 @@
 #include "spectral/spec/spectral_util.h"
 #include "include/transfer_matrix.h"
 #include "include/airy_reflectance.h"
+#include "fourier/fourier.h"
 
 
 static inline void save_to_file(const char* name, float *arr, int x_samples, int y_samples)
@@ -247,6 +248,54 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
       res.int_transmittivity[(FILM_ANGLE_RES * t + i) * 3 + 2] = rgb.z;
     }
   }
+
+  return res;
+}
+
+std::vector<float> precomputeConductorFourier(
+        uint eta_id, uint k_id, float eta, float k,
+        const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets)
+{
+  std::vector<float> res;
+  res.resize(FOURIER_ANGLE_RES * FourierSpec::SIZE);
+
+  if (eta_id < 0xFFFFFFFF && k_id < 0xFFFFFFFF)
+  {
+    uint2 data  = spec_offsets[eta_id];
+    uint offset = data.x;
+    uint size   = data.y;
+    FourierSpec etaSpecF = FourierSpec(spec_values.data() + offset, size);
+
+    data   = spec_offsets[k_id];
+    offset = data.x;
+    size   = data.y;
+    FourierSpec kSpecF = FourierSpec(spec_values.data() + offset, size);
+
+    auto etaSpec = fourier::to_std_spectrum(etaSpecF);
+    auto kSpec   = fourier::to_std_spectrum(kSpecF);
+
+    auto std_samples = etaSpec.size();
+
+    std::vector<float> spec;
+    spec.resize(std_samples);
+
+    for (uint i = 0; i < FILM_ANGLE_RES; ++i)
+    {
+      float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * i;
+      float cosTheta = clamp(cosf(theta), 1e-6f, 1.f);
+
+      for (uint j = 0; j < std_samples; ++j)
+      {
+        spec[j] = FrComplexConductor(cosTheta, {etaSpec[j], kSpec[j]});
+      }
+
+      FourierSpec specF = fourier::std_spectrum_to_fourier(spec);
+      
+      std::copy(specF.v, specF.v + FourierSpec::SIZE, res.begin() + i * FourierSpec::SIZE);
+    }
+  }
+
+  // TO-DO constant ior
 
   return res;
 }

@@ -121,8 +121,9 @@ static constexpr uint CONDUCTOR_COLOR_LAST_IND    = CONDUCTOR_COLOR;
 // custom
 static constexpr uint CONDUCTOR_ROUGH_U           = 0;
 static constexpr uint CONDUCTOR_ROUGH_V           = 1;
-static constexpr uint CONDUCTOR_ETA               = 2;
-static constexpr uint CONDUCTOR_K                 = 3;
+static constexpr uint CONDUCTOR_PRECOMP_OFFSET    = 2;
+static constexpr uint CONDUCTOR_ETA               = 3;
+static constexpr uint CONDUCTOR_K                 = 4;
 static constexpr uint CONDUCTOR_CUSTOM_LAST_IND   = CONDUCTOR_K;
 
 // Plastic (mitsuba)

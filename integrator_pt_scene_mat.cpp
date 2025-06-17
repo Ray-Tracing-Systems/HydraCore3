@@ -438,7 +438,9 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
-                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures, bool is_spectral_mode)
+                                    std::vector< std::shared_ptr<ICombinedImageSampler> > &textures, 
+                                    const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets,
+                                    std::vector<float> &precomputed_conductor, int spectral_mode)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   Material mat = {};
@@ -490,8 +492,19 @@ Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const st
   mat.spdid[0] = etaSpecId;
   mat.spdid[1] = kSpecId;
 
+  if(spectral_mode == SPECTRAL_MODE_FOURIER)
+  {
+    mat.data[CONDUCTOR_PRECOMP_OFFSET] = as_float(precomputed_conductor.size());
+    auto precomputed_data = precomputeConductorFourier(etaSpecId, kSpecId, eta, k, spec_values, spec_offsets);
+    std::copy(precomputed_data.begin(), precomputed_data.end(), std::back_inserter(precomputed_conductor));
+  }
+  else
+  {
+    mat.data[CONDUCTOR_PRECOMP_OFFSET] = 0xFFFFFFFF;
+  }
+
   auto nodeColor = materialNode.child(L"reflectance");
-  if(nodeColor != nullptr && !is_spectral_mode)
+  if(nodeColor != nullptr && !spectral_mode)
   {
     mat.colors[CONDUCTOR_COLOR] = GetColorFromNode(nodeColor, false);
   }

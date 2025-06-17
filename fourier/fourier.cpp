@@ -131,6 +131,11 @@ namespace fourier
         return result;
     }
 
+    FourierSpec std_spectrum_to_fourier(const std::vector<float> &values)
+    {
+        return real_fourier_moments_of(wl_to_phases(Get_CIE_lambda()), values);
+    }
+
     std::vector<float> to_std_spectrum(const FourierSpec &spec)
     {
         std::vector<float> phases = wl_to_phases(Get_CIE_lambda());

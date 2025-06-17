@@ -31,6 +31,7 @@ namespace fourier
         return real_fourier_moments_of(wl_to_phases(wavelenghts), values);
     }
 
+    FourierSpec std_spectrum_to_fourier(const std::vector<float> &values);
 
     std::vector<float> precompute_mese_coeffs(const FourierSpec &spec);
 

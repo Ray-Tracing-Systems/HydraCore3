@@ -3,6 +3,7 @@
 
 #include "fourier/fspec.h"
 #include "fourier/cmat_diffuse.h"
+#include "fourier/cmat_conductor.h"
 
 #include "Image2d.h"
 using LiteImage::Image2D;
@@ -118,6 +119,25 @@ BsdfEvalF Integrator::MaterialEvalF(uint a_materialId, float3 l, float3 v, float
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
+      break;
+    case MAT_TYPE_CONDUCTOR:
+      if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
+      {
+        const float4 texColor = {1.0, 1.0, 1.0, 1.0}; // placeholder
+        const float3 alphaTex  = to_float3(texColor);
+        const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
+
+
+        uint precomp_offset = as_uint(m_materials[currMat.id].data[CONDUCTOR_PRECOMP_OFFSET]);
+
+        if(!trEffectivelySmooth(alpha))
+        {
+          conductorRoughEvalF(m_materials.data() + currMat.id, l, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &currVal);
+        }
+
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+      }
       /*
       case MAT_TYPE_NEURAL_BRDF:
       if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0) //TODO
@@ -202,6 +222,20 @@ BsdfSampleF Integrator::MaterialSampleAndEvalF(uint a_materialId, uint tid, uint
       reflSpec = FourierSpec(m_spec_values.data() + offset, size);
 
       diffuseSampleAndEvalF(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
+    }    
+    break;
+  case MAT_TYPE_CONDUCTOR:
+    if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
+    {
+      const float4 texColor = {1.0, 1.0, 1.0, 1.0}; // placeholder
+      const float3 alphaTex = to_float3(texColor);    
+      const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
+
+      uint precomp_offset = as_uint(m_materials[currMatId].data[CONDUCTOR_PRECOMP_OFFSET]);
+      if(trEffectivelySmooth(alpha))
+        conductorSmoothSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, m_precomp_conductor.data() + precomp_offset, &res);
+      else
+        conductorRoughSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &res);
     }
     /*case MAT_TYPE_NEURAL_BRDF:
     if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)

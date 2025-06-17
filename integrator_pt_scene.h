@@ -113,7 +113,8 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
 Material LoadRoughConductorMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                                     std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                     std::vector< std::shared_ptr<ICombinedImageSampler> > &textures,
-                                    bool is_spectral_mode);
+                                    const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets,
+                                    std::vector<float> &precomputed_conductor, int spectral_mode);
 
 Material LoadDiffuseMaterial(const pugi::xml_node& materialNode, const std::vector<TextureInfo> &texturesInfo,
                              std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
@@ -196,9 +197,8 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
         const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
         const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec, const float* a_thickness, int layers, 
         const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z, 
-        const uint thickness_res = 1u, const float thickness_min = 0.f, const float thickness_max = 1000.f);\
+        const uint thickness_res = 1u, const float thickness_min = 0.f, const float thickness_max = 1000.f);
 
-ThinFilmPrecomputed precomputeDielectricFourier(
-        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
-        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
-        const float* a_thickness, int layers);
+std::vector<float> precomputeConductorFourier(
+        uint eta_id_vec, uint k_id_vec, float eta, float k,
+        const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets);
