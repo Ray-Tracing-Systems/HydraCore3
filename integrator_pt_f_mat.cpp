@@ -4,6 +4,7 @@
 #include "fourier/fspec.h"
 #include "fourier/cmat_diffuse.h"
 #include "fourier/cmat_conductor.h"
+#include "fourier/cmat_film.h"
 
 #include "Image2d.h"
 using LiteImage::Image2D;
@@ -227,7 +228,7 @@ BsdfSampleF Integrator::MaterialSampleAndEvalF(uint a_materialId, uint tid, uint
   case MAT_TYPE_CONDUCTOR:
     if(KSPEC_MAT_TYPE_CONDUCTOR != 0)
     {
-      const float4 texColor = {1.0, 1.0, 1.0, 1.0}; // placeholder
+      const float4 texColor = {1.0, 1.0, 1.0, 1.0}; // TO-DO
       const float3 alphaTex = to_float3(texColor);    
       const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
 
@@ -236,6 +237,33 @@ BsdfSampleF Integrator::MaterialSampleAndEvalF(uint a_materialId, uint tid, uint
         conductorSmoothSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, m_precomp_conductor.data() + precomp_offset, &res);
       else
         conductorRoughSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &res);
+    }
+    break;
+  case MAT_TYPE_THIN_FILM:
+    if(KSPEC_MAT_TYPE_THIN_FILM != 0)
+    {
+      const float4 texColor = {1.0, 1.0, 1.0, 1.0}; // TO-DO
+      const float3 alphaTex = to_float3(texColor);  
+      const float2 alpha = float2(m_materials[currMatId].data[FILM_ROUGH_V], m_materials[currMatId].data[FILM_ROUGH_U]);
+
+      uint t_offset = as_uint(m_materials[currMatId].data[FILM_THICKNESS_OFFSET]);
+      uint layers = as_uint(m_materials[currMatId].data[FILM_LAYERS_COUNT]);
+
+      float extIOR = m_materials[currMatId].data[FILM_ETA_EXT];
+      complex intIOR = complex(1, 0); // TO-DO
+
+      uint precomp_offset = as_uint(m_materials[currMatId].data[FILM_PRECOMP_OFFSET]);
+      if(trEffectivelySmooth(alpha))
+        filmSmoothSampleAndEvalF(m_materials.data() + currMatId, extIOR, intIOR, a_misPrev->ior, rands, v, n, tc, &res,
+                          m_precomp_thin_films.data() + precomp_offset);
+      //else
+      //  filmRoughSampleAndEval(m_materials.data() + currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
+      //                    m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+
+      //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
+      res.flags |= RAY_FLAG_WAVES_DIVERGED;
+
+      a_misPrev->ior = res.ior;
     }
     /*case MAT_TYPE_NEURAL_BRDF:
     if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)

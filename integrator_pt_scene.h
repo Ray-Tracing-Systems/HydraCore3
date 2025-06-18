@@ -199,6 +199,11 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
         const std::vector<float> &m_cie_x, const std::vector<float> &m_cie_y, const std::vector<float> &m_cie_z, 
         const uint thickness_res = 1u, const float thickness_min = 0.f, const float thickness_max = 1000.f);
 
+ThinFilmPrecomputed precomputeThinFilmFourier(
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
+        const float* a_thickness, int layers);
+
 std::vector<float> precomputeConductorFourier(
         uint eta_id_vec, uint k_id_vec, float eta, float k,
         const std::vector<float> &spec_values, const std::vector<uint2> &spec_offsets);

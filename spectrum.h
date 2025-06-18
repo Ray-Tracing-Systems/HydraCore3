@@ -9,6 +9,8 @@
 using namespace LiteMath;
 #endif
 
+constexpr uint32_t nCIESamples = 471;
+
 #ifndef KERNEL_SLICER
 struct Spectrum
 {

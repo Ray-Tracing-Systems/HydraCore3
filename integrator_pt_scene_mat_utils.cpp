@@ -299,3 +299,126 @@ std::vector<float> precomputeConductorFourier(
 
   return res;
 }
+
+ThinFilmPrecomputed precomputeThinFilmFourier(
+        const float extIOR, const uint* eta_id_vec, const uint* k_id_vec, const std::vector<float> &spec_values, 
+        const std::vector<uint2> &spec_offsets, const float* eta_vec, const float* k_vec,
+        const float* a_thickness, int layers)
+{
+  ThinFilmPrecomputed res;
+  res.ext_reflectivity.resize(FILM_ANGLE_RES * FourierSpec::SIZE);
+  res.ext_transmittivity.resize(FILM_ANGLE_RES * FourierSpec::SIZE);
+  res.int_reflectivity.resize(FILM_ANGLE_RES * FourierSpec::SIZE);
+  res.int_transmittivity.resize(FILM_ANGLE_RES * FourierSpec::SIZE);
+
+  std::vector<std::vector<float>> etaSpecs;
+  etaSpecs.resize(layers);
+  std::vector<std::vector<float>> kSpecs;
+  kSpecs.resize(layers);
+
+  ////
+  for (size_t layer = 0; layer < layers; ++layer)
+  {
+    uint eta_id = eta_id_vec[layer];
+    if (eta_id < 0xFFFFFFFF)
+    {
+      uint2 data  = spec_offsets[eta_id];
+      uint offset = data.x;
+      uint size   = data.y;
+      FourierSpec etaSpecF = FourierSpec(spec_values.data() + offset, size);
+      etaSpecs[layer] = fourier::to_std_spectrum(etaSpecF);
+    }
+
+    uint k_id = k_id_vec[layer]; 
+    if (k_id < 0xFFFFFFFF)
+    {   
+      uint2 data   = spec_offsets[k_id];
+      uint offset = data.x;
+      uint size   = data.y;
+      FourierSpec kSpecF = FourierSpec(spec_values.data() + offset, size);
+      kSpecs[layer] = fourier::to_std_spectrum(kSpecF);
+    }
+  }
+  ///
+
+  ThinFilmPrecomputed realSpec;
+  realSpec.ext_reflectivity.resize(nCIESamples);
+  realSpec.ext_transmittivity.resize(nCIESamples);
+  realSpec.int_reflectivity.resize(nCIESamples);
+  realSpec.int_transmittivity.resize(nCIESamples);
+    
+  for (int j = 0; j < FILM_ANGLE_RES; ++j)
+  {
+    float theta = M_PI_2 / float(FILM_ANGLE_RES - 1) * j;
+    float cosTheta = clamp(cosf(theta), 1e-3f, 1.f);
+
+    for (size_t i = 0; i < nCIESamples; ++i)
+    {
+      float wavelength = (LAMBDA_MAX - LAMBDA_MIN - 1) / (nCIESamples - 1) * i + LAMBDA_MIN;
+      std::vector<complex> ior;
+      ior.reserve(layers + 1);
+      ior[0] = complex(extIOR, 0.f);
+      float eta, k;
+      uint2 data;
+      uint offset;
+      uint size;
+      for (size_t layer = 0; layer < layers; ++layer)
+      {
+        eta = eta_vec[layer];
+        uint eta_id = eta_id_vec[layer];
+        if (eta_id < 0xFFFFFFFF)
+          eta = etaSpecs[layer][i];
+
+        k = k_vec[layer];
+        uint k_id = k_id_vec[layer];
+        if (k_id < 0xFFFFFFFF)
+          k = kSpecs[layer][i];
+
+        ior[layer + 1] = complex(eta, k);
+      }
+
+      FrReflRefr forward;
+      FrReflRefr backward;
+      if (layers == 2)
+      {
+        forward = FrFilm(cosTheta, ior[0], ior[1], ior[2], a_thickness[0], wavelength);
+        backward = FrFilm(cosTheta, ior[2], ior[1], ior[0], a_thickness[0], wavelength);
+        //forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+      }
+      else
+      {
+        forward = multFrFilm(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        backward = multFrFilm_r(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //forward = TransferMatrixForward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+        //backward = TransferMatrixBackward(cosTheta, ior.data(), a_thickness, layers, wavelength);
+      }
+      realSpec.ext_reflectivity[i] = forward.refl;
+      realSpec.ext_transmittivity[i] = forward.refr;
+      realSpec.int_reflectivity[i] = backward.refl;
+      realSpec.int_transmittivity[i] = backward.refr;  
+    }
+
+    FourierSpec extReflF = fourier::std_spectrum_to_fourier(realSpec.ext_reflectivity);
+    FourierSpec extRefrF = fourier::std_spectrum_to_fourier(realSpec.ext_transmittivity);
+    FourierSpec intReflF = fourier::std_spectrum_to_fourier(realSpec.int_reflectivity);
+    FourierSpec intRefrF = fourier::std_spectrum_to_fourier(realSpec.int_transmittivity);
+
+    /*
+    std::cout << "______________________________________________________________________________________________________________\n";
+    std::cout << "Film: ";
+    for (int i = 0; i < FourierSpec::SIZE; ++i) 
+    {
+      std::cout << extReflF[i] << " " << extRefrF[i] << " ";
+    }
+    std::cout << std::endl;
+    */
+
+    std::copy(extReflF.v, extReflF.v + FourierSpec::SIZE, res.ext_reflectivity.begin() + j * FourierSpec::SIZE);
+    std::copy(extRefrF.v, extRefrF.v + FourierSpec::SIZE, res.ext_transmittivity.begin() + j * FourierSpec::SIZE);
+    std::copy(intReflF.v, intReflF.v + FourierSpec::SIZE, res.int_reflectivity.begin() + j * FourierSpec::SIZE);
+    std::copy(intRefrF.v, intRefrF.v + FourierSpec::SIZE, res.int_transmittivity.begin() + j * FourierSpec::SIZE);
+  }
+
+  return res;
+}

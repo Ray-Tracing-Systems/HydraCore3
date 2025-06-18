@@ -18,7 +18,7 @@ static inline void conductorSmoothSampleAndEvalF(const Material* a_materials,
 
   float theta = clamp(std::acos(cosThetaOut) * 2.f / M_PI, 0.f, 1.f);
   theta *= FOURIER_ANGLE_RES - 1;
-  uint32_t index = std::min(uint32_t(theta), uint32_t(FILM_ANGLE_RES - 2));
+  uint32_t index = std::min(uint32_t(theta), uint32_t(FOURIER_ANGLE_RES - 2));
 
   float alpha = theta - float(index);
 
