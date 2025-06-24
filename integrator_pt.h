@@ -173,6 +173,8 @@ public:
 
 
   void PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum);
+  void PathTraceBlockF(uint tid, float* out_spec, uint a_passNum);
+  void FSpecToRGB(uint tid, int channels, float* out_color, float* out_spec);
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

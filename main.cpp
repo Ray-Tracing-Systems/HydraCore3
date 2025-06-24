@@ -326,6 +326,9 @@ int main(int argc, const char** argv) // common hydra main
   }
   //////////////////////////////////////////////////////////////////////////////////////
 
+  bool saveProgress = args.hasOption("--progress");  
+  std::vector<float> fSpecBuf(FB_WIDTH*FB_HEIGHT*FourierSpec::SIZE);
+
   for(size_t i=0;i<frames.size();i++) 
   {
     auto frame = frames[i];
@@ -378,19 +381,53 @@ int main(int argc, const char** argv) // common hydra main
   
       pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
       pImpl->UpdateMembersPlainData();
-      pImpl->PathTraceBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
-  
-      if(saveHDR)
+
+      if (saveProgress)
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+        for (int sample = 0; sample < PASS_NUMBER; ++sample)
+        {
+          pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), 1);
+          std::cout << "Sample " << sample << " is ready" << std::endl;
+
+          std::string curSuffix = suffix + std::to_string(sample);
+          float curNormConst = 1.f / float(sample + 1);
+
+          if(saveHDR)
+          {
+            const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst);
+          }
+          else
+          {
+            const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst, gamma);
+          }
+        }
       }
       else
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+        pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+
+        pImpl->GetExecutionTime("PathTraceBlock", timings);
+        std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+        std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+        std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    
+  
+        if(saveHDR)
+        {
+          const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+        }
+        else
+        {
+          const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+        }
       }
     } // end if enableShadowPT
 
@@ -402,19 +439,48 @@ int main(int argc, const char** argv) // common hydra main
   
       pImpl->SetIntegratorType(Integrator::INTEGRATOR_SHADOW_PT);
       pImpl->UpdateMembersPlainData();
-      pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
-  
-      if(saveHDR)
+
+      if (saveProgress)
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+        for (int sample = 0; sample < PASS_NUMBER; ++sample)
+        {
+          pImpl->PathTraceBlockF(vpSizeX*vpSizeY, fSpecBuf.data(), 1);
+          pImpl->FSpecToRGB(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), fSpecBuf.data());
+          std::cout << "Sample " << sample << " is ready" << std::endl;
+
+          std::string curSuffix = suffix + std::to_string(sample);
+          float curNormConst = 1.f / float(sample + 1);
+
+          if(saveHDR)
+          {
+            const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst);
+          }
+          else
+          {
+            const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst, gamma);
+          }
+        }
       }
       else
       {
-        const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+        pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+    
+        if(saveHDR)
+        {
+          const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+        }
+        else
+        {
+          const std::string outName = (integratorType == "shadowpt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_shadowpt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+        }
       }
     } // end if enableShadowPT
 
@@ -428,8 +494,53 @@ int main(int argc, const char** argv) // common hydra main
       
       //std::vector<float> tileData(vpSizeX*vpSizeY*FB_CHANNELS);
       //std::fill(tileData.begin(), tileData.end(), 0.0f);
-      
-      pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+
+      if (saveProgress)
+      {
+        for (int sample = 0; sample < PASS_NUMBER; ++sample)
+        {
+          pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), 1);
+          std::cout << "Sample " << sample << " is ready" << std::endl;
+
+          std::string curSuffix = suffix + std::to_string(sample);
+          float curNormConst = 1.f / float(sample + 1);
+
+          if(saveHDR)
+          {
+            const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst);
+          }
+          else
+          {
+            const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + curSuffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+            std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+            SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), curNormConst, gamma);
+          }
+        }
+      }
+      else
+      {
+        pImpl->PathTraceBlock(vpSizeX*vpSizeY, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+
+        pImpl->GetExecutionTime("PathTraceBlock", timings);
+        std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+        std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+        std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+    
+        if(saveHDR)
+        {
+          const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+        }
+        else
+        {
+          const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+          std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+          SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+        }
+      }
       
       //// copy data from tile memory to FB memory
       //for(int y=0;y<vpSizeY;y++){
@@ -441,24 +552,7 @@ int main(int argc, const char** argv) // common hydra main
       //    }
       //  }
       //}
-  
-      pImpl->GetExecutionTime("PathTraceBlock", timings);
-      std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
-      std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
-      std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-  
-      if(saveHDR)
-      {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
-      }
-      else
-      {
-        const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
-        std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
-      }
+
     } // end if (enableMISPT)
 
     if(enableMISPT && spectral_mode == 2)
