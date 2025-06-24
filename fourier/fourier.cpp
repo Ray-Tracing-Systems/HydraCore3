@@ -59,7 +59,7 @@ namespace fourier
         std::vector<float> e0(FourierSpec::M + 1, 0.0f);
         e0[0] = 1.0f;
         std::vector<float> data(2 * FourierSpec::M + 1); //Matrix values
-        data[FourierSpec::M] = LiteMath::INV_TWOPI * spec[0];
+        data[FourierSpec::M] = LiteMath::INV_PI * spec[0];
         for(int i = 1; i <= FourierSpec::M; ++i) {
             data[FourierSpec::M + i] = LiteMath::INV_TWOPI * spec[i];
             data[FourierSpec::M - i] = LiteMath::INV_TWOPI * spec[i]; //[std::conj(spec[i])] in fact;
