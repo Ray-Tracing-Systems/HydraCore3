@@ -600,7 +600,10 @@ public:
                                MisData* a_misPrev, BsdfSampleF* a_pRes);
 
 
+  
   void PathTraceN(uint tid, uint channels, float* out_color);
+  void PathTraceNBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+
   void kernel_InitEyeRay2N(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, SpecN* wavelengths, 
                            SpecN* accumColor,    SpecN* accumuThoroughput,
                            RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
@@ -624,6 +627,14 @@ public:
   uint32_t BlendSampleAndEvalN(uint a_materialId, uint tid, uint bounce, uint layer, const SpecN &wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSampleN* a_pRes);
   SpecN SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+
+  void kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const SpecN* accumThoroughput,
+                                       SpecN* accumColor);
+  void kernel_ContributeToImageN(uint tid, const uint* rayFlags, uint channels, const SpecN* a_accumColor, const RandomGen* gen,
+                                           const uint* in_pakedXY, const SpecN* wavelengths, float* out_color);
+
+  float3 SpectralCamRespoceToRGBN(const SpecN &specSamples, const SpecN &swaves, uint32_t rayFlags);
+
 
 };
 

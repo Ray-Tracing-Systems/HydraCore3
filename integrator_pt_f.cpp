@@ -429,10 +429,10 @@ void Integrator::PathTraceN(uint tid, uint channels, float* out_color)
       break;
   }
 
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+  kernel_HitEnvironmentN(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                         &accumColor);
 
-  kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
+  kernel_ContributeToImageN(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
 
 void Integrator::kernel_InitEyeRay2N(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, SpecN* wavelengths, 
@@ -687,3 +687,190 @@ SpecN Integrator::SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelen
 
   return res;
 }
+
+
+void Integrator::kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const SpecN* accumThoroughput,
+                                       SpecN* accumColor)
+{
+  if(tid >= m_maxThreadId)
+    return;
+  const uint currRayFlags = *rayFlags;
+  if(!isOutOfScene(currRayFlags))
+    return;
+  
+  float envPdf = 1.0f;
+  SpecN envColor = SpecN(0.0f);
+
+  const auto misPrev  = *a_prevMisData;
+  const bool isSpec   = isSpecular(&misPrev);
+  const bool exitZero = (currRayFlags & RAY_FLAG_PRIME_RAY_MISS) != 0;
+
+  if(m_intergatorType == INTEGRATOR_MIS_PT && m_envEnableSam != 0 && !isSpec && !exitZero)
+  {
+    float lgtPdf    = LightPdfSelectRev(m_envLightId)*envPdf;
+    float bsdfPdf   = misPrev.matSamplePdf;
+    float misWeight = misWeightHeuristic(bsdfPdf, lgtPdf); // (bsdfPdf*bsdfPdf) / (lgtPdf*lgtPdf + bsdfPdf*bsdfPdf);
+    envColor *= misWeight;    
+  }
+  else if(m_intergatorType == INTEGRATOR_SHADOW_PT && m_envEnableSam != 0)
+  {
+    envColor = SpecN(0.0f);
+  }
+ 
+  if(m_intergatorType == INTEGRATOR_STUPID_PT)     // todo: when explicit sampling will be added, disable contribution here for 'INTEGRATOR_SHADOW_PT'
+    *accumColor = (*accumThoroughput) * envColor;
+  else
+    *accumColor += (*accumThoroughput) * envColor;
+}
+
+void Integrator::kernel_ContributeToImageN(uint tid, const uint* rayFlags, uint channels, const SpecN* a_accumColor, const RandomGen* gen,
+                                          const uint* in_pakedXY, const SpecN* wavelengths, float* out_color)
+{
+  
+  if(tid >= m_maxThreadId) // don't contrubute to image in any "record" mode
+    return;
+  
+  m_randomGens[RandomGenId(tid)] = *gen;
+  if(m_disableImageContrib !=0)
+    return;
+
+  const uint XY = in_pakedXY[tid];
+  const uint x  = (XY & 0x0000FFFF);
+  const uint y  = (XY & 0xFFFF0000) >> 16;
+  
+  SpecN specSamples = *a_accumColor; 
+
+  const SpecN waves   = *wavelengths;
+  const uint rayFlags2 = *rayFlags; 
+  float3 rgb = SpectralCamRespoceToRGBN(specSamples, waves, rayFlags2);
+
+  float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
+  
+  if(channels == 1) // monochromatic spectral
+  {
+    // const float mono = 0.2126f*colorRes.x + 0.7152f*colorRes.y + 0.0722f*colorRes.z;
+    out_color[y * m_winWidth + x] += specSamples[0] * m_exposureMult;
+  } 
+  else if(channels <= 4) 
+  {
+    out_color[(y*m_winWidth+x)*channels + 0] += colorRes.x;
+    out_color[(y*m_winWidth+x)*channels + 1] += colorRes.y;
+    out_color[(y*m_winWidth+x)*channels + 2] += colorRes.z;
+  }
+  else // always spectral rendering
+  {
+    SpecN waves = (*wavelengths);
+    SpecN color = (*a_accumColor)*m_exposureMult;
+    for(int i=0; i<SpecN::SIZE; i++) {
+      const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
+      const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
+      const int offsetPixel = int(y)*m_winWidth + int(x);
+      const int offsetLayer = channelId*m_winWidth*m_winHeight;
+      out_color[offsetLayer + offsetPixel] += color[i];
+    }
+  }
+
+}
+
+static inline float3 SpectrumToXYZN(const SpecN &spec_in, const SpecN &lambda, float lambda_min, float lambda_max,
+                                   const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z, bool terminate_waves) 
+{
+  SpecN pdf = SpecN(1.0f / (lambda_max - lambda_min));
+  const float CIE_Y_integral = 106.856895f;
+  const uint32_t nCIESamples = 471;
+
+  SpecN spec = spec_in;
+
+  if(terminate_waves)
+  {
+    pdf[0] /= SpecN::SIZE;
+    for(uint32_t i = 1; i < SpecN::SIZE; ++i)
+    {
+      pdf[i] = 0.0f;
+    }
+  }
+  
+  for (uint32_t i = 0; i < SpecN::SIZE; ++i)
+  {
+    spec[i] = (pdf[i] != 0) ? spec[i] / pdf[i] : 0.0f;
+  }
+  
+  //float4 X = SampleCIE(lambda, a_CIE_X, lambda_min, lambda_max);
+  //float4 Y = SampleCIE(lambda, a_CIE_Y, lambda_min, lambda_max);
+  //float4 Z = SampleCIE(lambda, a_CIE_Z, lambda_min, lambda_max);
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f; 
+  for (uint32_t i = 0; i < SpecN::SIZE; ++i) 
+  {
+    uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - lambda_min);
+  
+    if (offset < nCIESamples) {
+      x += a_CIE_X[offset] * spec[i];
+      y += a_CIE_Y[offset] * spec[i];
+      z += a_CIE_Z[offset] * spec[i];
+    }
+  }
+
+  return float3{x, y, z} / (float(SpecN::SIZE) * CIE_Y_integral);
+}
+
+float3 Integrator::SpectralCamRespoceToRGBN(const SpecN &specSamples, const SpecN &waves, uint32_t rayFlags)
+{
+  float3 rgb;
+
+  if(m_camResponseSpectrumId[0] < 0)
+  {
+    const float3 xyz = SpectrumToXYZN(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), terminateWavelngths(rayFlags));
+    rgb = XYZToRGB(xyz);
+  }
+  else
+  {
+    SpecN responceX, responceY, responceZ;
+    {
+      int specId = m_camResponseSpectrumId[0];
+      if(specId >= 0)
+      {
+        const uint2 data  = m_spec_offset_sz[specId];
+        const uint offset = data.x;
+        const uint size   = data.y;
+        responceX = SampleUniformSpectrumN(m_spec_values.data() + offset, waves, size);
+      }
+      else
+        responceX = SpecN(1.0f);
+      specId = m_camResponseSpectrumId[1];
+      if(specId >= 0)
+      {
+        const uint2 data  = m_spec_offset_sz[specId];
+        const uint offset = data.x;
+        const uint size   = data.y;
+        responceY = SampleUniformSpectrumN(m_spec_values.data() + offset, waves, size);
+      }
+      else
+        responceY = responceX;
+      specId = m_camResponseSpectrumId[2];
+      if(specId >= 0)
+      {
+        const uint2 data  = m_spec_offset_sz[specId];
+        const uint offset = data.x;
+        const uint size   = data.y;
+        responceZ = SampleUniformSpectrumN(m_spec_values.data() + offset, waves, size);
+      }
+      else
+        responceZ = responceY;
+    }
+    float3 xyz = float3(0,0,0);
+    for (uint32_t i = 0; i < SpecN::SIZE; ++i) {
+      xyz.x += specSamples[i]*responceX[i];
+      xyz.y += specSamples[i]*responceY[i];
+      xyz.z += specSamples[i]*responceZ[i]; 
+    } 
+    if(m_camResponseType == CAM_RESPONCE_XYZ)
+      rgb = XYZToRGB(xyz);
+    else
+      rgb = xyz;
+  }
+  
+  return rgb;
+}
+
