@@ -407,7 +407,7 @@ void Integrator::PathTraceN(uint tid, uint channels, float* out_color)
   MisData   mis;
   uint      rayFlags;
   float     time;
-  kernel_InitEyeRay2(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
+  kernel_InitEyeRay2N(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &rayFlags, &mis, &time);
 
   for(uint depth = 0; depth < m_traceDepth; depth++) 
   {
@@ -419,10 +419,10 @@ void Integrator::PathTraceN(uint tid, uint channels, float* out_color)
     if(isDeadRay(rayFlags))
       break;
     
-    kernel_SampleLightSource(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
+    kernel_SampleLightSourceN(tid, &rayPosAndNear, &rayDirAndFar, &wavelengths, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
-    kernel_NextBounce(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
+    kernel_NextBounceN(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &wavelengths, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
     if(isDeadRay(rayFlags))
@@ -509,7 +509,7 @@ void Integrator::kernel_SampleLightSourceN(uint tid, const float4* rayPosAndNear
 
   if(needShade) /// (!!!) expression-way to compute 'needShade', RT pipeline bug work around, if change check test_213
   {
-    const BsdfEvalN bsdfV    = MaterialEval(matId, lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
+    const BsdfEvalN bsdfV    = MaterialEvalN(matId, &lambda, shadowRayDir, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv);
     float cosThetaOut       = std::max(dot(shadowRayDir, hit.norm), 0.0f);
     
     float      lgtPdfW      = LightPdfSelectRev(lightId) * LightEvalPDF(lightId, shadowRayPos, shadowRayDir, lSam.pos, lSam.norm, lSam.pdf);
@@ -531,14 +531,14 @@ void Integrator::kernel_SampleLightSourceN(uint tid, const float4* rayPosAndNear
       misWeight = 0.0f;
       
     
-    const SpecN lightColor = LightIntensity(lightId, lambda, shadowRayPos, shadowRayDir);
+    const SpecN lightColor = LightIntensityN(lightId, lambda, shadowRayPos, shadowRayDir);
     *out_shadeColor = (lightColor * bsdfV.val / lgtPdfW) * cosThetaOut * misWeight;
   }
   else
     *out_shadeColor = SpecN(0.0f);
 }
 
-SpecN Integrator::LightIntensityN(uint a_lightId, SpecN &a_wavelengths, float3 a_rayPos, float3 a_rayDir)
+SpecN Integrator::LightIntensityN(uint a_lightId, const SpecN &a_wavelengths, float3 a_rayPos, float3 a_rayDir)
 {
   SpecN lightColor;
   
@@ -549,7 +549,7 @@ SpecN Integrator::LightIntensityN(uint a_lightId, SpecN &a_wavelengths, float3 a
   const uint2 data  = m_spec_offset_sz[specId];
   const uint offset = data.x;
   const uint size   = data.y;
-  lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+  lightColor = SampleUniformSpectrumN(m_spec_values.data() + offset, a_wavelengths, size);
 
   lightColor *= m_lights[a_lightId].mult;
 
@@ -594,6 +594,9 @@ void Integrator::kernel_NextBounceN(uint tid, uint bounce, const float4* in_hitP
   //
   if(m_materials[matId].mtype == MAT_TYPE_LIGHT_SOURCE)
   {
+    const uint   lightId   = m_instIdToLightInstId[*in_instId]; 
+    SpecN lightIntensity = SpecN(1.0f);
+
     if(lightId != 0xFFFFFFFF)
     {
       const float lightCos = dot(to_float3(*rayDirAndFar), to_float3(m_lights[lightId].norm));
@@ -631,7 +634,7 @@ void Integrator::kernel_NextBounceN(uint tid, uint bounce, const float4* in_hitP
   }
   
   const uint bounceTmp    = bounce;
-  const BsdfSampleN matSam = MaterialSampleAndEvalN(matId, tid, bounceTmp, lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
+  const BsdfSampleN matSam = MaterialSampleAndEvalN(matId, tid, bounceTmp, &lambda, a_gen, (-1.0f)*ray_dir, hit.norm, hit.tang, hit.uv, misPrev, currRayFlags);
   const SpecN bxdfVal    = matSam.val * (1.0f / std::max(matSam.pdf, 1e-20f));
   const float  cosTheta   = std::abs(dot(matSam.dir, hit.norm)); 
 
@@ -667,4 +670,20 @@ void Integrator::kernel_NextBounceN(uint tid, uint bounce, const float4* in_hitP
   else if(!hasNonSpecular(currRayFlags) && hasNonSpecular(nextFlags))
     nextFlags |= RAY_FLAG_FIRST_NON_SPEC;
   *rayFlags      = nextFlags;                                   
+}
+
+
+SpecN Integrator::SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramId, uint32_t paramSpecId)
+{  
+  SpecN res = SpecN(0.0f);
+  const uint specId = m_materials[matId].spdid[paramSpecId];
+  if(specId < 0xFFFFFFFF)
+  {
+    const uint2 data  = m_spec_offset_sz[specId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    res = SampleUniformSpectrumN(m_spec_values.data() + offset, a_wavelengths, size);
+  }
+
+  return res;
 }

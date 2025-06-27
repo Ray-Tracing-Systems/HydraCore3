@@ -20,6 +20,7 @@
 #include "cam_plugin/CamPluginAPI.h"
 
 #include "fourier/fspec.h"
+#include "specn.h"
 using LiteImage::ICombinedImageSampler;
 
 struct SceneInfo
@@ -597,6 +598,33 @@ public:
                            
   uint32_t BlendSampleAndEvalF(uint a_materialId, uint tid, uint bounce, uint layer, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                MisData* a_misPrev, BsdfSampleF* a_pRes);
+
+
+  void PathTraceN(uint tid, uint channels, float* out_color);
+  void kernel_InitEyeRay2N(uint tid, float4* rayPosAndNear, float4* rayDirAndFar, SpecN* wavelengths, 
+                           SpecN* accumColor,    SpecN* accumuThoroughput,
+                           RandomGen* gen, uint* rayFlags, MisData* misData, float* time);
+  void kernel_SampleLightSourceN(uint tid, const float4* rayPosAndNear, const float4* rayDirAndFar, const SpecN* wavelengths,
+                                           const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                           const uint* rayFlags, const float* a_time, uint bounce, RandomGen* a_gen, SpecN* out_shadeColor);
+
+  SpecN LightIntensityN(uint a_lightId, const SpecN &a_wavelengths, float3 a_rayPos, float3 a_rayDir);
+
+  void kernel_NextBounceN(uint tid, uint bounce, const float4* in_hitPart1, const float4* in_hitPart2, const float4* in_hitPart3,
+                                   const uint* in_instId, const SpecN* in_shadeColor, float4* rayPosAndNear, float4* rayDirAndFar,
+                                   const SpecN* wavelengths, SpecN* accumColor, SpecN* accumThoroughput,
+                                   RandomGen* a_gen, MisData* misPrev, uint* rayFlags);
+
+  BsdfEvalN MaterialEvalN(uint a_materialId, const SpecN *wavelengths, float3 l, float3 v, float3 n, float3 tan, float2 tc);
+
+  BsdfSampleN MaterialSampleAndEvalN(uint a_materialId, uint tid, uint bounce, const SpecN *wavelengths, 
+                                                 RandomGen* a_gen, float3 v, float3 n, float3 tan, float2 tc, 
+                                                 MisData* a_misPrev, const uint a_currRayFlags);
+
+  uint32_t BlendSampleAndEvalN(uint a_materialId, uint tid, uint bounce, uint layer, const SpecN &wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
+                                        MisData* a_misPrev, BsdfSampleN* a_pRes);
+  SpecN SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+
 };
 
 #endif

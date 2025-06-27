@@ -34,6 +34,8 @@ struct SpecN
         }
     }
 
+    explicit SpecN(int x) : SpecN(float(x)) {}
+
     SpecN &operator=(const SpecN &other) = default;
 
     SpecN operator+(const SpecN &other) const 

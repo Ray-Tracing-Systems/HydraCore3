@@ -136,3 +136,112 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }
+
+#include "specn.h"
+
+static inline void conductorSmoothSampleAndEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec,
+                                                float4 rands, float3 v, float3 n, float2 tc,
+                                                BsdfSampleN* pRes)
+{
+  const float3 pefReflDir = reflect((-1.0f)*v, n);
+  const float cosThetaOut = dot(pefReflDir, n);
+  float3 dir              = pefReflDir;
+  float  pdf              = 1.0f;
+  
+  SpecN val;
+  for(uint32_t i = 0; i < SpecN::SIZE; ++i)
+  {
+    val[i] = FrComplexConductor(cosThetaOut, complex{etaSpec[i], kSpec[i]});
+    val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
+  }
+  
+  pRes->val = val; 
+  pRes->dir = dir;
+  pRes->pdf = pdf;
+  pRes->flags = RAY_EVENT_S;
+}
+
+
+static void conductorSmoothEval(const Material* a_materials, const SpecN &wavelengths, float3 l, float3 v, float3 n, float2 tc,
+                                BsdfEvalN* pRes)
+{
+  for (uint32_t i = 0; i < SpecN::SIZE; ++i) 
+  {
+    pRes->val = SpecN(0.0f);
+  }
+  pRes->pdf = 0.0f;
+}
+
+static inline void conductorRoughSampleAndEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec, 
+                                               float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                                               BsdfSampleN* pRes)
+{
+  if(v.z == 0)
+    return;
+
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+
+  float3 nx, ny, nz = n;
+  CoordinateSystemV2(nz, &nx, &ny);
+  const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+  if(wo.z == 0)
+    return;
+
+  if(wo.z == 0)
+    return;
+
+  float3 wm = trSample(wo, float2(rands.x, rands.y), alpha);
+  float3 wi = reflect((-1.0f) * wo, wm);
+
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return;
+  }
+
+  SpecN val;
+  for(uint32_t i = 0; i < SpecN::SIZE; ++i)
+  {
+    val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
+  }
+
+  pRes->val   = val; 
+  pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
+  pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+  pRes->flags = RAY_FLAG_HAS_NON_SPEC;
+}
+
+
+static void conductorRoughEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec, 
+                               float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
+                               BsdfEvalN* pRes)
+{
+  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+
+  float3 nx, ny, nz = n;
+  CoordinateSystemV2(nz, &nx, &ny);
+
+  // v = (-1.0f) * v;
+  const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+  const float3 wi = float3(dot(l, nx), dot(l, ny), dot(l, nz));
+
+  if(wo.z * wi.z < 0.0f)
+    return;
+
+  float3 wm = wo + wi;
+  if (dot(wm, wm) == 0)
+      return;
+
+  wm = normalize(wm);
+  SpecN val;
+  for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  {
+    val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
+  }
+
+  pRes->val = val;
+
+  wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
+  pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+}
