@@ -626,7 +626,7 @@ public:
 
   uint32_t BlendSampleAndEvalN(uint a_materialId, uint tid, uint bounce, uint layer, const SpecN &wavelengths, RandomGen* a_gen, float3 v, float3 n, float2 tc, 
                                         MisData* a_misPrev, BsdfSampleN* a_pRes);
-  SpecN SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
+  SpecN SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramSpecId);
 
   void kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const SpecN* accumThoroughput,
                                        SpecN* accumColor);

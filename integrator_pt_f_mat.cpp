@@ -388,7 +388,7 @@ BsdfSampleN Integrator::MaterialSampleAndEvalN(uint a_materialId, uint tid, uint
   const uint cflags      = m_materials[currMatId].cflags;
   RecordMatRndNeeded(bounce, rands);
 
-  SpecN spec = SampleMatParamSpectrumN(currMatId, lambda, DIFFUSE_COLOR, 0);
+  SpecN spec = SampleMatParamSpectrumN(currMatId, lambda, 0);
 
   switch(mtype)
   {
@@ -397,8 +397,8 @@ BsdfSampleN Integrator::MaterialSampleAndEvalN(uint a_materialId, uint tid, uint
     {
       const float3 alphaTex = {1.0f, 1.0f, 1.0f}; 
       const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
-      const SpecN etaSpec  = SampleMatParamSpectrumN(currMatId, lambda, CONDUCTOR_ETA, 0);
-      const SpecN kSpec    = SampleMatParamSpectrumN(currMatId, lambda, CONDUCTOR_K,   1);
+      const SpecN etaSpec  = SampleMatParamSpectrumN(currMatId, lambda, 0);
+      const SpecN kSpec    = SampleMatParamSpectrumN(currMatId, lambda, 1);
       if(trEffectivelySmooth(alpha))
         conductorSmoothSampleAndEvalN(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
@@ -535,7 +535,7 @@ BsdfEvalN Integrator::MaterialEvalN(uint a_materialId, const SpecN *wavelengths,
         bumpCosMult = 0.0f;
     }
 
-    SpecN spec = SampleMatParamSpectrumN(currMat.id, lambda, DIFFUSE_COLOR, 0);
+    SpecN spec = SampleMatParamSpectrumN(currMat.id, lambda, 0);
 
     const SpecN &texColor  = spec;
 
@@ -560,8 +560,8 @@ BsdfEvalN Integrator::MaterialEvalN(uint a_materialId, const SpecN *wavelengths,
 
         if(!trEffectivelySmooth(alpha))
         {
-          const SpecN etaSpec = SampleMatParamSpectrumN(currMat.id, lambda, CONDUCTOR_ETA, 0);
-          const SpecN kSpec   = SampleMatParamSpectrumN(currMat.id, lambda, CONDUCTOR_K,   1);
+          const SpecN etaSpec = SampleMatParamSpectrumN(currMat.id, lambda, 0);
+          const SpecN kSpec   = SampleMatParamSpectrumN(currMat.id, lambda, 1);
           conductorRoughEvalN(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
 

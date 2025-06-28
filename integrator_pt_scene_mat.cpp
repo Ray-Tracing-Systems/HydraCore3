@@ -897,7 +897,7 @@ Material LoadThinFilmMaterial(const pugi::xml_node& materialNode, const std::vec
     mat.data[FILM_PRECOMP_OFFSET] = as_float(precomputed_film.size());
     ThinFilmPrecomputed precomputed_data;
     // simple precomputing for spectral rendering
-    if (spectral_mode == SPECTRAL_MODE_STD)
+    if (spectral_mode == SPECTRAL_MODE_STD || spectral_mode == SPECTRAL_MODE_MULTIWAVE)
     {
       precomputed_data = precomputeThinFilmSpectral(mat.data[FILM_ETA_EXT], spec_id_vec.data() + as_uint(mat.data[FILM_ETA_SPECID_OFFSET]), 
               spec_id_vec.data() + as_uint(mat.data[FILM_K_SPECID_OFFSET]), spec_values, spec_offsets,

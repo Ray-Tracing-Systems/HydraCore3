@@ -673,7 +673,7 @@ void Integrator::kernel_NextBounceN(uint tid, uint bounce, const float4* in_hitP
 }
 
 
-SpecN Integrator::SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramId, uint32_t paramSpecId)
+SpecN Integrator::SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramSpecId)
 {  
   SpecN res = SpecN(0.0f);
   const uint specId = m_materials[matId].spdid[paramSpecId];

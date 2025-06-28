@@ -434,7 +434,7 @@ static void LoadFourierSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& 
 
 void LoadSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& spec_node, const std::filesystem::path &scene_dir, std::vector<uint2> &spec_offsets, std::vector<float> &spec_values, int spectral_mode)
 { 
-  if(spectral_mode == SPECTRAL_MODE_STD) {
+  if(spectral_mode == SPECTRAL_MODE_STD || spectral_mode == SPECTRAL_MODE_MULTIWAVE) {
     LoadNormalSpectrumFromNode(spec_id, spec_node, scene_dir, spec_offsets, spec_values);
   }
   else if(spectral_mode == SPECTRAL_MODE_FOURIER) {
