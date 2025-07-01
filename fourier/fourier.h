@@ -14,7 +14,7 @@ namespace fourier
 
     using ffunc_t = std::vector<float> (*)(const FourierSpec &);
 
-    float to_phase(float wl, float start, float end);
+    float to_phase(float wl, float start = LAMBDA_MIN, float end = LAMBDA_MAX);
 
     inline std::vector<float> wl_to_phases(std::vector<float> wavelenghts, float start = LAMBDA_MIN, float end = LAMBDA_MAX)
     {

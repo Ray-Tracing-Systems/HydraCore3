@@ -172,6 +172,26 @@ struct BsdfSampleN
   float  ior;
 };
 
+#include "fourier/fspec.h"
+
+struct BsdfEvalCV
+{
+  SpecN val;
+  FourierSpec val_f;
+  float  pdf; 
+};
+
+struct BsdfSampleCV
+{
+  SpecN val;
+  FourierSpec val_f;
+  float3 dir;
+  float  pdf; 
+  uint   flags;
+  float  ior;
+};
+
+
 static inline SpecN SampleWavelengthsN(float u, float a, float b) 
 {
   // pdf is 1.0f / (b - a)

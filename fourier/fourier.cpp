@@ -70,13 +70,13 @@ namespace fourier
 
     float mese_precomp(float phase, const std::vector<float> &q)
     {
-        Complex t = 0.0f;
-        for(int i = 0; i <= FourierSpec::M; ++i) t += LiteMath::INV_TWOPI * q[i] * std::exp(-I * float(i) * phase); 
+        float t = 0.0f;
+        for(int i = 0; i <= FourierSpec::M; ++i) t += LiteMath::INV_TWOPI * q[i] * std::cos(float(i) * phase); 
 
         float div = std::fabs(t);
         div *= div;
 
-        return (LiteMath::INV_TWOPI * std::real(q[0])) / div;
+        return (LiteMath::INV_TWOPI * q[0]) / div;
     }
 
     std::vector<float> mese(const std::vector<float> &phases, const FourierSpec &spec)
@@ -110,6 +110,62 @@ namespace fourier
     }
 
     std::vector<float> mese(const FourierSpec &spec) { return mese(wl_to_phases(Get_CIE_lambda()), spec); }
+
+
+    std::vector<Complex> exponential_moments(const FourierSpec &spec, float &gamma0)
+    {
+        gamma0 = 0.5f * INV_TWO_PI * std::exp(PI * I * (moments[0] - 0.5f));
+        std::vector<Complex> res(M + 1);
+        res[0] = 2.0f * gamma0.real();
+        for(int i = 1; i <= FourierSpec::M; ++i) {
+            Complex sm{0.0f, 0.0f};
+            for(int j = 1; j <= i - 1; ++j) {
+                sm += float(i - j) * res[j] * spec[i - j]; 
+            }
+
+            res[i] = TWO_PI * I * (float(i) * gamma0 * spec[i] + sm) / float(i);
+        }
+        return res;
+    }
+
+    std::vector<float> lagrange_multipliers(const FourierSpec &spec)
+    {      
+        Complex gamma0;
+        std::vector<Complex> gamma = exponential_moments(spec, gamma0);
+
+        //Calculating q
+        std::vector<float> q = precompute_mese_coeffs(std::vector<float>(gamma.begin(), gamma.end()));
+
+
+        std::vector<float> lambda(FourierSpec::SIZE);
+        for(int i = 0; i <= FourierSpec::M; ++i) {
+            Complex t{0.0f, 0.0f};
+
+            for(int k = 0; k <= FourierSpec::M - i; ++k) {
+                Complex ts{0.0f, 0.0f};
+                for(int j = 0; j <= FourierSpec::M - k - i; ++j) {
+                    ts += std::conj(q[j + k + i]) * q[j];
+                }
+                t += ts * (k == 0 ? gamma0 : gamma[k]);
+            }
+            lambda[i] = t / (PI * I * q[0]);
+        }
+        return std::real(lambda);
+    }
+    
+    float bounded_mese_l(float phase, const std::vector<float> &lagrange_m)
+    {
+        const int M = lagrange_m.size() - 1;
+        float sum = std::real(lagrange_m[0]);
+        for(int i = 1; i <= M; ++i) {
+            sum += 2.0f * std::real(lagrange_m[i] * std::cos(float(i) * phase));
+        } 
+
+        return INV_PI * std::atan(sum) + 0.5f;
+    }
+
+
+
     std::vector<float> fourier_series(const FourierSpec &spec) { return fourier_series(wl_to_phases(Get_CIE_lambda()), spec); }
 
     std::vector<float> fourier_series_lut(const FourierSpec &spec)

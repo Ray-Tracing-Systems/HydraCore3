@@ -20,6 +20,25 @@ struct BsdfEval
 };
 
 
+struct BsdfSample
+{
+  float4 val;
+  float3 dir;
+  float  pdf; 
+  uint   flags;
+  float  ior;
+};
+
+struct BsdfEval
+{
+  float4 val;
+  float  pdf; 
+};
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
