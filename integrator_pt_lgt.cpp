@@ -181,7 +181,7 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& o
     const uint offset = data.x;
     const uint size   = data.y;
     color = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
-    color /= 106.856895f;
+    color *= m_envSpecMult / 106.856895f;
   } 
 
   const uint envTexId = m_envTexId;

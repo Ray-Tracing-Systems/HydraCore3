@@ -419,6 +419,7 @@ public:
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
   uint  m_envSpecId      = uint(-1);
+  float m_envSpecMult        = 1.0f;
 
   /// @brief ////////////////////////////////////////////////////// cam variables
   float m_exposureMult   = 1.0f;

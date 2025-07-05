@@ -492,6 +492,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_envLightId   = uint(-1);
       m_envCamBackId = lightSource.camBackTexId;
       m_envSpecId    = lightSource.specId;
+      m_envSpecMult  = lightSource.mult;
       
       if(lightSource.texId != uint(-1))
       {
