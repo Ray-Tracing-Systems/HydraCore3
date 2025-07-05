@@ -488,7 +488,7 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
   *rayFlags      = nextFlags;                                   
 }
 
-void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
+void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* a_wavelengths, const float4* accumThoroughput,
                                        float4* accumColor)
 {
   if(tid >= m_maxThreadId)
@@ -498,7 +498,7 @@ void Integrator::kernel_HitEnvironment(uint tid, const uint* rayFlags, const flo
     return;
   
   float envPdf = 1.0f;
-  float4 envColor = EnvironmentColor(to_float3(*rayDirAndFar), envPdf);
+  float4 envColor = EnvironmentColor(to_float3(*rayDirAndFar), *a_wavelengths, envPdf);
 
   const auto misPrev  = *a_prevMisData;
   const bool isSpec   = isSpecular(&misPrev);
@@ -646,7 +646,7 @@ void Integrator::NaivePathTrace(uint tid, uint channels, float* out_color)
         break;
     }
   
-    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &wavelengths, &accumThroughput,
                           &accumColor);
   
     kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, 
@@ -689,7 +689,7 @@ void Integrator::PathTrace(uint tid, uint channels, float* out_color)
         break;
     }
   
-    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+    kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &wavelengths, &accumThroughput,
                           &accumColor);
   
     kernel_ContributeToImage(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
@@ -727,7 +727,7 @@ void Integrator::PathTraceFromInputRays(uint tid, uint channels, const RayPosAnd
       break;
   }
 
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &wavelengths, &accumThroughput,
                         &accumColor);
   
   //////////////////////////////////////////////////// same as for PathTrace

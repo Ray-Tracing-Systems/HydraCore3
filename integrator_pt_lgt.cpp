@@ -170,12 +170,19 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
   return lightColor;
 }
 
-float4 Integrator::EnvironmentColor(float3 a_dir, float& outPdf)
+float4 Integrator::EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& outPdf)
 {
   float4 color = m_envColor;
   
   // apply tex color
   //
+  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0) {
+    const uint2 data  = m_spec_offset_sz[m_envSpecId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    color = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+  } 
+
   const uint envTexId = m_envTexId;
   if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))
   {
