@@ -37,6 +37,7 @@ void Integrator::PathTraceF(uint tid, uint channels, float* fourierBuf)
     kernel_SampleLightSourceF(tid, &rayPosAndNear, &rayDirAndFar, &hitPart1, &hitPart2, &hitPart3, &rayFlags, &time,
                              depth, &gen, &shadeColor);
 
+
     kernel_NextBounceF(tid, depth, &hitPart1, &hitPart2, &hitPart3, &instId, &shadeColor,
                       &rayPosAndNear, &rayDirAndFar, &accumColor, &accumThroughput, &gen, &mis, &rayFlags);
 
@@ -47,6 +48,10 @@ void Integrator::PathTraceF(uint tid, uint channels, float* fourierBuf)
   kernel_HitEnvironmentF(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
                          &accumColor);
 
+    //for(int i = 0; i < FourierSpec::SIZE; ++i) {
+    //  std::cout << accumColor[i] << " ";
+    //}
+    //std::cout << std::endl;
 
   kernel_ContributeToBufferF(tid, &rayFlags, &accumColor, &gen, fourierBuf);
 }
@@ -221,7 +226,16 @@ FourierSpec Integrator::LightIntensityF(uint a_lightId, float3 a_rayPos, float3 
     lightColor = FourierSpec(m_spec_values.data() + offset, size);
   }
   lightColor *= m_lights[a_lightId].mult;
-  
+    
+  if(m_lights[a_lightId].distType == LIGHT_DIST_SPOT) // areaSpotLightAttenuation
+  {
+    float cos1      = m_lights[a_lightId].lightCos1;
+    float cos2      = m_lights[a_lightId].lightCos2;
+    float3 norm     = to_float3(m_lights[a_lightId].norm);
+    float cos_theta = std::max(-dot(a_rayDir, norm), 0.0f);
+    lightColor *= mylocalsmoothstep(cos2, cos1, cos_theta);
+  }
+
   return lightColor;
 }
 
@@ -552,6 +566,16 @@ SpecN Integrator::LightIntensityN(uint a_lightId, const SpecN &a_wavelengths, fl
   lightColor = SampleUniformSpectrumN(m_spec_values.data() + offset, a_wavelengths, size);
 
   lightColor *= m_lights[a_lightId].mult;
+
+  if(m_lights[a_lightId].distType == LIGHT_DIST_SPOT) // areaSpotLightAttenuation
+  {
+    float cos1      = m_lights[a_lightId].lightCos1;
+    float cos2      = m_lights[a_lightId].lightCos2;
+    float3 norm     = to_float3(m_lights[a_lightId].norm);
+    float cos_theta = std::max(-dot(a_rayDir, norm), 0.0f);
+    lightColor *= mylocalsmoothstep(cos2, cos1, cos_theta);
+  }
+
 
   return lightColor;
 }

@@ -565,7 +565,7 @@ public:
 
 
 
-  FourierSpec m_fourierEnvColor;
+  FourierSpec m_fourierEnvColor = FourierSpec(1.0f);
 
 
 

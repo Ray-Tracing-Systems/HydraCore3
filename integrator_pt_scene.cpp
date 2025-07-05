@@ -581,7 +581,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
-    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
+    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder, m_spectral_mode, texturesInfo, texCache, m_textures);                                
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
