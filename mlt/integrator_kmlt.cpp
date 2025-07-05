@@ -217,7 +217,7 @@ float4 IntegratorKMLT::PathTraceF(uint tid, int*pX, int* pY)
       break;
   }
 
-  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput, &accumColor);
+  kernel_HitEnvironment(tid, &rayFlags, &rayDirAndFar, &mis, &wavelengths, &accumThroughput, &accumColor);
   
   // change
   //

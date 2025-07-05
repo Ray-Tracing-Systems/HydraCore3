@@ -215,8 +215,8 @@ public:
                                 const uint* rayFlags, const float* a_time, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
-  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
-                             float4* accumColor);
+  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, 
+                             const float4* a_wavelengths, const float4* accumThoroughput, float4* accumColor);
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
 
@@ -337,7 +337,7 @@ public:
   */
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
-  float4 EnvironmentColor(float3 a_dir, float& outPdf);
+  float4 EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& outPdf);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
@@ -411,6 +411,8 @@ public:
   uint  m_envLightId     = uint(-1);
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
+  uint  m_envSpecId      = uint(-1);
+  float m_envSpecMult    = 1.0f;
 
   /// @brief ////////////////////////////////////////////////////// cam variables
   float m_exposureMult   = 1.0f;
@@ -628,8 +630,11 @@ public:
                                         MisData* a_misPrev, BsdfSampleN* a_pRes);
   SpecN SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelengths, uint32_t paramSpecId);
 
-  void kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const SpecN* accumThoroughput,
-                                       SpecN* accumColor);
+  SpecN EnvironmentColorN(float3 a_dir, const SpecN& a_wavelengths, float& outPdf);
+
+
+  void kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData,
+                              const SpecN *a_wavelengths, const SpecN* accumThoroughput, SpecN* accumColor);
   void kernel_ContributeToImageN(uint tid, const uint* rayFlags, uint channels, const SpecN* a_accumColor, const RandomGen* gen,
                                            const uint* in_pakedXY, const SpecN* wavelengths, float* out_color);
 

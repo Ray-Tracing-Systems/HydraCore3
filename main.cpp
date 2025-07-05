@@ -165,6 +165,17 @@ int main(int argc, const char** argv) // common hydra main
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
 
+  if(args.hasOption("--spectral"))
+    spectral_mode = 1; //aka SPECTRAL_MODE_STD
+  if(args.hasOption("--fourier")) {
+    spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
+    fourier::set_calc_func(fourier::fourier_series_lut);
+  } else if(args.hasOption("--specn")) {
+    spectral_mode = 3; //aka SPECTRAL_MODE_MULTIWAVE
+  }
+
+
+
   SceneInfo sceneInfo = {};
   sceneInfo.spectral  = spectral_mode;
   auto features = Integrator::PreliminarySceneAnalysis(scenePath.c_str(), sceneDir.c_str(), &sceneInfo);
@@ -183,14 +194,6 @@ int main(int argc, const char** argv) // common hydra main
     if(FB_CHANNELS == 2 || FB_CHANNELS == 3) { // we don't support these values currently
       FB_CHANNELS = 4;
     }
-  }
-  if(args.hasOption("--spectral"))
-    spectral_mode = 1; //aka SPECTRAL_MODE_STD
-  if(args.hasOption("--fourier")) {
-    spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
-    fourier::set_calc_func(fourier::fourier_series_lut);
-  } else if(args.hasOption("--specn")) {
-    spectral_mode = 3; //aka SPECTRAL_MODE_MULTIWAVE
   }
 
 

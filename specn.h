@@ -192,8 +192,6 @@ static inline SpecN SampleWavelengthsN(float u, float a, float b)
 
 static inline SpecN SampleUniformSpectrumN(const float* a_spec_values, SpecN a_wavelengths, uint32_t a_sz)
 {
-  const int  WAVESN = int(LAMBDA_MAX-LAMBDA_MIN);
-
   SpecN res;
   for(int i = 0; i < SpecN::SIZE; ++i) {
     size_t idx = size_t(a_wavelengths[i] - LAMBDA_MIN);

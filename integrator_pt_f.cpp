@@ -241,35 +241,12 @@ FourierSpec Integrator::LightIntensityF(uint a_lightId, float3 a_rayPos, float3 
 
 FourierSpec Integrator::EnvironmentColorF(float3 a_dir, float& outPdf)
 {
-  FourierSpec color = m_fourierEnvColor;
-  
-  // apply tex color
-  //
-  /*
-  const uint envTexId = m_envTexId;
-  if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))
-  {
-    float sinTheta  = 1.0f;
-    const float2 tc = sphereMapTo2DTexCoord(a_dir, &sinTheta);
-    const float2 texCoordT = mulRows2x4(m_envSamRow0, m_envSamRow1, tc);
-    
-    if (sinTheta != 0.f && m_envEnableSam != 0 && m_intergatorType == INTEGRATOR_MIS_PT && m_envLightId != uint(-1))
-    {
-      const uint32_t offset = m_lights[m_envLightId].pdfTableOffset;
-      const uint32_t sizeX  = m_lights[m_envLightId].pdfTableSizeX;
-      const uint32_t sizeY  = m_lights[m_envLightId].pdfTableSizeY;
+  const uint2 data  = m_spec_offset_sz[m_envSpecId];
+  const uint offset = data.x;
+  const uint size   = data.y;
+  FourierSpec color = FourierSpec(m_spec_values.data() + offset, size);
 
-      // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
-      //
-      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, int(sizeX), int(sizeY));
-      outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
-    }
-
-    const float4 texColor = m_textures[envTexId]->sample(texCoordT); 
-    color *= texColor; 
-  }*/
-
-  return color;
+  return color * m_envSpecMult / 106.856895f;
 }
 
 
@@ -443,8 +420,7 @@ void Integrator::PathTraceN(uint tid, uint channels, float* out_color)
       break;
   }
 
-  kernel_HitEnvironmentN(tid, &rayFlags, &rayDirAndFar, &mis, &accumThroughput,
-                        &accumColor);
+  kernel_HitEnvironmentN(tid, &rayFlags, &rayDirAndFar, &mis, &wavelengths, &accumThroughput, &accumColor);
 
   kernel_ContributeToImageN(tid, &rayFlags, channels, &accumColor, &gen, m_packedXY.data(), &wavelengths, out_color);
 }
@@ -712,9 +688,23 @@ SpecN Integrator::SampleMatParamSpectrumN(uint32_t matId, const SpecN &a_wavelen
   return res;
 }
 
+SpecN Integrator::EnvironmentColorN(float3 a_dir, const SpecN &a_wavelengths, float& outPdf)
+{
+  SpecN color;
+  
+  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0) {
+    const uint2 data  = m_spec_offset_sz[m_envSpecId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    color = SampleUniformSpectrumN(m_spec_values.data() + offset, a_wavelengths, size);
+    color *= m_envSpecMult / 106.856895f;
+  }
 
-void Integrator::kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const SpecN* accumThoroughput,
-                                       SpecN* accumColor)
+  return color;
+}
+
+void Integrator::kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData,
+                                        const SpecN* a_wavelengths, const SpecN* accumThoroughput, SpecN* accumColor)
 {
   if(tid >= m_maxThreadId)
     return;
@@ -723,7 +713,7 @@ void Integrator::kernel_HitEnvironmentN(uint tid, const uint* rayFlags, const fl
     return;
   
   float envPdf = 1.0f;
-  SpecN envColor = SpecN(0.0f);
+  SpecN envColor = EnvironmentColorN(to_float3(*rayDirAndFar), *a_wavelengths, envPdf);
 
   const auto misPrev  = *a_prevMisData;
   const bool isSpec   = isSpecular(&misPrev);
