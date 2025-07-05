@@ -176,7 +176,7 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& o
   
   // apply tex color
   //
-  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0) {
+  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0 && m_envSpecId != uint(-1)) {
     const uint2 data  = m_spec_offset_sz[m_envSpecId];
     const uint offset = data.x;
     const uint size   = data.y;
