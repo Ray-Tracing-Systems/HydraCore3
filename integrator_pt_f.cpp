@@ -240,13 +240,16 @@ FourierSpec Integrator::LightIntensityF(uint a_lightId, float3 a_rayPos, float3 
 }
 
 FourierSpec Integrator::EnvironmentColorF(float3 a_dir, float& outPdf)
-{
-  const uint2 data  = m_spec_offset_sz[m_envSpecId];
-  const uint offset = data.x;
-  const uint size   = data.y;
-  FourierSpec color = FourierSpec(m_spec_values.data() + offset, size);
+{ 
+  if(m_envSpecId != uint(-1)) {
+    const uint2 data  = m_spec_offset_sz[m_envSpecId];
+    const uint offset = data.x;
+    const uint size   = data.y;
+    FourierSpec color = FourierSpec(m_spec_values.data() + offset, size);
 
-  return color * m_envSpecMult / 106.856895f;
+    return color * m_envSpecMult / 106.856895f;
+  }
+  return FourierSpec(0.0f);
 }
 
 
@@ -692,7 +695,7 @@ SpecN Integrator::EnvironmentColorN(float3 a_dir, const SpecN &a_wavelengths, fl
 {
   SpecN color;
   
-  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0) {
+  if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0 && m_envSpecId != uint(-1)) {
     const uint2 data  = m_spec_offset_sz[m_envSpecId];
     const uint offset = data.x;
     const uint size   = data.y;
