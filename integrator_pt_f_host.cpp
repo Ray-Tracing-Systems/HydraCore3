@@ -133,9 +133,8 @@ void Integrator::FSpecToRGB(uint tid, int channels, float* out_color, float* out
   }
   const std::vector<float> phases = fourier::wl_to_phases(wavelengths);
   //float val = 0.0f;
-  ConsoleProgressBar progress(tid);
-  progress.Start();
-  auto start = std::chrono::high_resolution_clock::now();
+
+  //auto start = std::chrono::high_resolution_clock::now();
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
@@ -154,15 +153,11 @@ void Integrator::FSpecToRGB(uint tid, int channels, float* out_color, float* out
 
     out_color[(y*m_winWidth+x)*channels + 0] = rgb.x;
     out_color[(y*m_winWidth+x)*channels + 1] = rgb.y;
-    out_color[(y*m_winWidth+x)*channels + 2] = rgb.z;
-
-    progress.Update();
-    
+    out_color[(y*m_winWidth+x)*channels + 2] = rgb.z;    
 
   }
   //std::cout << val << std::endl;
-  progress.Done();
-  shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
+  //shadowPtTime = float(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count())/1000.f;
 }
 
 void Integrator::PathTraceNBlock(uint tid, uint channels, float* out_color, uint a_passNum)

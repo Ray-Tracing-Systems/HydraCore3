@@ -68,10 +68,6 @@ BsdfEvalF Integrator::MaterialEvalF(uint a_materialId, float3 l, float3 v, float
       if (cosThetaOut1 <= 0.0f)
         bumpCosMult = 0.0f;
     }
-
-    const float2 texCoordT = mulRows2x4(m_materials[currMat.id].row0[0], m_materials[currMat.id].row1[0], tc);
-    const uint   texId     = m_materials[currMat.id].texid[0];
-    const float4 texColor  = m_textures[texId]->sample(texCoordT);
     const uint   mtype     = m_materials[currMat.id].mtype;
     const uint   cflags    = m_materials[currMat.id].cflags;
 
