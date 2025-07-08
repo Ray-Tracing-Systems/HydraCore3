@@ -209,6 +209,7 @@ extern "C" BOOL IE_ReadFile(char *fname, IE_DATA *pdata)
       rewind(piesf);    /* First line is a label line or "TILT="        */
     }
 
+    pold = NULL;
     for ( ; ; )         /* Read label lines                             */
     {
       if (IE_GetLine(IE_TextBuf, IE_MaxLabel + 1, piesf) == NULL)
