@@ -24,12 +24,12 @@ namespace fourier {
     {
         const int count = int((LAMBDA_MAX - LAMBDA_MIN) / fourier::_SAMPLING_STEP);
 
-        std::vector<float> data(count + LAMBDA_MIN + count * fourier::_SAMPLING_STEP != LAMBDA_MAX);
+        std::vector<float> data(count + (LAMBDA_MIN + count * fourier::_SAMPLING_STEP != LAMBDA_MAX));
         for(int i = 0; i < count; ++i) {
             data[i] = fourier::to_phase(LAMBDA_MIN + float(i) * fourier::_SAMPLING_STEP, LAMBDA_MIN, LAMBDA_MAX);
         }
         if(LAMBDA_MIN + count * fourier::_SAMPLING_STEP != LAMBDA_MAX) {
-            data.back() = fourier::to_phase(LAMBDA_MAX, LAMBDA_MIN, LAMBDA_MAX);
+            data.push_back(fourier::to_phase(LAMBDA_MAX, LAMBDA_MIN, LAMBDA_MAX));
         }
         return data;
     }
