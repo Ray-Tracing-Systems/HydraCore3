@@ -144,7 +144,7 @@ extern "C" BOOL IE_ReadFile(char *fname, IE_DATA *pdata)
   struct IE_Label *pnew;        /* Current label line list element ptr  */
   struct IE_Label *pold;        /* Previous label line list element ptr */
   BOOL status = TRUE;           /* Status flag                          */
-  FILE *piesf;                  /* IESNA data file pointer              */
+  FILE *piesf = NULL;           /* IESNA data file pointer              */
   FILE *ptilt = NULL;           /* TILT data file pointer               */
 
   /* Save file name                                                     */
