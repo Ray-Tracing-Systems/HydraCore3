@@ -1,13 +1,9 @@
 #ifndef FOURIER_CMAT__DIFFUSE_H_
 #define FOURIER_CMAT__DIFFUSE_H_
 #include "../include/cglobals.h"
-#include "../include/crandom.h"
 #include "../include/cmaterial.h"
 
 #include "fspec.h"
-
-#include <iostream>
-
 
 static inline void diffuseSampleAndEvalF(const Material* a_materials, FourierSpec a_reflSpec, float4 rands, float3 v, 
                                         float3 n, float2 tc, BsdfSampleF* pRes)

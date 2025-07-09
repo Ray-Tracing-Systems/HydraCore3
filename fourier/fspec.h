@@ -1,15 +1,27 @@
 #ifndef FOURIER_FSPEC_H_
 #define FOURIER_FSPEC_H_
-#include <algorithm>
-#include <numeric>
+#include <vector>
+#include <cmath>
+#include "fourier_fwd.h"
 
+struct FourierSpec;
 
-
+namespace fourier {
+    extern FourierSpec real_fourier_moments_of(const std::vector<float> &phases, const std::vector<float> &values);
+    extern std::vector<float> fourier_series(const std::vector<float> &phases, const FourierSpec &spec);
+};
 
 struct FourierSpec
 {
-    static constexpr int SIZE = 10;
+    static constexpr int SIZE = fourier::_SIZE;
     static constexpr int M = SIZE - 1;
+    static constexpr int SAMPLING_STEP = fourier::_SAMPLING_STEP; 
+    static constexpr int SAMPLING_SIZE = int(LAMBDA_MAX - LAMBDA_MIN) / SAMPLING_STEP + int(LAMBDA_MAX - LAMBDA_MIN) % SAMPLING_STEP;
+    static_assert(SAMPLING_STEP > 0);
+    static inline std::vector<float> SAMPLING_PHASES = fourier::make_sampling_phases();
+
+    inline static bool unpack_on_multiply = false;
+
 
     float v[SIZE];
 
@@ -85,7 +97,15 @@ struct FourierSpec
 
     FourierSpec operator*(const FourierSpec &other) const 
     {
-        return convolve_freq(*this, other);
+        if(unpack_on_multiply) {
+            const std::vector<float> values1 = fourier::fourier_series(SAMPLING_PHASES, *this);
+            std::vector<float> values2 = fourier::fourier_series(SAMPLING_PHASES, other);
+            for(size_t i = 0; i < values1.size(); ++i) {
+                values2[i] *= values1[i];
+            }
+            return fourier::real_fourier_moments_of(SAMPLING_PHASES, values2);
+        }
+        else return convolve_freq(*this, other);
     }
 
     //Convolution in time domain
@@ -200,5 +220,7 @@ struct BsdfSampleF
   uint   flags;
   float  ior;
 };
+
+
 
 #endif

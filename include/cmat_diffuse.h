@@ -41,7 +41,8 @@ static inline void diffuseEval(const Material* a_materials, float4 a_reflSpec, f
 #include "specn.h"
 
 
-static inline void diffuseSampleAndEvalN(const Material* a_materials, const SpecN &a_reflSpec, float4 rands, float3 v, 
+template<typename Spec>
+static inline void diffuseSampleAndEvalN(const Material* a_materials, const Spec &a_reflSpec, float4 rands, float3 v, 
                                         float3 n, float2 tc, BsdfSampleN* pRes)
 {
   const uint   cflags     = a_materials[0].cflags;
@@ -59,8 +60,8 @@ static inline void diffuseSampleAndEvalN(const Material* a_materials, const Spec
             
 }
 
-
-static inline void diffuseEvalN(const Material* a_materials, const SpecN &a_reflSpec, float3 l, float3 v, float3 n, float2 tc, BsdfEvalN* res)
+template<typename Spec>
+static inline void diffuseEvalN(const Material* a_materials, const Spec &a_reflSpec, float3 l, float3 v, float3 n, float2 tc, BsdfEvalN* res)
 {
   const uint cflags = a_materials[0].cflags;
  

@@ -139,17 +139,18 @@ static void conductorRoughEval(const Material* a_materials, const float4 etaSpec
 
 #include "specn.h"
 
-static inline void conductorSmoothSampleAndEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec,
+template<typename Spec>
+static inline void conductorSmoothSampleAndEvalN(const Material* a_materials, const Spec &etaSpec, const Spec &kSpec,
                                                 float4 rands, float3 v, float3 n, float2 tc,
-                                                BsdfSampleN* pRes)
+                                                BsdfSampleN_<Spec>* pRes)
 {
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
   float  pdf              = 1.0f;
   
-  SpecN val;
-  for(uint32_t i = 0; i < SpecN::SIZE; ++i)
+  Spec val;
+  for(uint32_t i = 0; i < Spec::SIZE; ++i)
   {
     val[i] = FrComplexConductor(cosThetaOut, complex{etaSpec[i], kSpec[i]});
     val[i] = (cosThetaOut <= 1e-6f) ? 0.0f : (val[i] / std::max(cosThetaOut, 1e-6f));  
@@ -172,9 +173,10 @@ static void conductorSmoothEval(const Material* a_materials, const SpecN &wavele
   pRes->pdf = 0.0f;
 }
 
-static inline void conductorRoughSampleAndEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec, 
+template<typename Spec>
+static inline void conductorRoughSampleAndEvalN(const Material* a_materials, const Spec &etaSpec, const Spec &kSpec, 
                                                float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
-                                               BsdfSampleN* pRes)
+                                               BsdfSampleN_<Spec>* pRes)
 {
   if(v.z == 0)
     return;
@@ -199,8 +201,8 @@ static inline void conductorRoughSampleAndEvalN(const Material* a_materials, con
     return;
   }
 
-  SpecN val;
-  for(uint32_t i = 0; i < SpecN::SIZE; ++i)
+  Spec val;
+  for(uint32_t i = 0; i < Spec::SIZE; ++i)
   {
     val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
   }
@@ -211,10 +213,10 @@ static inline void conductorRoughSampleAndEvalN(const Material* a_materials, con
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
-
-static void conductorRoughEvalN(const Material* a_materials, const SpecN &etaSpec, const SpecN &kSpec, 
+template<typename Spec>
+static void conductorRoughEvalN(const Material* a_materials, const Spec &etaSpec, const Spec &kSpec, 
                                float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
-                               BsdfEvalN* pRes)
+                               BsdfEvalN_<Spec>* pRes)
 {
   const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
                               min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
@@ -234,7 +236,7 @@ static void conductorRoughEvalN(const Material* a_materials, const SpecN &etaSpe
       return;
 
   wm = normalize(wm);
-  SpecN val;
+  Spec val;
   for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
   {
     val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});

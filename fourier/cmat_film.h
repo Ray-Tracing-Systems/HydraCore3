@@ -7,12 +7,16 @@
 
 #include "fspec.h"
 
+#include <cassert>
+
 #include <iostream>
 
 static inline void filmSmoothSampleAndEvalF(const Material* a_materials, 
         const float extIOR, const complex intIOR, const float _extIOR,
         float4 rands, float3 v, float3 n, float2 tc, BsdfSampleF* pRes, const float* precomputed_data)
 {
+  assert(!FourierSpec::unpack_on_multiply);
+
   const uint transparFlag = as_uint((a_materials[0].data[FILM_TRANSPARENT]));
   bool reversed = false;
   uint32_t refl_offset;

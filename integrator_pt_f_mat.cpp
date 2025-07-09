@@ -1,3 +1,4 @@
+#include "include/cmaterial.h"
 #include "integrator_pt.h"
 #include "include/crandom.h"
 
@@ -18,7 +19,7 @@ using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
-
+using SpecN_U = SpecN_<FourierSpec::SAMPLING_SIZE>;
 
 
 BsdfEvalF Integrator::MaterialEvalF(uint a_materialId, float3 l, float3 v, float3 n, float3 tan, float2 tc)
@@ -130,12 +131,42 @@ BsdfEvalF Integrator::MaterialEvalF(uint a_materialId, float3 l, float3 v, float
         const float3 alphaTex  = to_float3(texColor);
         const float2 alpha     = float2(m_materials[currMat.id].data[CONDUCTOR_ROUGH_V], m_materials[currMat.id].data[CONDUCTOR_ROUGH_U]);
 
+        if(!FourierSpec::unpack_on_multiply) {
+          uint precomp_offset = as_uint(m_materials[currMat.id].data[CONDUCTOR_PRECOMP_OFFSET]);
 
-        uint precomp_offset = as_uint(m_materials[currMat.id].data[CONDUCTOR_PRECOMP_OFFSET]);
+          if(!trEffectivelySmooth(alpha))
+          {
+            conductorRoughEvalF(m_materials.data() + currMat.id, l, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &currVal);
+          }
+        }
+        else {
 
-        if(!trEffectivelySmooth(alpha))
-        {
-          conductorRoughEvalF(m_materials.data() + currMat.id, l, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &currVal);
+          if(!trEffectivelySmooth(alpha))
+          {
+            SpecN_U etaSpec;
+            {
+              uint32_t eta_specId = m_materials[currMat.id].spdid[0];
+              const uint2 eta_data  = m_spec_offset_sz[eta_specId];
+              const uint eta_offset = eta_data.x;
+              const auto eta_vec = fourier::fourier_series(FourierSpec::SAMPLING_PHASES, FourierSpec(m_spec_values.data() + eta_offset));
+              etaSpec = SpecN_U(eta_vec.data());
+            }
+            
+            SpecN_U kSpec;
+            {
+              uint32_t k_specId = m_materials[currMat.id].spdid[1];
+              const uint2 k_data  = m_spec_offset_sz[k_specId];
+              const uint k_offset = k_data.x;
+              const auto k_vec = fourier::fourier_series(FourierSpec::SAMPLING_PHASES, FourierSpec(m_spec_values.data() + k_offset));
+              kSpec = SpecN_U(k_vec.data());
+            }
+
+            BsdfEvalN_<SpecN_U> t;
+            conductorRoughEvalN(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &t);
+            currVal.val = fourier::real_fourier_moments_of(FourierSpec::SAMPLING_PHASES, std::vector<float>(t.val.v, t.val.v + SpecN_U::SIZE));
+            currVal.pdf = t.pdf;
+          }
+
         }
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
@@ -234,11 +265,44 @@ BsdfSampleF Integrator::MaterialSampleAndEvalF(uint a_materialId, uint tid, uint
       const float3 alphaTex = to_float3(texColor);    
       const float2 alpha    = float2(m_materials[currMatId].data[CONDUCTOR_ROUGH_V], m_materials[currMatId].data[CONDUCTOR_ROUGH_U]);
 
-      uint precomp_offset = as_uint(m_materials[currMatId].data[CONDUCTOR_PRECOMP_OFFSET]);
-      if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, m_precomp_conductor.data() + precomp_offset, &res);
-      else
-        conductorRoughSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &res);
+      if(!FourierSpec::unpack_on_multiply) {
+        uint precomp_offset = as_uint(m_materials[currMatId].data[CONDUCTOR_PRECOMP_OFFSET]);
+        if(trEffectivelySmooth(alpha))
+          conductorSmoothSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, m_precomp_conductor.data() + precomp_offset, &res);
+        else
+          conductorRoughSampleAndEvalF(m_materials.data() + currMatId, rands, v, shadeNormal, tc, alphaTex, m_precomp_conductor.data() + precomp_offset, &res);
+      }
+      else {
+        SpecN_U etaSpec;
+        {
+          uint32_t eta_specId = m_materials[currMatId].spdid[0];
+          const uint2 eta_data  = m_spec_offset_sz[eta_specId];
+          const uint eta_offset = eta_data.x;
+          const auto eta_vec = fourier::fourier_series(FourierSpec::SAMPLING_PHASES, FourierSpec(m_spec_values.data() + eta_offset));
+          etaSpec = SpecN_U(eta_vec.data());
+        }
+        
+        SpecN_U kSpec;
+        {
+          uint32_t k_specId = m_materials[currMatId].spdid[1];
+          const uint2 k_data  = m_spec_offset_sz[k_specId];
+          const uint k_offset = k_data.x;
+          const auto k_vec = fourier::fourier_series(FourierSpec::SAMPLING_PHASES, FourierSpec(m_spec_values.data() + k_offset));
+          kSpec = SpecN_U(k_vec.data());
+        }
+
+        BsdfSampleN_<SpecN_U> t;
+
+        if(trEffectivelySmooth(alpha))
+          conductorSmoothSampleAndEvalN(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &t);
+        else
+          conductorRoughSampleAndEvalN(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &t);
+
+        res.val = fourier::real_fourier_moments_of(FourierSpec::SAMPLING_PHASES, std::vector<float>(t.val.v, t.val.v + SpecN_U::SIZE));
+        res.dir = t.dir;
+        res.pdf = t.pdf;
+        res.flags = t.flags;
+      }
     }
     break;
   case MAT_TYPE_THIN_FILM:

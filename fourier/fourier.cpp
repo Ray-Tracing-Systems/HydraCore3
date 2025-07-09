@@ -2,12 +2,10 @@
 #include "levinson.h"
 #include <cassert>
 #include "LiteMath.h"
-#include <numeric>
 
 #include "../spectrum.h"
 
 
-#include <iostream>
 
 namespace fourier
 {
@@ -15,11 +13,6 @@ namespace fourier
     using Complex = std::complex<float>;
     static constexpr Complex I{0.0f, 1.0f};
 
-
-    float to_phase(float wl, float start, float end)
-    {
-        return std::fma(LiteMath::M_PI, (wl - start) / (end - start), -LiteMath::M_PI);
-    }
 
     static std::vector<float> compute_lut()
     {   
@@ -103,7 +96,7 @@ namespace fourier
     std::vector<float> fourier_series(const std::vector<float> &phases, const FourierSpec &spec)
     {
         std::vector<float> res(phases.size());
-        for(int i = 0; i < phases.size(); ++i) {
+        for(size_t i = 0; i < phases.size(); ++i) {
             res[i] = fourier_series(phases[i], spec);
         }
         return res;

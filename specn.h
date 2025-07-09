@@ -1,74 +1,74 @@
 #ifndef SPECN_H_
 #define SPECN_H_
-#include <algorithm>
-#include <numeric>
 
+#include <include/cglobals.h>
 
+constexpr int SPECN_SIZE = 10;
 
-
-struct SpecN
+template<int N>
+struct SpecN_
 {
-    static constexpr int SIZE = 10;
+    static constexpr int SIZE = N;
  
     float v[SIZE];
 
-    SpecN() : v{} 
+    SpecN_() : v{} 
     {
         for(int i = 0; i < SIZE; ++i) {
             v[i] = 0.0f;
         }
     }
 
-    explicit SpecN(const float *ptr) : v{} 
+    explicit SpecN_(const float *ptr) : v{} 
     { 
         for(int i = 0; i < SIZE; ++i) {
             v[i] = ptr[i];
         }
     }
 
-    SpecN(const SpecN &other) = default;
+    SpecN_(const SpecN_ &other) = default;
 
-    explicit SpecN(float x) : v{} {
+    explicit SpecN_(float x) : v{} {
         for(int i = 0; i < SIZE; ++i) {
             v[i] = x;
         }
     }
 
-    explicit SpecN(int x) : SpecN(float(x)) {}
+    explicit SpecN_(int x) : SpecN_(float(x)) {}
 
-    SpecN &operator=(const SpecN &other) = default;
+    SpecN_ &operator=(const SpecN_ &other) = default;
 
-    SpecN operator+(const SpecN &other) const 
+    SpecN_ operator+(const SpecN_ &other) const 
     {
-        SpecN c(*this);
+        SpecN_ c(*this);
         c += other;
         return c;
     }
 
-    SpecN operator-(const SpecN &other) const 
+    SpecN_ operator-(const SpecN_ &other) const 
     {
-        SpecN c(*this);
+        SpecN_ c(*this);
         c -= other;
         return c;
     }
 
-    SpecN operator*(float f) const 
+    SpecN_ operator*(float f) const 
     {
-        SpecN c(*this);
+        SpecN_ c(*this);
         c *= f;
         return c;
     }
 
-    SpecN operator/(float f) const 
+    SpecN_ operator/(float f) const 
     {
-        SpecN c(*this);
+        SpecN_ c(*this);
         c /= f;
         return c;
     }
     //Convolution in time domain
-    SpecN operator*(const SpecN &other) const
+    SpecN_ operator*(const SpecN_ &other) const
     {
-        SpecN c(*this);
+        SpecN_ c(*this);
         c *= other;
         return c;
     }
@@ -83,16 +83,16 @@ struct SpecN
         return v[i];
     }
 
-    SpecN operator-() const 
+    SpecN_ operator-() const 
     {
-        SpecN res;
+        SpecN_ res;
         for(uint i = 0; i < SIZE; ++i) {
             res.v[i] = -v[i];
         }
         return res;
     }
 
-    SpecN &operator+=(const SpecN &other) 
+    SpecN_ &operator+=(const SpecN_ &other) 
     {
         for(uint i = 0; i < SIZE; ++i) {
             v[i] += other.v[i];
@@ -100,7 +100,7 @@ struct SpecN
         return *this;
     }
 
-    SpecN &operator-=(const SpecN &other) 
+    SpecN_ &operator-=(const SpecN_ &other) 
     {
         for(uint i = 0; i < SIZE; ++i) {
             v[i] -= other.v[i];
@@ -108,7 +108,7 @@ struct SpecN
         return *this;
     }
 
-    SpecN &operator*=(float f) 
+    SpecN_ &operator*=(float f) 
     {
         for(uint i = 0; i < SIZE; ++i) {
             v[i] *= f;
@@ -116,7 +116,7 @@ struct SpecN
         return *this;
     }
 
-    SpecN &operator/=(float f) 
+    SpecN_ &operator/=(float f) 
     {
         for(uint i = 0; i < SIZE; ++i) {
             v[i] /= f;
@@ -124,7 +124,7 @@ struct SpecN
         return *this;
     }
 
-    SpecN &operator*=(const SpecN &other) 
+    SpecN_ &operator*=(const SpecN_ &other) 
     {
         for(uint i = 0; i < SIZE; ++i) {
             v[i] *= other.v[i];
@@ -132,7 +132,7 @@ struct SpecN
         return *this;
     }
 
-    bool operator==(const SpecN &other) const 
+    bool operator==(const SpecN_ &other) const 
     {
         for(int i = 0; i < SIZE; ++i) {
             if(v[i] != other.v[i]) return false;
@@ -140,7 +140,7 @@ struct SpecN
         return true;
     }
 
-    bool operator!=(const SpecN &other) const 
+    bool operator!=(const SpecN_ &other) const 
     {
         for(int i = 0; i < SIZE; ++i) {
             if(v[i] != other.v[i]) return true;
@@ -151,26 +151,34 @@ struct SpecN
 
 };
 
-inline SpecN operator*(float f, const SpecN &spec)
+template<int N>
+inline SpecN_<N> operator*(float f, const SpecN_<N> &spec)
 {
     return spec * f;
 }
 
-
-struct BsdfEvalN
+template<typename Spec>
+struct BsdfEvalN_
 {
-  SpecN val;
+  Spec val;
   float  pdf; 
 };
 
-struct BsdfSampleN
+template<typename Spec>
+struct BsdfSampleN_
 {
-  SpecN val;
+  Spec val;
   float3 dir;
   float  pdf; 
   uint   flags;
   float  ior;
 };
+
+
+
+using SpecN = SpecN_<SPECN_SIZE>;
+using BsdfSampleN = BsdfSampleN_<SpecN>;
+using BsdfEvalN = BsdfEvalN_<SpecN>;
 
 static inline SpecN SampleWavelengthsN(float u, float a, float b) 
 {
@@ -192,7 +200,7 @@ static inline SpecN SampleWavelengthsN(float u, float a, float b)
 
 static inline SpecN SampleUniformSpectrumN(const float* a_spec_values, SpecN a_wavelengths, uint32_t a_sz)
 {
-  SpecN res;
+  SpecN res; 
   for(int i = 0; i < SpecN::SIZE; ++i) {
     size_t idx = size_t(a_wavelengths[i] - LAMBDA_MIN);
     res[i] = a_spec_values[idx];
@@ -200,6 +208,5 @@ static inline SpecN SampleUniformSpectrumN(const float* a_spec_values, SpecN a_w
 
   return res;
 }
-
 
 #endif
