@@ -4,14 +4,8 @@
 
 #include "specn.h"
 
-#include <chrono>
-#include <string>
 
 
-#include "Image2d.h"
-using LiteImage::Image2D;
-using LiteImage::Sampler;
-using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
 
 void Integrator::PathTraceF(uint tid, uint channels, float* fourierBuf)

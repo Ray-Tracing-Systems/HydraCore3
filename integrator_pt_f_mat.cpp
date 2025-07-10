@@ -11,12 +11,8 @@
 
 #include "include/cmat_diffuse.h"
 #include "include/cmat_conductor.h"
-#include "include/cmat_film.h"
 
-#include "Image2d.h"
-using LiteImage::Image2D;
-using LiteImage::Sampler;
-using LiteImage::ICombinedImageSampler;
+
 using namespace LiteMath;
 
 using SpecN_U = SpecN_<FourierSpec::SAMPLING_SIZE>;

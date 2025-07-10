@@ -237,7 +237,7 @@ static void conductorRoughEvalN(const Material* a_materials, const Spec &etaSpec
 
   wm = normalize(wm);
   Spec val;
-  for(uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)
+  for(uint32_t i = 0; i < Spec::SIZE; ++i)
   {
     val[i] = conductorRoughEvalInternal(wo, wi, wm, alpha, complex{etaSpec[i], kSpec[i]});
   }

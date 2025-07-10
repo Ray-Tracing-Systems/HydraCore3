@@ -18,7 +18,7 @@ struct FourierSpec
     static constexpr int SAMPLING_STEP = fourier::_SAMPLING_STEP; 
     static constexpr int SAMPLING_SIZE = int(LAMBDA_MAX - LAMBDA_MIN) / SAMPLING_STEP + int(LAMBDA_MAX - LAMBDA_MIN) % SAMPLING_STEP;
     static_assert(SAMPLING_STEP > 0);
-    static inline std::vector<float> SAMPLING_PHASES = fourier::make_sampling_phases();
+    static inline std::vector<float> SAMPLING_PHASES = {}; 
 
     inline static bool unpack_on_multiply = false;
 
@@ -61,6 +61,7 @@ struct FourierSpec
     static FourierSpec  __attribute__((optimize("O3"))) convolve_freq(const FourierSpec &a, const FourierSpec &b)
     {
         FourierSpec res;
+        
         for(int i = 0; i < SIZE; ++i) {
             for(int j = 0; j < SIZE; ++j) {
                 if(i + j < SIZE) {
@@ -71,6 +72,21 @@ struct FourierSpec
                 }
             }
         }
+
+/*
+        for(int i = 0; i < SIZE; ++i) {
+            for(int j = 0; j <= i; ++j) {
+                res[i] += a[j] * b[i - j];// + a[i - j] * b[j];
+                if(i + j < SIZE)
+                    res[i] += a[j] * b[i + j];// + a[i + j] * b[j];
+            }
+            for(int j = i + 1; j < SIZE; ++j) {
+                if(i + j < SIZE)
+                    res[i] += a[j] * b[i + j];// + a[i + j] * b[j];
+                res[i] += a[j] * b[j - i];// + a[j - i] * b[j];
+            } 
+        }
+*/
         return res * 0.5f;
     }
 

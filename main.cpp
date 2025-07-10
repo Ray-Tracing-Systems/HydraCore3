@@ -177,6 +177,7 @@ int main(int argc, const char** argv) // common hydra main
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
     fourier::set_calc_func(fourier::fourier_series);
     FourierSpec::unpack_on_multiply = true;
+    FourierSpec::SAMPLING_PHASES =  fourier::make_sampling_phases();
   } else if(args.hasOption("--specn")) {
     spectral_mode = 3; //aka SPECTRAL_MODE_MULTIWAVE
   }

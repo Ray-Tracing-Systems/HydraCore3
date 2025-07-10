@@ -3,7 +3,7 @@
 
 #include <include/cglobals.h>
 
-constexpr int SPECN_SIZE = 10;
+constexpr int SPECN_SIZE = 32;
 
 template<int N>
 struct SpecN_
