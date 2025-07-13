@@ -43,7 +43,7 @@ static inline void diffuseEval(const Material* a_materials, float4 a_reflSpec, f
 
 template<typename Spec>
 static inline void diffuseSampleAndEvalN(const Material* a_materials, const Spec &a_reflSpec, float4 rands, float3 v, 
-                                        float3 n, float2 tc, BsdfSampleN* pRes)
+                                        float3 n, float2 tc, BsdfSampleN_<Spec>* pRes)
 {
   const uint   cflags     = a_materials[0].cflags;
   const float3 lambertDir = lambertSample(float2(rands.x, rands.y), v, n);
@@ -61,7 +61,7 @@ static inline void diffuseSampleAndEvalN(const Material* a_materials, const Spec
 }
 
 template<typename Spec>
-static inline void diffuseEvalN(const Material* a_materials, const Spec &a_reflSpec, float3 l, float3 v, float3 n, float2 tc, BsdfEvalN* res)
+static inline void diffuseEvalN(const Material* a_materials, const Spec &a_reflSpec, float3 l, float3 v, float3 n, float2 tc, BsdfEvalN_<Spec>* res)
 {
   const uint cflags = a_materials[0].cflags;
  

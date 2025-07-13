@@ -166,12 +166,29 @@ int main(int argc, const char** argv) // common hydra main
   ///////////////////////////////////////////////////////////////////////////////////////
   std::cout << "[main]: loading xml ... " << scenePath.c_str() << std::endl;
 
+  bool fourier_c0 = false;
+  std::string fourier_conversion_type = "fseries";
   if(args.hasOption("--spectral"))
     spectral_mode = 1; //aka SPECTRAL_MODE_STD
   if(args.hasOption("--fourier")) {
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
-    fourier::set_calc_func(fourier::fourier_series);
     FourierSpec::unpack_on_multiply = false;
+    fourier::set_calc_func(fourier::fourier_series);
+
+    if(args.hasOption("--mese")) {
+      fourier::set_calc_func(fourier::mese);
+      fourier_conversion_type = "mese";
+    }
+    else if(args.hasOption("--lut")) {
+      fourier::set_calc_func(fourier::fourier_series_lut);
+      fourier_conversion_type = "lut";
+    }
+    else if(args.hasOption("--fourier-c0")) {
+      fourier_c0 = true;
+      fourier_conversion_type = "c0";
+    }
+
+
   }
   if(args.hasOption("--fourier2000")) {
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
@@ -181,6 +198,8 @@ int main(int argc, const char** argv) // common hydra main
   } else if(args.hasOption("--specn")) {
     spectral_mode = 3; //aka SPECTRAL_MODE_MULTIWAVE
   }
+
+
 
 
 
@@ -446,7 +465,7 @@ int main(int argc, const char** argv) // common hydra main
 
     if(enableShadowPT && spectral_mode == 2)
     {
-      std::cout << "[main]: PathTraceBlock(Shadow-PT, Fourier) ... " << std::endl;
+      std::cout << "[main]: PathTraceBlock(Shadow-PT, Fourier:" + fourier_conversion_type + ") ... " << std::endl;
   
       std::fill(realColor.begin(), realColor.end(), 0.0f);
   
@@ -480,7 +499,7 @@ int main(int argc, const char** argv) // common hydra main
       }
       else
       {
-        pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+        pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER, fourier_c0);
     
         if(saveHDR)
         {
@@ -628,7 +647,7 @@ int main(int argc, const char** argv) // common hydra main
 
     if(enableMISPT && spectral_mode == 2)
     {
-      std::cout << "[main]: PathTraceBlock(MIS-PT, Fourier) ... " << std::endl;
+      std::cout << "[main]: PathTraceBlock(MIS-PT, Fourier:" + fourier_conversion_type + ") ... " << std::endl;
   
       std::fill(realColor.begin(), realColor.end(), 0.0f);
   
@@ -662,7 +681,7 @@ int main(int argc, const char** argv) // common hydra main
       }
       else
       {
-        pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER);
+        pImpl->PathTraceBlockF(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), PASS_NUMBER, fourier_c0);
     
         if(saveHDR)
         {

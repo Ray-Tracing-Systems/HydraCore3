@@ -1,7 +1,9 @@
 #include "fourier.h"
+#include "fourier/fourier_fwd.h"
 #include "levinson.h"
 #include <cassert>
 #include "LiteMath.h"
+#include <complex>
 
 #include "../spectrum.h"
 
@@ -13,6 +15,11 @@ namespace fourier
     using Complex = std::complex<float>;
     static constexpr Complex I{0.0f, 1.0f};
 
+    static const std::vector<float> CIE_phases = wl_to_phases(Get_CIE_lambda());
+
+    extern const FourierSpec CIE_X = real_fourier_moments_of(CIE_phases, Get_CIE_X());
+    extern const FourierSpec CIE_Y = real_fourier_moments_of(CIE_phases, Get_CIE_Y());
+    extern const FourierSpec CIE_Z = real_fourier_moments_of(CIE_phases, Get_CIE_Z());
 
     static std::vector<float> compute_lut()
     {   
@@ -102,17 +109,15 @@ namespace fourier
         return res;
     }
 
-    std::vector<float> mese(const FourierSpec &spec) { return mese(wl_to_phases(Get_CIE_lambda()), spec); }
-    std::vector<float> fourier_series(const FourierSpec &spec) { return fourier_series(wl_to_phases(Get_CIE_lambda()), spec); }
+    std::vector<float> mese(const FourierSpec &spec) { return mese(CIE_phases, spec); }
+    std::vector<float> fourier_series(const FourierSpec &spec) { return fourier_series(CIE_phases, spec); }
 
     std::vector<float> fourier_series_lut(const FourierSpec &spec)
     {   
         //compute_lut_if_needed();
-        static std::vector<float> phases = wl_to_phases(Get_CIE_lambda());
+        std::vector<float> result(CIE_phases.size());
 
-        std::vector<float> result(phases.size());
-
-        for(int i = 0; i < phases.size(); ++i) {
+        for(size_t i = 0; i < CIE_phases.size(); ++i) {
             const size_t offset = i * FourierSpec::SIZE;
             float val = 0.0f;
 
@@ -126,13 +131,11 @@ namespace fourier
 
     FourierSpec std_spectrum_to_fourier(const std::vector<float> &values)
     {
-        return real_fourier_moments_of(wl_to_phases(Get_CIE_lambda()), values);
+        return real_fourier_moments_of(CIE_phases, values);
     }
 
     std::vector<float> to_std_spectrum(const FourierSpec &spec)
     {
-        std::vector<float> phases = wl_to_phases(Get_CIE_lambda());
-
         return fourier_function(spec);
     }
 

@@ -3,7 +3,7 @@
 #include "include/cglobals.h"
 
 namespace fourier {
-    static constexpr int _SIZE = 10;
+    static constexpr int _SIZE = 12;
     static constexpr int _SAMPLING_STEP = int((LAMBDA_MAX - LAMBDA_MIN) / _SIZE); 
 
 

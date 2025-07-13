@@ -173,7 +173,7 @@ public:
   void SetResourcesDir(const std::string& a_dir) {m_resourcesDir = a_dir; }
 
 
-  void PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum);
+  void PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum, bool fourier_c0);
   void PathTraceBlockF(uint tid, float* out_spec, uint a_passNum);
   void FSpecToRGB(uint tid, int channels, float* out_color, float* out_spec);
 

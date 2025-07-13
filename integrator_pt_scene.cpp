@@ -421,13 +421,6 @@ static void LoadFourierSpectrumFromNode(uint32_t spec_id, const pugi::xml_node& 
     uint32_t offset = uint32_t(spec_values.size());
     std::copy(fspec.v, fspec.v + FourierSpec::SIZE, std::back_inserter(spec_values));
 
-    std::string name = hydra_xml::ws2s(spec_node.attribute(L"name").as_string());
-    std::cout << name << std::endl;
-    for(int i = 0; i < FourierSpec::SIZE; ++i) {
-      std::cout << fspec[i] << " ";
-    }
-    std::cout << std::endl;
-
     spec_offsets.push_back(uint2{offset, uint32_t(FourierSpec::SIZE)});
   }
 }

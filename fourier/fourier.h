@@ -1,8 +1,5 @@
 #ifndef FOURIER_FOURIER_H_
 #define FOURIER_FOURIER_H_
-#include "LiteMath.h"
-#include "include/cglobals.h"
-#include <complex>
 #include <vector>
 #include "fspec.h"
 
@@ -11,6 +8,10 @@
 
 namespace fourier
 {
+
+    extern const FourierSpec CIE_X;
+    extern const FourierSpec CIE_Y;
+    extern const FourierSpec CIE_Z;
 
     using ffunc_t = std::vector<float> (*)(const FourierSpec &);
 
@@ -37,7 +38,6 @@ namespace fourier
     std::vector<float> fourier_series(const std::vector<float> &phases, const FourierSpec &spec);
     std::vector<float> fourier_series(const FourierSpec &spec);
     std::vector<float> fourier_series_lut(const FourierSpec &spec);
-
 
 
     std::vector<float> to_std_spectrum(const FourierSpec &spec);

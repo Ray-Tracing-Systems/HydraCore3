@@ -1,20 +1,17 @@
+#include "fourier/fspec.h"
+#include "include/cglobals.h"
 #include "integrator_pt.h"
 #include "fourier/fourier.h"
 
-#include "include/cmaterial.h"
-#include "include/cmat_gltf.h"
-#include "include/cmat_conductor.h"
 #include "utils.h"
 #include "spectrum.h"
 
+#include <LiteMath.h>
 #include <chrono>
-#include <string>
 #include <vector>
 
-#include "Image2d.h"
-using LiteImage::Image2D;
-using LiteImage::Sampler;
-using LiteImage::ICombinedImageSampler;
+
+
 using namespace LiteMath;
 
 #include <iostream>
@@ -38,12 +35,40 @@ static float3 fourier_to_rgb(const FourierSpec &spec)
   return XYZToRGB(xyz) / 106.856895f;
 }
 
+static float3 fourier_to_rgb_conv(const FourierSpec &spec)
+{
+  float3 xyz;
+  xyz.x = (spec * fourier::CIE_X)[0];
+  xyz.y = (spec * fourier::CIE_Y)[0];
+  xyz.z = (spec * fourier::CIE_Z)[0];
 
-void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum)
+  return XYZToRGB((LAMBDA_MAX - LAMBDA_MIN) * xyz) / 106.856895f;
+}
+
+static inline float conv0(const float a[FourierSpec::SIZE], const float b[FourierSpec::SIZE])
+{
+  float res = a[0] * b[0];
+  for(int i = 0; i < FourierSpec::SIZE; ++i) {
+    res += a[i] * b[i];
+  }
+  return 0.5f * res;
+}
+
+static __attribute__((optimize("O3"))) float3 fourier_to_rgb_conv0(const FourierSpec &spec)
+{
+  float3 xyz;
+  xyz.x = conv0(spec.v, fourier::CIE_X.v);
+  xyz.y = conv0(spec.v, fourier::CIE_Y.v);
+  xyz.z = conv0(spec.v, fourier::CIE_Z.v);
+
+  return XYZToRGB((LAMBDA_MAX - LAMBDA_MIN) * xyz) / 106.856895f;
+}
+
+void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint a_passNum, bool use_c0)
 {
   std::vector<float> wavelengths;
   for(int i = int(LAMBDA_MIN); i <= int(LAMBDA_MAX); ++i) {
-    wavelengths.push_back(i);
+    wavelengths.push_back(float(i));
   }
   const std::vector<float> phases = fourier::wl_to_phases(wavelengths);
   //float val = 0.0f;
@@ -53,16 +78,16 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for (int i = 0; i < tid; ++i) {
+  for (uint i = 0; i < tid; ++i) {
     FourierSpec spec;
-    for (int j = 0; j < a_passNum; ++j) {
+    for (uint j = 0; j < a_passNum; ++j) {
       FourierSpec tmp;
       PathTraceF(uint(i), FourierSpec::SIZE, tmp.v);
 
       spec += tmp;
     }
 
-    float3 rgb = fourier_to_rgb(spec);
+    const float3 rgb = use_c0 ? fourier_to_rgb_conv0(spec) : fourier_to_rgb_conv(spec);
 
     const uint XY = m_packedXY[i];
     const uint x  = (XY & 0x0000FFFF);
@@ -93,7 +118,7 @@ void Integrator::PathTraceBlockF(uint tid, float* out_spec, uint a_passNum)
 {
   std::vector<float> wavelengths;
   for(int i = int(LAMBDA_MIN); i <= int(LAMBDA_MAX); ++i) {
-    wavelengths.push_back(i);
+    wavelengths.push_back(float(i));
   }
   const std::vector<float> phases = fourier::wl_to_phases(wavelengths);
   //float val = 0.0f;
@@ -103,8 +128,8 @@ void Integrator::PathTraceBlockF(uint tid, float* out_spec, uint a_passNum)
   #ifndef _DEBUG
   #pragma omp parallel for default(shared)
   #endif
-  for (int i = 0; i < tid; ++i) {
-    for (int j = 0; j < a_passNum; ++j) {
+  for (uint i = 0; i < tid; ++i) {
+    for (uint j = 0; j < a_passNum; ++j) {
       FourierSpec tmp;
       PathTraceF(uint(i), FourierSpec::SIZE, tmp.v);
 
