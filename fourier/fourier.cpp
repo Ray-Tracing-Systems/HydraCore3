@@ -7,7 +7,7 @@
 
 #include "../spectrum.h"
 
-
+#include <iostream>
 
 namespace fourier
 {

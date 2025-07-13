@@ -35,7 +35,7 @@ static float3 fourier_to_rgb(const FourierSpec &spec)
   return XYZToRGB(xyz) / 106.856895f;
 }
 
-static float3 fourier_to_rgb_conv(const FourierSpec &spec)
+static inline float3 fourier_to_rgb_conv(const FourierSpec &spec)
 {
   float3 xyz;
   xyz.x = (spec * fourier::CIE_X)[0];
@@ -54,7 +54,7 @@ static inline float conv0(const float a[FourierSpec::SIZE], const float b[Fourie
   return 0.5f * res;
 }
 
-static __attribute__((optimize("O3"))) float3 fourier_to_rgb_conv0(const FourierSpec &spec)
+static inline float3 fourier_to_rgb_conv0(const FourierSpec &spec)
 {
   float3 xyz;
   xyz.x = conv0(spec.v, fourier::CIE_X.v);
@@ -87,7 +87,7 @@ void Integrator::PathTraceBlockF(uint tid, int channels, float* out_color, uint 
       spec += tmp;
     }
 
-    const float3 rgb = use_c0 ? fourier_to_rgb_conv0(spec) : fourier_to_rgb_conv(spec);
+    const float3 rgb = (use_c0 ? fourier_to_rgb_conv0(spec) : fourier_to_rgb(spec));
 
     const uint XY = m_packedXY[i];
     const uint x  = (XY & 0x0000FFFF);

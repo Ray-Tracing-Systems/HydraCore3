@@ -172,7 +172,6 @@ int main(int argc, const char** argv) // common hydra main
     spectral_mode = 1; //aka SPECTRAL_MODE_STD
   if(args.hasOption("--fourier")) {
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
-    FourierSpec::unpack_on_multiply = false;
     fourier::set_calc_func(fourier::fourier_series);
 
     if(args.hasOption("--mese")) {
@@ -187,15 +186,14 @@ int main(int argc, const char** argv) // common hydra main
       fourier_c0 = true;
       fourier_conversion_type = "c0";
     }
-
-
   }
   if(args.hasOption("--fourier2000")) {
     spectral_mode = 2; //aka SPECTRAL_MODE_FOURIER
     fourier::set_calc_func(fourier::fourier_series);
     FourierSpec::unpack_on_multiply = true;
     FourierSpec::SAMPLING_PHASES =  fourier::make_sampling_phases();
-  } else if(args.hasOption("--specn")) {
+  }
+  if(args.hasOption("--specn")) {
     spectral_mode = 3; //aka SPECTRAL_MODE_MULTIWAVE
   }
 
