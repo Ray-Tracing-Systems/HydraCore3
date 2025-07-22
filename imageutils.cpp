@@ -1,8 +1,11 @@
 #include "imageutils.h"
 #include "include/cglobals.h"
 #include "Image2d.h"
-#include "LiteScene/3rd_party/tinyexr/tinyexr.h"
 
+#ifndef LITERT_RENDERER
+  #define TINYEXR_IMPLEMENTATION
+#endif
+#include "LiteScene/3rd_party/tinyexr/tinyexr.h"
 
 bool SaveImage4fToEXR(const float* rgb, int width, int height, const char* outfilename, float a_normConst = 1.0f, bool a_invertY = false) 
 {

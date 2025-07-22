@@ -22,7 +22,7 @@ endif()
 
 if(USE_LITERT)
   add_definitions(-DLITERT_RENDERER)
-  #include_directories(...) # add target incluide directlory for LiteRT 
+  #include_directories(...) # add target incluide directlory for LiteRT o
 endif()
 
 # get rid of annoying MSVC warnings.
