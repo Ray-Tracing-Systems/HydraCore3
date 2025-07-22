@@ -7,8 +7,8 @@
         "-pattern"    : "rtv",
         "-shaderCC"   : "glsl",
         "-megakernel" : 1,
-        "enable_ray_tracing_pipeline" : 0,
-        "-enable_motion_blur"         : 0,
+        "-enable_ray_tracing_pipeline" : 0,
+        "-enable_motion_blur"          : 0,
         "end" : ""
     },
 
