@@ -134,7 +134,7 @@ static inline LightSample pointLightSampleRev(const LightSource* a_pLight, int a
 \return found index
 
 */
-static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, const int N, 
+static int SelectIndexPropToOpt(const float a_r, const float* a_accum, int a_offset, const int N, 
                                 float* pPDF) 
 {
   int leftBound  = 0;
@@ -143,15 +143,15 @@ static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, 
   int currPos    = -1;
 
   const int maxStep = 50;
-  const float x = a_r*a_accum[N - 1];
+  const float x = a_r*a_accum[a_offset + N - 1];
 
   while (rightBound - leftBound > 1 && counter < maxStep)
   {
     const int currSize = rightBound + leftBound;
     const int currPos1 = (currSize % 2 == 0) ? (currSize + 1) / 2 : (currSize + 0) / 2;
 
-    const float a = a_accum[currPos1 + 0];
-    const float b = a_accum[currPos1 + 1];
+    const float a = a_accum[a_offset + currPos1 + 0];
+    const float b = a_accum[a_offset + currPos1 + 1];
 
     if (a < x && x <= b)
     {
@@ -168,10 +168,10 @@ static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, 
 
   if (currPos < 0) // check the rest intervals
   {
-    const float a1 = a_accum[leftBound + 0];
-    const float b1 = a_accum[leftBound + 1];
-    const float a2 = a_accum[rightBound + 0];
-    const float b2 = a_accum[rightBound + 1];
+    const float a1 = a_accum[a_offset + leftBound  + 0];
+    const float b1 = a_accum[a_offset + leftBound  + 1];
+    const float a2 = a_accum[a_offset + rightBound + 0];
+    const float b2 = a_accum[a_offset + rightBound + 1];
     if (a1 < x && x <= b1)
       currPos = leftBound;
     if (a2 < x && x <= b2)
@@ -183,11 +183,11 @@ static int SelectIndexPropToOpt(const float a_r, __global const float* a_accum, 
   else if (currPos < 0)
     currPos = (rightBound + leftBound + 1) / 2;
 
-  (*pPDF) = (a_accum[currPos + 1] - a_accum[currPos]) / a_accum[N - 1];
+  (*pPDF) = (a_accum[a_offset + currPos + 1] - a_accum[a_offset + currPos]) / a_accum[a_offset + N - 1];
   return currPos;
 }
 
-static inline float evalMap2DPdf(float2 texCoordT, const float* intervals, const int sizeX, const int sizeY)
+static inline float evalMap2DPdf(float2 texCoordT, const float* intervals, int a_inOffs, const int sizeX, const int sizeY)
 {  
   const float fw = (float)sizeX;
   const float fh = (float)sizeY;
@@ -212,9 +212,9 @@ static inline float evalMap2DPdf(float2 texCoordT, const float* intervals, const
   const int offset0     = (pixelOffset + 0 < maxSize+0) ? pixelOffset + 0 : maxSize - 1;
   const int offset1     = (pixelOffset + 1 < maxSize+1) ? pixelOffset + 1 : maxSize;
 
-  const float2 interval = make_float2(intervals[offset0], intervals[offset1]);
+  const float2 interval = make_float2(intervals[a_inOffs + offset0], intervals[a_inOffs + offset1]);
   
-  return (interval.y - interval.x)*(fw*fh)/intervals[sizeX*sizeY];
+  return (interval.y - interval.x)*(fw*fh)/intervals[a_inOffs + sizeX*sizeY];
 }
 
 static inline float mylocalsmoothstep(float edge0, float edge1, float x)

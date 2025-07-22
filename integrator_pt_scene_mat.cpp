@@ -818,7 +818,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
         data  = spec_offsets[eta_id];
         offset = data.x;
         size   = data.y;
-        eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+        eta = SampleUniformSpectrum(spec_values.data(), offset, {wavelength, 0, 0, 0}, size)[0];
       }
 
       k = k_vec[layer];
@@ -828,7 +828,7 @@ ThinFilmPrecomputed precomputeThinFilmSpectral(
         data  = spec_offsets[k_id];
         offset = data.x;
         size   = data.y;
-        k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+        k = SampleUniformSpectrum(spec_values.data(), offset, {wavelength, 0, 0, 0}, size)[0];
       }
 
       ior[layer + 1] = complex(eta, k);
@@ -928,7 +928,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
           data  = spec_offsets[eta_id];
           offset = data.x;
           size   = data.y;
-          eta = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+          eta = SampleUniformSpectrum(spec_values.data(), offset, {wavelength, 0, 0, 0}, size)[0];
         }
 
         k = k_vec[layer];
@@ -938,7 +938,7 @@ ThinFilmPrecomputed precomputeThinFilmRGB(
           data  = spec_offsets[k_id];
           offset = data.x;
           size   = data.y;
-          k = SampleUniformSpectrum(spec_values.data() + offset, {wavelength, 0, 0, 0}, size)[0];
+          k = SampleUniformSpectrum(spec_values.data(), offset, {wavelength, 0, 0, 0}, size)[0];
         }
 
         ior[layer + 1] = complex(eta, k);

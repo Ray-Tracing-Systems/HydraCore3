@@ -39,14 +39,14 @@ inline uint32_t BinarySearch(const float* array, size_t array_sz, float val)
 
 
 // temporary?
-inline uint32_t BinarySearchU2(const uint2* array, uint32_t array_sz, float val) 
+inline uint32_t BinarySearchU2(const uint2* array, uint32_t a_offset, uint32_t array_sz, float val) 
 {
   int32_t last = (int32_t)array_sz - 2, first = 1;
   while (last > 0) 
   {
     uint32_t half = (uint32_t)last >> 1, 
     middle = first + half;
-    bool predResult = float(array[middle].y) <= val;
+    bool predResult = float(array[a_offset + middle].y) <= val;
     first = predResult ? int(middle + 1) : first;
     last = predResult ? last - int(half + 1) : int(half);
   }
@@ -102,7 +102,7 @@ static inline float4 SampleWavelengths(float u, float a, float b)
 //  return sampleSpec;
 //}
 
-static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_wavelengths, uint32_t a_sz)
+static inline float4 SampleUniformSpectrum(const float* a_spec_values, uint32_t a_offset, float4 a_wavelengths, uint32_t a_sz)
 {
   const int  WAVESN = int(LAMBDA_MAX-LAMBDA_MIN);
   const int4 index1 = int4(min(max(a_wavelengths - float4(LAMBDA_MIN), float4(0.0f)), float4(WAVESN - 1)));   
@@ -112,8 +112,8 @@ static inline float4 SampleUniformSpectrum(const float* a_spec_values, float4 a_
   
 
   const float4 x1 = float4(LAMBDA_MIN) + float4(index1);
-  const float4 y1 = float4(a_spec_values[index1[0]], a_spec_values[index1[1]], a_spec_values[index1[2]], a_spec_values[index1[3]]); // TODO: reorder mem access for better cache: (index1[0], index2[0])
-  const float4 y2 = float4(a_spec_values[index2[0]], a_spec_values[index2[1]], a_spec_values[index2[2]], a_spec_values[index2[3]]); // TODO: reorder mem access for better cache: (index1[1], index2[1])
+  const float4 y1 = float4(a_spec_values[a_offset + index1[0]], a_spec_values[a_offset + index1[1]], a_spec_values[a_offset + index1[2]], a_spec_values[a_offset + index1[3]]); // TODO: reorder mem access for better cache: (index1[0], index2[0])
+  const float4 y2 = float4(a_spec_values[a_offset + index2[0]], a_spec_values[a_offset + index2[1]], a_spec_values[a_offset + index2[2]], a_spec_values[a_offset + index2[3]]); // TODO: reorder mem access for better cache: (index1[1], index2[1])
 
   auto res = (y1 + (a_wavelengths - x1) * (y2 - y1));
   // if(std::isinf(res.x) || std::isnan(res.x) || res.x < 0)

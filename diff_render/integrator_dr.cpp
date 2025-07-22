@@ -503,7 +503,7 @@ BsdfSample IntegratorDR::MaterialSampleAndEval(uint a_materialId, uint tid, uint
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
+      gltfSampleAndEval(m_materials.data(), currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
    
@@ -596,7 +596,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
+        gltfEval(m_materials.data(), currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
@@ -617,9 +617,9 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float3 rands, float3 ill
   const float2 rands2 = float2(rands.x, rands.y);
   switch(gtype)
   {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands2, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands2);
-    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data(), a_lightId, rands2, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data(), a_lightId, rands2);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data(), a_lightId);
     case LIGHT_GEOM_ENV: 
     if(KSPEC_LIGHT_ENV != 0)
     {
@@ -646,7 +646,7 @@ LightSample IntegratorDR::LightSampleRev(int a_lightId, float3 rands, float3 ill
       res.pdf    = samplePdf; // evaluated here for environment lights 
       return res;
     }
-    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
+    default:                return areaLightSampleRev  (m_lights.data(), a_lightId, rands2);
   };
 }
 
@@ -701,7 +701,7 @@ float4 IntegratorDR::LightIntensity(uint a_lightId, float4 a_wavelengths, float3
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    lightColor = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    lightColor = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
   lightColor *= m_lights[a_lightId].mult;
   
@@ -775,7 +775,7 @@ float4 IntegratorDR::EnvironmentColor(float3 a_dir, float& outPdf, const float* 
 
       // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
       //
-      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data() + offset, int(sizeX), int(sizeY));
+      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data(), offset, int(sizeX), int(sizeY));
       outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 

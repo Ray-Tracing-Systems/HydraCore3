@@ -14,7 +14,7 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
     const uint offset = data.x;
     const uint size   = data.y;
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
-    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
 
   return res;
@@ -33,7 +33,7 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
     const uint offset = data.x;
     const uint size   = data.y;
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
-    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
 
   return res;
@@ -51,7 +51,7 @@ float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uin
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
-    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
 
   return res;
@@ -76,7 +76,7 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
         const uint2 data  = m_spec_offset_sz[specId];
         const uint offset = data.x;
         const uint size   = data.y;
-        responceX = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
+        responceX = SampleUniformSpectrum(m_spec_values.data(), offset, waves, size);
       }
       else
         responceX = float4(1,1,1,1);
@@ -86,7 +86,7 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
         const uint2 data  = m_spec_offset_sz[specId];
         const uint offset = data.x;
         const uint size   = data.y;
-        responceY = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
+        responceY = SampleUniformSpectrum(m_spec_values.data(), offset, waves, size);
       }
       else
         responceY = responceX;
@@ -96,7 +96,7 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
         const uint2 data  = m_spec_offset_sz[specId];
         const uint offset = data.x;
         const uint size   = data.y;
-        responceZ = SampleUniformSpectrum(m_spec_values.data() + offset, waves, size);
+        responceZ = SampleUniformSpectrum(m_spec_values.data(), offset, waves, size);
       }
       else
         responceZ = responceY;
@@ -129,7 +129,7 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
     const uint  offset = data.x;
     const uint  size   = data.y;
 
-    res = SampleUniformSpectrum(m_spec_values.data() + offset, a_wavelengths, size);
+    res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
     
     if(KSPEC_SPD_TEX != 0) // check if spectrum is represented as textures
     {
@@ -147,7 +147,7 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
             continue;
           }
 
-          uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data() + tex_offset, tex_size, a_wavelengths[i]);
+          uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data(), tex_offset, tex_size, a_wavelengths[i]);
 
           uint32_t texID1 = m_spec_tex_ids_wavelengths[tex_offset + o + 0].x;
           uint32_t texID2 = m_spec_tex_ids_wavelengths[tex_offset + o + 1].x;
