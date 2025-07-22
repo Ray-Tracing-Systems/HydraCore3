@@ -117,7 +117,7 @@ static inline void CoordinateSystem(float3 v1, float3* v2, float3* v3)
        Tom Duff, James Burgess, Per Christensen,
        Christophe Hery, Andrew Kensler, Max Liani,
        and Ryusuke Villemin (JCGT Vol 6, No 1, 2017) */
-static inline void CoordinateSystemV2(const float3 &n, float3* s, float3* t) 
+static inline void CoordinateSystemV2(float3 n, float3* s, float3* t) 
 {
   float sign = n.z >= 0 ? 1.0f : -1.0f;
   float a    = -(1.0f / (sign + n.z));

@@ -4,8 +4,9 @@ project (HydraCore3)
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
-
+option(USE_LITERT "Enable LiteRT" OFF)
 option(USE_STB_IMAGE "Enable STB image " ON)
+
 if(USE_STB_IMAGE)
   add_definitions(-DUSE_STB_IMAGE)
 endif()
@@ -19,9 +20,13 @@ if(USE_ENZYME)
   add_definitions(-DUSE_ENZYME)
 endif()
 
+if(USE_LITERT)
+  add_definitions(-DLITERT_RENDERER)
+  #include_directories(...) # add target incluide directlory for LiteRT 
+endif()
+
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-
 
 if(HYDRA_CORE3_LIB)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -102,7 +107,6 @@ else()
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-useless-cast")
   message(STATUS "Debug is OFF!")
 endif()
-
 
 set(VULKAN_EXTERNAL_SRC
         external/vkutils/vk_utils.cpp

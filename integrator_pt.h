@@ -13,14 +13,14 @@
 #include <utility>
 #include <cfloat>
 
-//#ifndef LITERT_RENDERER
-//#include "CrossRT.h" // special include for ray tracing
-//#else
-#include "../../core/ISceneObject.h" // special include for ray tracing
-#include "../../BVH/BVH2Common.h"
-//#endif
-#include "Image2d.h" // special include for textures
+#ifndef LITERT_RENDERER
+  #include "CrossRT.h" // special include for ray tracing
+#else
+  #include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
+  #include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
+#endif
 
+#include "Image2d.h" // special include for textures
 #include "spectrum.h"
 #include "cam_plugin/CamPluginAPI.h"
 
@@ -86,6 +86,14 @@ public:
                               const RayDirAndT* in_rayDirAndFar  [[size("tid*channels")]],
                               float*            out_color        [[size("tid*channels")]]);
   
+  // related to persistent threads implementation
+  inline uint   RTVPersistent_ThreadId(uint a_tid)      const { return a_tid; }
+  inline void   RTVPersistent_SetIter(uint a_pid)       const {               }
+  inline uint   RTVPersistent_Iters()                   const { return 1;     }
+  inline bool   RTVPersistent_IsFirst()                 const { return true;  }
+  inline float4 RTVPersistent_ReduceAdd4f(float4 color) const { return color; }
+  // \\ end of persistent threads
+
   struct GBufferPixel
   {
     float   depth;
@@ -213,7 +221,7 @@ public:
                                 const uint* rayFlags, const float* a_time, uint bounce,
                                 RandomGen* a_gen, float4* out_shadeColor);
 
-  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* accumThoroughput,
+  void kernel_HitEnvironment(uint tid, const uint* rayFlags, const float4* rayDirAndFar, const MisData* a_prevMisData, const float4* a_wavelengths, const float4* accumThoroughput,
                              float4* accumColor);
 
   void kernel_RealColorToUint32(uint tid, float4* a_accumColor, uint* out_color);
@@ -341,7 +349,7 @@ public:
   */
   float  LightEvalPDF(int a_lightId, float3 ray_pos, float3 ray_dir, const float3 lpos, const float3 lnorm, float a_envPdf);
 
-  float4 EnvironmentColor(float3 a_dir, float& outPdf);
+  float4 EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& outPdf);
   float3 BumpMapping(uint normalMapId, uint currMatId, float3 n, float3 tan, float2 tc);
   BsdfSample MaterialSampleWhitted(uint a_materialId, float3 v, float3 n, float2 tc);
   float3     MaterialEvalWhitted  (uint a_materialId, float3 l, float3 v, float3 n, float2 tc);
@@ -415,6 +423,8 @@ public:
   uint  m_envLightId     = uint(-1);
   uint  m_envEnableSam   = 0;
   uint  m_envCamBackId   = uint(-1);
+  uint  m_envSpecId      = uint(-1);
+  float m_envSpecMult    = 1.0f;
 
   /// @brief ////////////////////////////////////////////////////// cam variables
   float m_exposureMult   = 1.0f;
