@@ -147,7 +147,7 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
             continue;
           }
 
-          uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data(), tex_offset, tex_size, a_wavelengths[i]);
+          uint32_t o = BinarySearchU2(m_spec_tex_ids_wavelengths.data(), int(tex_offset), tex_size, a_wavelengths[i]);
 
           uint32_t texID1 = m_spec_tex_ids_wavelengths[tex_offset + o + 0].x;
           uint32_t texID2 = m_spec_tex_ids_wavelengths[tex_offset + o + 1].x;

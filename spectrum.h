@@ -23,33 +23,33 @@ struct Spectrum
 };
 #endif
 
-inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 
+inline uint BinarySearch(const float* array, size_t array_sz, float val) 
 {
-  int32_t last = int32_t(array_sz) - 2;
-  int32_t first = 1;
+  int last  = int(array_sz) - 2;
+  int first = 1;
   while (last > 0) 
   {
-    uint32_t half = uint32_t(last) >> 1; 
-    int middle = first + half;
+    uint half = uint(last) >> 1; 
+    int middle = first + int(half);
     bool predResult = array[middle] <= val;
-    first = predResult ? int32_t(middle + 1) : first;
-    last = predResult ? last - int32_t(half + 1) : int32_t(half);
+    first = predResult ? int(middle + 1) : first;
+    last = predResult ? last - int(half + 1) : int(half);
   }
   return uint32_t(clamp(int32_t(first - 1), 0, int32_t(array_sz - 2)));
 }
 
 // temporary?
-inline uint32_t BinarySearchU2(const uint2* array, uint32_t a_offset, uint32_t array_sz, float val) 
+inline uint32_t BinarySearchU2(const uint2* array, int a_offset, uint32_t array_sz, float val) 
 {
-  int32_t last  = int32_t(array_sz) - 2;
-  int32_t first = 1;
+  int last  = int(array_sz) - 2;
+  int first = 1;
   while (last > 0) 
   {
-    uint32_t half = uint32_t(last) >> 1; 
-    int middle = first + half;
-    bool predResult = float(array[a_offset + middle].y) <= val;
-    first = predResult ? int(middle + 1) : first;
-    last = predResult ? last - int(half + 1) : int(half);
+    const int half        = last >> 1; 
+    const int middle      = first + half;
+    const bool predResult = float(array[a_offset + middle].y) <= val;
+    first = predResult ? middle + 1       : first;
+    last  = predResult ? last - half + 1  : half;
   }
   return uint32_t(clamp(int(first - 1), 0, int(array_sz - 2)));
 }
