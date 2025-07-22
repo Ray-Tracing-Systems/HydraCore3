@@ -24,9 +24,9 @@ LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illim
   const float2 rands2 = float2(rands.x, rands.y);
   switch(gtype)
   {
-    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data() + a_lightId, rands2, illiminationPoint);
-    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data() + a_lightId, rands2);
-    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data() + a_lightId);
+    case LIGHT_GEOM_DIRECT: return directLightSampleRev(m_lights.data(), a_lightId, rands2, illiminationPoint);
+    case LIGHT_GEOM_SPHERE: return sphereLightSampleRev(m_lights.data(), a_lightId, rands2);
+    case LIGHT_GEOM_POINT:  return pointLightSampleRev (m_lights.data(), a_lightId);
     case LIGHT_GEOM_ENV: 
     if(KSPEC_LIGHT_ENV != 0)
     {
@@ -53,7 +53,7 @@ LightSample Integrator::LightSampleRev(int a_lightId, float3 rands, float3 illim
       res.pdf    = samplePdf; // evaluated here for environment lights 
       return res;
     }
-    default:                return areaLightSampleRev  (m_lights.data() + a_lightId, rands2);
+    default:                return areaLightSampleRev  (m_lights.data(), a_lightId, rands2);
   };
 }
 

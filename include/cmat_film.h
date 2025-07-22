@@ -6,11 +6,11 @@
 #include "airy_reflectance.h"
 #include <iostream>
 
-static inline void filmSmoothSampleAndEval(const Material* a_materials, 
+static inline void filmSmoothSampleAndEval(const Material* a_materials, uint32_t a_matId, 
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
-        float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
+        float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* precomputed_data, const uint32_t precompOffset, const bool spectral_mode, const bool precomputed)
 {
-  const uint transparFlag = as_uint((a_materials[0].data[FILM_TRANSPARENT]));
+  const uint transparFlag = as_uint((a_materials[a_matId].data[FILM_TRANSPARENT]));
   bool reversed = false;
   uint32_t refl_offset;
   uint32_t refr_offset;
@@ -52,12 +52,12 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
       float alpha = w - float(index1);
       float beta = theta - float(index2);
 
-      float v0 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
-      float v1 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2],     precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2],     alpha);
+      float v1 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
       R[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2], precomputed_data[refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
-      v1 = lerp(precomputed_data[refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2],     precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2],     alpha);
+      v1 = lerp(precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
       T[0] = lerp(v0, v1, beta);
     }
     else 
@@ -80,10 +80,10 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   {
     float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    if (as_uint((a_materials[a_matId].data[FILM_THICKNESS_MAP])) == 1u)
     {
-      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
-      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float thickness_min = a_materials[a_matId].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[a_matId].data[FILM_THICKNESS_MAX];
       float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
       t *= FILM_THICKNESS_RES - 1;
       uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
@@ -97,16 +97,16 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
       uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
       uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
-      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + a], precomputed_data[precompOffset + b], alpha);
+      float v1 = lerp(precomputed_data[precompOffset + c], precomputed_data[precompOffset + d], alpha);
       R[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 1], precomputed_data[precompOffset + b + 1], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 1], precomputed_data[precompOffset + d + 1], alpha);
       R[1] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 2], precomputed_data[precompOffset + b + 2], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 2], precomputed_data[precompOffset + d + 2], alpha);
       R[2] = lerp(v0, v1, beta);
 
       a = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
@@ -114,16 +114,16 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
       c = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
       d = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-      v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
-      v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a], precomputed_data[precompOffset + b], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c], precomputed_data[precompOffset + d], alpha);
       T[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 1], precomputed_data[precompOffset + b + 1], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 1], precomputed_data[precompOffset + d + 1], alpha);
       T[1] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 2], precomputed_data[precompOffset + b + 2], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 2], precomputed_data[precompOffset + d + 2], alpha);
       T[2] = lerp(v0, v1, beta);
     }
     else
@@ -132,13 +132,13 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
 
       float alpha = theta - float(index);
 
-      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      R[0] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3],     precomputed_data[precompOffset + (refl_offset + index + 1) * 3],     alpha);
+      R[1] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 1], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 2], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 2], alpha);
 
-      T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
-      T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
-      T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+      T[0] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3],     precomputed_data[precompOffset + (refr_offset + index + 1) * 3], alpha);
+      T[1] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3 + 1], precomputed_data[precompOffset + (refr_offset + index + 1) * 3 + 1], alpha);
+      T[2] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3 + 2], precomputed_data[precompOffset + (refr_offset + index + 1) * 3 + 2], alpha);
     }
   }
 
@@ -180,11 +180,11 @@ static inline void filmSmoothSampleAndEval(const Material* a_materials,
   pRes->val /= std::max(std::abs(dot(pRes->dir, n)), 1e-6f);
 }
 
-static inline void filmRoughSampleAndEval(const Material* a_materials, 
+static inline void filmRoughSampleAndEval(const Material* a_materials, const uint32_t a_matId,
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
-        float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
+        float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, BsdfSample* pRes, const float* precomputed_data, const uint32_t precompOffset, const bool spectral_mode, const bool precomputed)
 {
-  const uint transparFlag = as_uint(a_materials[0].data[FILM_TRANSPARENT]);
+  const uint transparFlag = as_uint(a_materials[a_matId].data[FILM_TRANSPARENT]);
   bool reversed = false;
   uint32_t refl_offset;
   uint32_t refr_offset;
@@ -205,8 +205,8 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
     refr_offset = FILM_ANGLE_RES;
   }
 
-  const float2 alpha = float2(min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
-                              min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
+  const float2 alpha = float2(min(a_materials[a_matId].data[FILM_ROUGH_V], alpha_tex.x), 
+                              min(a_materials[a_matId].data[FILM_ROUGH_U], alpha_tex.y));
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
@@ -238,12 +238,12 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       float alpha = w - float(index1);
       float beta = theta - float(index2);
 
-      float v0 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
-      float v1 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2    ], precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2    ], alpha);
+      float v1 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
       R[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2], precomputed_data[refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
-      v1 = lerp(precomputed_data[refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2    ], precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2],     alpha);
+      v1 = lerp(precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[precompOffset + refr_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
       T[0] = lerp(v0, v1, beta);
     }
     else 
@@ -266,10 +266,10 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
   {
     float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    if (as_uint((a_materials[a_matId].data[FILM_THICKNESS_MAP])) == 1u)
     {
-      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
-      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float thickness_min = a_materials[a_matId].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[a_matId].data[FILM_THICKNESS_MAX];
       float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
       t *= FILM_THICKNESS_RES - 1;
       uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
@@ -283,16 +283,16 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
       uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
-      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + a], precomputed_data[precompOffset + b], alpha);
+      float v1 = lerp(precomputed_data[precompOffset + c], precomputed_data[precompOffset + d], alpha);
       R[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 1], precomputed_data[precompOffset + b + 1], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 1], precomputed_data[precompOffset + d + 1], alpha);
       R[1] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 2], precomputed_data[precompOffset + b + 2], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 2], precomputed_data[precompOffset + d + 2], alpha);
       R[2] = lerp(v0, v1, beta);
 
       a = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2) * 3;
@@ -300,16 +300,16 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
       c = (refr_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
       d = (refr_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-      v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
-      v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a], precomputed_data[precompOffset + b], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c], precomputed_data[precompOffset + d], alpha);
       T[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 1], precomputed_data[precompOffset + b + 1], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 1], precomputed_data[precompOffset + d + 1], alpha);
       T[1] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 2], precomputed_data[precompOffset + b + 2], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 2], precomputed_data[precompOffset + d + 2], alpha);
       T[2] = lerp(v0, v1, beta);
     }
     else
@@ -318,13 +318,13 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
 
       float alpha = theta - float(index);
 
-      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      R[0] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3],     precomputed_data[precompOffset + (refl_offset + index + 1) * 3],     alpha);
+      R[1] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 1], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 2], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 2], alpha);
 
-      T[0] = lerp(precomputed_data[(refr_offset + index) * 3], precomputed_data[(refr_offset + index + 1) * 3], alpha);
-      T[1] = lerp(precomputed_data[(refr_offset + index) * 3 + 1], precomputed_data[(refr_offset + index + 1) * 3 + 1], alpha);
-      T[2] = lerp(precomputed_data[(refr_offset + index) * 3 + 2], precomputed_data[(refr_offset + index + 1) * 3 + 2], alpha);
+      T[0] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3],     precomputed_data[precompOffset + (refr_offset + index + 1) * 3],     alpha);
+      T[1] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3 + 1], precomputed_data[precompOffset + (refr_offset + index + 1) * 3 + 1], alpha);
+      T[2] = lerp(precomputed_data[precompOffset + (refr_offset + index) * 3 + 2], precomputed_data[precompOffset + (refr_offset + index + 1) * 3 + 2], alpha);
     }
   }
   
@@ -410,9 +410,9 @@ static inline void filmRoughSampleAndEval(const Material* a_materials,
 }
 
 
-static void filmRoughEval(const Material* a_materials, 
+static void filmRoughEval(const Material* a_materials, const uint32_t a_matId,  
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, float3 l, float3 v, float3 n, float2 tc,
-        float3 alpha_tex, BsdfEval* pRes, const float* precomputed_data, const bool spectral_mode, const bool precomputed)
+        float3 alpha_tex, BsdfEval* pRes, const float* precomputed_data, const uint32_t precompOffset, const bool spectral_mode, const bool precomputed)
 {
   if (intIOR.im < 0.001f)
   {
@@ -435,8 +435,8 @@ static void filmRoughEval(const Material* a_materials,
     refr_offset = FILM_ANGLE_RES;
   }
 
-  const float2 alpha = float2(std::min(a_materials[0].data[FILM_ROUGH_V], alpha_tex.x), 
-                              std::min(a_materials[0].data[FILM_ROUGH_U], alpha_tex.y));
+  const float2 alpha = float2(std::min(a_materials[a_matId].data[FILM_ROUGH_V], alpha_tex.x), 
+                              std::min(a_materials[a_matId].data[FILM_ROUGH_U], alpha_tex.y));
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
@@ -473,8 +473,8 @@ static void filmRoughEval(const Material* a_materials,
       float alpha = w - float(index1);
       float beta = theta - float(index2);
 
-      float v0 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2], alpha);
-      float v1 = lerp(precomputed_data[refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2],     precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2],     alpha);
+      float v1 = lerp(precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + index1 * FILM_ANGLE_RES + index2 + 1], precomputed_data[precompOffset + refl_offset * FILM_LENGTH_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1], alpha);
       R[0] = lerp(v0, v1, beta);
     }
     else
@@ -493,10 +493,10 @@ static void filmRoughEval(const Material* a_materials,
   {
     float theta = clamp(std::acos(cosThetaI) * 2.f / M_PI, 0.f, 1.f);
     theta *= FILM_ANGLE_RES - 1;
-    if (as_uint((a_materials[0].data[FILM_THICKNESS_MAP])) == 1u)
+    if (as_uint((a_materials[a_matId].data[FILM_THICKNESS_MAP])) == 1u)
     {
-      float thickness_min = a_materials[0].data[FILM_THICKNESS_MIN];
-      float thickness_max = a_materials[0].data[FILM_THICKNESS_MAX];
+      float thickness_min = a_materials[a_matId].data[FILM_THICKNESS_MIN];
+      float thickness_max = a_materials[a_matId].data[FILM_THICKNESS_MAX];
       float t = clamp((thickness - thickness_min) / (thickness_max - thickness_min), 0.f, 1.f);
       t *= FILM_THICKNESS_RES - 1;
       uint32_t index1 = std::min(uint32_t(t), uint32_t(FILM_THICKNESS_RES - 2));
@@ -510,16 +510,16 @@ static void filmRoughEval(const Material* a_materials,
       uint c = (refl_offset * FILM_THICKNESS_RES + index1 * FILM_ANGLE_RES + index2 + 1) * 3;
       uint d = (refl_offset * FILM_THICKNESS_RES + (index1 + 1) * FILM_ANGLE_RES + index2 + 1) * 3;
 
-      float v0 = lerp(precomputed_data[a], precomputed_data[b], alpha);
-      float v1 = lerp(precomputed_data[c], precomputed_data[d], alpha);
+      float v0 = lerp(precomputed_data[precompOffset + a], precomputed_data[precompOffset + b], alpha);
+      float v1 = lerp(precomputed_data[precompOffset + c], precomputed_data[precompOffset + d], alpha);
       R[0] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 1], precomputed_data[b + 1], alpha);
-      v1 = lerp(precomputed_data[c + 1], precomputed_data[d + 1], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 1], precomputed_data[precompOffset + b + 1], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 1], precomputed_data[precompOffset + d + 1], alpha);
       R[1] = lerp(v0, v1, beta);
 
-      v0 = lerp(precomputed_data[a + 2], precomputed_data[b + 2], alpha);
-      v1 = lerp(precomputed_data[c + 2], precomputed_data[d + 2], alpha);
+      v0 = lerp(precomputed_data[precompOffset + a + 2], precomputed_data[precompOffset + b + 2], alpha);
+      v1 = lerp(precomputed_data[precompOffset + c + 2], precomputed_data[precompOffset + d + 2], alpha);
       R[2] = lerp(v0, v1, beta);
     }
     else
@@ -528,9 +528,9 @@ static void filmRoughEval(const Material* a_materials,
 
       float alpha = theta - float(index);
 
-      R[0] = lerp(precomputed_data[(refl_offset + index) * 3], precomputed_data[(refl_offset + index + 1) * 3], alpha);
-      R[1] = lerp(precomputed_data[(refl_offset + index) * 3 + 1], precomputed_data[(refl_offset + index + 1) * 3 + 1], alpha);
-      R[2] = lerp(precomputed_data[(refl_offset + index) * 3 + 2], precomputed_data[(refl_offset + index + 1) * 3 + 2], alpha);
+      R[0] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3],     precomputed_data[precompOffset + (refl_offset + index + 1) * 3],     alpha);
+      R[1] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 1], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 1], alpha);
+      R[2] = lerp(precomputed_data[precompOffset + (refl_offset + index) * 3 + 2], precomputed_data[precompOffset + (refl_offset + index + 1) * 3 + 2], alpha);
     }
   }
 

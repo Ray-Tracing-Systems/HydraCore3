@@ -4,12 +4,11 @@
 #include "cmaterial.h"
 #include "../spectrum.h"
 
-
-static inline void conductorSmoothSampleAndEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec,
+static inline void conductorSmoothSampleAndEval(const Material* a_materials, uint32_t a_matId, const float4 etaSpec, const float4 kSpec,
                                                 float4 rands, float3 v, float3 n, float2 tc,
                                                 BsdfSample* pRes)
 {
-  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
+  const float4 rgb_reflectance = a_materials[a_matId].colors[CONDUCTOR_COLOR];
   const float3 pefReflDir = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(pefReflDir, n);
   float3 dir              = pefReflDir;
@@ -29,7 +28,7 @@ static inline void conductorSmoothSampleAndEval(const Material* a_materials, con
 }
 
 
-static void conductorSmoothEval(const Material* a_materials, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc,
+static void conductorSmoothEval(const Material* a_materials, uint32_t a_matId, float4 wavelengths, float3 l, float3 v, float3 n, float2 tc,
                                 BsdfEval* pRes)
 {
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
@@ -59,17 +58,17 @@ static float conductorRoughEvalInternal(float3 wo, float3 wi, float3 wm, float2 
 }
 
 
-static inline void conductorRoughSampleAndEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec, 
+static inline void conductorRoughSampleAndEval(const Material* a_materials, uint32_t a_matId, const float4 etaSpec, const float4 kSpec, 
                                                float4 rands, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                                BsdfSample* pRes)
 {
   if(v.z == 0)
     return;
 
-  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
+  const float4 rgb_reflectance = a_materials[a_matId].colors[CONDUCTOR_COLOR];
 
-  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
-                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+  const float2 alpha = float2(min(a_materials[a_matId].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[a_matId].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);
@@ -101,14 +100,14 @@ static inline void conductorRoughSampleAndEval(const Material* a_materials, cons
 }
 
 
-static void conductorRoughEval(const Material* a_materials, const float4 etaSpec, const float4 kSpec, 
+static void conductorRoughEval(const Material* a_materials, uint32_t a_matId, const float4 etaSpec, const float4 kSpec, 
                                float3 l, float3 v, float3 n, float2 tc, float3 alpha_tex, 
                                BsdfEval* pRes)
 {
-  const float2 alpha = float2(min(a_materials[0].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
-                              min(a_materials[0].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
+  const float2 alpha = float2(min(a_materials[a_matId].data[CONDUCTOR_ROUGH_U], alpha_tex.x), 
+                              min(a_materials[a_matId].data[CONDUCTOR_ROUGH_V], alpha_tex.y));
 
-  const float4 rgb_reflectance = a_materials[0].colors[CONDUCTOR_COLOR];
+  const float4 rgb_reflectance = a_materials[a_matId].colors[CONDUCTOR_COLOR];
 
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);

@@ -64,47 +64,47 @@ struct LightSample
   bool   hasIES;
 };
 
-static inline LightSample areaLightSampleRev(const LightSource* a_pLight, float2 rands)
+static inline LightSample areaLightSampleRev(const LightSource* a_pLight, int a_lightId, float2 rands)
 {
-  float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[0].size;  // PLEASE! use 'a_pLight[0].' for a while ... , not a_pLight-> and not *(a_pLight[0])
-  if(a_pLight[0].geomType == LIGHT_GEOM_DISC)
+  float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[a_lightId].size;  
+  if(a_pLight[a_lightId].geomType == LIGHT_GEOM_DISC)
   {
     const float offsetX = rands.x * 2.0f - 1.0f;
     const float offsetY = rands.y * 2.0f - 1.0f;
-    sampleOff = MapSamplesToDisc(float2(offsetX, offsetY))*a_pLight[0].size.x; 
+    sampleOff = MapSamplesToDisc(float2(offsetX, offsetY))*a_pLight[a_lightId].size.x; 
   }
-  const float3 samplePos = mul3x3(a_pLight[0].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[0].pos) + epsilonOfPos(to_float3(a_pLight[0].pos)) * to_float3(a_pLight[0].norm);
+  const float3 samplePos = mul3x3(a_pLight[a_lightId].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[a_lightId].pos) + epsilonOfPos(to_float3(a_pLight[a_lightId].pos)) * to_float3(a_pLight[a_lightId].norm);
   LightSample res;
   res.pos    = samplePos;
-  res.norm   = to_float3(a_pLight[0].norm);
+  res.norm   = to_float3(a_pLight[a_lightId].norm);
   res.isOmni = false;
-  res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.hasIES = (a_pLight[a_lightId].iesId != uint(-1));
   res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 
-static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, float2 rands)
+static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, int a_lightId, float2 rands)
 {
   const float theta = 2.0f * M_PI * rands.x;
   const float phi   = std::acos(1.0f - 2.0f * rands.y);
   const float x     = std::sin(phi) * std::cos(theta);
   const float y     = std::sin(phi) * std::sin(theta);
   const float z     = std::cos(phi);
-  const float3 lcenter   = to_float3(a_pLight[0].pos);
-  const float  lradius   = a_pLight[0].size.x;
+  const float3 lcenter   = to_float3(a_pLight[a_lightId].pos);
+  const float  lradius   = a_pLight[a_lightId].size.x;
   const float3 samplePos = lcenter + (lradius*1.000001f)*make_float3(x, y, z);
   LightSample res;
   res.pos  = samplePos;
   res.norm = normalize(samplePos - lcenter);
   res.isOmni = false;
-  res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.hasIES = (a_pLight[a_lightId].iesId != uint(-1));
   res.pdf    = 1.0f; // evaluated later 
   return res;
 }
 
-static inline LightSample directLightSampleRev(const LightSource* a_pLight, float2 rands, float3 illuminationPoint)
+static inline LightSample directLightSampleRev(const LightSource* a_pLight, int a_lightId, float2 rands, float3 illuminationPoint)
 {
-  const float3 norm = to_float3(a_pLight[0].norm);
+  const float3 norm = to_float3(a_pLight[a_lightId].norm);
   LightSample res;
   res.pos    = illuminationPoint - norm*100000.0f;
   res.norm   = norm;
@@ -114,13 +114,13 @@ static inline LightSample directLightSampleRev(const LightSource* a_pLight, floa
   return res;
 }
 
-static inline LightSample pointLightSampleRev(const LightSource* a_pLight)
+static inline LightSample pointLightSampleRev(const LightSource* a_pLight, int a_lightId)
 {
   LightSample res;
-  res.pos    = to_float3(a_pLight[0].pos);
-  res.norm   = to_float3(a_pLight[0].norm);
-  res.isOmni = (a_pLight[0].distType == LIGHT_DIST_OMNI);
-  res.hasIES = (a_pLight[0].iesId != uint(-1));
+  res.pos    = to_float3(a_pLight[a_lightId].pos);
+  res.norm   = to_float3(a_pLight[a_lightId].norm);
+  res.isOmni = (a_pLight[a_lightId].distType == LIGHT_DIST_OMNI);
+  res.hasIES = (a_pLight[a_lightId].iesId != uint(-1));
   res.pdf    = 1.0f; // evaluated later 
   return res;
 }

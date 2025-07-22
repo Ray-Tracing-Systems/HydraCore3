@@ -4,14 +4,14 @@
 #include "cmaterial.h"
 
 
-static inline void plasticSampleAndEval(const Material* a_materials, float4 a_reflSpec, float4 rands,
-                                        float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* transmittance)
+static inline void plasticSampleAndEval(const Material* a_materials, const uint32_t a_matId, float4 a_reflSpec, float4 rands,
+                                        float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* transmittance, const uint32_t trOffset)
 {
-  const float alpha         = a_materials[0].data[PLASTIC_ROUGHNESS];
-  const float eta           = a_materials[0].data[PLASTIC_IOR_RATIO];
-  const float spec_weight   = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
-  const uint  nonlinear     = a_materials[0].nonlinear;
-  const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
+  const float alpha         = a_materials[a_matId].data[PLASTIC_ROUGHNESS];
+  const float eta           = a_materials[a_matId].data[PLASTIC_IOR_RATIO];
+  const float spec_weight   = a_materials[a_matId].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
+  const uint  nonlinear     = a_materials[a_matId].nonlinear;
+  const float internal_refl = a_materials[a_matId].data[PLASTIC_PRECOMP_REFLECTANCE];
   const float2 alpha2       = {alpha, alpha};
 
   float3 s = n;
@@ -24,15 +24,14 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 
   const float cos_theta_i = std::max(wi.z, EPSILON_32);
 
-  // float t_i = lerp_gather(transmittance, cos_theta_i, MI_ROUGH_TRANSMITTANCE_RES);
   float t_i = 0.0f;
   {
     float x = cos_theta_i;
     x *= float(MI_ROUGH_TRANSMITTANCE_RES - 1);
     uint32_t index = std::min(uint32_t(x), uint32_t(MI_ROUGH_TRANSMITTANCE_RES - 2));
 
-    float v0 = transmittance[index];
-    float v1 = transmittance[index + 1];
+    float v0 = transmittance[trOffset + index];
+    float v1 = transmittance[trOffset + index + 1];
 
     t_i = lerp(v0, v1, x - float(index));
   }
@@ -91,8 +90,8 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
     x *= float(MI_ROUGH_TRANSMITTANCE_RES - 1);
     uint32_t index = std::min(uint32_t(x), uint32_t(MI_ROUGH_TRANSMITTANCE_RES - 2));
 
-    float v0 = transmittance[index];
-    float v1 = transmittance[index + 1];
+    float v0 = transmittance[trOffset + index];
+    float v1 = transmittance[trOffset + index + 1];
 
     t_o = lerp(v0, v1, x - float(index));
   }
@@ -107,14 +106,14 @@ static inline void plasticSampleAndEval(const Material* a_materials, float4 a_re
 }
 
 
-static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
-                        BsdfEval* pRes, const float* transmittance)
+static void plasticEval(const Material* a_materials, const uint32_t a_matId, float4 a_reflSpec, float3 l, float3 v, float3 n, float2 tc, 
+                        BsdfEval* pRes, const float* transmittance, const uint32_t trOffset)
 {
-  const float alpha     = a_materials[0].data[PLASTIC_ROUGHNESS];
-  const float eta       = a_materials[0].data[PLASTIC_IOR_RATIO];
-  const float spec_weight = a_materials[0].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
-  const uint  nonlinear   = a_materials[0].nonlinear;
-  const float internal_refl = a_materials[0].data[PLASTIC_PRECOMP_REFLECTANCE];
+  const float alpha         = a_materials[a_matId].data[PLASTIC_ROUGHNESS];
+  const float eta           = a_materials[a_matId].data[PLASTIC_IOR_RATIO];
+  const float spec_weight   = a_materials[a_matId].data[PLASTIC_SPEC_SAMPLE_WEIGHT];
+  const uint  nonlinear     = a_materials[a_matId].nonlinear;
+  const float internal_refl = a_materials[a_matId].data[PLASTIC_PRECOMP_REFLECTANCE];
 
   const float2 alpha2 {alpha, alpha};
   
@@ -138,8 +137,8 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
     x *= float(MI_ROUGH_TRANSMITTANCE_RES - 1);
     uint32_t index = std::min(uint32_t(x), uint32_t(MI_ROUGH_TRANSMITTANCE_RES - 2));
 
-    float v0 = transmittance[index];
-    float v1 = transmittance[index + 1];
+    float v0 = transmittance[trOffset + index];
+    float v1 = transmittance[trOffset + index + 1];
 
     t_i = lerp(v0, v1, x - float(index));
   }
@@ -179,8 +178,8 @@ static void plasticEval(const Material* a_materials, float4 a_reflSpec, float3 l
     x *= float(MI_ROUGH_TRANSMITTANCE_RES - 1);
     uint32_t index = std::min(uint32_t(x), uint32_t(MI_ROUGH_TRANSMITTANCE_RES - 2));
 
-    float v0 = transmittance[index];
-    float v1 = transmittance[index + 1];
+    float v0 = transmittance[trOffset + index];
+    float v1 = transmittance[trOffset + index + 1];
 
     t_o = lerp(v0, v1, x - float(index));
   }

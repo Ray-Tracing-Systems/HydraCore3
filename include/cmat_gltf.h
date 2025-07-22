@@ -3,17 +3,16 @@
 #include "crandom.h"
 #include "cmaterial.h"
 
-static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, float3 v, 
+static inline void gltfSampleAndEval(const Material* a_materials, uint32_t a_matId, float4 rands, float3 v, 
                                      float3 n, float2 tc, float4 baseColor, float4 fourParams, BsdfSample* pRes)
 {
-  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-  const uint   cflags     = a_materials[0].cflags;
-  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor; 
-  const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];  
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);   
-  float        metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA]*fourParams.y;
-  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;                 
-  const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
+  const uint   cflags     = a_materials[a_matId].cflags;
+  const float4 metalCol   = a_materials[a_matId].colors[GLTF_COLOR_METAL]*baseColor; 
+  const float4 coatCol    = a_materials[a_matId].colors[GLTF_COLOR_COAT];  
+  const float  roughness  = clamp(1.0f - a_materials[a_matId].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);   
+  float        metalness  = a_materials[a_matId].data[GLTF_FLOAT_ALPHA]*fourParams.y;
+  const float  coatValue  = a_materials[a_matId].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;                 
+  const float  fresnelIOR = a_materials[a_matId].data[GLTF_FLOAT_IOR];
   
   if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal component set
     metalness = 1.0f;
@@ -81,7 +80,7 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
             
       if(coatValue > 0.0f && fresnelIOR > 0.0f) // Plastic, account for retroreflection between surface and coating layer
       {
-        const float m_fdr_int = a_materials[0].data[GLTF_FLOAT_MI_FDR_INT];
+        const float m_fdr_int = a_materials[a_matId].data[GLTF_FLOAT_MI_FDR_INT];
         const float f_o       = FrDielectricPBRT(std::abs(dot(lambertDir, n)), 1.0f, fresnelIOR);
         pRes->val            *= lerp(1.0f, (1.0f - f_i) * (1.0f - f_o) / (fresnelIOR * fresnelIOR * (1.0f - m_fdr_int)), coatValue);
       }
@@ -91,16 +90,16 @@ static inline void gltfSampleAndEval(const Material* a_materials, float4 rands, 
 }
 
 
-static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc, 
+static void gltfEval(const Material* a_materials, uint32_t a_matId, float3 l, float3 v, float3 n, float2 tc, 
                      float4 baseColor, float4 fourParams, BsdfEval* res)
 {
-  const uint   cflags     = a_materials[0].cflags;
-  const float4 metalCol   = a_materials[0].colors[GLTF_COLOR_METAL]*baseColor;
-  const float4 coatCol    = a_materials[0].colors[GLTF_COLOR_COAT];
-  const float  roughness  = clamp(1.0f - a_materials[0].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);
-        float  metalness  = a_materials[0].data[GLTF_FLOAT_ALPHA]*fourParams.y;
-  const float  coatValue  = a_materials[0].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;      
-  const float  fresnelIOR = a_materials[0].data[GLTF_FLOAT_IOR];
+  const uint   cflags     = a_materials[a_matId].cflags;
+  const float4 metalCol   = a_materials[a_matId].colors[GLTF_COLOR_METAL]*baseColor;
+  const float4 coatCol    = a_materials[a_matId].colors[GLTF_COLOR_COAT];
+  const float  roughness  = clamp(1.0f - a_materials[a_matId].data[GLTF_FLOAT_GLOSINESS]*fourParams.x, 0.0f, 1.0f);
+        float  metalness  = a_materials[a_matId].data[GLTF_FLOAT_ALPHA]*fourParams.y;
+  const float  coatValue  = a_materials[a_matId].data[GLTF_FLOAT_REFL_COAT]*fourParams.z;      
+  const float  fresnelIOR = a_materials[a_matId].data[GLTF_FLOAT_IOR];
 
   if(cflags == GLTF_COMPONENT_METAL) // assume only GGX-based metal
     metalness = 1.0f;
@@ -128,7 +127,7 @@ static void gltfEval(const Material* a_materials, float3 l, float3 v, float3 n, 
   {
     f_i                   = FrDielectricPBRT(std::abs(dot(v,n)), 1.0f, fresnelIOR);
     const float f_o       = FrDielectricPBRT(std::abs(dot(l,n)), 1.0f, fresnelIOR);  
-    const float m_fdr_int = a_materials[0].data[GLTF_FLOAT_MI_FDR_INT];
+    const float m_fdr_int = a_materials[a_matId].data[GLTF_FLOAT_MI_FDR_INT];
     const float coeff     = lerp(1.0f, (1.f - f_i) * (1.f - f_o) / (fresnelIOR*fresnelIOR*(1.f - m_fdr_int)), coatValue);
     lambertVal           *= coeff;
     coeffLambertPdf       = coeff; 

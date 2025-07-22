@@ -235,13 +235,13 @@ static inline float fresnel2(float3 v, float3 n, float ior)
 }
 
 
-static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
-  const float3 a_viewDir, const float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
+static inline void glassSampleAndEval(const Material* a_materials, const uint32_t a_matId, const float4 a_rands, 
+                                      const float3 a_viewDir, const float3 a_normal, const float2 a_tc, 
+                                      BsdfSample* a_pRes, MisData* a_misPrev)
 {
-  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-  const float4 colorReflect = a_materials[0].colors[GLASS_COLOR_REFLECT];   
-  const float4 colorTransp  = a_materials[0].colors[GLASS_COLOR_TRANSP];
-  const float  ior                  = a_materials[0].data[GLASS_FLOAT_IOR];
+  const float4 colorReflect = a_materials[a_matId].colors[GLASS_COLOR_REFLECT];   
+  const float4 colorTransp  = a_materials[a_matId].colors[GLASS_COLOR_TRANSP];
+  const float  ior          = a_materials[a_matId].data[GLASS_FLOAT_IOR];
 
   const float3 rayDir = (-1.0f) * a_viewDir;
   float relativeIor   = ior / a_misPrev->ior;
@@ -278,70 +278,9 @@ static inline void glassSampleAndEval(const Material* a_materials, const float4 
 }
 
 
-// implicit strategy
-
-//static inline void glassSampleAndEval(const Material* a_materials, const float4 a_rands, 
-//  float3 a_viewDir, float3 a_normal, const float2 a_tc, BsdfSample* a_pRes, MisData* a_misPrev)
-//{
-//  // PLEASE! use 'a_materials[0].' for a while ... , not a_materials-> and not *(a_materials).
-//  const float3 colorReflect    = to_float3(a_materials[0].colors[GLASS_COLOR_REFLECT]);   
-//  const float3 colorTransp     = to_float3(a_materials[0].colors[GLASS_COLOR_TRANSP]);
-//  const float  roughReflect    = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_REFLECT], 0.0f, 1.0f);
-//  const float  roughTransp     = clamp(1.0f - a_materials[0].data[GLASS_FLOAT_GLOSS_TRANSP], 0.0f, 1.0f);                          
-//  float        ior             = a_materials[0].data[GLASS_FLOAT_IOR]; 
-//  
-//  float3 fixNormal             = a_normal;
-//
-//  if (a_pRes->flags & RAY_FLAG_HAS_INV_NORMAL) // hit the reverse side of the polygon from the volume
-//  {
-//    fixNormal      = (-1.0f) * a_normal;
-//
-//    if (a_misPrev->ior == ior) // in the previous hit there was material with a equal IOR
-//      a_misPrev->ior = 1.0f;
-//    else
-//      ior = 1.0f / ior;
-//  }
-//
-//  const float  dotNV  = dot(a_normal, a_viewDir);
-//  const float fresnel = FrDielectricPBRT(dotNV, a_misPrev->ior, ior);
-//
-//
-//  if (a_rands.w < fresnel) // reflection
-//  {
-//    float3 dir;
-//    float  val = 1.0f;
-//    float  pdf = 1.0f;
-//
-//    if (roughReflect < 0.01f)
-//    {
-//      dir                     = reflect((-1.0f) * a_viewDir, fixNormal);
-//      const float cosThetaOut = dot(dir, fixNormal);
-//      val                     = (cosThetaOut <= 1e-6f) ? 1.0f : (1.0f / std::max(cosThetaOut, 1e-6f));  // BSDF is multiplied (outside) by cosThetaOut. For mirrors this shouldn't be done, so we pre-divide here instead.
-//    }
-//    else
-//    {
-//      dir                     = ggxSample(float2(a_rands.x, a_rands.y), a_viewDir, fixNormal, roughReflect);
-//      val                     = ggxEvalBSDF(dir, a_viewDir, fixNormal, roughReflect);
-//      pdf                     = ggxEvalPDF(dir, a_viewDir, fixNormal, roughReflect);
-//    }
-//
-//    a_pRes->direction         = dir;
-//    a_pRes->color             = val * colorReflect;
-//    a_pRes->pdf               = pdf;
-//    a_pRes->flags            |= (roughReflect < 0.01f) ? RAY_EVENT_S : RAY_FLAG_HAS_NON_SPEC;
-//  }
-//  else  // transparency
-//  {
-//
-    //refractionGlassSampleAndEval(colorTransp, a_misPrev->ior, ior, roughTransp, a_normal, fixNormal, a_rands, (-1.0f) * a_viewDir, a_pRes);
-//    a_misPrev->ior = ior;
-//  }
-//}
-
-
 // explicit strategy
-static void glassEval(const Material* a_materials, float3 l, float3 v, float3 n, float2 tc,
-  float3 color, BsdfEval* res)
+static void glassEval(const Material* a_materials, uint32_t a_matId, float3 l, float3 v, float3 n, float2 tc, float3 color, 
+                      BsdfEval* res)
 {
   // because we don't want to sample this material with shadow rays
   res->val   = float4(0.0f);

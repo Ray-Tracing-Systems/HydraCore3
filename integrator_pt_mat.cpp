@@ -172,13 +172,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     if(KSPEC_MAT_TYPE_GLTF != 0)
     {
       const float4 color = m_materials[currMatId].colors[GLTF_COLOR_BASE]*texColor;
-      gltfSampleAndEval(m_materials.data() + currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
+      gltfSampleAndEval(m_materials.data(), currMatId, rands, v, shadeNormal, tc, color, fourScalarMatParams, &res);
     }
     break;
     case MAT_TYPE_GLASS: 
     if(KSPEC_MAT_TYPE_GLASS != 0)
     {
-      glassSampleAndEval(m_materials.data() + currMatId, rands, v, geomNormal, tc, &res, a_misPrev);
+      glassSampleAndEval(m_materials.data(), currMatId, rands, v, geomNormal, tc, &res, a_misPrev);
     }
     break;
     case MAT_TYPE_CONDUCTOR:
@@ -189,9 +189,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       const float4 etaSpec  = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_ETA, 0);
       const float4 kSpec    = SampleMatParamSpectrum(currMatId, wavelengths, CONDUCTOR_K,   1);
       if(trEffectivelySmooth(alpha))
-        conductorSmoothSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
+        conductorSmoothSampleAndEval(m_materials.data(), currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, &res);
       else
-        conductorRoughSampleAndEval(m_materials.data() + currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
+        conductorRoughSampleAndEval(m_materials.data(), currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
     }
     break;
     case MAT_TYPE_THIN_FILM:
@@ -236,11 +236,11 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
 
       uint precomp_offset = precomp_flag ? as_uint(m_materials[currMatId].data[FILM_PRECOMP_OFFSET]) : 0;
       if(trEffectivelySmooth(alpha))
-        filmSmoothSampleAndEval(m_materials.data() + currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, &res,
-                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+        filmSmoothSampleAndEval(m_materials.data(), currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, &res,
+                                m_precomp_thin_films.data(), precomp_offset, spectral_mode, precomp_flag);
       else
-        filmRoughSampleAndEval(m_materials.data() + currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
-                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+        filmRoughSampleAndEval(m_materials.data() , currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
+                               m_precomp_thin_films.data() , precomp_offset, spectral_mode, precomp_flag);
 
       //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
       res.flags |= RAY_FLAG_WAVES_DIVERGED;
@@ -256,7 +256,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       if(m_spectral_mode == 0)
         reflSpec *= color;
       
-      diffuseSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
+      diffuseSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res);
     }
     break;
     case MAT_TYPE_PLASTIC:
@@ -270,8 +270,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
 
       const uint precomp_id = m_materials[currMatId].datai[0];
 
-      plasticSampleAndEval(m_materials.data() + currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
-                           m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+      plasticSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
+                           m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
     }
     break;
     case MAT_TYPE_DIELECTRIC:
@@ -279,7 +279,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
     {
       const float4 intIORSpec = SampleMatParamSpectrum(currMatId, wavelengths, DIELECTRIC_ETA_INT, 0);
       const uint specId = m_materials[currMatId].spdid[0];
-      dielectricSmoothSampleAndEval(m_materials.data() + currMatId, intIORSpec, a_misPrev->ior, rands, v, shadeNormal, tc, &res);
+      dielectricSmoothSampleAndEval(m_materials.data(), currMatId, intIORSpec, a_misPrev->ior, rands, v, shadeNormal, tc, &res);
 
       res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
 
@@ -389,7 +389,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       if(KSPEC_MAT_TYPE_GLTF != 0)
       {
         const float4 color     = (m_materials[currMat.id].colors[GLTF_COLOR_BASE]) * texColor;
-        gltfEval(m_materials.data() + currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
+        gltfEval(m_materials.data(), currMat.id, l, v, shadeNormal, tc, color, fourScalarMatParams, &currVal);
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
@@ -397,7 +397,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_GLASS:
       if(KSPEC_MAT_TYPE_GLASS != 0)
       {
-        glassEval(m_materials.data() + currMat.id, l, v, geomNormal, tc, float3(0,0,0), &currVal);
+        glassEval(m_materials.data(), currMat.id, l, v, geomNormal, tc, float3(0,0,0), &currVal);
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
@@ -412,7 +412,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         {
           const float4 etaSpec = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_ETA, 0);
           const float4 kSpec   = SampleMatParamSpectrum(currMat.id, wavelengths, CONDUCTOR_K,   1);
-          conductorRoughEval(m_materials.data() + currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
+          conductorRoughEval(m_materials.data(), currMat.id, etaSpec, kSpec, l, v, shadeNormal, tc, alphaTex, &currVal);
         }
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
@@ -460,8 +460,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
           bool precomp_flag = as_uint(m_materials[currMat.id].data[FILM_PRECOMP_FLAG]) > 0u;
           uint precomp_offset = precomp_flag ? as_uint(m_materials[currMat.id].data[FILM_PRECOMP_OFFSET]) : 0;
-          filmRoughEval(m_materials.data() + currMat.id, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, l, v, n, tc, alphaTex, &currVal,
-                          m_precomp_thin_films.data() + precomp_offset, spectral_mode, precomp_flag);
+          filmRoughEval(m_materials.data(), currMat.id, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, l, v, n, tc, alphaTex, &currVal,
+                          m_precomp_thin_films.data(), precomp_offset, spectral_mode, precomp_flag);
         }
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
@@ -475,7 +475,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         float4 reflSpec    = SampleMatColorSpectrumTexture(currMat.id, wavelengths, DIFFUSE_COLOR, 0, tc);
         if(m_spectral_mode == 0)
           reflSpec *= color;        
-        diffuseEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc,  &currVal);
+        diffuseEval(m_materials.data(), currMat.id, reflSpec, l, v, shadeNormal, tc,  &currVal);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
@@ -490,8 +490,8 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         if(m_spectral_mode == 0)
           reflSpec *= color;
         const uint precomp_id = m_materials[currMat.id].datai[0];
-        plasticEval(m_materials.data() + currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
-                    m_precomp_coat_transmittance.data() + precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+        plasticEval(m_materials.data(), currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
+                    m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;

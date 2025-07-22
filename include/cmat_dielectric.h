@@ -5,11 +5,11 @@
 #include "../spectrum.h"
 
 
-static inline void dielectricSmoothSampleAndEval(const Material* a_materials, const float4 etaSpec,
+static inline void dielectricSmoothSampleAndEval(const Material* a_materials, const uint32_t a_matId, const float4 etaSpec,
                                                  const float _extIOR, float4 rands, float3 v, float3 n, float2 tc, 
                                                  BsdfSample* pRes)
 {
-  const float extIOR = a_materials[0].data[DIELECTRIC_ETA_EXT];
+  const float extIOR = a_materials[a_matId].data[DIELECTRIC_ETA_EXT];
 
   // if we hit the reverse side of the polygon, reverse the normal back (it was reversed in the RayTrace func.)
   // for correct computations in FrDielectricDetailed
