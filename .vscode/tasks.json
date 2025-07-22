@@ -40,6 +40,15 @@
             ]
         },
         {
+            "label": "Build Kernels (Slang)",
+            "type": "shell",
+            "command": "cd shaders_generated && bash build_slang.sh",
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "label": "Build Shaders PinHole (GLSL)",
             "type": "shell",
             "command": "cd cam_plugin/shaders_pinhole_gpu && bash build.sh",

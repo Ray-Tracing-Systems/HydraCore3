@@ -25,32 +25,33 @@ struct Spectrum
 
 inline uint32_t BinarySearch(const float* array, size_t array_sz, float val) 
 {
-  int32_t last = (int32_t)array_sz - 2, first = 1;
+  int32_t last = int32_t(array_sz) - 2;
+  int32_t first = 1;
   while (last > 0) 
   {
-    uint32_t half = (uint32_t)last >> 1, 
-    middle = first + half;
+    uint32_t half = uint32_t(last) >> 1; 
+    int middle = first + half;
     bool predResult = array[middle] <= val;
     first = predResult ? int32_t(middle + 1) : first;
     last = predResult ? last - int32_t(half + 1) : int32_t(half);
   }
-  return (uint32_t)clamp(int32_t(first - 1), 0, int32_t(array_sz - 2));
+  return uint32_t(clamp(int32_t(first - 1), 0, int32_t(array_sz - 2)));
 }
-
 
 // temporary?
 inline uint32_t BinarySearchU2(const uint2* array, uint32_t a_offset, uint32_t array_sz, float val) 
 {
-  int32_t last = (int32_t)array_sz - 2, first = 1;
+  int32_t last  = int32_t(array_sz) - 2;
+  int32_t first = 1;
   while (last > 0) 
   {
-    uint32_t half = (uint32_t)last >> 1, 
-    middle = first + half;
+    uint32_t half = uint32_t(last) >> 1; 
+    int middle = first + half;
     bool predResult = float(array[a_offset + middle].y) <= val;
     first = predResult ? int(middle + 1) : first;
     last = predResult ? last - int(half + 1) : int(half);
   }
-  return (uint32_t)clamp(int(first - 1), 0, int(array_sz - 2));
+  return uint32_t(clamp(int(first - 1), 0, int(array_sz - 2)));
 }
 
 // "stratified" sample wavelengths in [a, b] with random number u
@@ -207,9 +208,9 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
 }
 
 // 2° standard colorimetric observer
-inline LiteMath::float3 XYZToRGB(LiteMath::float3 xyz)
+inline float3 XYZToRGB(float3 xyz)
 {
-  LiteMath::float3 rgb;
+  float3 rgb;
   rgb[0] = +3.240479f * xyz[0] - 1.537150f * xyz[1] - 0.498535f * xyz[2];
   rgb[1] = -0.969256f * xyz[0] + 1.875991f * xyz[1] + 0.041556f * xyz[2];
   rgb[2] = +0.055648f * xyz[0] - 0.204043f * xyz[1] + 1.057311f * xyz[2];

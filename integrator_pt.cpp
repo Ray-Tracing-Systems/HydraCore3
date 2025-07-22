@@ -638,7 +638,8 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
     else // always spectral rendering
     {
       auto waves = (*wavelengths);
-      auto color = (*a_accumColor)*m_exposureMult;
+      auto accum = (*a_accumColor);      // work around slang bug in slang back-end
+      auto color = accum*m_exposureMult; // work around slang bug in slang back-end
       for(int i=0;i<4;i++) {
         const float t         = (waves[i] - LAMBDA_MIN)/(LAMBDA_MAX-LAMBDA_MIN);
         const int channelId   = std::min(int(float(channels)*t), int(channels)-1);
@@ -811,10 +812,10 @@ static inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
   float floatRootDiscrim   = float(rootDiscrim);
   // Compute quadratic _t_ values
   float q;
-  if ((float)B < 0)
-      q = -.5 * (B - floatRootDiscrim);
+  if ((float)B < 0.0f)
+      q = -.5f * (B - floatRootDiscrim);
   else
-      q = -.5 * (B + floatRootDiscrim);
+      q = -.5f * (B + floatRootDiscrim);
   *t0 = q / A;
   *t1 = C / q;
   if ((float)*t0 > (float)*t1) 
@@ -857,7 +858,7 @@ bool Integrator::IntersectSphericalElement(float radius, float zCenter, float3 r
     return false;
   
   // Select intersection $t$ based on ray direction and element curvature
-  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0);
+  bool useCloserT = (rayDir.z > 0.0f) != (radius < 0.0f);
   *t = useCloserT ? std::min(t0, t1) : std::max(t0, t1);
   if (*t < 0.0f) 
     return false;
