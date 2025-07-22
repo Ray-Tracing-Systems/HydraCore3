@@ -194,6 +194,18 @@ void Integrator::kernel_InitEyeRayFromInput(uint tid, const RayPosAndW* in_rayPo
   *gen           = m_randomGens[RandomGenId(tid)];
 }
 
+float3 decode_normal(float2 e)
+{
+  float3 v = float3(e.x, e.y, 1.0f - std::abs(e.x) - std::abs(e.y));
+  if (v.z < 0) 
+  {
+    float vx = v.x;
+    v.x = (1.0f - std::abs(v.y)) * ((v.x >= 0.0) ? +1.0f : -1.0f);
+    v.y = (1.0f - std::abs( vx)) * ((v.y >= 0.0) ? +1.0f : -1.0f);
+  }
+  return normalize(v);
+}
+
 
 void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,
                                   float4* out_hit1, float4* out_hit2, float4* out_hit3, uint* out_instId, uint* rayFlags)
@@ -213,74 +225,117 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   if(hit.geomId != uint32_t(-1))
   {
-    const float2 uv     = float2(hit.coords[0], hit.coords[1]);
-    
+    #ifdef LITERT_RENDERER
+    const uint32_t type   = hit.geomId >> SH_TYPE;
+    const uint32_t geomId = hit.geomId & GEOM_ID_MASK;
+    #endif
     // slightly undershoot the intersection to prevent self-intersection and other bugs
-    const float3 hitPos = to_float3(rayPos) + hit.t * (1.f - 1e-6f) * to_float3(rayDir);
-    // const float3 overHit  = to_float3(rayPos) + hit.t * (1.f + 1e-6f) * to_float3(rayDir);
-
-    // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
-    /////////////////////////////////////////////////////////////////////////////////
-    // // get distance vectors from triangle vertices
-    // vec3 tmpu = P - A, tmpv = P - B, tmpw = P - C
-    // // project these onto the tangent planes
-    // // defined by the shading normals
-    // float dotu = min (0.0, dot(tmpu , nA))
-    // float dotv = min (0.0, dot(tmpv , nB))
-    // float dotw = min (0.0, dot(tmpw , nC))
-    // tmpu -= dotu*nA
-    // tmpv -= dotv*nB
-    // tmpw -= dotw*nC
-    // // finally P' is the barycentric mean of these three
-    // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
-    /////////////////////////////////////////////////////////////////////////////////
-
-    const uint triOffset  = m_matIdOffsets[hit.geomId];
-    const uint vertOffset = m_vertOffset  [hit.geomId];
-  
-    const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
-    const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
-    const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
-
-    const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
-    const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
-
-    float3 hitNorm     = to_float3(data1);
-    float3 hitTang     = to_float3(data2);
-    float2 hitTexCoord = float2(data1.w, data2.w);
-
-    // transform surface point with matrix and flip normal if needed
-    //
-    hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
-    hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
-
-    if(m_normMatrices2.size() > 0)
+    const float3   hitPos = to_float3(rayPos) + hit.t * (1.f - 1e-6f) * to_float3(rayDir);
+    #ifdef LITERT_RENDERER
+    if (type == TYPE_MESH_TRIANGLE)
+    #endif
     {
-      float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
-      float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
+      const float2 uv     = float2(hit.coords[0], hit.coords[1]);
+      
+      // alternative, you may consider Johannes Hanika solution from  Ray Tracing Gems2  
+      /////////////////////////////////////////////////////////////////////////////////
+      // // get distance vectors from triangle vertices
+      // vec3 tmpu = P - A, tmpv = P - B, tmpw = P - C
+      // // project these onto the tangent planes
+      // // defined by the shading normals
+      // float dotu = min (0.0, dot(tmpu , nA))
+      // float dotv = min (0.0, dot(tmpv , nB))
+      // float dotw = min (0.0, dot(tmpw , nC))
+      // tmpu -= dotu*nA
+      // tmpv -= dotv*nB
+      // tmpw -= dotw*nC
+      // // finally P' is the barycentric mean of these three
+      // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
+      /////////////////////////////////////////////////////////////////////////////////
 
-      hitNorm = lerp(hitNorm, hitNorm2, time);
-      hitTang = lerp(hitTang, hitTang2, time);
+      const uint triOffset  = m_matIdOffsets[geomId];
+      const uint vertOffset = m_vertOffset  [geomId];
+    
+      const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
+      const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
+      const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
+
+      const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
+      const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
+      float2 hitTexCoord = float2(data1.w, data2.w);
+
+      float3 hitNorm, hitTang;
+      {
+        hitNorm     = to_float3(data1);
+        hitTang     = to_float3(data2);
+        #ifdef LITERT_RENDERER
+        float3 biTangent = float3(0,0,1);
+        CoordinateSystemV2(hitNorm, &hitTang, &biTangent);
+        #endif
+
+        // transform surface point with matrix and flip normal if needed
+        //
+        hitNorm = mul3x3(m_normMatrices[hit.instId], hitNorm);
+        hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
+      }
+    
+      if(m_normMatrices2.size() > 0)
+      {
+        float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
+        float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
+
+        hitNorm = lerp(hitNorm, hitNorm2, time);
+        hitTang = lerp(hitTang, hitTang2, time);
+      }
+
+      hitNorm = normalize(hitNorm);
+      hitTang = normalize(hitTang);
+      
+      const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
+      hitNorm              = flipNorm * hitNorm;
+      hitTang              = flipNorm * hitTang; // do we need this ??
+
+      if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
+      else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
+      
+      const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[geomId] + hit.primId];
+      const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
+
+      *rayFlags              = packMatId(currRayFlags, midRemaped);
+      *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
+      *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
+      *out_hit3              = to_float4(hitTang, hit.t);
+      *out_instId            = hit.instId;
     }
+    #ifdef LITERT_RENDERER
+    else
+    {
+      //no normal flip/remap on SDFs and other obscure stuff
+      currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
 
-    hitNorm = normalize(hitNorm);
-    hitTang = normalize(hitTang);
+      //only one material per geometry without remaps
+      const uint matId = m_matIdByPrimId[m_matIdOffsets[geomId]];
+
+      //no texture coordinates, only constant color materials
+      const float2 tc = float2(0,0);
+
+      //normals for SDFs are calculated along with the hit calculation
+      const float3 n = decode_normal(float2(hit.coords[2], hit.coords[3]));
     
-    const float flipNorm = dot(to_float3(rayDir), hitNorm) > 0.001f ? -1.0f : 1.0f; // beware of transparent materials which use normal sign to identity "inside/outside" glass for example
-    hitNorm              = flipNorm * hitNorm;
-    hitTang              = flipNorm * hitTang; // do we need this ??
+      const float len = length(n);
+      const float3 hitNorm = len > 1e-9f ? n / len : float3(1.0f, 0.0f, 0.0f);
+       
+      float3 hitTang   = float3(1,0,1);
+      float3 biTangent = float3(0,0,1);
+      CoordinateSystemV2(hitNorm, &hitTang, &biTangent);
 
-    if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
-    else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
-    
-    const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
-    const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
-
-    *rayFlags              = packMatId(currRayFlags, midRemaped);
-    *out_hit1              = to_float4(hitPos,  hitTexCoord.x); 
-    *out_hit2              = to_float4(hitNorm, hitTexCoord.y);
-    *out_hit3              = to_float4(hitTang, hit.t);
-    *out_instId            = hit.instId;
+      *rayFlags              = packMatId(currRayFlags, matId);
+      *out_hit1              = to_float4(hitPos,  tc.x); 
+      *out_hit2              = to_float4(hitNorm, tc.y);
+      *out_hit3              = to_float4(hitTang, hit.t);
+      *out_instId            = hit.instId;
+    }
+    #endif
   }
   else
   {

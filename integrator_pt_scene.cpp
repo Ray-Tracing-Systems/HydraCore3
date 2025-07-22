@@ -262,15 +262,16 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     }
     num_instances++;
   }
-
-  std::cout << "Scene analysis:\n" 
-            << "  Total meshes     = " << num_meshes << "\n"
-            << "  Total instances  = " << num_instances << "\n"
-            << "  Total primitives = " << maxTotalPrimitives << "\n"
-            << "  Total vertices   = " << maxTotalVertices << "\n"
-            << "  Total lights     = " << num_lights << "\n"
-            << "  Total materials  = " << num_materials << "\n"
-            << "  Total textures   = " << num_textures << "\n";
+  #ifdef _DEBUG
+  std::cout << "Scene total:\n" 
+            << "  meshes     = " << num_meshes << "\n"
+            << "  instances  = " << num_instances << "\n"
+            << "  primitives = " << maxTotalPrimitives << "\n"
+            << "  vertices   = " << maxTotalVertices << "\n"
+            << "  lights     = " << num_lights << "\n"
+            << "  materials  = " << num_materials << "\n"
+            << "  textures   = " << num_textures << "\n";
+  #endif
 
 
   (*pSceneInfo) = g_lastSceneInfo;
@@ -755,30 +756,52 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   //m_vTexc2f.resize(0);
 
   m_pAccelStruct->ClearGeom();
-  for(auto meshPath : scene.MeshFiles())
+  auto mIter = scene.GeomNodes().begin();
+  while (mIter != scene.GeomNodes().end())
   {
-    #ifdef _DEBUG
-    std::cout << "[LoadScene]: mesh = " << meshPath.c_str() << std::endl;
-    #endif
-    auto currMesh = cmesh4::LoadMeshFromVSGF(meshPath.c_str());
-    auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
-
-    (void)geomId; // silence unused var. warning
-
+    std::string dir = sceneFolder + "/" + hydra_xml::ws2s(std::wstring(mIter->attribute(L"loc").as_string()));
+    std::string name = hydra_xml::ws2s(std::wstring(mIter->name()));
     m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
     m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
-    const size_t lastVertex = m_vNorm4f.size();
 
-    m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
-    m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+    if (name == "mesh")
+    {
+      #ifdef _DEBUG
+      std::cout << "[LoadScene]: mesh = " << dir.c_str() << std::endl;
+      #endif
+      auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
+      auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
-    m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
-    m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
+      (void)geomId; // silence unused var. warning
 
-    for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
-      m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
-      m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+      const size_t lastVertex = m_vNorm4f.size();
+
+      m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
+      m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+
+      m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
+      m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
+
+      for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
+        m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
+        m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+      }
     }
+    else
+    {
+      //currently all non-mesh types can have only one material for geometry
+      uint32_t mat_id = mIter->attribute(L"mat_id").as_int(0);
+      m_matIdByPrimId.push_back(mat_id);
+      m_pAccelStruct->AddCustomGeom_FromFile(name.c_str(), dir.c_str(), m_pAccelStruct.get());
+
+      //we insert one fake triangle for each custom geometry, because m_matIdOffsets is also used to 
+      //index from m_triIndices list, i.e. we assume to have as many material Ids as triangles in total
+      //this fake triangle should never be accessed during rendering
+      m_triIndices.push_back(0);
+      m_triIndices.push_back(0);
+      m_triIndices.push_back(0);
+    }
+    mIter++;
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
 
@@ -878,6 +901,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
 
+#ifdef _DEBUG
   std::cout << "features = {";
   bool firstFeature = true;
   for(size_t i=0; i<m_enabledFeatures.size();i++)
@@ -892,6 +916,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
   std::cout << "};" << std::endl;
+#endif
 
   LoadSceneEnd();
   return true;

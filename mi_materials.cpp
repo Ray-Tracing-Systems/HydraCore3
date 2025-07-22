@@ -134,8 +134,6 @@ namespace mi
   template <typename Value>
   std::pair<Value, Value> legendre_pd(int l, Value x) 
   {
-    using Scalar = Value;
-
     assert(l >= 0);
     Value l_cur = Value(0), d_cur = Value(0);
 
