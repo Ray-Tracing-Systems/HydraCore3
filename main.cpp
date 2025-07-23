@@ -16,7 +16,7 @@ std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, std::vect
 #ifdef USE_VULKAN
 #include "vk_context.h"
 #include "integrator_pt_generated.h" // advanced way
-//std::shared_ptr<Integrator> CreateIntegrator_Generated(int a_maxThreads, std::vector<uint32_t> a_features, vk_utils::VulkanContext a_ctx, size_t a_maxThreadsGenerated); // simple way
+vk_utils::VulkanDeviceFeatures Integrator_Generated_ListRequiredDeviceFeatures();
 #endif
 
 #ifdef USE_STB_IMAGE
@@ -196,19 +196,13 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   if(onGPU)
   {
     unsigned int a_preferredDeviceId = args.getOptionValue<int>("-gpu_id", 0);
-
-    // simple way
-    //
-    //auto ctx = vk_utils::globalContextGet(enableValidationLayers, a_preferredDeviceId);
-    //pImpl = CreateIntegrator_Generated(FB_WIDTH*FB_HEIGHT, spectral_mode, features, ctx, FB_WIDTH*FB_HEIGHT);
-
     size_t gpuAuxMemSize = FB_WIDTH*FB_HEIGHT*FB_CHANNELS*sizeof(float) + 16 * 1024 * 1024; // reserve for frame buffer and other
 
     // advanced way, init device with features which is required by generated class
     //
-    std::vector<const char*> requiredExtensions;
-    auto deviceFeatures = Integrator_Generated::ListRequiredDeviceFeatures(requiredExtensions);
-    auto ctx            = vk_utils::globalContextInit(requiredExtensions, enableValidationLayers, a_preferredDeviceId, &deviceFeatures, gpuAuxMemSize, 1);
+    auto deviceFeatures = Integrator_Generated_ListRequiredDeviceFeatures();
+    deviceFeatures.memForBuffers += gpuAuxMemSize;
+    auto ctx            = vk_utils::globalContextInit(deviceFeatures, enableValidationLayers, a_preferredDeviceId);
 
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster
