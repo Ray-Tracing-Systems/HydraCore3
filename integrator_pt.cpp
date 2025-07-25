@@ -113,8 +113,10 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     res.waveSam = 1.0f;
     if(m_normMatrices2Offs != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
+    #ifndef DISABLE_SPECTRUM
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
       res.waveSam = GetRandomNumbersSpec(tid, pGen);
+    #endif
     res.cosTheta = 1.0f;
   }
   
@@ -617,12 +619,14 @@ void Integrator::kernel_ContributeToImage(uint tid, const uint* rayFlags, uint c
   float4 tmpVal      = specSamples*m_camRespoceRGB;
   float3 rgb         = to_float3(tmpVal);
 
+  #ifndef DISABLE_SPECTRUM
   if(KSPEC_SPECTRAL_RENDERING!=0 && m_spectral_mode != 0) 
   {
     const float4 waves   = *wavelengths;
     const uint rayFlags2 = *rayFlags; 
     rgb = SpectralCamRespoceToRGB(specSamples, waves, rayFlags2);
   }
+  #endif
   
   float4 colorRes = m_exposureMult * to_float4(rgb, 1.0f);
   colorRes = RTVPersistent_ReduceAdd4f(colorRes);

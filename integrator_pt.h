@@ -14,6 +14,7 @@
 #include <cfloat>
 
 //#define DISABLE_LENS 1
+//#define DISABLE_SPECTRUM 1
 
 #ifndef LITERT_RENDERER
   #include "CrossRT.h" // special include for ray tracing
@@ -490,21 +491,22 @@ public:
   //// textures
   //
   std::vector< std::shared_ptr<ICombinedImageSampler> > m_textures; ///< all textures, right now represented via combined image/sampler
-
+  
+  #ifndef DISABLE_SPECTRUM
   std::vector<float> m_spec_values;
   std::vector<uint2> m_spec_offset_sz;
-
   std::vector<uint2> m_spec_tex_ids_wavelengths;
   std::vector<uint2> m_spec_tex_offset_sz;
 
   std::vector<float4> m_cie_xyz;
+
+  std::vector<float>  m_films_thickness_vec;  // todo: merge to single buffer with float4 if possible
+  std::vector<uint>   m_films_spec_id_vec;
+  std::vector<float>  m_films_eta_k_vec;
+  std::vector<float>  m_precomp_thin_films;   // frenel precomputed data for thin films
   std::vector<float>  m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
-
-  std::vector<float> m_films_thickness_vec;  // todo: merge to single buffer with float4 if possible
-  std::vector<uint>  m_films_spec_id_vec;
-  std::vector<float> m_films_eta_k_vec;
-  std::vector<float> m_precomp_thin_films;   // frenel precomputed data for thin films
-
+  #endif
+   
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);

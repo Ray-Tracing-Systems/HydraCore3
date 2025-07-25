@@ -328,12 +328,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
 
   //// init spectral curves
+  #ifndef DISABLE_SPECTRUM
   std::vector<float> cie_x = Get_CIE_X();
   std::vector<float> cie_y = Get_CIE_Y();
   std::vector<float> cie_z = Get_CIE_Z();
   m_cie_xyz.resize(cie_x.size());
   for(size_t i=0; i < m_cie_xyz.size(); i++)
     m_cie_xyz[i] = float4(cie_x[i], cie_y[i], cie_z[i], 0.0f);
+  #endif
   ////
   
   //// init render feature map
@@ -390,6 +392,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   // std::vector<SpectrumInfo> spectraInfo;
   // spectraInfo.reserve(100);
+  #ifndef DISABLE_SPECTRUM
   if(m_spectral_mode != 0 || true)
   {  
     for(auto specNode : scene.SpectraNodes())
@@ -459,6 +462,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
     }
   }
+  #endif
 
   // (1) load lights
   //
@@ -562,6 +566,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
+    #ifndef DISABLE_SPECTRUM
     else if (mat_type == thinFilmMatTypeStr)
     {
       mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
@@ -578,12 +583,14 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
                                 loadedSpectralTextures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
+    #endif
     else if(mat_type == blendMatTypeStr)
     {
       mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
+    #ifndef DISABLE_SPECTRUM
     else if(mat_type == plasticMatTypeStr)
     {
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
@@ -591,6 +598,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
                                 loadedSpectralTextures);
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
+    #endif
     else if(mat_type == dielectricMatTypeStr)
     {
       mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);

@@ -113,6 +113,7 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
   // get spectral data for light source
   //
   const uint specId = m_lights[a_lightId].specId;
+  #ifndef DISABLE_SPECTRUM
   if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0 && specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
@@ -120,6 +121,7 @@ float4 Integrator::LightIntensity(uint a_lightId, float4 a_wavelengths, float3 a
     const uint size   = data.y;
     lightColor = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
+  #endif
   lightColor *= m_lights[a_lightId].mult;
   
   // get ies data for light source
@@ -176,13 +178,15 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& o
   
   // apply tex color
   //
+  #ifndef DISABLE_SPECTRUM
   if(KSPEC_SPECTRAL_RENDERING != 0 && m_spectral_mode != 0 && m_envSpecId != uint(-1)) {
     const uint2 data  = m_spec_offset_sz[m_envSpecId];
     const uint offset = data.x;
     const uint size   = data.y;
     color = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
     color *= m_envSpecMult / 106.856895f;
-  } 
+  }
+  #endif 
 
   const uint envTexId = m_envTexId;
   if(KSPEC_LIGHT_ENV != 0 && envTexId != uint(-1))

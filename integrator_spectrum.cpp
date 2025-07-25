@@ -6,9 +6,10 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
   float4 res = m_materials[matId].colors[paramId];
   if(a_wavelengths[0] == 0.0f)
     return res;
-
+  
+  #ifndef DISABLE_SPECTRUM
   const uint specId = m_materials[matId].spdid[paramSpecId];
-  if(specId < 0xFFFFFFFF)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
@@ -16,6 +17,7 @@ float4 Integrator::SampleMatColorParamSpectrum(uint32_t matId, float4 a_waveleng
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
     res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
+  #endif
 
   return res;
 }
@@ -25,9 +27,10 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
   float4 res = float4(m_materials[matId].data[paramId]);
   if(a_wavelengths[0] == 0.0f)
     return res;
-
+  
+  #ifndef DISABLE_SPECTRUM
   const uint specId = m_materials[matId].spdid[paramSpecId];
-  if(specId < 0xFFFFFFFF)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
@@ -35,38 +38,43 @@ float4 Integrator::SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, 
     //res = SampleSpectrum(m_wavelengths.data() + offset, m_spec_values.data() + offset, a_wavelengths, size);
     res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
+  #endif
 
   return res;
 }
 
 float4 Integrator::SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer)
-{  
+{
+  #ifndef DISABLE_SPECTRUM  
   float4 res = float4(m_films_eta_k_vec[as_uint(m_materials[matId].data[paramId]) + layer]);
   if(a_wavelengths[0] == 0.0f && false)
     return res;
 
   const uint specId = m_films_spec_id_vec[as_uint(m_materials[matId].data[paramSpecId]) + layer];
-  if(specId < 0xFFFFFFFF)
+  if(KSPEC_SPECTRAL_RENDERING !=0 && specId < 0xFFFFFFFF)
   {
     const uint2 data  = m_spec_offset_sz[specId];
     const uint offset = data.x;
     const uint size   = data.y;
     res = SampleUniformSpectrum(m_spec_values.data(), offset, a_wavelengths, size);
   }
-
   return res;
+  #else
+  return float4(0.0f);
+  #endif
 }
 
 float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uint32_t rayFlags)
 {
   float3 rgb = to_float3(specSamples);
-
-  if(m_camResponseSpectrumId[0] < 0)
+  
+  #ifndef DISABLE_SPECTRUM
+  if(KSPEC_SPECTRAL_RENDERING !=0 && m_camResponseSpectrumId[0] < 0)
   {
     const float3 xyz = SpectrumToXYZ(specSamples, waves, LAMBDA_MIN, LAMBDA_MAX, m_cie_xyz.data(), terminateWavelngths(rayFlags));
     rgb = XYZToRGB(xyz);
   }
-  else
+  else if(KSPEC_SPECTRAL_RENDERING !=0)
   {
     float4 responceX, responceY, responceZ;
     {
@@ -112,6 +120,7 @@ float3 Integrator::SpectralCamRespoceToRGB(float4 specSamples, float4 waves, uin
     else
       rgb = xyz;
   }
+  #endif
   
   return rgb;
 }
@@ -121,7 +130,8 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
   float4 res = m_materials[matId].colors[paramId];
   if(a_wavelengths[0] == 0.0f)
     return res;
-
+  
+  #ifndef DISABLE_SPECTRUM
   const uint specId = m_materials[matId].spdid[paramSpecId];
   if(KSPEC_SPECTRAL_RENDERING !=0 && specId < 0xFFFFFFFF)
   {
@@ -166,6 +176,7 @@ float4 Integrator::SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavele
       }
     }
   }
+  #endif
 
   return res;
 }

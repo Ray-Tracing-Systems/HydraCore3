@@ -235,12 +235,14 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
       bool precomp_flag = as_uint(m_materials[currMatId].data[FILM_PRECOMP_FLAG]) > 0u;
 
       uint precomp_offset = precomp_flag ? as_uint(m_materials[currMatId].data[FILM_PRECOMP_OFFSET]) : 0;
+      #ifndef DISABLE_SPECTRUM
       if(trEffectivelySmooth(alpha))
         filmSmoothSampleAndEval(m_materials.data(), currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, &res,
                                 m_precomp_thin_films.data(), precomp_offset, spectral_mode, precomp_flag);
       else
         filmRoughSampleAndEval(m_materials.data() , currMatId, extIOR, filmIOR, intIOR, thickness, wavelengths_spec, a_misPrev->ior, rands, v, n, tc, alphaTex, &res,
                                m_precomp_thin_films.data() , precomp_offset, spectral_mode, precomp_flag);
+      #endif
 
       //res.flags |= (specId < 0xFFFFFFFF) ? RAY_FLAG_WAVES_DIVERGED : 0;
       res.flags |= RAY_FLAG_WAVES_DIVERGED;
@@ -269,9 +271,10 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint b
         reflSpec *= color;
 
       const uint precomp_id = m_materials[currMatId].datai[0];
-
+      #ifndef DISABLE_SPECTRUM
       plasticSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
                            m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+      #endif
     }
     break;
     case MAT_TYPE_DIELECTRIC:
@@ -420,6 +423,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       }
       break;
       case MAT_TYPE_THIN_FILM: 
+      #ifndef DISABLE_SPECTRUM
       if(KSPEC_MAT_TYPE_THIN_FILM != 0)
       {
         const float3 alphaTex = to_float3(texColor);  
@@ -467,6 +471,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
+      #endif
       break;
       case MAT_TYPE_DIFFUSE:
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
@@ -482,6 +487,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       }
       break;
       case MAT_TYPE_PLASTIC:
+      #ifndef DISABLE_SPECTRUM
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const float4 color = texColor;
@@ -496,6 +502,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
+      #endif
       break;
       case MAT_TYPE_DIELECTRIC:
       if(KSPEC_MAT_TYPE_DIELECTRIC != 0)

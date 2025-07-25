@@ -20,8 +20,8 @@
     },
 
     "defines" : {
-      //"DISABLE_LENS"  : "",
-      "DISABLE_NURBS" : ""
+      "DISABLE_LENS"  : "",
+      "DISABLE_SPECTRUM" : ""
     },
 
     "source" : ["integrator_pt.cpp", 
