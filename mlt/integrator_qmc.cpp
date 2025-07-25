@@ -12,7 +12,7 @@ void IntegratorQMC::EnableQMC()
 {
   const bool dof    = (m_camLensRadius > 0.0f) || (m_enableOpticSim != 0);
   const bool spd    = (m_spectral_mode != 0);
-  const bool motion = (m_normMatrices2.size() != 0);
+  const bool motion = (m_normMatrices2Offs != 0);
 
   assert(qmc::QRNG_DIMENSIONS >= 11); // code of this function assume >= 11 dimentions
   
@@ -203,7 +203,7 @@ Integrator::EyeRayData IntegratorQMC::SampleCameraRay(RandomGen* pGen, uint tid)
     res.y      = y;
     res.timeSam = 0.0f;
     res.waveSam = 1.0f;
-    if(m_normMatrices2.size() != 0)
+    if(m_normMatrices2Offs != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
       res.waveSam = GetRandomNumbersSpec(tid, pGen);

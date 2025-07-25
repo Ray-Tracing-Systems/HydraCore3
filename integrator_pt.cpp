@@ -109,7 +109,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     res.y      = y;
     res.timeSam = 0.0f;
     res.waveSam = 1.0f;
-    if(m_normMatrices2.size() != 0)
+    if(m_normMatrices2Offs != 0)
       res.timeSam = GetRandomNumbersTime(tid, pGen);
     if(KSPEC_SPECTRAL_RENDERING !=0 && m_spectral_mode != 0)
       res.waveSam = GetRandomNumbersSpec(tid, pGen);
@@ -283,10 +283,10 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
         hitTang = mul3x3(m_normMatrices[hit.instId], hitTang);
       }
     
-      if(m_normMatrices2.size() > 0)
+      if(m_normMatrices2Offs > 0)
       {
-        float3 hitNorm2 = mul3x3(m_normMatrices2[hit.instId], hitNorm);
-        float3 hitTang2 = mul3x3(m_normMatrices2[hit.instId], hitTang);
+        float3 hitNorm2 = mul3x3(m_normMatrices[m_normMatrices2Offs + hit.instId], hitNorm);
+        float3 hitTang2 = mul3x3(m_normMatrices[m_normMatrices2Offs + hit.instId], hitTang);
 
         hitNorm = lerp(hitNorm, hitNorm2, time);
         hitTang = lerp(hitTang, hitTang2, time);

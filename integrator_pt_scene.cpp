@@ -816,7 +816,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   //// (3) make instances of created meshes
   //
-  m_normMatrices.clear(); m_normMatrices.reserve(1000);
+  m_normMatrices.clear(); m_normMatrices.reserve(1000*2);
+  std::vector<float4x4>   m_normMatrices2;
+  m_normMatrices2.reserve(1000);
+
   m_pAccelStruct->ClearScene();
   uint32_t realInstId = 0;
   for(auto inst : scene.InstancesGeom())
@@ -858,7 +861,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     m_normMatrices2.clear();
     m_normMatrices2.resize(0);
+    m_normMatrices2Offs = 0;
   }
+  else
+    m_normMatrices2Offs = uint32_t(m_normMatrices.size());
+  m_normMatrices.insert(m_normMatrices.end(), m_normMatrices2.begin(), m_normMatrices2.end());
 
   uint32_t build_options = BUILD_HIGH;
   if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 1)
