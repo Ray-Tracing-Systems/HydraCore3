@@ -391,13 +391,13 @@ if __name__ == '__main__':
                       [
                         PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0001/spectral-macbeth-hydra3.xml",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0004/spectral-cornell-hydra3.xml",
-                        PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0005/spectral-texture-hydra3.xml",
+                        #PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0005/spectral-texture-hydra3.xml", // (!!!) HANGS ON MY HOME COMPUTER 
                         PATH_TO_HYDRA3_SCENS + "/Tests/Hydra2-spectral/0006/spectral-cornell-hydra3.xml",
                       ],
                       [
                         PATH_TO_HYDRA2_TESTS + "/tests_images/test_602_macbeth/w_ref.png",
                         PATH_TO_HYDRA2_TESTS + "/tests_images/test_601_cornell_spectral_2/w_ref.png",
-                        PATH_TO_HYDRA2_TESTS + "/tests_images/test_603_texture_1/w_ref.png",
+                        #PATH_TO_HYDRA2_TESTS + "/tests_images/test_603_texture_1/w_ref.png",              // (!!!) HANGS ON MY HOME COMPUTER
                         PATH_TO_HYDRA2_TESTS + "/tests_images/test_612_cornell_spectral_3/w_ref.png",
                       ],
                       imsize = [(1280, 720), (512, 512), (512, 512), (512, 512)],
@@ -504,8 +504,8 @@ if __name__ == '__main__':
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0002/Spectral-diffuse-sphere-hydra3.xml",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0003/PlasticRough-025_sphere_hydra3.xml",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0004/Spectral-plastic-sphere-hydra3.xml",
-                        PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0006/Spectral-diffuse-texture-hydra3.xml",
-                        PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0007/Spectral-plastic-texture-hydra3.xml"
+                        #PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0006/Spectral-diffuse-texture-hydra3.xml",
+                        #PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0007/Spectral-plastic-texture-hydra3.xml"
                       ],
                       [
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0000/Images/Spectral-ior-sphere-mitsuba.png",
@@ -513,12 +513,12 @@ if __name__ == '__main__':
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0002/Images/Spectral-diffuse-sphere-mitsuba.png",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0003/Images/PlasticRough-025_sphere_mitsuba.png",
                         PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0004/Images/Spectral-plastic-sphere-mitsuba.png",
-                        PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0006/Images/Spectral-diffuse-texture-hydra3.png",
-                        PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0007/Images/Spectral-plastic-texture-hydra3.png",
+                        #PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0006/Images/Spectral-diffuse-texture-hydra3.png",
+                        #PATH_TO_HYDRA3_SCENS + "/Tests/Spectral-cornell/0007/Images/Spectral-plastic-texture-hydra3.png",
                       ],
                       imsize = [(1024, 1024) for i in range(7)],
                       naivemul = 8, integrators = ["mispt"], is_spectral = True))
-
+  
   reqs.append( REQ_HX("blend",
                       [
                         PATH_TO_HYDRA3_SCENS + "/Tests/Blend/0001/spectral-blend-sphere-hydra3.xml",

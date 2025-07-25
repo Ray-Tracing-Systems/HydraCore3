@@ -527,7 +527,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
 uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
 {
-  const int remapListId  = m_remapInst[a_instId];
+  const int remapListId  = m_remapInst[a_instId].x;
   if(remapListId == -1)
     return a_mId;
 

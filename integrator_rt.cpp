@@ -125,12 +125,14 @@ void Integrator::kernel_GetRayColor(uint tid, const Lite_Hit* in_hit, const floa
     return;
   }
 
-  const uint32_t matId  = m_matIdByPrimId[m_matIdOffsets[hit.geomId] + hit.primId];
+  const uint2 mvOffsets = m_matVertOffset[hit.geomId];
+
+  const uint32_t matId  = m_matIdByPrimId[mvOffsets.x + hit.primId];
   const float4 mdata    = m_materials[matId].colors[GLTF_COLOR_BASE];
   const float2 uv       = *bars;
 
-  const uint triOffset  = m_matIdOffsets[hit.geomId];
-  const uint vertOffset = m_vertOffset  [hit.geomId];
+  const uint triOffset  = mvOffsets.x;
+  const uint vertOffset = mvOffsets.y;
 
   const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
   const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];

@@ -84,6 +84,7 @@
         "__locale": "cpp",
         "__threading_support": "cpp",
         "__verbose_abort": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "list": "cpp"
     }
 }

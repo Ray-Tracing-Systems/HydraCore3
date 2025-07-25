@@ -464,7 +464,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   //
   std::vector<uint32_t> oldLightIdToNewLightId(scene.GetInstancesNum(), uint32_t(-1));
 
-  m_instIdToLightInstId.resize(scene.GetInstancesNum(), -1);
+  m_remapInst.resize(scene.GetInstancesNum(), int2{-1,-1});
   m_pdfLightData.resize(0);
   
   uint32_t oldLightId = 0;
@@ -749,8 +749,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   
   //// (2) load meshes
   //
-  m_matIdOffsets.reserve(1024);
-  m_vertOffset.reserve(1024);
+  m_matVertOffset.reserve(1024);
   m_matIdByPrimId.reserve(128000);
   m_triIndices.reserve(128000*3);
 
@@ -764,8 +763,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   {
     std::string dir = sceneFolder + "/" + hydra_xml::ws2s(std::wstring(mIter->attribute(L"loc").as_string()));
     std::string name = hydra_xml::ws2s(std::wstring(mIter->name()));
-    m_matIdOffsets.push_back(static_cast<unsigned int>(m_matIdByPrimId.size()));
-    m_vertOffset.push_back(static_cast<unsigned int>(m_vNorm4f.size()));
+    
+    uint2 offsets;
+    offsets.x = static_cast<unsigned int>(m_matIdByPrimId.size());
+    offsets.y = static_cast<unsigned int>(m_vNorm4f.size());
+    m_matVertOffset.push_back(offsets);
 
     if (name == "mesh")
     {
@@ -811,7 +813,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   //// (3) make instances of created meshes
   //
   m_normMatrices.clear(); m_normMatrices.reserve(1000);
-  m_remapInst.clear();    m_remapInst.reserve(1000);
   m_pAccelStruct->ClearScene();
   uint32_t realInstId = 0;
   for(auto inst : scene.InstancesGeom())
@@ -840,12 +841,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     m_normMatrices.push_back(transpose(inverse4x4(inst.matrix)));
     
-    m_remapInst.push_back(inst.rmapId);
+    m_remapInst[realInstId].x = inst.rmapId;
     
     if(inst.lightInstId != uint32_t(-1))
-      m_instIdToLightInstId[inst.instId] = oldLightIdToNewLightId[inst.lightInstId];
+      m_remapInst[inst.instId].y = oldLightIdToNewLightId[inst.lightInstId];
     else
-      m_instIdToLightInstId[inst.instId] = inst.lightInstId;
+      m_remapInst[inst.instId].y = inst.lightInstId;
     realInstId++;
   }
 

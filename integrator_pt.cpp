@@ -254,9 +254,11 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
       // // finally P' is the barycentric mean of these three
       // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
       /////////////////////////////////////////////////////////////////////////////////
+      
+      const uint2 mvOffsets = m_matVertOffset[hit.geomId];
 
-      const uint triOffset  = m_matIdOffsets[geomId];
-      const uint vertOffset = m_vertOffset  [geomId];
+      const uint triOffset  = mvOffsets.x;
+      const uint vertOffset = mvOffsets.y;
     
       const uint A = m_triIndices[(triOffset + hit.primId)*3 + 0];
       const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
@@ -300,7 +302,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
       if (flipNorm < 0.0f) currRayFlags |=  RAY_FLAG_HAS_INV_NORMAL;
       else                 currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
       
-      const uint midOriginal = m_matIdByPrimId[m_matIdOffsets[geomId] + hit.primId];
+      const uint midOriginal = m_matIdByPrimId[mvOffsets.x + hit.primId];
       const uint midRemaped  = RemapMaterialId(midOriginal, hit.instId);
 
       *rayFlags              = packMatId(currRayFlags, midRemaped);
@@ -316,7 +318,7 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
       currRayFlags &= ~RAY_FLAG_HAS_INV_NORMAL;
 
       //only one material per geometry without remaps
-      const uint matId = m_matIdByPrimId[m_matIdOffsets[geomId]];
+      const uint matId = m_matIdByPrimId[mvOffsets.x];
 
       //no texture coordinates, only constant color materials
       const float2 tc = float2(0,0);
@@ -462,7 +464,8 @@ void Integrator::kernel_NextBounce(uint tid, uint bounce, const float4* in_hitPa
     const uint   texId     = m_materials[matId].texid[0];
     const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
     const float4 texColor  = m_textures[texId]->sample(texCoordT);
-    const uint   lightId   = m_instIdToLightInstId[*in_instId]; 
+    const auto   instId    = *in_instId;
+    const uint   lightId   = m_remapInst[instId].y; 
     
     const float4 emissColor = m_materials[matId].colors[EMISSION_COLOR];
     float4 lightIntensity   = emissColor * texColor;

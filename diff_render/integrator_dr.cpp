@@ -989,7 +989,7 @@ float4 IntegratorDR::PathTraceReplay(uint tid, uint channels, uint cpuThreadId, 
         const uint   texId     = m_materials[matId].texid[0];
         const float2 texCoordT = mulRows2x4(m_materials[matId].row0[0], m_materials[matId].row1[0], hit.uv);
         const float4 texColor  = m_textures[texId]->sample(texCoordT);
-        const uint   lightId   = m_instIdToLightInstId[instId]; 
+        const uint   lightId   = m_remapInst[instId].y; 
         
         const float4 emissColor = m_materials[matId].colors[EMISSION_COLOR];
         float4 lightIntensity   = emissColor * texColor;

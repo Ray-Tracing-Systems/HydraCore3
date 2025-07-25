@@ -376,19 +376,17 @@ public:
 
   std::vector<Material>         m_materials;  
 
-  std::vector<uint32_t>         m_matIdOffsets;  ///< offset = m_matIdOffsets[geomId]
+  std::vector<uint2>            m_matVertOffset; ///< m_matIdOffsets[geomId -> (matIdOffset, vertOffset)
   std::vector<uint32_t>         m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
   std::vector<uint32_t>         m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
   std::vector<uint32_t>         m_packedXY;
                                 
-  std::vector<uint32_t>         m_vertOffset;    ///< vertOffs = m_vertOffset[geomId]
   std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
   std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
-  std::vector<int>              m_remapInst;
   std::vector<int>              m_allRemapLists;
   std::vector<int>              m_allRemapListsOffsets;
-  std::vector<uint32_t>         m_instIdToLightInstId;
+  std::vector<int2>             m_remapInst; // instId -> (matId, lgtId)
                                 
   float4x4                      m_proj;
   float4x4                      m_worldView;
