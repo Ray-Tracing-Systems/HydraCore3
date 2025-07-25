@@ -531,8 +531,8 @@ uint Integrator::RemapMaterialId(uint a_mId, int a_instId)
   if(remapListId == -1)
     return a_mId;
 
-  const int r_offset     = m_allRemapListsOffsets[remapListId];
-  const int r_size       = m_allRemapListsOffsets[remapListId+1] - r_offset;
+  const int r_offset     = m_allRemapLists[m_allRemapListsSize + remapListId];               // (r_offset, r_size) is actually are actually in a different array m_allRemapListsOffsets
+  const int r_size       = m_allRemapLists[m_allRemapListsSize + remapListId+1] - r_offset;  // but we join m_allRemapLists and m_allRemapListsOffsets to single array and put offsets at the end
   const int2 offsAndSize = int2(r_offset, r_size);
   
   uint res = a_mId;

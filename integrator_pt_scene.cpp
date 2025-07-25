@@ -867,7 +867,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   // (4) load remap lists and put all of the to the flat data structure
   // 
   m_allRemapLists.clear();
-  m_allRemapListsOffsets.clear();
+  std::vector<int>  m_allRemapListsOffsets;
   m_allRemapLists.reserve(m_normMatrices.size()*10);     // approx size for all reamp lists based on number of instances; may not do this reserve in fact, or make it more precise
   m_allRemapListsOffsets.reserve(m_normMatrices.size()); // approx size for all reamp lists ... 
   for(auto remapList : scene.RemapLists())
@@ -877,6 +877,9 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
   m_allRemapListsOffsets.push_back(static_cast<int>(m_allRemapLists.size())); // put size of the list remap list
   
+  m_allRemapListsSize = uint32_t(m_allRemapLists.size());                                                      // save array size
+  m_allRemapLists.insert(m_allRemapLists.end(), m_allRemapListsOffsets.begin(), m_allRemapListsOffsets.end()); // put all offsets to the end of the array
+
   // (5) load render settings
   //
   for(const auto& sett : scene.Settings())

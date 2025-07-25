@@ -385,7 +385,8 @@ public:
   std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
   std::vector<int>              m_allRemapLists;
-  std::vector<int>              m_allRemapListsOffsets;
+  //std::vector<int>              m_allRemapListsOffsets;
+  uint32_t                      m_allRemapListsSize;
   std::vector<int2>             m_remapInst; // instId -> (matId, lgtId)
                                 
   float4x4                      m_proj;
