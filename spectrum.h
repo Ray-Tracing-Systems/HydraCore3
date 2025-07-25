@@ -148,8 +148,7 @@ static inline float SpectrumAverage(float4 spec)
   return sum / SPECTRUM_SAMPLE_SZ;
 }
 
-static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min, float lambda_max,
-                                   const float* a_CIE_X, const float* a_CIE_Y, const float* a_CIE_Z, bool terminate_waves) 
+static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min, float lambda_max, const float4* a_CIE_XYZ, bool terminate_waves) 
 {
   float4 pdf = float4(1.0f / (lambda_max - lambda_min));
   const float CIE_Y_integral = 106.856895f;
@@ -176,21 +175,22 @@ static inline float3 SpectrumToXYZ(float4 spec, float4 lambda, float lambda_min,
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i) 
   {
     uint32_t offset = uint32_t(float(std::floor(lambda[i] + 0.5f)) - lambda_min);
+    float4 XYZ      = a_CIE_XYZ[offset];
   
     if (offset >= nCIESamples)
       X[i] = 0;
     else
-      X[i] = a_CIE_X[offset];
+      X[i] = XYZ.x;
   
     if (offset >= nCIESamples)
       Y[i] = 0;
     else
-      Y[i] = a_CIE_Y[offset];
+      Y[i] = XYZ.y;
   
     if (offset >= nCIESamples)
       Z[i] = 0;
     else
-      Z[i] = a_CIE_Z[offset];
+      Z[i] = XYZ.z;
   }
 
   for (uint32_t i = 0; i < SPECTRUM_SAMPLE_SZ; ++i)

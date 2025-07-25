@@ -78,6 +78,12 @@
         "queue": "cpp",
         "stack": "cpp",
         "ios": "cpp",
-        "__nullptr": "cpp"
+        "__nullptr": "cpp",
+        "__bit_reference": "cpp",
+        "__config": "cpp",
+        "__locale": "cpp",
+        "__threading_support": "cpp",
+        "__verbose_abort": "cpp",
+        "locale": "cpp"
     }
 }

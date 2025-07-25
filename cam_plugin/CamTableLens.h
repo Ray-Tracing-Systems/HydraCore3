@@ -56,10 +56,7 @@ protected:
   std::vector<float>       m_storedWaves;
   std::vector<float>       m_storedCos4;
   void Init(int a_maxThreads);
-
-  std::vector<float> m_cie_x;
-  std::vector<float> m_cie_y;
-  std::vector<float> m_cie_z;
+  std::vector<float4> m_cie_xyz;
   
   struct LensElementInterface 
   {

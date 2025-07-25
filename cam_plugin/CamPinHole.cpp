@@ -30,9 +30,12 @@ void CamPinHole::Init(int a_maxThreads)
     m_randomGens[i] = RandomGenInit(i + 12345*i);
 
   // init spectral curves
-  m_cie_x      = Get_CIE_X();
-  m_cie_y      = Get_CIE_Y();
-  m_cie_z      = Get_CIE_Z();
+  std::vector<float> cie_x = Get_CIE_X();
+  std::vector<float> cie_y = Get_CIE_Y();
+  std::vector<float> cie_z = Get_CIE_Z();
+  m_cie_xyz.resize(cie_x.size());
+  for(size_t i=0; i < m_cie_xyz.size(); i++)
+    m_cie_xyz[i] = float4(cie_x[i], cie_y[i], cie_z[i], 0.0f);
 }
 
 void CamPinHole::MakeRaysBlock(RayPosAndW* out_rayPosAndNear4f, RayDirAndT* out_rayDirAndFar4f, uint32_t in_blockSize, int subPassId)
@@ -116,7 +119,7 @@ void CamPinHole::kernel1D_ContribSample(int in_blockSize, const float* in_color,
     {
       const float4 wavelengths = float4(m_storedWaves[tid]);
                                   
-      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_x.data(), m_cie_y.data(), m_cie_z.data(), false);
+      const float3 xyz = SpectrumToXYZ(color, wavelengths, CAM_LAMBDA_MIN, CAM_LAMBDA_MAX, m_cie_xyz.data(), false);
       color = to_float4(XYZToRGB(xyz), 1.0f);
     }
 

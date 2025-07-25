@@ -418,5 +418,32 @@
       ]
   },
 
+  {
+      "name": "LiteRT/BunnyScene",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-debug/hydra",
+      "args": ["--gpu",
+               "-in", "/home/frol/PROG/vg_code/LiteRT/saves/test_43_mesh.xml",
+               "-integrator", "mispt", 
+               "-width", "1024",
+               "-height", "1024",
+               "-spp", "1024",
+               //"-scn_dir", "../comparisonrender",
+               "-out", "z_bunny.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
   ]
 }

@@ -45,10 +45,7 @@ protected:
   std::vector<RandomGen>  m_randomGens;
   std::vector<float>      m_storedWaves;
   void Init(int a_maxThreads);
-
-  std::vector<float> m_cie_x;
-  std::vector<float> m_cie_y;
-  std::vector<float> m_cie_z;
+  std::vector<float4> m_cie_xyz;
 
   static constexpr float CAM_LAMBDA_MIN = 360.0f;
   static constexpr float CAM_LAMBDA_MAX = 830.0f;

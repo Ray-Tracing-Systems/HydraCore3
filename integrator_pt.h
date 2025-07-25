@@ -469,16 +469,13 @@ public:
   std::vector<uint2> m_spec_tex_ids_wavelengths;
   std::vector<uint2> m_spec_tex_offset_sz;
 
-  std::vector<float> m_cie_x;
-  std::vector<float> m_cie_y;
-  std::vector<float> m_cie_z;
+  std::vector<float4> m_cie_xyz;
+  std::vector<float>  m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
 
-  std::vector<float> m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
-
-  std::vector<float> m_films_thickness_vec;
-  std::vector<uint> m_films_spec_id_vec;
+  std::vector<float> m_films_thickness_vec;  // todo: merge to single buffer with float4 if possible
+  std::vector<uint>  m_films_spec_id_vec;
   std::vector<float> m_films_eta_k_vec;
-  std::vector<float> m_precomp_thin_films; //frenel precomputed data for thin films
+  std::vector<float> m_precomp_thin_films;   // frenel precomputed data for thin films
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

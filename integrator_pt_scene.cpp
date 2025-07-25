@@ -328,9 +328,12 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
 
   //// init spectral curves
-  m_cie_x      = Get_CIE_X();
-  m_cie_y      = Get_CIE_Y();
-  m_cie_z      = Get_CIE_Z();
+  std::vector<float> cie_x = Get_CIE_X();
+  std::vector<float> cie_y = Get_CIE_Y();
+  std::vector<float> cie_z = Get_CIE_Z();
+  m_cie_xyz.resize(cie_x.size());
+  for(size_t i=0; i < m_cie_xyz.size(); i++)
+    m_cie_xyz[i] = float4(cie_x[i], cie_y[i], cie_z[i], 0.0f);
   ////
   
   //// init render feature map
@@ -562,7 +565,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if (mat_type == thinFilmMatTypeStr)
     {
       mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
-                                 m_spec_values, m_spec_offset_sz, m_cie_x, m_cie_y, m_cie_z, m_spectral_mode);
+                                 m_spec_values, m_spec_offset_sz, cie_x, cie_y, cie_z, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
       uint layers = 0;
       for (auto layerNode : materialNode.child(L"layers").children()) layers++;
