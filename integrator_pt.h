@@ -13,6 +13,8 @@
 #include <utility>
 #include <cfloat>
 
+//#define DISABLE_LENS 1
+
 #ifndef LITERT_RENDERER
   #include "CrossRT.h" // special include for ray tracing
 #else
@@ -262,8 +264,13 @@ public:
 
   float2 GetPhysSize() const { return m_physSize; }
   void  SetPhysSize(float2 new_size) { m_physSize = new_size; }
-
-  void SetLines(const std::vector<LensElementInterface>& a_lines) {m_lines = a_lines;}
+  
+  void SetLines(const std::vector<LensElementInterface>& a_lines) 
+  {
+    #ifndef DISABLE_LENS
+    m_lines = a_lines;
+    #endif
+  }
 
   void SetIntegratorType(const uint a_type) { m_intergatorType = a_type; }
   
@@ -450,8 +457,23 @@ public:
   float  m_diagonal;
   float  m_aspect;
 
-  inline float LensRearZ()      const { return m_lines[0].thickness; }
-  inline float LensRearRadius() const { return m_lines[0].apertureRadius; }         
+  inline float LensRearZ()      const 
+  {
+    #ifndef DISABLE_LENS 
+    return m_lines[0].thickness; 
+    #else
+    return 0.0f;
+    #endif
+  }
+
+  inline float LensRearRadius() const 
+  { 
+    #ifndef DISABLE_LENS 
+    return m_lines[0].apertureRadius; 
+    #else
+    return 0.0f;
+    #endif
+  }         
 
   bool IntersectSphericalElement(float radius, float zCenter, float3 rayPos, float3 rayDir, 
                                  float *t, float3 *n) const;

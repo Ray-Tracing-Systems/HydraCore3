@@ -19,6 +19,11 @@
         "PackXYMega" : {"nonConstantData": {"m_packedXY" : 1}}
     },
 
+    "defines" : {
+      //"DISABLE_LENS"  : "",
+      "DISABLE_NURBS" : ""
+    },
+
     "source" : ["integrator_pt.cpp", 
                 "integrator_pt_lgt.cpp",
                 "integrator_pt_mat.cpp",

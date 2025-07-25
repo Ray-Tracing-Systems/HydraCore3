@@ -75,6 +75,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
     rayPos.y += xy.y;
     rayDir = normalize(focusPosition - rayPos);
   }
+  #ifndef DISABLE_LENS
   else if(KSPEC_OPTIC_SIM !=0 && m_enableOpticSim != 0)  
   {
     const float2 xy = 0.25f*m_physSize*float2(2.0f*xCoordNormalized - 1.0f, 2.0f*yCoordNormalized - 1.0f);
@@ -100,6 +101,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
       rayPos = float3(-1,-1,-1)*rayPos;
     }
   }
+  #endif
 
   EyeRayData res;
   {
