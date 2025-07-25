@@ -752,9 +752,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_matVertOffset.reserve(1024);
   m_matIdByPrimId.reserve(128000);
   m_triIndices.reserve(128000*3);
-
-  m_vNorm4f.resize(0);
-  m_vTang4f.resize(0);
+  
+  m_vData8f.resize(0);
+  //m_vNorm4f.resize(0);
+  //m_vTang4f.resize(0);
   //m_vTexc2f.resize(0);
 
   m_pAccelStruct->ClearGeom();
@@ -766,7 +767,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     
     uint2 offsets;
     offsets.x = static_cast<unsigned int>(m_matIdByPrimId.size());
-    offsets.y = static_cast<unsigned int>(m_vNorm4f.size());
+    offsets.y = static_cast<unsigned int>(m_vData8f.size());
     m_matVertOffset.push_back(offsets);
 
     if (name == "mesh")
@@ -779,17 +780,20 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
       (void)geomId; // silence unused var. warning
 
-      const size_t lastVertex = m_vNorm4f.size();
+      const size_t lastVertex = m_vData8f.size();
 
       m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
       m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
 
-      m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
-      m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
-
-      for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack texture coords
-        m_vNorm4f[lastVertex + i].w = currMesh.vTexCoord2f[i].x;
-        m_vTang4f[lastVertex + i].w = currMesh.vTexCoord2f[i].y;
+      //m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
+      //m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
+      
+      m_vData8f.resize(m_vData8f.size() + currMesh.vNorm4f.size());
+      for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack vertex data
+        m_vData8f[lastVertex + i].normAndTx   = currMesh.vNorm4f[i];
+        m_vData8f[lastVertex + i].tangAndTy   = currMesh.vTang4f[i];
+        m_vData8f[lastVertex + i].normAndTx.w = currMesh.vTexCoord2f[i].x;
+        m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
       }
     }
     else

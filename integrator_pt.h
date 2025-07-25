@@ -380,9 +380,15 @@ public:
   std::vector<uint32_t>         m_matIdByPrimId; ///< matId  = m_matIdByPrimId[offset + primId]
   std::vector<uint32_t>         m_triIndices;    ///< (A,B,C) = m_triIndices[(offset + primId)*3 + 0/1/2]
   std::vector<uint32_t>         m_packedXY;
-                                
-  std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
+  
+  struct PackedVertex
+  {
+    float4 normAndTx;
+    float4 tangAndTy;
+  };
+  std::vector<PackedVertex>     m_vData8f;
+  //std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
+  //std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
                                 
   std::vector<int>              m_allRemapLists;
   //std::vector<int>              m_allRemapListsOffsets;

@@ -150,8 +150,8 @@ void Integrator::kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, 
   const uint B = m_triIndices[(triOffset + hit.primId)*3 + 1];
   const uint C = m_triIndices[(triOffset + hit.primId)*3 + 2];
 
-  const float4 data1 = (1.0f - uv.x - uv.y)*m_vNorm4f[A + vertOffset] + uv.y*m_vNorm4f[B + vertOffset] + uv.x*m_vNorm4f[C + vertOffset];
-  const float4 data2 = (1.0f - uv.x - uv.y)*m_vTang4f[A + vertOffset] + uv.y*m_vTang4f[B + vertOffset] + uv.x*m_vTang4f[C + vertOffset];
+  const float4 data1 = (1.0f - uv.x - uv.y)*m_vData8f[A + vertOffset].normAndTx + uv.y*m_vData8f[B + vertOffset].normAndTx + uv.x*m_vData8f[C + vertOffset].normAndTx;
+  const float4 data2 = (1.0f - uv.x - uv.y)*m_vData8f[A + vertOffset].tangAndTy + uv.y*m_vData8f[B + vertOffset].tangAndTy + uv.x*m_vData8f[C + vertOffset].tangAndTy;
   float2 hitTexCoord = float2(data1.w, data2.w);
   float3 hitNorm     = to_float3(data1);
 
