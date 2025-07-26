@@ -469,7 +469,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   std::vector<uint32_t> oldLightIdToNewLightId(scene.GetInstancesNum(), uint32_t(-1));
 
   m_remapInst.resize(scene.GetInstancesNum(), int2{-1,-1});
-  m_pdfLightData.resize(0);
+  m_arrays1f.resize(0);
   
   uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
@@ -513,11 +513,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
           const auto pTex = m_textures[lightSource.texId];
           int tableW = 0, tableH = 0;
           std::vector<float> pdfImage = PdfTableFromImage(pTex, &tableW, &tableH);
-          lightSource.pdfTableOffset  = uint32_t(m_pdfLightData.size());
+          lightSource.pdfTableOffset  = uint32_t(m_arrays1f.size());
           lightSource.pdfTableSize    = uint32_t(pdfImage.size());
           lightSource.pdfTableSizeX   = tableW;
           lightSource.pdfTableSizeY   = tableH;
-          m_pdfLightData.insert(m_pdfLightData.end(), pdfImage.begin(), pdfImage.end());
+          m_arrays1f.insert(m_arrays1f.end(), pdfImage.begin(), pdfImage.end());
           m_envLightId = uint(m_lights.size());
         }
   
@@ -593,7 +593,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     else if(mat_type == plasticMatTypeStr)
     {
       #ifndef DISABLE_SPECTRUM
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_arrays1f, m_spectral_mode,
                                 m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures);
       #else
@@ -601,7 +601,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       std::vector<uint2> spec_offset_sz;
       std::vector<uint2> spec_tex_ids_wavelengths;
       std::vector<uint2> spec_tex_offset_sz;
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_arrays1f, m_spectral_mode,
                                 spec_values, spec_offset_sz,  spec_tex_ids_wavelengths, spec_tex_offset_sz, 
                                 loadedSpectralTextures);
       #endif

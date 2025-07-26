@@ -269,10 +269,9 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
       // float4 reflSpec    = SampleMatColorParamSpectrum(currMatId, wavelengths, PLASTIC_COLOR, 0);
       if(m_spectral_mode == 0)
         reflSpec *= color;
-
-      const uint precomp_id = m_materials[currMatId].datai[0];
-      plasticSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
-                           m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+      
+      uint trOffset = m_materials[currMatId].datai[0];
+      plasticSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res, m_arrays1f.data(), trOffset);
     }
     break;
     case MAT_TYPE_DIELECTRIC:
@@ -485,7 +484,6 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       }
       break;
       case MAT_TYPE_PLASTIC:
-      #ifndef DISABLE_SPECTRUM
       if(KSPEC_MAT_TYPE_PLASTIC != 0)
       {
         const float4 color = texColor;
@@ -493,14 +491,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         // float4 reflSpec    = SampleMatColorParamSpectrum(currMat.id, wavelengths, PLASTIC_COLOR, 0);
         if(m_spectral_mode == 0)
           reflSpec *= color;
-        const uint precomp_id = m_materials[currMat.id].datai[0];
-        plasticEval(m_materials.data(), currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, 
-                    m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
+        
+        uint trOffset = m_materials[currMat.id].datai[0];
+        plasticEval(m_materials.data(), currMat.id, reflSpec, l, v, shadeNormal, tc, &currVal, m_arrays1f.data(), trOffset);
 
         res.val += currVal.val * currMat.weight * bumpCosMult;
         res.pdf += currVal.pdf * currMat.weight;
       }
-      #endif
       break;
       case MAT_TYPE_DIELECTRIC:
       if(KSPEC_MAT_TYPE_DIELECTRIC != 0)

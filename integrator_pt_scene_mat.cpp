@@ -752,10 +752,8 @@ Material LoadPlasticMaterial(const pugi::xml_node& materialNode, const std::vect
 
   mat.data[PLASTIC_PRECOMP_REFLECTANCE] = precomp.internal_reflectance;
   mat.data[PLASTIC_SPEC_SAMPLE_WEIGHT]  = precomp.specular_sampling_weight;
-
+  mat.datai[0] = uint32_t(precomputed_transmittance.size());
   std::copy(precomp.transmittance.begin(), precomp.transmittance.end(), std::back_inserter(precomputed_transmittance));
-  
-  mat.datai[0] = (precomputed_transmittance.size() / MI_ROUGH_TRANSMITTANCE_RES) - 1u;
 
   return mat;
 }

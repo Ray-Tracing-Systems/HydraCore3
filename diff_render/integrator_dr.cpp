@@ -775,7 +775,7 @@ float4 IntegratorDR::EnvironmentColor(float3 a_dir, float& outPdf, const float* 
 
       // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
       //
-      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data(), offset, int(sizeX), int(sizeY));
+      const float mapPdf = evalMap2DPdf(texCoordT, m_arrays1f.data(), offset, int(sizeX), int(sizeY));
       outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 

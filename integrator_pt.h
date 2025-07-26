@@ -395,11 +395,9 @@ public:
     float4 tangAndTy;
   };
   std::vector<PackedVertex>     m_vData8f;
-  //std::vector<float4>           m_vNorm4f;       ///< vertNorm = m_vNorm4f[vertOffs + vertId]
-  //std::vector<float4>           m_vTang4f;       ///< vertTang = m_vTang4f[vertOffs + vertId]
-                                
+  std::vector<float>            m_arrays1f;
+  
   std::vector<int>              m_allRemapLists;
-  //std::vector<int>              m_allRemapListsOffsets;
   uint32_t                      m_allRemapListsSize;
   std::vector<int2>             m_remapInst; // instId -> (matId, lgtId)
                                 
@@ -419,7 +417,6 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// light source
   std::vector<LightSource> m_lights;
-  std::vector<float>       m_pdfLightData;
 
   Map2DPiecewiseSample SampleMap2D(float3 rands, uint32_t a_tableOffset, int sizeX, int sizeY);
 
@@ -505,7 +502,6 @@ public:
   std::vector<float>  m_films_eta_k_vec;
   std::vector<float>  m_precomp_thin_films;   // frenel precomputed data for thin films
   #endif
-  std::vector<float>  m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
    
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

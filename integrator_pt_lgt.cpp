@@ -203,7 +203,7 @@ float4 Integrator::EnvironmentColor(float3 a_dir, float4 a_wavelengths, float& o
 
       // apply inverse texcoord transform to get phi and theta and than get correct pdf from table 
       //
-      const float mapPdf = evalMap2DPdf(texCoordT, m_pdfLightData.data(), int(offset), int(sizeX), int(sizeY));
+      const float mapPdf = evalMap2DPdf(texCoordT, m_arrays1f.data(), int(offset), int(sizeX), int(sizeY));
       outPdf = (mapPdf * 1.0f) / (2.f * M_PI * M_PI * std::max(std::abs(sinTheta), 1e-20f));  
     }
 
@@ -221,7 +221,7 @@ Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t 
   const float fN = fw*fh;
 
   float pdf = 1.0f;
-  int pixelOffset = SelectIndexPropToOpt(rands.z, m_pdfLightData.data(), int(a_tableOffset), sizeX*sizeY+1, &pdf);
+  int pixelOffset = SelectIndexPropToOpt(rands.z, m_arrays1f.data(), int(a_tableOffset), sizeX*sizeY+1, &pdf);
 
   if (pixelOffset >= sizeX*sizeY)
     pixelOffset = sizeX*sizeY - 1;
