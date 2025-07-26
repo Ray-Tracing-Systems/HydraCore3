@@ -1,0 +1,38 @@
+import os, sys, subprocess, re
+
+def list_scenes(directory):
+  return [(entry, directory + "/" + entry + "/statex_00001.xml") for entry in os.listdir(directory) if os.path.isdir(os.path.join(directory, entry))]
+
+def run(test_name, args, time_list):
+  try:
+    res = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output  = res.stdout.decode('utf-8')
+    #print(output)
+    pattern = r'PathTraceBlock\(exec\) = (\d+\.\d+) ms'
+    match   = re.search(pattern, output)
+    if match:
+      execution_time_ms = round(float(match.group(1)))
+      time_list.append(execution_time_ms)
+  except Exception as e:
+    print("Failed to run scene {0} : {1}".format(test_name, e),)
+    return
+
+if __name__ == '__main__':
+
+  HYDRA3_PATH = ""
+  SPP = 256
+
+  os.chdir('..') # use HydraCore3 root dir as current
+  if sys.platform == 'win32':
+    HYDRA3_PATH = "./bin-release/Release/hydra.exe"
+  else:  # if sys.platform == 'linux':
+    HYDRA3_PATH = "./bin-release/hydra"
+  
+  time_list = []
+  scenes = list_scenes("../HydraScenes")
+  for scn in scenes:
+      args = [HYDRA3_PATH, "-in", scn[1], "-out",  "y_" + scn[0] + ".png", "-spp", str(SPP), "--gpu"]
+      print(args)  
+      run(scn[0], args, time_list)
+  
+  print(time_list)
