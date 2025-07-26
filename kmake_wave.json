@@ -6,22 +6,17 @@
     "options" : {
         "-pattern"    : "rtv",
         "-shaderCC"   : "slang",
-        "-megakernel" : 1,
+        "-megakernel" : 0,
         "-const_ubo"  : 1,
-        "-const_shit" : 1,
+        "-const_shit" : 0,
         "-enable_ray_tracing_pipeline" : 0,
         "-enable_motion_blur"          : 0,
         "end" : ""
     },
 
-    "kernels" : {
-        "all"        : {"nonConstantData": {"out_color"  : 1, "m_randomGens" : 1}},
-        "PackXYMega" : {"nonConstantData": {"m_packedXY" : 1}}
-    },
-
     "defines" : {
-      "DISABLE_LENS"  : "",
-      "DISABLE_SPECTRUM" : ""
+      //"DISABLE_LENS"  : "",
+      //"DISABLE_SPECTRUM" : ""
     },
 
     "source" : ["integrator_pt.cpp", 

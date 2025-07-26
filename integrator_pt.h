@@ -204,7 +204,7 @@ public:
   void kernel_InitEyeRayGB(uint tidX, uint tidY, const uint* packedXY, float4* rayPosAndNear, float4* rayDirAndFar);  
   void kernel_GetRayGBuff(uint tidX, uint tidY, const Lite_Hit* pHit, const float2* bars, GBufferPixel* out_gbuffer);                                 
 
-  bool kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
+  void kernel_RayTrace(uint tid, const float4* rayPosAndNear, float4* rayDirAndFar,
                        Lite_Hit* out_hit, float2* out_bars);
 
   void kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAndNear, const float4* rayDirAndFar, const float* a_time,

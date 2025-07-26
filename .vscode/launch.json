@@ -445,5 +445,29 @@
       ]
   },
 
+  {
+      "name": "Benchmark(bathroom2)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", "-in", "../HydraScenes/bathroom2/statex_00001.xml",
+               "-width",  "1024",
+               "-height", "1024",
+               "-spp",    "1024",
+               "-out", "y_bathroom2.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
   ]
 }
