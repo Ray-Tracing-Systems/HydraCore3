@@ -271,10 +271,8 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
         reflSpec *= color;
 
       const uint precomp_id = m_materials[currMatId].datai[0];
-      #ifndef DISABLE_SPECTRUM
       plasticSampleAndEval(m_materials.data(), currMatId, reflSpec, rands, v, shadeNormal, tc, &res,
                            m_precomp_coat_transmittance.data(), precomp_id * MI_ROUGH_TRANSMITTANCE_RES);
-      #endif
     }
     break;
     case MAT_TYPE_DIELECTRIC:

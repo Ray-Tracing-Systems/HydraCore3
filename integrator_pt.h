@@ -504,8 +504,8 @@ public:
   std::vector<uint>   m_films_spec_id_vec;
   std::vector<float>  m_films_eta_k_vec;
   std::vector<float>  m_precomp_thin_films;   // frenel precomputed data for thin films
-  std::vector<float>  m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
   #endif
+  std::vector<float>  m_precomp_coat_transmittance; //MI_ROUGH_TRANSMITTANCE_RES elements per material
    
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

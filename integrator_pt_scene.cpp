@@ -590,15 +590,23 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[KSPEC_BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
-    #ifndef DISABLE_SPECTRUM
     else if(mat_type == plasticMatTypeStr)
     {
+      #ifndef DISABLE_SPECTRUM
       mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
                                 m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures);
+      #else
+      std::vector<float> spec_values;
+      std::vector<uint2> spec_offset_sz;
+      std::vector<uint2> spec_tex_ids_wavelengths;
+      std::vector<uint2> spec_tex_offset_sz;
+      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_coat_transmittance, m_spectral_mode,
+                                spec_values, spec_offset_sz,  spec_tex_ids_wavelengths, spec_tex_offset_sz, 
+                                loadedSpectralTextures);
+      #endif
       m_actualFeatures[KSPEC_MAT_TYPE_PLASTIC] = 1;
     }
-    #endif
     else if(mat_type == dielectricMatTypeStr)
     {
       mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
