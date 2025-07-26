@@ -508,30 +508,31 @@ public:
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);
   float4 SampleMatColorSpectrumTexture(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, float2 texCoords);
 
+  static constexpr uint32_t FILMS_STACK_SIZE = 6;
+  static constexpr uint32_t BLEND_STACK_SIZE = 4;
+
   static constexpr uint32_t KSPEC_MAT_TYPE_GLTF       = 1;
   static constexpr uint32_t KSPEC_MAT_TYPE_GLASS      = 2;
   static constexpr uint32_t KSPEC_MAT_TYPE_CONDUCTOR  = 3;
   static constexpr uint32_t KSPEC_MAT_TYPE_DIFFUSE    = 4;
   static constexpr uint32_t KSPEC_MAT_TYPE_PLASTIC    = 5;
-  static constexpr uint32_t KSPEC_FILMS_STACK_SIZE    = 6;
-  static constexpr uint32_t KSPEC_MAT_TYPE_THIN_FILM  = 7;
+  static constexpr uint32_t KSPEC_MAT_TYPE_THIN_FILM  = 6;
  
-  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 8;
-  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 9;
-  static constexpr uint32_t KSPEC_BLEND_STACK_SIZE    = 10;
-  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 11;
-  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 12;
-  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 13;
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 7;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 8;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 9;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 10;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 11;
   
-  static constexpr uint32_t KSPEC_LIGHT_IES           = 14;
-  static constexpr uint32_t KSPEC_LIGHT_ENV           = 15;
+  static constexpr uint32_t KSPEC_LIGHT_IES           = 12;
+  static constexpr uint32_t KSPEC_LIGHT_ENV           = 13;
 
-  static constexpr uint32_t KSPEC_MOTION_BLUR         = 16;  
-  static constexpr uint32_t KSPEC_OPTIC_SIM           = 17;
-  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 18;
-  static constexpr uint32_t KSPEC_SPD_TEX             = 19;
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 14;  
+  static constexpr uint32_t KSPEC_OPTIC_SIM           = 15;
+  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 16;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 17;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 20; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 18; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 
@@ -586,7 +587,7 @@ public:
   
   // struct IORVector
   // {
-  //   complex value[KSPEC_FILMS_STACK_SIZE];
+  //   complex value[FILMS_STACK_SIZE];
   // };
 };
 

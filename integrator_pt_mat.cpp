@@ -314,7 +314,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
   }
 
   MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
-  MatIdWeight material_stack[KSPEC_BLEND_STACK_SIZE];
+  MatIdWeight material_stack[BLEND_STACK_SIZE];
   if(KSPEC_MAT_TYPE_BLEND != 0)
     material_stack[0] = currMat;
   int top = 0;
@@ -511,7 +511,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         auto childMats = BlendEval(currMat, wavelengths, l, v, geomNormal, tc);
         currMat = childMats.first;
         needPop = false;                        // we already put 'childMats.first' in 'currMat'
-        if(top + 1 <= KSPEC_BLEND_STACK_SIZE)
+        if(top + 1 <= BLEND_STACK_SIZE)
         {
           material_stack[top] = childMats.second; // remember second mat in stack
           top++;

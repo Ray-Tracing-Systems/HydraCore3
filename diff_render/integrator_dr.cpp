@@ -536,7 +536,7 @@ BsdfEval IntegratorDR::MaterialEval(uint a_materialId, float4 wavelengths, float
   }
 
   MatIdWeight currMat = make_id_weight(a_materialId, 1.0f);
-  MatIdWeight material_stack[KSPEC_BLEND_STACK_SIZE];
+  MatIdWeight material_stack[BLEND_STACK_SIZE];
   if(KSPEC_MAT_TYPE_BLEND != 0)
     material_stack[0] = currMat;
   int top = 0;
