@@ -19,7 +19,7 @@
 #ifndef LITERT_RENDERER
   #ifdef USE_HEAVYRT  
   #include "external/HeavyRT/core/CrossRT.h"
-  //#include "external/HeavyRT/core/BVH2FatRT.h" // 
+  #include "external/HeavyRT/core/BVH2FatRT.h" // 
   #else
   #include "external/CrossRT/CrossRT.h" // special include for ray tracing
   #endif
@@ -59,7 +59,8 @@ public:
     #ifndef USE_HEAVYRT 
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     #else
-    m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
     #endif
     InitDataForGbuffer();
   }
