@@ -812,6 +812,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
       }
     }
+    #ifndef USE_HEAVYRT
     else
     {
       //currently all non-mesh types can have only one material for geometry
@@ -826,6 +827,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       m_triIndices.push_back(0);
       m_triIndices.push_back(0);
     }
+    #endif
     mIter++;
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }

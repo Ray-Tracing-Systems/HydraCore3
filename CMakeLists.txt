@@ -4,7 +4,8 @@ project (HydraCore3)
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
-option(USE_LITERT "Enable LiteRT" OFF)
+option(USE_LITERT  "Enable LiteRT" OFF)
+option(USE_HEAVYRT "Enable HeavyRT" OFF)
 option(USE_STB_IMAGE "Enable STB image " ON)
 
 if(USE_STB_IMAGE)
@@ -24,6 +25,12 @@ if(USE_LITERT)
   add_definitions(-DLITERT_RENDERER)
   #include_directories(...) # add target incluide directlory for LiteRT o
 endif()
+if(USE_HEAVYRT)
+  add_definitions(-DUSE_HEAVYRT)
+  include_directories("external/HeavyRT/core")
+  include_directories("external/HeavyRT/core/builders")
+endif()
+
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -195,6 +202,33 @@ set(CORE_SRC
         imageutils_gbuffer.cpp
         utils.cpp
         ies_parser/ies_render.cpp)
+
+if(USE_HEAVYRT)
+  #set(BUILDERS_SRC
+  #      ${CMAKE_SOURCE_DIR}/core/builders/lbvh.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/lbvh_host.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_fat.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_core.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_embree2.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_split.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/EXT_TriBoxOverlap.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_esc.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_esc2.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/cbvh_hlbvh.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/FatBVHReorder.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/FatBVHClusterize.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/FatBVHPrint.cpp
+  #      ${CMAKE_SOURCE_DIR}/core/builders/refitter.cpp)
+  
+  # list(APPEND CORE_SRC ${BUILDERS_SRC})
+
+  list(APPEND CORE_SRC 
+        external/HeavyRT/core/BVH2FatRT.cpp
+        external/HeavyRT/core/BVH2FatRT_host.cpp)
+
+endif()
+
 
 if(HYDRA_CORE3_LIB)
   if(USE_VULKAN)    

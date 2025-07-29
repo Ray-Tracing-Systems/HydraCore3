@@ -17,7 +17,12 @@
 //#define DISABLE_SPECTRUM 1
 
 #ifndef LITERT_RENDERER
-  #include "CrossRT.h" // special include for ray tracing
+  #ifdef USE_HEAVYRT  
+  #include "external/HeavyRT/core/CrossRT.h"
+  //#include "external/HeavyRT/core/BVH2FatRT.h" // 
+  #else
+  #include "external/CrossRT/CrossRT.h" // special include for ray tracing
+  #endif
 #else
   #include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
   #include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
@@ -51,7 +56,11 @@ public:
   Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_maxThreadId(a_maxThreads), m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
+    #ifndef USE_HEAVYRT 
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    #else
+    m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    #endif
     InitDataForGbuffer();
   }
 
