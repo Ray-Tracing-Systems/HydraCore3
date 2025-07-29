@@ -152,9 +152,14 @@ set(LOADER_EXTERNAL_SRC
         external/LiteScene/hydraxml.cpp
         external/LiteScene/cmesh4.cpp)
 
+if(USE_HEAVYRT)
+set(OTHER_EXTERNAL_SRC
+        external/LiteMath/Image2d.cpp)
+else()
 set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
         external/CrossRT/EmbreeRT.cpp)
+endif()
 if(WIN32)
   list(APPEND OTHER_EXTERNAL_SRC
         # spectral OBJECT type libs

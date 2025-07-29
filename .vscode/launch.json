@@ -145,6 +145,37 @@
   },
 
   {
+      "name": "LambertRGB (debug)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-debug/hydra",
+      "args": ["--cpu", 
+               "-in", "../comparisonrender/Tests/Lambert/0001/Lambert_cornell_hydra3.xml",
+               "-integrator", "mispt", 
+               //"--qmc",
+               //"-cam_id", "0",
+               //"-cam_id", "1",
+               "-width",  "512",
+               "-height", "512",
+               "-spp",    "1",
+               "-fb_layer", "color",
+               "-scn_dir", "../comparisonrender",
+               "-out", "z_out_lambert_cornell_bunny.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
+  {
     "name": "CrySponza (GPU)",
     "type": "cppdbg",
     "request": "launch",
