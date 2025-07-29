@@ -225,7 +225,8 @@ if(USE_HEAVYRT)
 
   list(APPEND CORE_SRC 
         external/HeavyRT/core/BVH2FatRT.cpp
-        external/HeavyRT/core/BVH2FatRT_host.cpp)
+        external/HeavyRT/core/BVH2FatRT_host.cpp
+        external/HeavyRT/core/NonunifNodeStorage.cpp)
 
 endif()
 
