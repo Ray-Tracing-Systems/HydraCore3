@@ -59,12 +59,11 @@ public:
   Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_maxThreadId(a_maxThreads), m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
-    #ifndef USE_HEAVYRT 
-    //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
-    //#else
-    //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    #ifdef USE_HEAVYRT 
     m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
     //m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2"); 
+    #else
+    m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     #endif
     InitDataForGbuffer();
   }
