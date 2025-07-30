@@ -15,18 +15,20 @@
 
 //#define DISABLE_LENS 1
 //#define DISABLE_SPECTRUM 1
+//#define LITERT_RENDERER
+//#define USE_HEAVYRT
 
-#ifndef LITERT_RENDERER
-  //#ifdef USE_HEAVYRT  
+#ifdef LITERT_RENDERER
+  #include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
+  #include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
+#else  
+  #ifdef USE_HEAVYRT  
   #include "external/HeavyRT/core/CrossRT.h"
-  #include "external/HeavyRT/core/BVH2FatRT.h"        // v1
+  #include "external/HeavyRT/core/BVH2FatRT.h"          // v1
   //#include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
-  //#else
-  //#include "external/CrossRT/CrossRT.h" // embree based implementation
-  //#endif
-#else
-  //#include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
-  //#include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
+  #else
+  #include "external/CrossRT/CrossRT.h" // embree based implementation
+  #endif
 #endif
 
 #include "Image2d.h" // special include for textures
