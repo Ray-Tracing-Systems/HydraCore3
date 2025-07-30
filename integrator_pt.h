@@ -57,18 +57,19 @@ public:
   Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_maxThreadId(a_maxThreads), m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
-    //#ifndef USE_HEAVYRT 
+    #ifndef USE_HEAVYRT 
     //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     //#else
     //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
     m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
     //m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2"); 
-    //#endif
+    #endif
     InitDataForGbuffer();
   }
 
   virtual ~Integrator() { m_pAccelStruct = nullptr; }
-
+  
+  #ifndef KERNEL_SLICER
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
     a_restrictions[0] = g_lastSceneInfo.maxMeshes;
@@ -78,7 +79,7 @@ public:
   }
 
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
-
+  #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
 
@@ -324,7 +325,7 @@ public:
   
   void SetProj(const float4x4& a_mat) 
   { 
-    m_proj = a_mat; 
+    m_proj    = a_mat; 
     m_projInv = LiteMath::inverse4x4(m_proj);
   }
   
@@ -555,7 +556,9 @@ public:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
+  #ifndef KERNEL_SLICER
   static SceneInfo   g_lastSceneInfo;
+  #endif
 
   std::string m_resourcesDir = ".";
 
