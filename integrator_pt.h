@@ -19,9 +19,10 @@
 #ifndef LITERT_RENDERER
   #ifdef USE_HEAVYRT  
   #include "external/HeavyRT/core/CrossRT.h"
-  #include "external/HeavyRT/core/BVH2FatRT.h" // 
+  #include "external/HeavyRT/core/BVH2FatRT.h"        // v1
+  #include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
   #else
-  #include "external/CrossRT/CrossRT.h" // special include for ray tracing
+  #include "external/CrossRT/CrossRT.h" // embree based implementation
   #endif
 #else
   #include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
@@ -60,7 +61,8 @@ public:
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     #else
     //m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT("BVH2Fat", "cbvh_embree2", "DepthFirst"), [](ISceneObject *p) { DeleteSceneRT(p); } );
-    m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
+    //m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
+    m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2"); 
     #endif
     InitDataForGbuffer();
   }
