@@ -176,7 +176,7 @@
       ]
   },
 
-   {
+  {
       "name": "LambertRGB (GPU)",
       "type": "cppdbg",
       "request": "launch",
@@ -204,31 +204,32 @@
       ]
   },
 
-  {
-    "name": "CrySponza (GPU)",
-    "type": "cppdbg",
-    "request": "launch",
-    "program": "${workspaceFolder}/bin-release/hydra",
-    "args": ["--gpu", 
-             "-in", "scenes/crytek_sponza/statex_00001.xml",
-             "-integrator", "mispt", 
-             "-width", "1024",
-             "-height", "1024",
-             "-spp", "1024",
-             "-out", "z_cry_sponza.bmp"],
-    "stopAtEntry": false,
-    "cwd": "${workspaceFolder}",
-    "environment": [],
-    "externalConsole": false,
-    "MIMode": "gdb",
-    "setupCommands": [
-        {
-            "description": "Enable pretty-printing for gdb",
-            "text": "-enable-pretty-printing",
-            "ignoreFailures": true
-        }
-    ]
-},
+   {
+      "name": "LambertRGB (FromBench)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", 
+               "-in", "../HydraScenes/a_cornell_bunny/statex_00001.xml",
+               "-integrator", "mispt", 
+               "-width",  "1024",
+               "-height", "1024",
+               "-spp",    "1024",
+               "-fb_layer", "color",
+               "-out", "z_out_lambert_cornell_bunny_gpu.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
 
   {
       "name": "MotionBlurSpectral",
@@ -576,6 +577,32 @@
           }
       ]
   },
+
+  {
+    "name": "Benchmark(CrySponza)",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/bin-release/hydra",
+    "args": ["--gpu", 
+             "-in", "../HydraScenes/a_crytek_sponza/statex_00001.xml",
+             "-integrator", "mispt", 
+             "-width", " 1024",
+             "-height", "1024",
+             "-spp",    "64",
+             "-out", "z_cry_sponza.bmp"],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        }
+    ]
+},
 
   ]
 }
