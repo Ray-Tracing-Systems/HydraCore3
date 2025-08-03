@@ -1,7 +1,8 @@
 {
     "mainClass"     : "Integrator", // must explicitly specify main class as main process 'unit' for slicer
     "baseClasses"   : [],           // specify all base clases in  reverse order from leaf to root
-    "composClasses" : {},           // specify all classes for composition pattern 
+    "composClasses" : [{"interface" : "ISceneObject", 
+                        "implementation": "BVH2FatRT"}],
     
     "options" : {
         "-pattern"    : "rtv",
@@ -15,17 +16,19 @@
     },
 
     "defines" : {
-      "DISABLE_LENS"  : "",
-      "DISABLE_SPECTRUM" : ""
+      "USE_HEAVYRT"      : "1",
+      "DISABLE_LENS"     : "1",
+      "DISABLE_SPECTRUM" : "1"
     },
 
     "source" : ["integrator_pt.cpp", 
                 "integrator_pt_lgt.cpp",
                 "integrator_pt_mat.cpp",
                 "integrator_rt.cpp",
-                "integrator_spectrum.cpp"],
+                "integrator_spectrum.cpp",
+                "external/HeavyRT/core/BVH2FatRT.cpp"],
 
     "includeIgnore"  : ["external/LiteMath", "external/LiteScene"],
-    "includeProcess" : ["external/CrossRT", "cam_plugin"],
+    "includeProcess" : ["external/HeavyRT/core", "cam_plugin"],
     "end" : ""
 }

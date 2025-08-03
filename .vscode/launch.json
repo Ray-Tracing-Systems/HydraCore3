@@ -453,7 +453,7 @@
       "args": ["--gpu", "-in", "../HydraScenes/bathroom2/statex_00001.xml",
                //"-width",  "1024",
                //"-height", "1024",
-               "-spp",    "1024",
+               "-spp",    "16",
                "-out", "y_bathroom2.bmp"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",

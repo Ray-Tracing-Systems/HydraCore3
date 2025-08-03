@@ -15,12 +15,20 @@
 
 //#define DISABLE_LENS 1
 //#define DISABLE_SPECTRUM 1
+//#define LITERT_RENDERER
+//#define USE_HEAVYRT
 
-#ifndef LITERT_RENDERER
-  #include "CrossRT.h" // special include for ray tracing
-#else
+#ifdef LITERT_RENDERER
   #include "../../core/ISceneObject.h" // TODO: change path in CMake(?) special include for ray tracing
   #include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
+#else  
+  #ifdef USE_HEAVYRT  
+  #include "external/HeavyRT/core/CrossRT.h"
+  #include "external/HeavyRT/core/BVH2FatRT.h"          // v1
+  //#include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
+  #else
+   #include "CrossRT.h" // special include for ray tracing
+  #endif
 #endif
 
 #include "Image2d.h" // special include for textures
@@ -51,7 +59,12 @@ public:
   Integrator(int a_maxThreads = 1, std::vector<uint32_t> a_features = {}) : m_maxThreadId(a_maxThreads), m_enabledFeatures(a_features)
   {
     InitRandomGens(a_maxThreads);
+    #ifdef USE_HEAVYRT 
+    m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
+    //m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2"); 
+    #else
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
+    #endif
     InitDataForGbuffer();
   }
 

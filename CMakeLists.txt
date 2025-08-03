@@ -4,7 +4,8 @@ project (HydraCore3)
 option(USE_VULKAN "Enable Vulkan implementation" OFF)
 option(CAM_PLUGIN "Enable Cam Plugin Demo" OFF)
 option(USE_ENZYME "Enable Enzyme AD" OFF)
-option(USE_LITERT "Enable LiteRT" OFF)
+option(USE_LITERT  "Enable LiteRT" OFF)
+option(USE_HEAVYRT "Enable HeavyRT" OFF)
 option(USE_STB_IMAGE "Enable STB image " ON)
 
 if(USE_STB_IMAGE)
@@ -24,6 +25,12 @@ if(USE_LITERT)
   add_definitions(-DLITERT_RENDERER)
   #include_directories(...) # add target incluide directlory for LiteRT o
 endif()
+if(USE_HEAVYRT)
+  add_definitions(-DUSE_HEAVYRT)
+  include_directories("external/HeavyRT/core")
+  include_directories("external/HeavyRT/core/builders")
+endif()
+
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -145,9 +152,14 @@ set(LOADER_EXTERNAL_SRC
         external/LiteScene/hydraxml.cpp
         external/LiteScene/cmesh4.cpp)
 
+if(USE_HEAVYRT)
+set(OTHER_EXTERNAL_SRC
+        external/LiteMath/Image2d.cpp)
+else()
 set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
         external/CrossRT/EmbreeRT.cpp)
+endif()
 if(WIN32)
   list(APPEND OTHER_EXTERNAL_SRC
         # spectral OBJECT type libs
@@ -195,6 +207,36 @@ set(CORE_SRC
         imageutils_gbuffer.cpp
         utils.cpp
         ies_parser/ies_render.cpp)
+
+if(USE_HEAVYRT)
+  set(BUILDERS_SRC
+         external/HeavyRT/core/builders/lbvh.cpp
+         external/HeavyRT/core/builders/lbvh_host.cpp
+         external/HeavyRT/core/builders/cbvh.cpp
+         external/HeavyRT/core/builders/cbvh_fat.cpp
+         external/HeavyRT/core/builders/cbvh_core.cpp
+         external/HeavyRT/core/builders/cbvh_embree2.cpp
+         external/HeavyRT/core/builders/cbvh_split.cpp
+         external/HeavyRT/core/builders/EXT_TriBoxOverlap.cpp
+         external/HeavyRT/core/builders/cbvh_esc.cpp
+         external/HeavyRT/core/builders/cbvh_esc2.cpp
+         external/HeavyRT/core/builders/cbvh_hlbvh.cpp
+         external/HeavyRT/core/builders/FatBVHReorder.cpp
+         external/HeavyRT/core/builders/FatBVHClusterize.cpp
+         external/HeavyRT/core/builders/FatBVHPrint.cpp
+         external/HeavyRT/core/builders/refitter.cpp)
+  
+  list(APPEND CORE_SRC ${BUILDERS_SRC})
+
+  list(APPEND CORE_SRC 
+        external/HeavyRT/core/BVH2FatRT.cpp             # v1
+        external/HeavyRT/core/BVH2FatRT_host.cpp        # v1
+        external/HeavyRT/core/BVH2CommonLoftRT.cpp      # v2
+        external/HeavyRT/core/BVH2CommonLoftRT_host.cpp # v2
+        external/HeavyRT/core/NonunifNodeStorage.cpp)   # TODO: remove 'NonunifNodeStorage.cpp'
+
+endif()
+
 
 if(HYDRA_CORE3_LIB)
   if(USE_VULKAN)    

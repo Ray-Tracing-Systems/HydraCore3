@@ -85,6 +85,8 @@
         "__threading_support": "cpp",
         "__verbose_abort": "cpp",
         "locale": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "charconv": "cpp",
+        "format": "cpp"
     }
 }
