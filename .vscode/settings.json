@@ -87,6 +87,8 @@
         "locale": "cpp",
         "list": "cpp",
         "charconv": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "__functional_base": "cpp",
+        "__functional_base_03": "cpp"
     }
 }
