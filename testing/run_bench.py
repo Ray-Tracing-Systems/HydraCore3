@@ -27,7 +27,6 @@ if __name__ == '__main__':
 
   HYDRA3_PATH = ""
   SPP = 1024
-  SQRRES = True
 
   os.chdir('..') # use HydraCore3 root dir as current
   if sys.platform == 'win32':
@@ -35,7 +34,8 @@ if __name__ == '__main__':
   else:  # if sys.platform == 'linux':
     HYDRA3_PATH = "./bin-release/hydra"
   
-  for SQRRES in [False,True]:
+  for SQRRES in [False, True]:
+  
     time_list = []
     scenes = list_scenes("../HydraScenes")
     for scn in scenes:
@@ -56,5 +56,5 @@ if __name__ == '__main__':
       for name, value in zip(scenes, time_list):
           suffix = "(1024)" if SQRRES else ""
           writer.writerow([name[0] + suffix, value])
-
+    
     print(time_list)
