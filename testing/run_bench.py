@@ -21,7 +21,6 @@ if __name__ == '__main__':
 
   HYDRA3_PATH = ""
   SPP = 1024
-  SQRRES = True
 
   os.chdir('..') # use HydraCore3 root dir as current
   if sys.platform == 'win32':
@@ -29,25 +28,27 @@ if __name__ == '__main__':
   else:  # if sys.platform == 'linux':
     HYDRA3_PATH = "./bin-release/hydra"
   
-  time_list = []
-  scenes = list_scenes("../HydraScenes")
-  for scn in scenes:
-      args = [HYDRA3_PATH, "-in", scn[1], "-out",  "y_" + scn[0] + ".png", "-spp", str(SPP), "--gpu"]
-      if(SQRRES):
-        args = args + ["-width", "1024", "-height", "1024"]
-      print(args)  
-      run(scn[0], args, time_list)
+  for SQRRES in [False, True]:
   
-  with open('testing/data.csv', 'a', newline='', encoding='utf-8') as file:
-    writer = csv.writer(file)
+    time_list = []
+    scenes = list_scenes("../HydraScenes")
+    for scn in scenes:
+        args = [HYDRA3_PATH, "-in", scn[1], "-out",  "y_" + scn[0] + ".png", "-spp", str(SPP), "--gpu"]
+        if(SQRRES):
+          args = args + ["-width", "1024", "-height", "1024"]
+        print(args)  
+        run(scn[0], args, time_list)
     
-    # Если файл пустой, добавляем заголовки
-    if file.tell() == 0:
-        writer.writerow(["Scene", "Time"])  # Заголовки столбцов
+    with open('testing/data.csv', 'a', newline='', encoding='utf-8') as file:
+      writer = csv.writer(file)
+      
+      # Если файл пустой, добавляем заголовки
+      if file.tell() == 0:
+          writer.writerow(["Scene", "Time"])  # Заголовки столбцов
+      
+      # Записываем данные построчно
+      for name, value in zip(scenes, time_list):
+          suffix = "(1024)" if SQRRES else ""
+          writer.writerow([name[0] + suffix, value])
     
-    # Записываем данные построчно
-    for name, value in zip(scenes, time_list):
-        suffix = "(1024)" if SQRRES else ""
-        writer.writerow([name[0] + suffix, value])
-
-  print(time_list)
+    print(time_list)
