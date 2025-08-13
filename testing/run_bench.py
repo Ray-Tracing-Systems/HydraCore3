@@ -1,7 +1,13 @@
 import os, sys, subprocess, re, csv
 
+#def list_scenes(directory):
+#  return [(entry, directory + "/" + entry + "/statex_00001.xml") for entry in os.listdir(directory) if os.path.isdir(os.path.join(directory, entry))]
+
 def list_scenes(directory):
-  return [(entry, directory + "/" + entry + "/statex_00001.xml") for entry in os.listdir(directory) if os.path.isdir(os.path.join(directory, entry))]
+    entries = [(entry, directory + "/" + entry + "/statex_00001.xml") 
+              for entry in os.listdir(directory) 
+              if os.path.isdir(os.path.join(directory, entry))]
+    return sorted(entries, key=lambda x: x[0])
 
 def run(test_name, args, time_list):
   try:
