@@ -24,8 +24,8 @@
 #else  
   #ifdef USE_HEAVYRT  
   #include "external/HeavyRT/core/CrossRT.h"
-  #include "external/HeavyRT/core/BVH2FatRT.h"          // v1
-  //#include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
+  //#include "external/HeavyRT/core/BVH2FatRT.h"          // v1
+  #include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
   #else
    #include "CrossRT.h" // special include for ray tracing
   #endif
@@ -60,8 +60,8 @@ public:
   {
     InitRandomGens(a_maxThreads);
     #ifdef USE_HEAVYRT 
-    m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); 
-    //m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2"); 
+    //m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); // v1
+    m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2");      // v2
     #else
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     #endif
