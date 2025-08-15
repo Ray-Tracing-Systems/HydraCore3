@@ -72,14 +72,17 @@ public:
 
   virtual void SceneRestrictions(uint32_t a_restrictions[4]) const
   {
+    #ifndef KERNEL_SLICER
     a_restrictions[0] = g_lastSceneInfo.maxMeshes;
     a_restrictions[1] = g_lastSceneInfo.maxTotalVertices;
     a_restrictions[2] = g_lastSceneInfo.maxTotalPrimitives;
     a_restrictions[3] = g_lastSceneInfo.maxPrimitivesPerMesh;
+    #endif
   }
-
+  
+  #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
-
+  #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
 
@@ -556,7 +559,10 @@ public:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
+  
+  #ifndef KERNEL_SLICER
   static SceneInfo   g_lastSceneInfo;
+  #endif
 
   std::string m_resourcesDir = ".";
 

@@ -229,6 +229,8 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   if(hit.geomId != uint32_t(-1))
   {
+    const uint2 mvOffsets = m_matVertOffset[hit.geomId];
+    
     #ifdef LITERT_RENDERER
     const uint32_t type   = hit.geomId >> SH_TYPE;
     const uint32_t geomId = hit.geomId & GEOM_ID_MASK;
@@ -258,8 +260,6 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
       // // finally P' is the barycentric mean of these three
       // vec3 Pp = P + u*tmpu + v*tmpv + w*tmpw
       /////////////////////////////////////////////////////////////////////////////////
-      
-      const uint2 mvOffsets = m_matVertOffset[hit.geomId];
 
       const uint triOffset  = mvOffsets.x;
       const uint vertOffset = mvOffsets.y;
