@@ -229,14 +229,13 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
   if(hit.geomId != uint32_t(-1))
   {
-    const uint2 mvOffsets = m_matVertOffset[hit.geomId];
-    
     #ifdef LITERT_RENDERER
     const uint32_t type   = hit.geomId >> SH_TYPE;
     const uint32_t geomId = hit.geomId & GEOM_ID_MASK;
     #else
     const uint32_t geomId = hit.geomId;
     #endif
+    const uint2 mvOffsets = m_matVertOffset[hit.geomId];
     // slightly undershoot the intersection to prevent self-intersection and other bugs
     const float3   hitPos = to_float3(rayPos) + hit.t * (1.f - 1e-6f) * to_float3(rayDir);
     #ifdef LITERT_RENDERER   
