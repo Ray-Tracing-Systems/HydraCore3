@@ -495,4 +495,4 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   vk_utils::globalContextDestroy();
   #endif
   return 0;
-}
+} //
