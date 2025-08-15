@@ -817,6 +817,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       //currently all non-mesh types can have only one material for geometry
       uint32_t mat_id = mIter->attribute(L"mat_id").as_int(0);
       m_matIdByPrimId.push_back(mat_id);
+      
       m_pAccelStruct->AddCustomGeom_FromFile(name.c_str(), dir.c_str(), m_pAccelStruct.get());
 
       //we insert one fake triangle for each custom geometry, because m_matIdOffsets is also used to 

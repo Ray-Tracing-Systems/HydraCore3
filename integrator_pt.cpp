@@ -274,12 +274,8 @@ void Integrator::kernel_RayTrace2(uint tid, uint bounce, const float4* rayPosAnd
 
       float3 hitNorm, hitTang;
       {
-        hitNorm     = to_float3(data1);
-        hitTang     = to_float3(data2);
-        #ifdef LITERT_RENDERER
-        float3 biTangent = float3(0,0,1);
-        CoordinateSystemV2(hitNorm, &hitTang, &biTangent);
-        #endif
+        hitNorm = to_float3(data1);
+        hitTang = to_float3(data2);
 
         // transform surface point with matrix and flip normal if needed
         //
