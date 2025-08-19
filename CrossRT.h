@@ -13,7 +13,7 @@ enum BuildOptions
   BUILD_HIGH             = 0x00000004, //
   BUILD_REFIT            = 0x00000008, //
   MOTION_BLUR            = 0x00000010, //
-  BUILD_NOW              = 32,         // this is for internal usage normally 
+  BUILD_SKIP             = 0x00000020, // this is for internal usage: when use custome prims with HW accelerated BVH traversal, we don't have to build our own BVH
   BUILD_OPTIONS_MAX_ENUM = 0x7FFFFFFF
 };
 
@@ -94,9 +94,9 @@ struct ISceneObject
   \param a_customPrimCount - size of array pointer. It is allowd to represent each primitive with several AABB on input. For example, if we want 4 boxes per primitive, for a_customPrimCount equals to 10, a_boxNumber must be 40 
   \return id of added geometry
   */
-  virtual uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs = nullptr, size_t a_customPrimCount = 0) { return 0; }
+  virtual uint32_t AddGeom_AABB(uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, uint32_t a_buildFlags = BUILD_HIGH, void** a_customPrimPtrs = nullptr, size_t a_customPrimCount = 0) { return 0; }
   
-  virtual void     UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, void** a_customPrimPtrs = nullptr, size_t a_customPrimCount = 0) {}
+  virtual void     UpdateGeom_AABB(uint32_t a_geomId, uint32_t a_typeId, const CRT_AABB* boxMinMaxF8, size_t a_boxNumber, uint32_t a_buildFlags = BUILD_HIGH, void** a_customPrimPtrs = nullptr, size_t a_customPrimCount = 0) {}
 
   /**
   \brief Clear all instances, but don't touch geometry
