@@ -115,6 +115,7 @@ protected:
 
   std::vector<unsigned int>    m_geomTags;
   std::vector<LiteMath::uint2> m_remapTable;
+  std::vector<LiteMath::uint2> m_remapGeom;
   size_t                       m_totalPrimsIS2 = 0;
   std::unordered_map<uint32_t, LiteMath::uint2> m_offsetByTag;
 
