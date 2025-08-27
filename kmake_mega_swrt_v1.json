@@ -2,7 +2,7 @@
     "mainClass"     : "Integrator", // must explicitly specify main class as main process 'unit' for slicer
     "baseClasses"   : [],           // specify all base clases in  reverse order from leaf to root
     "composClasses" : [{"interface" : "ISceneObject", 
-                        "implementation": "BVH2FatRT"}],
+                        "implementation": "BVH2CommonLoftRT"}],
     
     "options" : {
         "-pattern"    : "rtv",
@@ -12,6 +12,7 @@
         "-const_shit" : 1,
         "-enable_ray_tracing_pipeline" : 0,
         "-enable_motion_blur"          : 0,
+        "-persistent" : 1,
         "end" : ""
     },
 
@@ -31,9 +32,10 @@
                 "integrator_pt_mat.cpp",
                 "integrator_rt.cpp",
                 "integrator_spectrum.cpp",
-                "external/HeavyRT/core/BVH2FatRT.cpp"],
-
+                "external/HeavyRT/core/BVH2CommonLoftRT.cpp"],
+    
     "includeIgnore"  : ["external/LiteMath", "external/LiteScene"],
     "includeProcess" : ["external/HeavyRT/core", "cam_plugin"],
+    "additionaIncludes" : ["BVH2CommonLoftRT.h"],
     "end" : ""
 }

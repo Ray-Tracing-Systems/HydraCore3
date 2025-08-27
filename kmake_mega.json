@@ -11,6 +11,7 @@
         "-const_shit" : 1,
         "-enable_ray_tracing_pipeline" : 0,
         "-enable_motion_blur"          : 0,
+        "-persistent" : 0,
         "end" : ""
     },
 

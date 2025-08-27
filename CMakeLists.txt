@@ -229,11 +229,10 @@ if(USE_HEAVYRT)
   list(APPEND CORE_SRC ${BUILDERS_SRC})
 
   list(APPEND CORE_SRC 
-        external/HeavyRT/core/BVH2FatRT.cpp             # v1
-        external/HeavyRT/core/BVH2FatRT_host.cpp        # v1
+        #external/HeavyRT/core/BVH2FatRT.cpp             # v1
+        #external/HeavyRT/core/BVH2FatRT_host.cpp        # v1
         external/HeavyRT/core/BVH2CommonLoftRT.cpp      # v2
-        external/HeavyRT/core/BVH2CommonLoftRT_host.cpp # v2
-        external/HeavyRT/core/NonunifNodeStorage.cpp)   # TODO: remove 'NonunifNodeStorage.cpp'
+        external/HeavyRT/core/BVH2CommonLoftRT_host.cpp)
 
 endif()
 

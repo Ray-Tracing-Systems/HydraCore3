@@ -42,7 +42,7 @@
              "-width", "1024",
              "-height", "1024",
              //"-channels", "16",
-             "-spp", "256",
+             "-spp", "1024",
              "-scn_dir", "../comparisonrender",
              "-out", "z_out.bmp"],
     "stopAtEntry": false,
@@ -541,16 +541,41 @@
       ]
   },
 
+
   {
-      "name": "Benchmark(kitchen)",
+      "name": "Benchmark(coffee)",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin-release/hydra",
-      "args": ["--gpu", "-in", "../HydraScenes/kitchen/statex_00001.xml",
+      "args": ["--gpu", "-in", "../HydraScenes/coffee/statex_00001.xml",
                "-width",  "1024",
                "-height", "1024",
-               "-spp",    "16",
-               "-out", "y_kitchen_cpu.bmp"],
+               "-spp",    "256",
+               "-out", "y_coffee_gpu.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
+  {
+      "name": "Benchmark(spaceship)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", "-in", "../HydraScenes/spaceship/statex_00001.xml",
+               "-width",  "1024",
+               "-height", "1024",
+               "-spp",    "256",
+               "-out", "y_spaceship_gpu.bmp"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
@@ -573,8 +598,33 @@
       "args": ["--gpu", "-in", "../HydraScenes/staircase/statex_00001.xml",
                "-width",  "1024",
                "-height", "1024",
-               "-spp",    "16",
-               "-out", "y_staircase_cpu.bmp"],
+               "-spp",    "256",
+               "-out", "y_staircase_gpu.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
+
+
+  {
+      "name": "Benchmark(kitchen)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", "-in", "../HydraScenes/kitchen/statex_00001.xml",
+               "-width",  "1024",
+               "-height", "1024",
+               "-spp",    "256",
+               "-out", "y_kitchen_gpu.bmp"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

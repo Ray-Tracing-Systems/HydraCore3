@@ -23,8 +23,8 @@
   #include "../../BVH/BVH2Common.h"    // TODO: change path in CMake(?)
 #else  
   #ifdef USE_HEAVYRT  
-  #include "external/HeavyRT/core/CrossRT.h"
-  //#include "external/HeavyRT/core/BVH2FatRT.h"          // v1
+  #include "external/HeavyRT/core/HeavyRT.h"
+  //#include "external/HeavyRT/core/BVH2FatRT.h"      // v1
   #include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
   #else
    #include "CrossRT.h" // special include for ray tracing
