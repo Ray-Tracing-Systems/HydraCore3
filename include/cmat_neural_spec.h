@@ -26,7 +26,7 @@ static inline void neuralSpecSmoothSampleAndEval(const Material* a_materials, co
   CoordinateSystemV2(n, &s, &t);
   const float3 wo = LiteMath::normalize(float3(dot(l, s), dot(l, t), dot(l, n)));
   const float3 wi = LiteMath::normalize(float3(dot(v, s), dot(v, t), dot(v, n)));
-  const float3 wm = normalize(wo + wi);
+  const float3 wm = LiteMath::normalize(wo + wi);
 
   if (wi.z * wo.z < 0.0f)
   {

@@ -646,7 +646,6 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   m_neural_tex_offsets.resize(mat_count, {0, 0});
   m_neural_weights_offsets.resize(mat_count, 0);
 
-
   std::set<uint32_t> loadedSpectralTextures = {};
   for(auto materialNode : scene.MaterialNodes())
   {
