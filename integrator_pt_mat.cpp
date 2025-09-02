@@ -548,11 +548,11 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         const uint   ch1texId     = m_materials[currMat.id].texid[1];
         const uint   ch2texId     = m_materials[currMat.id].texid[2];
         const uint   ch3texId     = m_materials[currMat.id].texid[3];
-        const float4 ch1 = m_textures[ch1texId]->sample(texCoordT);
-        const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
-        const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
+        //const float4 ch1 = m_textures[ch1texId]->sample(texCoordT);
+        //const float4 ch2 = m_textures[ch2texId]->sample(texCoordT);
+        //const float4 ch3 = m_textures[ch3texId]->sample(texCoordT);
 
-        float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
+        float buf[16]{texColor.x, texColor.y, texColor.z, texColor.w};//, ch1.x, ch1.y, ch1.z, ch1.w, ch2.x, ch2.y, ch2.z, ch2.w, ch3.x, ch3.y, ch3.z, ch3.w};
 
         neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, v, l, n, buf, &res);
 

@@ -44,6 +44,17 @@ namespace nn
     }
   }
 
+  void Add(const float *A, float b, float *out, 
+                      uint32_t m, uint32_t n)
+  {
+    const uint32_t count = m * n; 
+
+    for(uint32_t i = 0; i < count; ++i) {
+      out[i] = A[i] + b;
+    }
+  }
+
+
   void Sub(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n)
   {
@@ -125,6 +136,16 @@ namespace nn
 
     for(uint32_t i = 0; i < count; ++i) {
       out[i] = A[i] * _sigmoid(A[i]);
+    }
+  }
+
+  void Exp(const float *A, float *out,
+                      uint32_t m, uint32_t n)
+  {
+    const uint32_t count = m * n; 
+
+    for(uint32_t i = 0; i < count; ++i) {
+      out[i] = std::exp(A[i]);
     }
   }
 

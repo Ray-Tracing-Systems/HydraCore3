@@ -26,6 +26,16 @@ namespace nn
   void Add(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n = 1);
 
+    /**
+   * A   : m x n
+   * B   : m x n
+   * out : m x n
+   * 
+   * (A == out || B == out) is possible
+   */
+  void Add(const float *A, float b, float *out, 
+                      uint32_t m, uint32_t n = 1);
+
   /**
    * A   : m x n
    * B   : m x n
@@ -35,6 +45,8 @@ namespace nn
    */
   void Sub(const float *A, const float *B, float *out, 
                       uint32_t m, uint32_t n = 1);
+
+
 
   /**
    * A   : m x n
@@ -120,6 +132,16 @@ namespace nn
    */
   void SiLU(const float *A, float *out,
                       uint32_t m, uint32_t n = 1);
+
+    /**
+   * A   : m x n
+   * out : m x n
+   * 
+   * (A == out) is possible
+   */
+  void Exp(const float *A, float *out,
+                      uint32_t m, uint32_t n = 1);
+
 
 
 }
