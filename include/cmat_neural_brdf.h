@@ -18,10 +18,12 @@ static constexpr uint NBRDF_SIZE_MAT6    = NBRDF_HIDDEN_DIM * 6;
 
 static bool isUsed = false;
 
+static constexpr float ALPHA = 0.4;
+
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights,
                                     float3 l, float3 v, float3 n, float *tex, BsdfEval *pRes)
 {
-  const float2 alpha = float2(0.25, 0.25);
+  const float2 alpha = float2(ALPHA, ALPHA);
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);
   const float cosThetaOut = dot(l, n); 
@@ -82,17 +84,31 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->val = float4(buf[0], buf[1], buf[2], 1.0f);
-  pRes->val = (cosThetaOut <= 1e-6f) ? float4(0.0f) : (pRes->val / std::max(cosThetaOut, 1e-6f));  
+  pRes->val = (cosThetaOut <= 1e-6f) ? float4(0.0f) : (pRes->val * std::max(cosThetaOut, 1e-6f));  
+}
 
 
+float ggxDistribution(float3 n, float3 h, float roughness) 
+{
+    float alpha = roughness * roughness;
+    float alpha2 = alpha * alpha;
+    float cosThetaH = std::max(LiteMath::dot(n, h), 0.0f);
+    float denom = (cosThetaH * cosThetaH) * (alpha2 - 1.0f) + 1.0f;
+    return alpha2 / (LiteMath::M_PI * denom * denom + EPSILON);
+}
+
+float schlickSmithG1(float3 n, float3 v, float roughness) 
+{
+    float k = (roughness + 1.0f) * (roughness + 1.0f) / 8.0f;
+    float nv = std::max(LiteMath::dot(n, v), 0.0f);
+    return nv / (nv * (1.0f - k) + k + EPSILON);
 }
 
 
 static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 rands, 
                                             float3 v, float3 n, float *tex, BsdfSample* pRes)
 {
-
-  const float2 alpha = float2(0.25, 0.25);
+  const float2 alpha = float2(ALPHA, ALPHA);
   const float3 l = reflect((-1.0f)*v, n);
   const float cosThetaOut = dot(l, n); 
 
@@ -110,8 +126,6 @@ static inline void neuralBrdfSampleAndEval(const Material* a_materials, const fl
 
   float3 s, t = n;
   CoordinateSystemV2(n, &s, &t);
-
-
 
   if (wi.z * wo.z < 0.0f)
   {
@@ -133,8 +147,6 @@ static inline void neuralBrdfSampleAndEval(const Material* a_materials, const fl
       x[6 + i] = tex[i];
   }
 
-
-
   //Layer0
   nn::Linear(weights, x, buf, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
   nn::ReLU(buf, buf, NBRDF_HIDDEN_DIM);
@@ -155,8 +167,11 @@ static inline void neuralBrdfSampleAndEval(const Material* a_materials, const fl
   nn::Add(buf, -1.0f, buf, 3);
   nn::ReLU(buf, buf, 3);
 
-  pRes->val = float4(buf[0], buf[1], buf[2], 1.0f);
-  pRes->val = (cosThetaOut <= 1e-6f) ? float4(0.0f) : (pRes->val / std::max(cosThetaOut, 1e-6f));  
+  pRes->val = float4(buf[0], buf[1], buf[2], 1.0f);    
+  //std::cout << a.x << " " << a.y << " " << a.z << std::endl;
+  //std::cout << b.z << " " << b.z << " " << b.z << std::endl;
+  //std::cout << b.z << " " << pRes->val.x << std::endl;
+  //pRes->val = (cosThetaOut <= 1e-6f) ? float4(0.0f) : (pRes->val / std::max(cosThetaOut, 1e-6f));  
   
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));

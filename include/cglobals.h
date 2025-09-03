@@ -408,9 +408,13 @@ static inline void RusinkiewiczTransform(float3 wi, float3 wo, float3* half, flo
   float3 binormal(0.f, 1.f, 0.f);
   float3 normal(0.f, 0.f, 1.f);
 
+  // Fix for isotropic NBRDF
+  (*half) = rotate((*half), normal, -phi_h);
   (*diff) = rotate(wi, normal, -phi_h);
-  (*diff) = rotate(*diff, binormal, -theta_h);
+  phi_h = 0.f;
 
+  (*diff) = rotate(*diff, binormal, -theta_h);
+  (*diff) = normalize(*diff);
   return;
 }
 
