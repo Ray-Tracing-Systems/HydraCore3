@@ -19,9 +19,9 @@ struct HAPI_SceneLibrary ///< main data storage, scene library, resource manager
   int32_t id = -1;
 };
 
-enum HAPI_RES_MANAGER_TYPE { HAPI_RES_MGR_CPU     = 0, ///< force CPU implementation
-                             HAPI_RES_MGR_GPU     = 1, ///< force GPU implementation, try not to store data on CPU when possible
-                             HAPI_RES_MGR_DUAL    = 2, ///< create both, duplicate data
+enum HAPI_RES_MANAGER_TYPE { HAPI_RES_MGR_CPU  = 0, ///< force CPU implementation
+                             HAPI_RES_MGR_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible
+                             HAPI_RES_MGR_DUAL = 2, ///< create both, duplicate data
 };  
 
 struct HAPI_ReserveOpions
@@ -31,9 +31,14 @@ struct HAPI_ReserveOpions
   int32_t maxLights = 131126;
 };
 
-HAPI HAPI_SceneLibrary hapiCreateEmpty   (HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions);
-HAPI HAPI_SceneLibrary hapiCreateFromFile(HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions, const char* a_filename);
-HAPI void              hapiSaveSceneLibrary(HAPI_SceneLibrary, const char* a_filename);
+HAPI HAPI_SceneLibrary hapiCreateLibraryEmpty   (HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions);
+HAPI HAPI_SceneLibrary hapiCreateLibraryFromFile(HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async = false);
+
+HAPI void              hapiSaveSceneLibrary  (HAPI_SceneLibrary, const char* a_filename, bool a_async = false);
+HAPI void              hapiDeleteSceneLibrary(HAPI_SceneLibrary); ///< detele all
+
+HAPI bool              hapiSceneLibraryIsFinished(HAPI_SceneLibrary a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
+                                                                                ///< in the first version async load/save is not planned for implementation, always return true
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,18 +90,21 @@ struct HAPI_CommandBuffer ///<! use this object to add new data to scene library
   HAPI_CMD_TYPE type = HAPI_CMD_UNDEFINED;
 };
 
-HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CMD_TYPE a_type);
-void               hapiCommitCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CommandBuffer a_cmbBuff); ///< Commit and immediately delete it
+HAPI HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CMD_TYPE a_type);
+HAPI void               hapiCommitCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CommandBuffer a_cmbBuff, bool a_async = false); ///< Commit and immediately delete it
+
+HAPI bool               hapiCommandBufferIsFinished(HAPI_CommandBuffer a_cmbBuff); ///< check wherther async commit is completed; use this function within a wait-sleep loop when large scene is loaded/added
+                                                                                   ///< in the first version async commit is not planned for implementation, always return true
 
 //// Create new objects 
 
-HAPI_Geom    hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
-HAPI_Texture hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+HAPI HAPI_Geom    hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+HAPI HAPI_Texture hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
 
 //// Update existing objects
 
-HAPI_Geom    hapiGetGeom   (HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
-HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
+HAPI HAPI_Geom    hapiGetGeom   (HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
+HAPI HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
 
 void         hapiSetGeom   (HAPI_CommandBuffer a_cmdBuff, HAPI_Geom    a_geom);
 void         hapiSetTexture(HAPI_CommandBuffer a_cmdBuff, HAPI_Texture a_tex);
