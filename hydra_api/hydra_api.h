@@ -85,8 +85,8 @@ struct HAPI_CommandBuffer ///<! use this object to add new data to scene library
   HAPI_CMD_TYPE type = HAPI_CMD_UNDEFINED;
 };
 
-HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_CMD_TYPE a_type);
-void               hapiCommitCommandBuffer(HAPI_CommandBuffer a_cmbBuff); ///< Commit and immediately delete it
+HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CMD_TYPE a_type);
+void               hapiCommitCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CommandBuffer a_cmbBuff); ///< Commit and immediately delete it
 
 //// Create new objects 
 
@@ -97,3 +97,6 @@ HAPI_Texture hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char*
 
 HAPI_Geom    hapiGetGeom   (HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
 HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
+
+void         hapiSetGeom   (HAPI_CommandBuffer a_cmdBuff, HAPI_Geom    a_geom);
+void         hapiSetTexture(HAPI_CommandBuffer a_cmdBuff, HAPI_Texture a_tex);
