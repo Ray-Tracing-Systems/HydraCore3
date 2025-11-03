@@ -2,6 +2,11 @@
 #pragma once
 #include <cstdint>
 
+#define HAPI_SEE_PUGIXML 
+#ifdef HAPI_SEE_PUGIXML
+  #include "pugixml.hpp"
+#endif
+
 #if defined(WIN32)
   #define HAPI
   //#ifdef HAPI_DLL
@@ -19,20 +24,21 @@ struct HAPI_SceneLibrary ///< main data storage, scene library, resource manager
   int32_t id = -1;
 };
 
-enum HAPI_RES_MANAGER_TYPE { HAPI_RES_MGR_CPU  = 0, ///< force CPU implementation
-                             HAPI_RES_MGR_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible
-                             HAPI_RES_MGR_DUAL = 2, ///< create both, duplicate data
+enum HAPI_RES_STORAGE_TYPE { HAPI_STORAGE_CPU  = 0, ///< force CPU implementation
+                             HAPI_STORAGE_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible
+                             HAPI_STORAGE_DUAL = 2, ///< create both, duplicate data
 };  
 
 struct HAPI_ReserveOpions
 {
-  int32_t maxGeoms  = 16384;
-  int32_t maxImages = 256;
-  int32_t maxLights = 131126;
+  int32_t maxGeoms     = 16384;
+  int32_t maxImages    = 256;
+  int32_t maxmaterials = 1024;
+  int32_t maxLights    = 131126;
 };
 
-HAPI HAPI_SceneLibrary hapiCreateLibraryEmpty   (HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions);
-HAPI HAPI_SceneLibrary hapiCreateLibraryFromFile(HAPI_RES_MANAGER_TYPE a_type, HAPI_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async = false);
+HAPI HAPI_SceneLibrary hapiCreateLibraryEmpty   (HAPI_RES_STORAGE_TYPE a_type, HAPI_ReserveOpions a_reserveOptions);
+HAPI HAPI_SceneLibrary hapiCreateLibraryFromFile(HAPI_RES_STORAGE_TYPE a_type, HAPI_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async = false);
 
 HAPI void              hapiSaveSceneLibrary  (HAPI_SceneLibrary, const char* a_filename, bool a_async = false);
 HAPI void              hapiDeleteSceneLibrary(HAPI_SceneLibrary); ///< detele all
@@ -43,44 +49,17 @@ HAPI bool              hapiSceneLibraryIsFinished(HAPI_SceneLibrary a_cmbBuff); 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//// input types with structures and e.t.c
-////
-
-struct HAPI_Geom ///< asbtract type for geometry, usually mesh
-{
-  int32_t id = -1;
-  const char* xmldata = nullptr; ///<! custom fields if we have them
-};
-
-struct HAPI_Material ///< asbtract type for material
-{
-  int32_t id = -1;
-  const char* xmldata = nullptr; ///<! custom fields if we have them
-};
-
-struct HAPI_Light  ///< asbtract type for light
-{
-  int32_t id = -1;
-  const char* xmldata = nullptr; ///<! custom fields if we have them
-};
-
-struct HAPI_Texture ///< asbtract type for images/textures
-{
-  int32_t id = -1;
-  const char* xmldata = nullptr; ///<! custom fields if we have them
-};
-
-struct HAPI_Spectrum ///< asbtract type for spectrum
-{
-  int32_t id = -1;
-  const char* xmldata = nullptr; ///<! custom fields if we have them
-};
+struct HAPI_Geom     { int32_t id = -1; };
+struct HAPI_Material { int32_t id = -1; };
+struct HAPI_Light    { int32_t id = -1; };
+struct HAPI_Texture  { int32_t id = -1; };
+struct HAPI_Spectrum { int32_t id = -1; };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum HAPI_CMD_TYPE { HAPI_CMD_APPEND = 0, ///< create new bjects
-                     HAPI_CMD_UPDATE = 1, ///< update existing objects
-                     HAPI_CMD_DUAL   = 2, ///< simultaniously create and update
+enum HAPI_CMD_TYPE { HAPI_CMD_APPEND = 0, ///<! create new bjects
+                     HAPI_CMD_UPDATE = 1, ///<! update existing objects
+                     HAPI_CMD_DUAL   = 2, ///<! simultaniously create and update
                      HAPI_CMD_UNDEFINED = 0xFFFFFFFF,
 }; 
 
@@ -91,20 +70,23 @@ struct HAPI_CommandBuffer ///<! use this object to add new data to scene library
 };
 
 HAPI HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CMD_TYPE a_type);
-HAPI void               hapiCommitCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CommandBuffer a_cmbBuff, bool a_async = false); ///< Commit and immediately delete it
+HAPI void               hapiCommitCommandBuffer(HAPI_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and immediately delete it
 
-HAPI bool               hapiCommandBufferIsFinished(HAPI_CommandBuffer a_cmbBuff); ///< check wherther async commit is completed; use this function within a wait-sleep loop when large scene is loaded/added
-                                                                                   ///< in the first version async commit is not planned for implementation, always return true
+HAPI bool               hapiCommandBufferIsFinished(HAPI_CommandBuffer a_cmbBuff); ///<! check wherther async commit is completed; use this function within a wait-sleep loop when large scene is loaded/added
+                                                                                   ///<! in the first version async commit is not planned for implementation, always return true
 
 //// Create new objects 
 
-HAPI HAPI_Geom    hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
-HAPI HAPI_Texture hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+HAPI HAPI_Material hapiCreateMaterialEmpty  (HAPI_CommandBuffer a_cmdBuff, const char* a_matName = "");
+
+HAPI HAPI_Geom     hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+HAPI HAPI_Texture  hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
 
 //// Update existing objects
 
-HAPI HAPI_Geom    hapiGetGeom   (HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
-HAPI HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_id);
-
-void         hapiSetGeom   (HAPI_CommandBuffer a_cmdBuff, HAPI_Geom    a_geom);
-void         hapiSetTexture(HAPI_CommandBuffer a_cmdBuff, HAPI_Texture a_tex);
+HAPI HAPI_Geom    hapiGetGeom   (HAPI_CommandBuffer a_cmdBuff, const int32_t a_id); ///<! Geometry and texture update will not be implemented in first version
+HAPI HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_id); ///<! Geometry and texture update will not be implemented in first version
+ 
+#ifdef HAPI_SEE_PUGIXML
+HAPI pugi::xml_node hapiMaterialParamNode(HAPI_Material a_mat);
+#endif

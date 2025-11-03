@@ -8,6 +8,8 @@ option(USE_LITERT  "Enable LiteRT" OFF)
 option(USE_HEAVYRT "Enable HeavyRT" OFF)
 option(USE_STB_IMAGE "Enable STB image " ON)
 
+option(TEST_API2 OFF)
+
 if(USE_STB_IMAGE)
   add_definitions(-DUSE_STB_IMAGE)
 endif()
@@ -326,4 +328,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")   # add debug specific options here
   target_link_libraries(hydra LINK_PUBLIC Threads::Threads OpenMP::OpenMP_CXX)
 else()
   target_link_libraries(hydra LINK_PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+if(TEST_API2)
+   include_directories("external/LiteScene/3rd_party")
+   
+   add_executable(api_test hydra_api/api_test.cpp
+                           hydra_api/hydra_api.cpp
+                           hydra_api/hydra_cpu.cpp
+                           external/LiteScene/3rd_party/pugixml.cpp)
 endif()
