@@ -332,9 +332,10 @@ endif()
 
 if(TEST_API2)
    include_directories("external/LiteScene/3rd_party")
-   
+
    add_executable(api_test hydra_api/api_test.cpp
                            hydra_api/hydra_api.cpp
                            hydra_api/hydra_cpu.cpp
-                           external/LiteScene/3rd_party/pugixml.cpp)
+                           external/LiteScene/3rd_party/pugixml.cpp
+                           hydra_api/mesh_utils.cpp)
 endif()

@@ -79,6 +79,8 @@ HAPI bool               hapiCommandBufferIsFinished(HAPI_CommandBuffer a_cmbBuff
 
 HAPI HAPI_Material hapiCreateMaterialEmpty  (HAPI_CommandBuffer a_cmdBuff, const char* a_matName = "");
 
+
+HAPI HAPI_Geom     hapiCreateMeshEmpty      (HAPI_CommandBuffer a_cmdBuff, const char* a_meshName);
 HAPI HAPI_Geom     hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
 HAPI HAPI_Texture  hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
 

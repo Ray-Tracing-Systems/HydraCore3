@@ -1,4 +1,5 @@
 #include "hydra_api.h"
+#include "mesh_utils.h"
 
 int main(int argc, const char** argv)
 {
@@ -32,42 +33,32 @@ int main(int argc, const char** argv)
     color.append_attribute(L"val").set_value(L"0.25 0.25 0.25");
   }
   
-  /*
   SimpleMesh meshPlane = CreatePlane(10.0f);
   SimpleMesh meshCube  = CreateCube(1.0f);
   
-  HRMeshRef cubeRef = hrMeshCreate(L"cube");
-  
-  hrMeshOpen(cubeRef, HR_TRIANGLE_IND3, HR_WRITE_DISCARD);
+  HAPI_Geom cubeRef = hapiCreateMeshEmpty(appendBuffer, "cube");
   {
-    hrMeshVertexAttribPointer4f(cubeRef, L"pos",      &meshCube.vPos[0]);
-    hrMeshVertexAttribPointer4f(cubeRef, L"norm",     &meshCube.vNorm[0]);
-    hrMeshVertexAttribPointer2f(cubeRef, L"texcoord", &meshCube.vTexCoord[0]);
-    
-    hrMeshMaterialId(cubeRef, mat0.id);
-    
-    hrMeshAppendTriangles3(cubeRef, int(meshCube.triIndices.size()), &meshCube.triIndices[0]);
+    //hrMeshVertexAttribPointer4f(cubeRef, L"pos",      &meshCube.vPos[0]);
+    //hrMeshVertexAttribPointer4f(cubeRef, L"norm",     &meshCube.vNorm[0]);
+    //hrMeshVertexAttribPointer2f(cubeRef, L"texcoord", &meshCube.vTexCoord[0]);
+    //
+    //hrMeshMaterialId(cubeRef, mat0.id);
+    //
+    //hrMeshAppendTriangles3(cubeRef, int(meshCube.triIndices.size()), &meshCube.triIndices[0]);
   }
-  hrMeshClose(cubeRef);
   
-  HRMeshRef planeRef = hrMeshCreate(L"plane");
-  
-  hrMeshOpen(planeRef, HR_TRIANGLE_IND3, HR_WRITE_DISCARD);
+  HAPI_Geom planeRef = hapiCreateMeshEmpty(appendBuffer, "plane");
   {
-    hrMeshVertexAttribPointer4f(planeRef, L"pos",      &meshPlane.vPos[0]);
-    hrMeshVertexAttribPointer4f(planeRef, L"norm",     &meshPlane.vNorm[0]);
-    hrMeshVertexAttribPointer2f(planeRef, L"texcoord", &meshPlane.vTexCoord[0]);
-    
-    hrMeshMaterialId(planeRef, mat1.id);
-    
-    hrMeshAppendTriangles3(planeRef, int(meshPlane.triIndices.size()), &meshPlane.triIndices[0]);
+    //hrMeshVertexAttribPointer4f(planeRef, L"pos",      &meshPlane.vPos[0]);
+    //hrMeshVertexAttribPointer4f(planeRef, L"norm",     &meshPlane.vNorm[0]);
+    //hrMeshVertexAttribPointer2f(planeRef, L"texcoord", &meshPlane.vTexCoord[0]);
+    //
+    //hrMeshMaterialId(planeRef, mat1.id);
+    //
+    //hrMeshAppendTriangles3(planeRef, int(meshPlane.triIndices.size()), &meshPlane.triIndices[0]);
   }
-  hrMeshClose(planeRef);
-
-  */
  
-  hapiCommitCommandBuffer(appendBuffer); // now scene library is finished and we can resnder some scene
-
+  hapiCommitCommandBuffer(appendBuffer); // now scene library is finished and we can render some scene
   
 
   return 0;

@@ -25,6 +25,12 @@ HAPI void hapiCommitCommandBuffer(HAPI_CommandBuffer a_cmbBuff, bool a_async)
 
 }
 
+HAPI HAPI_Geom hapiCreateMeshEmpty(HAPI_CommandBuffer a_cmdBuff, const char* a_meshName)
+{
+  HAPI_Geom res = {};
+  return res;
+}
+
 HAPI HAPI_Material hapiCreateMaterialEmpty(HAPI_CommandBuffer a_cmdBuff, const char* a_matName)
 {
   HAPI_Material res = {};
