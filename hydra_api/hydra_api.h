@@ -54,19 +54,20 @@ struct HAPI_Material { int32_t id = -1; };
 struct HAPI_Light    { int32_t id = -1; };
 struct HAPI_Texture  { int32_t id = -1; };
 struct HAPI_Spectrum { int32_t id = -1; };
+struct HAPI_Camera   { int32_t id = -1; };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum HAPI_CMD_TYPE { HAPI_CMD_APPEND = 0, ///<! create new bjects
-                     HAPI_CMD_UPDATE = 1, ///<! update existing objects
-                     HAPI_CMD_DUAL   = 2, ///<! simultaniously create and update
-                     HAPI_CMD_UNDEFINED = 0xFFFFFFFF,
+enum HAPI_CMD_TYPE { HAPI_CMDBUF_APPEND = 0, ///<! create new bjects
+                     HAPI_CMDBUF_UPDATE = 1, ///<! update existing objects
+                     HAPI_CMDBUF_DUAL   = 2, ///<! simultaniously create and update
+                     HAPI_CMDBUF_UNDEFINED = 0xFFFFFFFF,
 }; 
 
 struct HAPI_CommandBuffer ///<! use this object to add new data to scene library
 {
   int32_t id = -1;
-  HAPI_CMD_TYPE type = HAPI_CMD_UNDEFINED;
+  HAPI_CMD_TYPE type = HAPI_CMDBUF_UNDEFINED;
 };
 
 HAPI HAPI_CommandBuffer hapiCreateCommandBuffer(HAPI_SceneLibrary a_scnLib, HAPI_CMD_TYPE a_type);
@@ -77,12 +78,33 @@ HAPI bool               hapiCommandBufferIsFinished(HAPI_CommandBuffer a_cmbBuff
 
 //// Create new objects 
 
-HAPI HAPI_Material hapiCreateMaterialEmpty  (HAPI_CommandBuffer a_cmdBuff, const char* a_matName = "");
+HAPI HAPI_Material hapiCreateMaterial(HAPI_CommandBuffer a_cmdBuff, const char* a_matName = "");
+HAPI HAPI_Light    hapiCreateLight   (HAPI_CommandBuffer a_cmdBuff, const char* a_lgtName = "");
+HAPI HAPI_Camera   hapiCreateCamera  (HAPI_CommandBuffer a_cmdBuff, const char* a_camName = "");
 
+struct HAPI_MeshInput
+{
+  float*   vPosPtr     = nullptr; 
+  uint32_t vPosStride  = 4;
+  float*   vNormPtr    = nullptr; 
+  uint32_t vNormStride = 4;
+  float*   vTangPtr    = nullptr; 
+  uint32_t vTangStride = 4;
+  float*   vTexCoordPtr    = nullptr; 
+  uint32_t vTexCoordStride = 2;
 
-HAPI HAPI_Geom     hapiCreateMeshEmpty      (HAPI_CommandBuffer a_cmdBuff, const char* a_meshName);
-HAPI HAPI_Geom     hapiCreateGeomFromFile   (HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
-HAPI HAPI_Texture  hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+  uint32_t* indicesPtr = nullptr;
+  uint32_t  indicesNum = 0;
+  //uint32_t  indicesStride = 3; ///<! 3 for triangle mesh, 4 for quad mesh, quads are not supported yet
+
+  uint32_t* matIdPtr = nullptr;
+  uint32_t  matIdAll = 0;
+  uint32_t  matIdNum = 1; ///<! if 1, set whole mesh with single material, read matIdAll; else read material indices from matIdPtr
+};
+
+HAPI HAPI_Geom    hapiCreateMeshFromData(HAPI_CommandBuffer a_cmdBuff, const char* a_meshName, HAPI_MeshInput a_input);
+HAPI HAPI_Geom    hapiCreateGeomFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
+HAPI HAPI_Texture hapiCreateTextureFromFile(HAPI_CommandBuffer a_cmdBuff, const char* a_filename);
 
 //// Update existing objects
 
@@ -91,4 +113,6 @@ HAPI HAPI_Texture hapiGetTexture(HAPI_CommandBuffer a_cmdBuff, const int32_t a_i
  
 #ifdef HAPI_SEE_PUGIXML
 HAPI pugi::xml_node hapiMaterialParamNode(HAPI_Material a_mat);
+HAPI pugi::xml_node hapiLightParamNode(HAPI_Light a_lgt);
+HAPI pugi::xml_node hapiCameraParamNode(HAPI_Camera a_cam);
 #endif
