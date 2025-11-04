@@ -41,7 +41,7 @@ namespace LiteScene {
     class Material
     {
     public:
-        Material(uint32_t id, const std::string &name) : id(id), name(name) {}
+        Material(uint32_t _id, const std::string &_name) : id(_id), name(_name) {}
 
         virtual ~Material() = default;
         virtual MaterialType type() const = 0;

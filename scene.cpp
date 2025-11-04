@@ -163,8 +163,8 @@ namespace LiteScene
             printf("[MeshGeometry::save_data] Mesh is not loaded\n");
             return false;
         }
-        std::string name = "mesh_" + std::to_string(id);
-        relative_file_path = metadata.geometry_folder_relative + "/" + name + ".vsgf";
+        std::string mesh_name = "mesh_" + std::to_string(id);
+        relative_file_path = metadata.geometry_folder_relative + "/" + mesh_name + ".vsgf";
         std::string file_path = metadata.scene_xml_folder == "" ? relative_file_path : 
         metadata.scene_xml_folder + "/" + relative_file_path;
         cmesh4::SaveMeshToVSGF(file_path.c_str(), mesh);
