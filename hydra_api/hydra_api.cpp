@@ -22,7 +22,7 @@ HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE 
   return buf;
 }
 
-HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene, HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene, HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;

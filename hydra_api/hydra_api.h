@@ -64,8 +64,7 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 };
 
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene,   HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2DrawCommandBuffer   (HR2_SceneRef   a_scene,   HR2_FrameImgRef a_frame,  HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_FrameImgRef a_frame, HR2_CMD_TYPE a_type); ///<! 
 void              hr2CommitCommandBuffer (HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and then immediately delete it
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
