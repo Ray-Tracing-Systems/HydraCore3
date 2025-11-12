@@ -4,13 +4,20 @@
 int main(int argc, const char** argv)
 {
   HR2_SceneLibraryRef scnLibrary = hr2CreateLibrary(HR2_STORAGE_CPU, HR2_ReserveOpions());
-  HR2_CommandBuffer appendBuffer = hr2CreateCommandBuffer(scnLibrary, HR2_CMDBUF_APPEND);
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // first load/create heavy scene data
+  //
+
+  HR2_CommandBuffer storageLevel = hr2CreateCommandBuffer(scnLibrary, HR2_CMD_BUF_APPEND, HR2_CMD_LVL_STORAGE);
 
   // (1) Create materials
   //
 
-  HR2_MaterialRef mat0 = hr2CreateMaterial(appendBuffer);
-  HR2_MaterialRef mat1 = hr2CreateMaterial(appendBuffer);
+  HR2_MaterialRef mat0 = hr2CreateMaterial(storageLevel);
+  HR2_MaterialRef mat1 = hr2CreateMaterial(storageLevel);
 
   // set material #0
   {
@@ -61,13 +68,13 @@ int main(int argc, const char** argv)
     inputPlane.indicesNum   = uint32_t(meshPlane.triIndices.size());
   }
 
-  HR2_GeomRef cubeRef  = hr2CreateMeshFromData(appendBuffer, "cube", inputCube);
-  HR2_GeomRef planeRef = hr2CreateMeshFromData(appendBuffer, "plane", inputPlane);
+  HR2_GeomRef cubeRef  = hr2CreateMeshFromData(storageLevel, "cube", inputCube);
+  HR2_GeomRef planeRef = hr2CreateMeshFromData(storageLevel, "plane", inputPlane);
   
   // (3) Create lights
   //
 
-  HR2_LightRef rectLight = hr2CreateLight(appendBuffer);
+  HR2_LightRef rectLight = hr2CreateLight(storageLevel);
   {
     auto lightNode = hr2LightParamNode(rectLight);
     
@@ -87,11 +94,23 @@ int main(int argc, const char** argv)
     intensityNode.append_child(L"color").append_attribute(L"val")      = L"1 1 1";
     intensityNode.append_child(L"multiplier").append_attribute(L"val") = 25.0f;
   }
+  
+  hr2CommitCommandBuffer(storageLevel); // now scene library is finished 
 
-  // (4) Create camera; TODO: do we need to create camera via command buffer ?
+  // MUST NOT USE storageLevel after hr2CommitCommandBuffer, immediately report error! 
+  // ALWAYS create new command buffer
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // next we can do relativelly quck scene create/update during edit/work with program
+  //
+  HR2_CommandBuffer sceneLvl = hr2CreateCommandBuffer(scnLibrary, HR2_CMD_BUF_APPEND, HR2_CMD_LVL_SCENE);
+
+  // (4) Create camera; 
   //
   
-  HR2_CameraRef camRef = hr2CreateCamera(appendBuffer);
+  HR2_CameraRef camRef = hr2CreateCamera(sceneLvl);
   {
     auto camNode = hr2CameraParamNode(camRef);
     
@@ -104,13 +123,11 @@ int main(int argc, const char** argv)
     camNode.append_child(L"position").text().set(L"0 3 20");
     camNode.append_child(L"look_at").text().set(L"0 0 0");
   }
- 
-  hr2CommitCommandBuffer(appendBuffer); // now scene library is finished and we can render some scene
   
-  // (5) render settings ... TODO: do we need to create camera via command buffer ?
+  // (5) render settings ... 
   //
 
-  HR2_SettingsRef settingsRef = hr2CreateSettings(appendBuffer);
+  HR2_SettingsRef settingsRef = hr2CreateSettings(sceneLvl);
   {
     auto node = hr2SettingsParamNode(settingsRef);
     
@@ -124,8 +141,65 @@ int main(int argc, const char** argv)
     node.append_child(L"qmc_variant").text()      = 7; // enable all of them, results to '7'
   }
 
+  HR2_FrameBufferInfo fbInfo = {};
+  fbInfo.width  = 512;
+  fbInfo.height = 512;
+
+  HR2_FrameImgRef frameImageRef = hr2CreateFrameImg(sceneLvl, fbInfo);
+
+  hr2CommitCommandBuffer(sceneLvl); // now scene is finished and we can render some scene
+
   // (6) Create scene as instances of existing objects and lights
   //
+  const int NFrames = 10;
+  for(int frame = 0; frame < NFrames; frame++)
+  {
+      
+    // #NOTE: each frame we discard old scene and create the new one by instancing of existing geometry and lights
+    //
+    HR2_CommandBuffer frameLvl = hr2CreateCommandBuffer(scnLibrary, HR2_CMD_BUF_APPEND, HR2_CMD_LVL_FRAME);
+    HR2_SceneRef      sceneRef = hr2CreateScene(frameLvl);
+    /*
+    {
+    
+      float m1[16] = {1, 0, 0, 0,
+                      0, 1, 0, 0,
+                      0, 0, 1, 0,
+                      0, 0, 0, 1,};
+    
+      float m2[16] = {1, 0, 0, 0,
+                      0, 1, 0, 1,
+                      0, 0, 1, 0,
+                      0, 0, 0, 1,};
+    
+      float m3[16] = {1, 0, 0, 0,
+                      0, 1, 0, 5,
+                      0, 0, 1, 0,
+                      0, 0, 0, 1,};
+    
+      hrMeshInstance(sceneRef, planeRef, m1);
+      hrMeshInstance(sceneRef, cubeRef, m2);
+      hrLightInstance(sceneRef, rectLight, m3);
+      
+      for (int z = -2; z <= 2; z++)
+      {
+        for (int x = -2; x <= 2; x++)
+        {
+          float m4[16] = {1, 0, 0, float(x) * float(frame),
+                          0, 1, 0, 1,
+                          0, 0, 1, float(z) * float(frame),
+                          0, 0, 0, 1,};
+        
+          hrMeshInstance(sceneRef, cubeRef, m4);
+        }
+      }
+    */
+    
+    hr2CommitCommandBuffer(frameLvl);  
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   return 0;
 }

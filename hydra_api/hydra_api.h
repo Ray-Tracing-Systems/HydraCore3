@@ -31,7 +31,7 @@ HR2_SceneLibraryRef hr2CreateLibraryFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_Re
 void hr2SaveSceneLibrary  (HR2_SceneLibraryRef, const char* a_filename, bool a_async = false);
 void hr2DeleteSceneLibrary(HR2_SceneLibraryRef); ///< detele all
 bool hr2SceneLibraryIsFinished(HR2_SceneLibraryRef a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
-                                                                                ///< in the first version async load/save is not planned for implementation, always return true
+                                                               ///< in the first version async load/save is not planned for implementation, always return true
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,24 +41,34 @@ struct HR2_MaterialRef { int32_t id = -1; };
 struct HR2_LightRef    { int32_t id = -1; };
 struct HR2_TextureRef  { int32_t id = -1; };
 struct HR2_SpectrumRef { int32_t id = -1; };
+
 struct HR2_CameraRef   { int32_t id = -1; };
 struct HR2_SettingsRef { int32_t id = -1; };
+struct HR2_SceneRef    { int32_t id = -1; };
+struct HR2_FrameImgRef { int32_t id = -1; };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum HR2_CMD_TYPE { HR2_CMDBUF_APPEND = 0, ///<! create new bjects
-                    HR2_CMDBUF_UPDATE = 1, ///<! update existing objects
-                    HR2_CMDBUF_DUAL   = 2, ///<! simultaniously create and update
-                    HR2_CMDBUF_UNDEFINED = 0xFFFFFFFF,
+enum HR2_CMD_TYPE { HR2_CMD_BUF_APPEND = 0, ///<! create new bjects
+                    HR2_CMD_BUF_UPDATE = 1, ///<! update existing objects
+                    HR2_CMD_BUF_DUAL   = 2, ///<! simultaniously create and update
+                    HR2_CMD_BUF_UNDEFINED = 0xFFFFFFFF,
+}; 
+
+enum HR2_CMD_LEVEL { HR2_CMD_LVL_STORAGE   = 0, ///<! the most long and heavy operations
+                     HR2_CMD_LVL_SCENE     = 1, ///<! relatively fast operations
+                     HR2_CMD_LVL_FRAME     = 2, ///<! fastest operations, per frame
+                     HR2_CMD_LVL_UNDEFINED = 0xFFFFFFFF,
 }; 
 
 struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 {
-  int32_t id = -1;
-  HR2_CMD_TYPE type = HR2_CMDBUF_UNDEFINED;
+  int32_t       id    = -1;
+  HR2_CMD_TYPE  type  = HR2_CMD_BUF_UNDEFINED;
+  HR2_CMD_LEVEL level = HR2_CMD_LVL_UNDEFINED;
 };
 
-HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type, HR2_CMD_LEVEL a_lvl); ///<! 
 void              hr2CommitCommandBuffer(HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and immediately delete it
 
 bool              hr2CommandBufferIsFinished(HR2_CommandBuffer a_cmbBuff); ///<! check wherther async commit is completed; use this function within a wait-sleep loop when large scene is loaded/added
@@ -66,10 +76,20 @@ bool              hr2CommandBufferIsFinished(HR2_CommandBuffer a_cmbBuff); ///<!
 
 //// Create new objects 
 
+struct HR2_FrameBufferInfo
+{
+  uint32_t width    = 512;
+  uint32_t height   = 512;
+  uint32_t channels = 4;
+  uint32_t bpp      = 16;
+};
+
 HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff);
 HR2_LightRef    hr2CreateLight   (HR2_CommandBuffer a_cmdBuff);
 HR2_CameraRef   hr2CreateCamera  (HR2_CommandBuffer a_cmdBuff);
 HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff);
+HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff);
+HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferInfo a_info);
 
 struct HR2_MeshInput
 {
@@ -90,6 +110,7 @@ struct HR2_MeshInput
   uint32_t  matIdAll = 0;
   uint32_t  matIdNum = 1; ///<! if 1, set whole mesh with single material, read matIdAll; else read material indices from matIdPtr
 };
+
 
 HR2_GeomRef    hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_meshName, HR2_MeshInput a_input);
 HR2_GeomRef    hr2CreateGeomFromFile(HR2_CommandBuffer a_cmdBuff, const char* a_filename);

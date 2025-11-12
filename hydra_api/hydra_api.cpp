@@ -14,9 +14,11 @@ HR2_SceneLibraryRef hr2CreateLibrary(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpi
   return res;
 }
 
-HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type, HR2_CMD_LEVEL a_lvl)
 {
   HR2_CommandBuffer buf = {};
+  buf.type  = a_type;
+  buf.level = a_lvl;
   return buf;
 }
 
@@ -52,6 +54,18 @@ HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SettingsRef res = {};
+  return res;
+}
+
+HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_SceneRef res = {};
+  return res;
+}
+
+HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferInfo a_info)
+{
+  HR2_FrameImgRef res = {};
   return res;
 }
 
