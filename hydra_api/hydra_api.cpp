@@ -8,19 +8,35 @@
 //  CPU_IMPL* pImplGPU;
 //};
 
-HR2_SceneLibraryRef hr2CreateLibrary(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
+HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
 {
-  HR2_SceneLibraryRef res = {};
+  HR2_StorageRef res = {};
   return res;
 }
 
-HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type, HR2_CMD_LEVEL a_lvl)
+HR2_CommandBuffer hr2CreateStorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
-  buf.level = a_lvl;
+  buf.level = HR2_CMD_LVL_STORAGE;
   return buf;
 }
+
+HR2_CommandBuffer hr2CreateSceneCommandBuffer  (HR2_SceneRef    a_scene,   HR2_CMD_TYPE a_type)
+{
+  HR2_CommandBuffer buf = {};
+  buf.type  = a_type;
+  buf.level = HR2_CMD_LVL_SCENE;
+  return buf;
+}
+
+HR2_CommandBuffer hr2CreateFrameCommandBuffer  (HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type)
+{
+  HR2_CommandBuffer buf = {};
+  buf.type  = a_type;
+  buf.level = HR2_CMD_LVL_FRAME;
+  return buf;
+} 
 
 void hr2CommitCommandBuffer(HR2_CommandBuffer a_cmbBuff, bool a_async)
 {

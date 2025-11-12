@@ -7,10 +7,18 @@
   #include "pugixml.hpp"
 #endif
 
-struct HR2_SceneLibraryRef ///< main data storage, scene library, resource manager, navel of the earth. Usually this object is created in a single copy.
-{              
-  int32_t id = -1;
-};
+struct HR2_StorageRef  { int32_t id = -1; }; ///< LEVEL ZERO,  main data storage, scene library, resource manager, navel of the earth. Usually this object is created in a single copy.
+struct HR2_SceneRef    { int32_t id = -1; }; ///< LEVEL ONE,   per scene data storage. 
+struct HR2_FrameImgRef { int32_t id = -1; }; ///< LEVEL THREE, per frame data 
+
+struct HR2_GeomRef     { int32_t id = -1; };
+struct HR2_MaterialRef { int32_t id = -1; };
+struct HR2_LightRef    { int32_t id = -1; };
+struct HR2_TextureRef  { int32_t id = -1; };
+struct HR2_SpectrumRef { int32_t id = -1; };
+
+struct HR2_CameraRef   { int32_t id = -1; };
+struct HR2_SettingsRef { int32_t id = -1; };
 
 enum HR2_RES_STORAGE_TYPE { HR2_STORAGE_CPU  = 0, ///< force CPU implementation
                             HR2_STORAGE_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible
@@ -25,29 +33,16 @@ struct HR2_ReserveOpions
   int32_t maxLights    = 131126;
 };
 
-HR2_SceneLibraryRef hr2CreateLibrary(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions);
-HR2_SceneLibraryRef hr2CreateLibraryFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async = false);
+HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions);
+HR2_StorageRef hr2CreateStorageFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async = false);
 
-void hr2SaveSceneLibrary  (HR2_SceneLibraryRef, const char* a_filename, bool a_async = false);
-void hr2DeleteSceneLibrary(HR2_SceneLibraryRef); ///< detele all
-bool hr2SceneLibraryIsFinished(HR2_SceneLibraryRef a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
-                                                               ///< in the first version async load/save is not planned for implementation, always return true
+void hr2SaveStorage  (HR2_StorageRef a_ref, const char* a_filename, bool a_async = false);
+void hr2DeleteStorage(HR2_StorageRef a_ref); ///< detele all
+bool hr2SceneLibraryIsFinished(HR2_StorageRef a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
+                                                          ///< in the first version async load/save is not planned for implementation, always return true
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-struct HR2_GeomRef     { int32_t id = -1; };
-struct HR2_MaterialRef { int32_t id = -1; };
-struct HR2_LightRef    { int32_t id = -1; };
-struct HR2_TextureRef  { int32_t id = -1; };
-struct HR2_SpectrumRef { int32_t id = -1; };
-
-struct HR2_CameraRef   { int32_t id = -1; };
-struct HR2_SettingsRef { int32_t id = -1; };
-struct HR2_SceneRef    { int32_t id = -1; };
-struct HR2_FrameImgRef { int32_t id = -1; };
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 enum HR2_CMD_TYPE { HR2_CMD_BUF_APPEND = 0, ///<! create new bjects
                     HR2_CMD_BUF_UPDATE = 1, ///<! update existing objects
@@ -68,11 +63,14 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
   HR2_CMD_LEVEL level = HR2_CMD_LVL_UNDEFINED;
 };
 
-HR2_CommandBuffer hr2CreateCommandBuffer(HR2_SceneLibraryRef a_scnLib, HR2_CMD_TYPE a_type, HR2_CMD_LEVEL a_lvl); ///<! 
-void              hr2CommitCommandBuffer(HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and immediately delete it
+HR2_CommandBuffer hr2CreateStorageCommandBuffer(HR2_StorageRef  a_storage, HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2CreateSceneCommandBuffer  (HR2_SceneRef    a_scene,   HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2CreateFrameCommandBuffer  (HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type); ///<! 
 
-bool              hr2CommandBufferIsFinished(HR2_CommandBuffer a_cmbBuff); ///<! check wherther async commit is completed; use this function within a wait-sleep loop when large scene is loaded/added
-                                                                                ///<! in the first version async commit is not planned for implementation, always return true
+void              hr2CommitCommandBuffer       (HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and then immediately delete it
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //// Create new objects 
 
