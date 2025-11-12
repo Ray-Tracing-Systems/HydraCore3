@@ -11,7 +11,7 @@ int main(int argc, const char** argv)
   // first load/create heavy scene data
   //
 
-  HR2_CommandBuffer storageLevel = hr2CreateStorageCommandBuffer(scnStorage, HR2_CMD_BUF_APPEND);
+  HR2_CommandBuffer storageLevel = hr2StorageCommandBuffer(scnStorage, HR2_CMD_BUF_APPEND);
 
   // (1) Create materials
   //
@@ -97,6 +97,12 @@ int main(int argc, const char** argv)
 
   HR2_SceneRef  sceneRef = hr2CreateScene(storageLevel);
   
+  HR2_FrameBufferInfo fbInfo = {};
+  fbInfo.width  = 512;
+  fbInfo.height = 512;
+
+  HR2_FrameImgRef frameImageRef = hr2CreateFrameImg(storageLevel, fbInfo);
+
   hr2CommitCommandBuffer(storageLevel); // now scene library is finished 
 
   // MUST NOT USE storageLevel after hr2CommitCommandBuffer, immediately report error! 
@@ -107,7 +113,7 @@ int main(int argc, const char** argv)
 
   // next we can do relativelly quck scene create/update during edit/work with program
   //
-  HR2_CommandBuffer sceneLvl = hr2CreateSceneCommandBuffer(sceneRef, HR2_CMD_BUF_APPEND);
+  HR2_CommandBuffer sceneLvl = hr2SceneCommandBuffer(sceneRef, HR2_CMD_BUF_APPEND);
 
   // (4) Create camera; 
   //
@@ -143,12 +149,6 @@ int main(int argc, const char** argv)
     node.append_child(L"qmc_variant").text()      = 7; // enable all of them, results to '7'
   }
 
-  HR2_FrameBufferInfo fbInfo = {};
-  fbInfo.width  = 512;
-  fbInfo.height = 512;
-
-  HR2_FrameImgRef frameImageRef = hr2CreateFrameImg(sceneLvl, fbInfo);
-
   hr2CommitCommandBuffer(sceneLvl); // now scene is finished and we can render some scene
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -162,7 +162,7 @@ int main(int argc, const char** argv)
       
     // #NOTE: each frame we discard old scene and create the new one by instancing of existing geometry and lights
     //
-    HR2_CommandBuffer frameLvl = hr2CreateFrameCommandBuffer(frameImageRef, HR2_CMD_BUF_APPEND);
+    HR2_CommandBuffer frameLvl = hr2DrawCommandBuffer(sceneRef, frameImageRef, HR2_CMD_BUF_APPEND);
     /*
     {
     

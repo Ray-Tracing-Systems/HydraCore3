@@ -14,7 +14,7 @@ HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a
   return res;
 }
 
-HR2_CommandBuffer hr2CreateStorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
@@ -22,7 +22,7 @@ HR2_CommandBuffer hr2CreateStorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD
   return buf;
 }
 
-HR2_CommandBuffer hr2CreateSceneCommandBuffer  (HR2_SceneRef    a_scene,   HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
@@ -30,7 +30,7 @@ HR2_CommandBuffer hr2CreateSceneCommandBuffer  (HR2_SceneRef    a_scene,   HR2_C
   return buf;
 }
 
-HR2_CommandBuffer hr2CreateFrameCommandBuffer  (HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2DrawCommandBuffer(HR2_SceneRef a_scene, HR2_FrameImgRef a_frame, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;

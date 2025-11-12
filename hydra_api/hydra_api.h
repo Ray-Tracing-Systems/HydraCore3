@@ -9,7 +9,6 @@
 
 struct HR2_StorageRef  { int32_t id = -1; }; ///< LEVEL ZERO,  main data storage, scene library, resource manager, navel of the earth. Usually this object is created in a single copy.
 struct HR2_SceneRef    { int32_t id = -1; }; ///< LEVEL ONE,   per scene data storage. 
-struct HR2_FrameImgRef { int32_t id = -1; }; ///< LEVEL THREE, per frame data 
 
 struct HR2_GeomRef     { int32_t id = -1; };
 struct HR2_MaterialRef { int32_t id = -1; };
@@ -19,6 +18,7 @@ struct HR2_SpectrumRef { int32_t id = -1; };
 
 struct HR2_CameraRef   { int32_t id = -1; };
 struct HR2_SettingsRef { int32_t id = -1; };
+struct HR2_FrameImgRef { int32_t id = -1; }; 
 
 enum HR2_RES_STORAGE_TYPE { HR2_STORAGE_CPU  = 0, ///< force CPU implementation
                             HR2_STORAGE_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible
@@ -63,11 +63,10 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
   HR2_CMD_LEVEL level = HR2_CMD_LVL_UNDEFINED;
 };
 
-HR2_CommandBuffer hr2CreateStorageCommandBuffer(HR2_StorageRef  a_storage, HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2CreateSceneCommandBuffer  (HR2_SceneRef    a_scene,   HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2CreateFrameCommandBuffer  (HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type); ///<! 
-
-void              hr2CommitCommandBuffer       (HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and then immediately delete it
+HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene,   HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2DrawCommandBuffer   (HR2_SceneRef   a_scene,   HR2_FrameImgRef a_frame,  HR2_CMD_TYPE a_type); ///<! 
+void              hr2CommitCommandBuffer (HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and then immediately delete it
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
