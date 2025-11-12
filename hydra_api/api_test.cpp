@@ -3,18 +3,18 @@
 
 int main(int argc, const char** argv)
 {
-  HAPI_SceneLibrary  scnLibrary   = hapiCreateLibraryEmpty(HAPI_STORAGE_CPU, HAPI_ReserveOpions());
-  HAPI_CommandBuffer appendBuffer = hapiCreateCommandBuffer(scnLibrary, HAPI_CMDBUF_APPEND);
+  HR2_SceneLibraryRef  scnLibrary   = hr2CreateLibrary(HR2_STORAGE_CPU, HR2_ReserveOpions());
+  HR2_CommandBuffer appendBuffer = hr2CreateCommandBuffer(scnLibrary, HR2_CMDBUF_APPEND);
 
   // (1) Create materials
   //
 
-  HAPI_Material mat0 = hapiCreateMaterial(appendBuffer, "MyFirstMaterial");
-  HAPI_Material mat1 = hapiCreateMaterial(appendBuffer, "MySecondMaterial");
+  HR2_MaterialRef mat0 = hr2CreateMaterial(appendBuffer, "MyFirstMaterial");
+  HR2_MaterialRef mat1 = hr2CreateMaterial(appendBuffer, "MySecondMaterial");
 
   // set material #0
   {
-    auto node = hapiMaterialParamNode(mat0);
+    auto node = hr2MaterialParamNode(mat0);
     node.append_attribute(L"type") = L"???";
 
     auto diff = node.append_child(L"diffuse");
@@ -26,7 +26,7 @@ int main(int argc, const char** argv)
   
   // set material #1
   {
-    auto node = hapiMaterialParamNode(mat1);
+    auto node = hr2MaterialParamNode(mat1);
     node.append_attribute(L"type") = L"???";
     
     auto diff = node.append_child(L"diffuse");
@@ -42,7 +42,7 @@ int main(int argc, const char** argv)
   SimpleMesh meshPlane = CreatePlane(10.0f);
   SimpleMesh meshCube  = CreateCube(1.0f);
   
-  HAPI_MeshInput inputCube, inputPlane;
+  HR2_MeshInput inputCube, inputPlane;
   {
     inputCube.vPosPtr       = meshCube.vPos.data();
     inputCube.vNormPtr      = meshCube.vNorm.data();
@@ -59,15 +59,15 @@ int main(int argc, const char** argv)
     inputPlane.indicesNum   = uint32_t(meshPlane.triIndices.size());
   }
 
-  HAPI_Geom cubeRef  = hapiCreateMeshFromData(appendBuffer, "cube", inputCube);
-  HAPI_Geom planeRef = hapiCreateMeshFromData(appendBuffer, "plane", inputPlane);
+  HR2_GeomRef cubeRef  = hr2CreateMeshFromData(appendBuffer, "cube", inputCube);
+  HR2_GeomRef planeRef = hr2CreateMeshFromData(appendBuffer, "plane", inputPlane);
   
   // (3) Create lights
   //
 
-  HAPI_Light rectLight = hapiCreateLight(appendBuffer, "my_area_light");
+  HR2_LightRef rectLight = hr2CreateLight(appendBuffer, "my_area_light");
   {
-    auto lightNode = hapiLightParamNode(rectLight);
+    auto lightNode = hr2LightParamNode(rectLight);
     
     lightNode.append_attribute(L"type").set_value(L"area");
     lightNode.append_attribute(L"shape").set_value(L"rect");
@@ -87,9 +87,9 @@ int main(int argc, const char** argv)
   // (4) Create camera; TODO: do we need to create camera via command buffer ?
   //
   
-  HAPI_Camera camRef = hapiCreateCamera(appendBuffer, "my_camera");
+  HR2_CameraRef camRef = hr2CreateCamera(appendBuffer, "my_camera");
   {
-    auto camNode = hapiCameraParamNode(camRef);
+    auto camNode = hr2CameraParamNode(camRef);
     
     camNode.append_child(L"fov").text().set(L"45");
     camNode.append_child(L"nearClipPlane").text().set(L"0.01");
@@ -100,11 +100,28 @@ int main(int argc, const char** argv)
     camNode.append_child(L"look_at").text().set(L"0 0 0");
   }
  
-  hapiCommitCommandBuffer(appendBuffer); // now scene library is finished and we can render some scene
+  hr2CommitCommandBuffer(appendBuffer); // now scene library is finished and we can render some scene
   
-  // (5) render settings ... ?
+  // (5) render settings ... how we set them, how we allocate framebuffer image, separately ?
   //
 
+  // HRRenderRef renderRef = hrRenderCreate(L"HydraModern");
+  // hrRenderEnableDevice(renderRef, 0, true);
+  // 
+  // hrRenderOpen(renderRef, HR_WRITE_DISCARD);
+  // {
+  //   auto node = hrRenderParamNode(renderRef);
+  //   
+  //   node.append_child(L"width").text()  = 512;
+  //   node.append_child(L"height").text() = 512;
+  //   
+  //   node.append_child(L"method_primary").text()   = L"pathtracing";
+  //   node.append_child(L"trace_depth").text()      = 6;
+  //   node.append_child(L"diff_trace_depth").text() = 4;
+  //   node.append_child(L"maxRaysPerPixel").text()  = 256;
+  //   node.append_child(L"qmc_variant").text()      = (HYDRA_QMC_DOF_FLAG | HYDRA_QMC_MTL_FLAG | HYDRA_QMC_LGT_FLAG); // enable all of them, results to '7'
+  // }
+  // hrRenderClose(renderRef);
 
   // (6) Create scene as instances of existing objects and lights
   //
