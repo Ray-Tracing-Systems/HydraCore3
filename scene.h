@@ -74,6 +74,8 @@ namespace LiteScene
         constexpr static uint32_t MESH_TYPE_ID   = 0;
         constexpr static uint32_t CUSTOM_TYPE_ID = 1000;
 
+        static std::string get_type_name() { return "abstract_geometry"; }
+
         virtual ~Geometry() {}
         bool load_node_base(pugi::xml_node node);
         void save_node_base(pugi::xml_node &node) const;
@@ -94,6 +96,8 @@ namespace LiteScene
     class MeshGeometry : public Geometry
     {
     public:
+        static std::string get_type_name() { return "vsgf"; }
+
         virtual ~MeshGeometry() {}
         bool load_node(pugi::xml_node node) override;
         bool save_node(pugi::xml_node &node) const override;
@@ -111,6 +115,8 @@ namespace LiteScene
     class CustomGeometry : public Geometry
     {
     public:
+        static std::string get_type_name() { return "custom"; }
+
         virtual ~CustomGeometry() {}
         bool load_node(pugi::xml_node node) override;
         bool save_node(pugi::xml_node &node) const override;
