@@ -1,6 +1,7 @@
 #include "hydra_api.h"
 #include "mesh_utils.h"
 
+#include <iostream>
 #include <sstream>
 
 int main(int argc, const char** argv)
@@ -199,11 +200,25 @@ int main(int argc, const char** argv)
         }
       }
     }
-    hr2Commit(frameLvl);  
 
-    // now render image and save it to file or draw
+    hr2CommitAndRender(frameLvl, sceneRef, camRef, settingsRef, frameImageRef, false); 
     
-    hr2Render(sceneRef, camRef, settingsRef, frameImageRef);
+    // when async commit-and-wait is used
+    //
+    //while (true)
+    //{
+    //  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //  auto info = hr2HaveUpdate(frameLvl);
+    //
+    //  if (info.haveUpdateFB)
+    //  {
+    //    std::cout << "rendering progress = " << info.progress << "% \r";
+    //    std::cout.flush();
+    //  }
+    //
+    //  if (info.finalUpdate)
+    //    break;
+    //}
 
     // render to frameImageRef
 
@@ -211,8 +226,9 @@ int main(int argc, const char** argv)
     stream << "z_img_" << frame << ".png";
     std::string fileName = stream.str();
    
+    std::cout << "save frame " << frame << " to " << fileName.c_str() << std::endl;
     hr2SaveFrameBuffer(frameImageRef, fileName.c_str());
-
+    
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -41,6 +41,7 @@ void hr2DeleteStorage(HR2_StorageRef a_ref); ///< detele all
 bool hr2SceneLibraryIsFinished(HR2_StorageRef a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
                                                           ///< in the first version async load/save is not planned for implementation, always return true
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -64,6 +65,23 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
 HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
+void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
+
+/**
+\brief these struct is returned by hrRenderHaveUpdate
+*/
+struct HR2RenderUpdateInfo
+{
+  HR2RenderUpdateInfo() : haveUpdateFB(false), haveUpdateMSG(false), finalUpdate(false), progress(0.0f), msg("") {}
+
+  bool        haveUpdateFB;
+  bool        haveUpdateMSG;
+  bool        finalUpdate;
+  float       progress;
+  const char* msg;
+};
+
+HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,5 +138,7 @@ HR2_TextureRef hr2CreateTextureFromFile(HR2_CommandBuffer a_cmdBuff, const char*
 int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList = nullptr, int32_t a_remapListSize = 0);
 int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList = nullptr, int32_t a_remapListSize = 0);
 
-void hr2Render(HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
-void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName); 
