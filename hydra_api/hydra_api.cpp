@@ -2,11 +2,30 @@
 #include "hydra_cpu.h"
 //#include "hydra_vk.h"
 
-//struct Impl_XXX
-//{
-//  CPU_IMPL* pImplCPU;
-//  CPU_IMPL* pImplGPU;
-//};
+
+#ifdef HR2_SEE_PUGIXML
+
+pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_mat)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_cam)
+{
+  return pugi::xml_node();
+}
+
+#endif
 
 HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
 {
@@ -30,10 +49,13 @@ HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
   return buf;
 }
 
-void hr2CommitCommandBuffer(HR2_CommandBuffer a_cmbBuff, bool a_async)
+void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
 {
 
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_meshName, HR2_MeshInput a_input)
 {
@@ -87,26 +109,15 @@ int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a
   return 0;
 }
 
-#ifdef HR2_SEE_PUGIXML
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pugi::xml_node hr2MaterialParamNode(HR2_MaterialRef a_mat)
+void hr2Render(HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
 {
-  return pugi::xml_node();
+
 }
 
-pugi::xml_node hr2LightParamNode(HR2_LightRef a_mat)
+void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName)
 {
-  return pugi::xml_node();
-}
 
-pugi::xml_node hr2CameraParamNode(HR2_CameraRef a_cam)
-{
-  return pugi::xml_node();
 }
-
-pugi::xml_node hr2SettingsParamNode(HR2_SettingsRef a_cam)
-{
-  return pugi::xml_node();
-}
-
-#endif

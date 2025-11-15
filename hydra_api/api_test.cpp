@@ -1,6 +1,8 @@
 #include "hydra_api.h"
 #include "mesh_utils.h"
 
+#include <sstream>
+
 int main(int argc, const char** argv)
 {
   HR2_StorageRef scnStorage = hr2CreateStorage(HR2_STORAGE_CPU, HR2_ReserveOpions());
@@ -21,7 +23,7 @@ int main(int argc, const char** argv)
 
   // set material #0
   {
-    auto node = hr2MaterialParamNode(mat0);
+    auto node = hr2MaterialParamNode(storageLevel, mat0);
     node.append_attribute(L"name") = L"MyFirstMaterial";
     node.append_attribute(L"type") = L"hydra_material";
 
@@ -34,7 +36,7 @@ int main(int argc, const char** argv)
   
   // set material #1
   {
-    auto node = hr2MaterialParamNode(mat1);
+    auto node = hr2MaterialParamNode(storageLevel, mat1);
     node.append_attribute(L"name") = L"MySecondMaterial";
     node.append_attribute(L"type") = L"hydra_material";
     
@@ -76,7 +78,7 @@ int main(int argc, const char** argv)
 
   HR2_LightRef rectLight = hr2CreateLight(storageLevel);
   {
-    auto lightNode = hr2LightParamNode(rectLight);
+    auto lightNode = hr2LightParamNode(storageLevel, rectLight);
     
     lightNode.append_attribute(L"name").set_value(L"my_area_light");
     lightNode.append_attribute(L"type").set_value(L"area");
@@ -103,9 +105,9 @@ int main(int argc, const char** argv)
 
   HR2_FrameImgRef frameImageRef = hr2CreateFrameImg(storageLevel, fbInfo);
 
-  hr2CommitCommandBuffer(storageLevel); // now scene library is finished 
+  hr2Commit(storageLevel); // now scene library is finished 
 
-  // MUST NOT USE storageLevel after hr2CommitCommandBuffer, immediately report error! 
+  // MUST NOT USE storageLevel after hr2Commit, immediately report error! 
   // ALWAYS create new command buffer
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -120,7 +122,7 @@ int main(int argc, const char** argv)
   
   HR2_CameraRef camRef = hr2CreateCamera(sceneLvl);
   {
-    auto camNode = hr2CameraParamNode(camRef);
+    auto camNode = hr2CameraParamNode(storageLevel, camRef);
     
     camNode.append_attribute(L"name")             = L"my_camera";
     camNode.append_child(L"fov").text()           = 45;
@@ -137,7 +139,7 @@ int main(int argc, const char** argv)
 
   HR2_SettingsRef settingsRef = hr2CreateSettings(sceneLvl);
   {
-    auto node = hr2SettingsParamNode(settingsRef);
+    auto node = hr2SettingsParamNode(storageLevel, settingsRef);
     
     node.append_child(L"width").text()  = 512;
     node.append_child(L"height").text() = 512;
@@ -149,7 +151,7 @@ int main(int argc, const char** argv)
     node.append_child(L"qmc_variant").text()      = 7; // enable all of them, results to '7'
   }
 
-  hr2CommitCommandBuffer(sceneLvl); // now scene is finished and we can render some scene
+  hr2Commit(sceneLvl); // now scene is finished and we can render some scene
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,11 +199,19 @@ int main(int argc, const char** argv)
         }
       }
     }
-    hr2CommitCommandBuffer(frameLvl);  
+    hr2Commit(frameLvl);  
 
     // now render image and save it to file or draw
+    
+    hr2Render(sceneRef, camRef, settingsRef, frameImageRef);
 
     // render to frameImageRef
+
+    std::stringstream stream;
+    stream << "z_img_" << frame << ".png";
+    std::string fileName = stream.str();
+   
+    hr2SaveFrameBuffer(frameImageRef, fileName.c_str());
 
   }
 
