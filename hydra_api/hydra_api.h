@@ -38,8 +38,8 @@ HR2_StorageRef hr2CreateStorageFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_Reserve
 
 void hr2SaveStorage  (HR2_StorageRef a_ref, const char* a_filename, bool a_async = false);
 void hr2DeleteStorage(HR2_StorageRef a_ref); ///< detele all
-bool hr2SceneLibraryIsFinished(HR2_StorageRef a_cmbBuff); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
-                                                          ///< in the first version async load/save is not planned for implementation, always return true
+bool hr2StorageIsFinished(HR2_StorageRef a_ref); ///< check whether async scene load/save is completed; use this function within a wait-sleep loop when large scene is loaded/saved
+                                                 ///< in the first version async load/save is not planned for implementation, always return true
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,11 +64,12 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
 HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
+
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
 void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
 
 /**
-\brief these struct is returned by hrRenderHaveUpdate
+\brief these struct is returned by hr2HaveUpdate
 */
 struct HR2RenderUpdateInfo
 {

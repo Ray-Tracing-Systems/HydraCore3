@@ -2,6 +2,47 @@
 #include "hydra_cpu.h"
 //#include "hydra_vk.h"
 
+#include "LiteScene/hydraxml.h"
+
+namespace HR2
+{
+  struct SceneStorage
+  {
+    SceneStorage(){}
+    virtual ~SceneStorage(){}
+
+    hydra_xml::HydraScene xmlData;
+  };
+
+
+};
+
+HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
+{
+  HR2_StorageRef res = {};
+  return res;
+}
+
+HR2_StorageRef hr2CreateStorageFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async)
+{
+  HR2_StorageRef res = {};
+  return res;
+}
+
+void hr2SaveStorage (HR2_StorageRef a_ref, const char* a_filename, bool a_async)
+{
+
+}
+
+void hr2DeleteStorage(HR2_StorageRef a_ref)
+{
+
+}
+
+bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef HR2_SEE_PUGIXML
 
@@ -27,11 +68,6 @@ pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef
 
 #endif
 
-HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
-{
-  HR2_StorageRef res = {};
-  return res;
-}
 
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
 {
