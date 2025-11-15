@@ -4,22 +4,55 @@
 
 #include "LiteScene/hydraxml.h"
 
+#include <memory>
+#include <iostream>
+#include <ostream>
+
 namespace HR2
 {
+  struct CommadBuffer
+  {
+    CommadnBuffer(){}
+    virtual ~CommadnBuffer(){}
+  };
+ 
+
   struct SceneStorage
   {
     SceneStorage(){}
     virtual ~SceneStorage(){}
 
     hydra_xml::HydraScene xmlData;
+    std::unique_ptr<CommadBuffer> pCommandBuffer = nullptr; ///!< currently only single command buffer per storage is allowed
   };
-
+   
 
 };
+
+struct GlobalContext
+{
+  std::unique_ptr<HR2::SceneStorage> pStorage = nullptr; ///!< currently only single scene storage is allowed 
+  std::ostream& textOut = std::cout;
+} g_context;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
 {
   HR2_StorageRef res = {};
+ 
+  if(g_context.pStorage != nullptr)
+  {
+    g_context.textOut << "[hr2CreateStorage]: only single storage is supported currently" << std::endl;
+    res.id = -1;
+  }
+  else
+  {
+    g_context.pStorage = std::make_unique<HR2::SceneStorage>();
+    res.id = 0;
+  }
+
   return res;
 }
 
@@ -36,7 +69,7 @@ void hr2SaveStorage (HR2_StorageRef a_ref, const char* a_filename, bool a_async)
 
 void hr2DeleteStorage(HR2_StorageRef a_ref)
 {
-
+  g_context.pStorage = nullptr; // unique_ptr should delete it
 }
 
 bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
@@ -44,29 +77,6 @@ bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef HR2_SEE_PUGIXML
-
-pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
-{
-  return pugi::xml_node();
-}
-
-pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_mat)
-{
-  return pugi::xml_node();
-}
-
-pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
-{
-  return pugi::xml_node();
-}
-
-pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_cam)
-{
-  return pugi::xml_node();
-}
-
-#endif
 
 
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
@@ -155,6 +165,33 @@ int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a
 {
   return 0;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef HR2_SEE_PUGIXML
+
+pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_mat)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
+{
+  return pugi::xml_node();
+}
+
+pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_cam)
+{
+  return pugi::xml_node();
+}
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
