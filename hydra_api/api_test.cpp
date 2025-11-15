@@ -11,7 +11,7 @@ int main(int argc, const char** argv)
   // first load/create heavy scene data
   //
 
-  HR2_CommandBuffer storageLevel = hr2StorageCommandBuffer(scnStorage, HR2_CMD_BUF_APPEND);
+  HR2_CommandBuffer storageLevel = hr2StorageCommandBuffer(scnStorage, HR2_APPEND_AND_CLEAR);
 
   // (1) Create materials
   //
@@ -113,7 +113,7 @@ int main(int argc, const char** argv)
 
   // next we can do relativelly quck scene create/update during edit/work with program
   //
-  HR2_CommandBuffer sceneLvl = hr2SceneCommandBuffer(sceneRef, HR2_FrameImgRef{}, HR2_CMD_BUF_APPEND); // you can pass empty image ref
+  HR2_CommandBuffer sceneLvl = hr2SceneCommandBuffer(sceneRef, HR2_APPEND_AND_CLEAR); // you can pass empty image ref
 
   // (4) Create camera; 
   //
@@ -162,8 +162,7 @@ int main(int argc, const char** argv)
       
     // #NOTE: each frame we discard old scene and create the new one by instancing of existing geometry and lights
     //
-    HR2_CommandBuffer frameLvl = hr2SceneCommandBuffer(sceneRef, frameImageRef, HR2_CMD_BUF_APPEND);
-    /*
+    HR2_CommandBuffer frameLvl = hr2SceneCommandBuffer(sceneRef, HR2_APPEND_AND_CLEAR);
     {
     
       float m1[16] = {1, 0, 0, 0,
@@ -181,9 +180,9 @@ int main(int argc, const char** argv)
                       0, 0, 1, 0,
                       0, 0, 0, 1,};
     
-      hrMeshInstance(sceneRef, planeRef, m1);
-      hrMeshInstance(sceneRef, cubeRef, m2);
-      hrLightInstance(sceneRef, rectLight, m3);
+      hr2GeomInstance(frameLvl, planeRef, m1);
+      hr2GeomInstance(frameLvl, cubeRef, m2);
+      hr2LightInstance(frameLvl, rectLight, m3);
       
       for (int z = -2; z <= 2; z++)
       {
@@ -194,12 +193,16 @@ int main(int argc, const char** argv)
                           0, 0, 1, float(z) * float(frame),
                           0, 0, 0, 1,};
         
-          hrMeshInstance(sceneRef, cubeRef, m4);
+          hr2GeomInstance(frameLvl, cubeRef, m4);
         }
       }
-    */
-    
+    }
     hr2CommitCommandBuffer(frameLvl);  
+
+    // now render image and save it to file or draw
+
+    // render to frameImageRef
+
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

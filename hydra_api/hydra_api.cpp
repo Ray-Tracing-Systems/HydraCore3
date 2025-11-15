@@ -18,25 +18,17 @@ HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE 
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
-  buf.level = HR2_CMD_LVL_STORAGE;
+  buf.level = HR2_LVL_STORAGE;
   return buf;
 }
 
-HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene, HR2_FrameImgRef a_frame,   HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
-  buf.level = HR2_CMD_LVL_SCENE;
+  buf.level = HR2_LVL_SCENE;
   return buf;
 }
-
-HR2_CommandBuffer hr2DrawCommandBuffer(HR2_SceneRef a_scene, HR2_FrameImgRef a_frame, HR2_CMD_TYPE a_type)
-{
-  HR2_CommandBuffer buf = {};
-  buf.type  = a_type;
-  buf.level = HR2_CMD_LVL_FRAME;
-  return buf;
-} 
 
 void hr2CommitCommandBuffer(HR2_CommandBuffer a_cmbBuff, bool a_async)
 {
@@ -83,6 +75,16 @@ HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferIn
 {
   HR2_FrameImgRef res = {};
   return res;
+}
+
+int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  return 0;
+}
+
+int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  return 0;
 }
 
 #ifdef HR2_SEE_PUGIXML

@@ -44,27 +44,25 @@ bool hr2SceneLibraryIsFinished(HR2_StorageRef a_cmbBuff); ///< check whether asy
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum HR2_CMD_TYPE { HR2_CMD_BUF_APPEND = 0, ///<! create new bjects
-                    HR2_CMD_BUF_UPDATE = 1, ///<! update existing objects
-                    HR2_CMD_BUF_DUAL   = 2, ///<! simultaniously create and update
-                    HR2_CMD_BUF_UNDEFINED = 0xFFFFFFFF,
+enum HR2_CMD_TYPE { HR2_APPEND_AND_CLEAR  = 1, ///<! append objects, clear each buffer type that has at least one object in list
+                    HR2_APPEND_AND_UPDATE = 2, ///<! update existing objects and append new to the end of each buffer
+                    HR2_APPEND_ONLY       = 3, ///<! append objects to the end
+                    HR2_UPDATE_ONLY       = 4  ///<! update existing objects only
 }; 
 
-enum HR2_CMD_LEVEL { HR2_CMD_LVL_STORAGE   = 0, ///<! the most long and heavy operations
-                     HR2_CMD_LVL_SCENE     = 1, ///<! relatively fast operations
-                     HR2_CMD_LVL_FRAME     = 2, ///<! fastest operations, per frame
-                     HR2_CMD_LVL_UNDEFINED = 0xFFFFFFFF,
-}; 
+enum HR2_CMD_LEVEL { HR2_LVL_STORAGE   = 1, ///<! the most long and heavy operations
+                     HR2_LVL_SCENE     = 2  ///<! relatively fast operations
+                    }; 
 
 struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 {
   int32_t       id    = -1;
-  HR2_CMD_TYPE  type  = HR2_CMD_BUF_UNDEFINED;
-  HR2_CMD_LEVEL level = HR2_CMD_LVL_UNDEFINED;
+  HR2_CMD_TYPE  type  = HR2_APPEND_AND_CLEAR;
+  HR2_CMD_LEVEL level = HR2_LVL_STORAGE;
 };
 
 HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_FrameImgRef a_frame, HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type); ///<! 
 void              hr2CommitCommandBuffer (HR2_CommandBuffer a_cmbBuff, bool a_async = false); ///<! Commit and then immediately delete it
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,7 +114,11 @@ HR2_TextureRef hr2CreateTextureFromFile(HR2_CommandBuffer a_cmdBuff, const char*
 
 HR2_GeomRef    hr2GetGeom   (HR2_CommandBuffer a_cmdBuff, const int32_t a_id); ///<! Geometry and texture update will not be implemented in first version
 HR2_TextureRef hr2GetTexture(HR2_CommandBuffer a_cmdBuff, const int32_t a_id); ///<! Geometry and texture update will not be implemented in first version
- 
+
+int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList = nullptr, int32_t a_remapListSize = 0);
+int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList = nullptr, int32_t a_remapListSize = 0);
+
+
 #ifdef HR2_SEE_PUGIXML
 pugi::xml_node hr2MaterialParamNode(HR2_MaterialRef a_mat);
 pugi::xml_node hr2LightParamNode   (HR2_LightRef a_lgt);
