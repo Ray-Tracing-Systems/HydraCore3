@@ -14,7 +14,7 @@ int main(int argc, const char** argv)
   // first load/create heavy scene data
   //
 
-  HR2_CommandBuffer storageLevel = hr2StorageCommandBuffer(scnStorage, HR2_APPEND_AND_CLEAR);
+  HR2_CommandBuffer storageLevel = hr2CommandBufferStorage(scnStorage, HR2_CLEAR_AND_APPEND);
 
   // (1) Create materials
   //
@@ -116,7 +116,7 @@ int main(int argc, const char** argv)
 
   // next we can do relativelly quck scene create/update during edit/work with program
   //
-  HR2_CommandBuffer sceneLvl = hr2SceneCommandBuffer(sceneRef, HR2_APPEND_AND_CLEAR); // you can pass empty image ref
+  HR2_CommandBuffer sceneLvl = hr2CommandBufferScene(sceneRef, HR2_CLEAR_AND_APPEND); // you can pass empty image ref
 
   // (4) Create camera; 
   //
@@ -165,7 +165,7 @@ int main(int argc, const char** argv)
       
     // #NOTE: each frame we discard old scene and create the new one by instancing of existing geometry and lights
     //
-    HR2_CommandBuffer frameLvl = hr2SceneCommandBuffer(sceneRef, HR2_APPEND_AND_CLEAR);
+    HR2_CommandBuffer frameLvl = hr2CommandBufferScene(sceneRef, HR2_CLEAR_AND_APPEND);
     {
     
       float m1[16] = {1, 0, 0, 0,

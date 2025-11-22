@@ -10,29 +10,48 @@
 
 namespace HR2
 {
-  struct CommadBuffer
-  {
-    CommadnBuffer(){}
-    virtual ~CommadnBuffer(){}
-  };
- 
-
   struct SceneStorage
   {
     SceneStorage(){}
     virtual ~SceneStorage(){}
 
     hydra_xml::HydraScene xmlData;
-    std::unique_ptr<CommadBuffer> pCommandBuffer = nullptr; ///!< currently only single command buffer per storage is allowed
   };
    
+
+  struct CommadBuffer
+  {
+    CommadBuffer(){}
+    CommadBuffer(std::shared_ptr<SceneStorage> a_pStorage) : pStorage(a_pStorage) {}
+    virtual ~CommadBuffer(){}
+
+    std::shared_ptr<SceneStorage> pStorage = nullptr;
+    
+    virtual void CommitToStorage()
+    {
+
+    }
+
+  };
 
 };
 
 struct GlobalContext
 {
-  std::unique_ptr<HR2::SceneStorage> pStorage = nullptr; ///!< currently only single scene storage is allowed 
+  static constexpr uint32_t MAX_STORAGES = 4;
+  static constexpr uint32_t MAX_COMMMAND_BUFFERS = 8;
+
+  ///////////////////////////////////////////////////////////////
+
+  std::shared_ptr<HR2::SceneStorage> storages[MAX_STORAGES] = {};
+  uint32_t                           storageTop = 0;
+
+  std::unique_ptr<HR2::CommadBuffer> cmdInFlight[MAX_COMMMAND_BUFFERS];
+
+  ///////////////////////////////////////////////////////////////
+
   std::ostream& textOut = std::cout;
+
 } g_context;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,15 +61,17 @@ HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a
 {
   HR2_StorageRef res = {};
  
-  if(g_context.pStorage != nullptr)
+  if(g_context.storageTop >= GlobalContext::MAX_STORAGES)
   {
-    g_context.textOut << "[hr2CreateStorage]: only single storage is supported currently" << std::endl;
+    g_context.textOut << "[hr2CreateStorage]: MAX_STORAGES exceeded! " << std::endl;
     res.id = -1;
   }
   else
   {
-    g_context.pStorage = std::make_unique<HR2::SceneStorage>();
-    res.id = 0;
+    g_context.storages[g_context.storageTop] = std::make_unique<HR2::SceneStorage>();
+    g_context.storages[g_context.storageTop]->xmlData.LoadEmpty();
+    res.id = g_context.storageTop;
+    g_context.storageTop++;
   }
 
   return res;
@@ -62,14 +83,59 @@ HR2_StorageRef hr2CreateStorageFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_Reserve
   return res;
 }
 
-void hr2SaveStorage (HR2_StorageRef a_ref, const char* a_filename, bool a_async)
+static bool CheckStorage(HR2_StorageRef a_ref, const char* a_funName)
 {
+  if(a_ref.id >= g_context.storageTop)
+  {
+    g_context.textOut << "[" << a_funName << "]: Bad storage at: " << a_ref.id << std::endl;
+    return false;
+  }
 
+  if(g_context.storages[a_ref.id] == nullptr)
+  {
+    g_context.textOut << "[" << a_funName << "]: Nullptr storage at: " << a_ref.id << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+static bool CheckCommandBuffer(HR2_CommandBuffer a_ref, const char* a_funName)
+{
+  if(a_ref.id >= GlobalContext::MAX_COMMMAND_BUFFERS)
+  {
+    g_context.textOut << "[" << a_funName << "]: Bad Command Buffer at: " << a_ref.id << std::endl;
+    return false;
+  }
+
+  if(g_context.cmdInFlight[a_ref.id] == nullptr)
+  {
+    g_context.textOut << "[" << a_funName << "]: Nullptr Command Buffer at: " << a_ref.id << std::endl;
+    g_context.cmdInFlight[a_ref.id]->pStorage = nullptr; // always ensure don't have copies
+    return false;
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void hr2SaveStorage(HR2_StorageRef a_ref, const char* a_filename, bool a_async)
+{
+  if(!CheckStorage(a_ref, "hr2SaveStorage")) 
+    return;
+  g_context.storages[a_ref.id]->xmlData.SaveState(a_filename);
 }
 
 void hr2DeleteStorage(HR2_StorageRef a_ref)
 {
-  g_context.pStorage = nullptr; // unique_ptr should delete it
+  if(!CheckStorage(a_ref, "hr2DeleteStorage"))
+    return; 
+
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+    g_context.cmdInFlight[cmdBuffId] = nullptr;
+  g_context.storages[a_ref.id] = nullptr; // unique_ptr should delete it
 }
 
 bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
@@ -77,17 +143,33 @@ bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_scnLib, HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
   buf.level = HR2_LVL_STORAGE;
+  buf.id    = uint32_t(-1);
+
+  if(!CheckStorage(a_storageRef, "hr2CommandBufferStorage"))
+    return buf; 
+
+  uint32_t foundCmdBuffId = uint32_t(-1);
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+  {
+    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
+    {
+      foundCmdBuffId = cmdBuffId;
+      break;
+    }
+  }
+  
+  buf.id = foundCmdBuffId;
+  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommadBuffer>(g_context.storages[a_storageRef.id]);
+
   return buf;
 }
 
-HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
@@ -97,7 +179,11 @@ HR2_CommandBuffer hr2SceneCommandBuffer(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
 
 void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
 {
-
+  if(!CheckCommandBuffer(a_cmbBuff, "hr2Commit"))
+    return;
+  
+  g_context.cmdInFlight[a_cmbBuff.id]->CommitToStorage();  
+  g_context.cmdInFlight[a_cmbBuff.id] = nullptr;
 }
 
 void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)

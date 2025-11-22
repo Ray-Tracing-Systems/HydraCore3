@@ -337,5 +337,7 @@ if(TEST_API2)
                            hydra_api/hydra_api.cpp
                            hydra_api/hydra_cpu.cpp
                            external/LiteScene/3rd_party/pugixml.cpp
+                           external/LiteScene/hydraxml.cpp
+                           external/LiteScene/cmesh4.cpp
                            hydra_api/mesh_utils.cpp)
 endif()

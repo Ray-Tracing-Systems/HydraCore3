@@ -45,8 +45,8 @@ bool hr2StorageIsFinished(HR2_StorageRef a_ref); ///< check whether async scene 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-enum HR2_CMD_TYPE { HR2_APPEND_AND_CLEAR  = 1, ///<! append objects, clear each buffer type that has at least one object in list
-                    HR2_APPEND_AND_UPDATE = 2, ///<! update existing objects and append new to the end of each buffer
+enum HR2_CMD_TYPE { HR2_CLEAR_AND_APPEND  = 1, ///<! append objects, clear each buffer type that has at least one object in list
+                    HR2_UPDATE_AND_APPEND = 2, ///<! update existing objects and append new to the end of each buffer
                     HR2_APPEND_ONLY       = 3, ///<! append objects to the end
                     HR2_UPDATE_ONLY       = 4  ///<! update existing objects only
 }; 
@@ -58,12 +58,12 @@ enum HR2_CMD_LEVEL { HR2_LVL_STORAGE   = 1, ///<! the most long and heavy operat
 struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 {
   int32_t       id    = -1;
-  HR2_CMD_TYPE  type  = HR2_APPEND_AND_CLEAR;
+  HR2_CMD_TYPE  type  = HR2_CLEAR_AND_APPEND;
   HR2_CMD_LEVEL level = HR2_LVL_STORAGE;
 };
 
-HR2_CommandBuffer hr2StorageCommandBuffer(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2SceneCommandBuffer  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
+HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
+HR2_CommandBuffer hr2CommandBufferScene  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
 
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
 void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
