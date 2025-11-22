@@ -325,6 +325,9 @@ namespace hydra_xml
     int LoadState(const std::string& path, const std::string& scnDir = "");
     #endif  
 
+    void LoadEmpty();
+    void SaveState(const std::string& path);
+
     //// use this functions with C++11 range for 
     //
     pugi::xml_object_range<pugi::xml_node_iterator> TextureNodes()  { return m_texturesLib.children();  } 

@@ -32,6 +32,29 @@ namespace hydra_xml
     std::cout << "HydraScene ERROR: " << msg << std::endl;
   }
 
+  void HydraScene::LoadEmpty()
+  {
+    m_xmlDoc = pugi::xml_document();
+    auto root = m_xmlDoc.append_child(L"root");
+
+    m_texturesLib  = root.append_child(L"textures_lib");
+    m_materialsLib = root.append_child(L"materials_lib");
+    m_geometryLib  = root.append_child(L"geometry_lib");
+    m_lightsLib    = root.append_child(L"lights_lib");
+    m_spectraLib   = root.append_child(L"spectra_lib");
+
+    m_cameraLib    = root.append_child(L"cam_lib");
+    m_settingsNode = root.append_child(L"render_lib");
+    m_scenesNode   = root.append_child(L"scenes");
+  }
+
+  void HydraScene::SaveState(const std::string& path)
+  {
+    std::wstring pathToSave = hydra_xml::s2ws(path);
+    m_xmlDoc.save_file(pathToSave.c_str(), L"  ");
+  }
+
+
 #if defined(__ANDROID__)
   int HydraScene::LoadState(AAssetManager* mgr, const std::string& path, const std::string& scnDir)
   {
