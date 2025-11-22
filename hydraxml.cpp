@@ -33,9 +33,10 @@ namespace hydra_xml
   }
 
   void HydraScene::LoadEmpty()
-  {
-    m_xmlDoc = pugi::xml_document();
-    auto root = m_xmlDoc.append_child(L"root");
+  {  
+    m_xmlDoc.load_string(L"<?xml version=\"1.0\"?>");
+
+    auto root      = m_xmlDoc.append_child(L"root");
 
     m_texturesLib  = root.append_child(L"textures_lib");
     m_materialsLib = root.append_child(L"materials_lib");
@@ -54,6 +55,22 @@ namespace hydra_xml
     m_xmlDoc.save_file(pathToSave.c_str(), L"  ");
   }
 
+  std::pair<pugi::xml_node, const wchar_t*> HydraScene::RootFor(XML_OBJECT_TYPES a_objType)
+  {
+    switch(a_objType)
+    {
+      case XML_OBJ_TEXTURE:   return std::make_pair(m_texturesLib,  L"texture");
+      case XML_OBJ_SPECTRA:   return std::make_pair(m_spectraLib,   L"spectrum");
+      case XML_OBJ_MATERIALS: return std::make_pair(m_materialsLib, L"material");
+      case XML_OBJ_GEOMETRY : return std::make_pair(m_geometryLib,  L"mesh"); // todo: geom (?)
+      case XML_OBJ_LIGHT    : return std::make_pair(m_lightsLib,    L"light");
+      case XML_OBJ_CAMERA   : return std::make_pair(m_cameraLib,    L"camera");
+      case XML_OBJ_SETTINGS : return std::make_pair(m_settingsNode, L"render_settings");
+      case XML_OBJ_SCENE    : return std::make_pair(m_scenesNode,   L"scene");
+      default: return std::make_pair(pugi::xml_node(),  L"");
+    };
+    return std::make_pair(pugi::xml_node(),  L"");
+  }
 
 #if defined(__ANDROID__)
   int HydraScene::LoadState(AAssetManager* mgr, const std::string& path, const std::string& scnDir)
