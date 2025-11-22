@@ -111,7 +111,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   message(STATUS "Debug is ON!")
   add_definitions(-D_DEBUG)
   #uncomment this to detect broken memory problems via gcc sanitizers
-  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 else()
 #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-useless-cast")
   message(STATUS "Debug is OFF!")

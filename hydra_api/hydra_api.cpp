@@ -12,28 +12,17 @@
 
 namespace HR2
 {
-  enum XML_OBJECT_TYPES{
-    XML_OBJ_TEXTURE   = 0,
-    XML_OBJ_SPECTRA   = 1,
-    XML_OBJ_MATERIALS = 2,
-    XML_OBJ_GEOMETRY  = 3,
-    XML_OBJ_LIGHT     = 4,
-    XML_OBJ_CAMERA    = 5,
-    XML_OBJ_SETTINGS  = 6,
-    XML_OBJ_SCENE     = 7,
-    XML_OBJ_TOTAL_NUM = 8,
-  };
 
   struct SceneStorage
   {
     SceneStorage() {
-      for(int i=0;i<XML_OBJ_TOTAL_NUM; i++)
+      for(int i=0;i<hydra_xml::XML_OBJ_TYPES_NUM; i++)
         xmlById[i].reserve(128); 
     }
     virtual ~SceneStorage(){}
 
     hydra_xml::HydraScene       xmlData;
-    std::vector<pugi::xml_node> xmlById[XML_OBJ_TOTAL_NUM]; 
+    std::vector<pugi::xml_node> xmlById[hydra_xml::XML_OBJ_TYPES_NUM]; 
   };
 
   struct CommandBuffer
@@ -46,8 +35,8 @@ namespace HR2
     HR2_CMD_TYPE                  m_type   = HR2_APPEND_ONLY;
     HR2_CMD_LEVEL                 m_level  = HR2_LVL_SCENE;
 
-    uint32_t       AppendNode(XML_OBJECT_TYPES a_objType);
-    pugi::xml_node NodeById  (XML_OBJECT_TYPES a_objType, uint32_t a_id);
+    uint32_t       AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType);
+    pugi::xml_node NodeById  (hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id);
 
     virtual void CommitToStorage()
     {
@@ -79,18 +68,22 @@ struct GlobalContext
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-uint32_t HR2::CommandBuffer::AppendNode(XML_OBJECT_TYPES a_objType)
+uint32_t HR2::CommandBuffer::AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType)
 {
   const int typeId = int(a_objType);
-  assert(typeId < int(HR2::XML_OBJ_TOTAL_NUM));
-  //xmlById[typeId] = ... 
+  assert(typeId < int(hydra_xml::XML_OBJ_TYPES_NUM));
+  
+  auto nodeNamePair = pStorage->xmlData.RootFor(a_objType);
+  assert(nodeNamePair.first != nullptr);
+  pStorage->xmlById[typeId].push_back(nodeNamePair.first.append_child(nodeNamePair.second)); 
+  
   return uint32_t(pStorage->xmlById[typeId].size() - 1);
 }
 
-pugi::xml_node HR2::CommandBuffer::NodeById(XML_OBJECT_TYPES a_objType, uint32_t a_id)
+pugi::xml_node HR2::CommandBuffer::NodeById(hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id)
 {
   const int typeId = int(a_objType);
-  assert(typeId < int(HR2::XML_OBJ_TOTAL_NUM));
+  assert(typeId < int(hydra_xml::XML_OBJ_TYPES_NUM));
   return pStorage->xmlById[typeId][a_id];
 }
 
@@ -246,7 +239,7 @@ HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
 HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_meshName, HR2_MeshInput a_input)
 {
   HR2_GeomRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_GEOMETRY);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_GEOMETRY);
   // TODO: do some thing with actual data 
   return res;
 }
@@ -254,35 +247,35 @@ HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_mes
 HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_MaterialRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_MATERIALS);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_MATERIALS);
   return res;
 }
 
 HR2_LightRef  hr2CreateLight(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_LightRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_LIGHT);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_LIGHT);
   return res;
 }
 
 HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_CameraRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_CAMERA);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_CAMERA);
   return res;
 }
 
 HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SettingsRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_SCENE);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
   return res;
 }
 
 HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SceneRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(HR2::XML_OBJ_SCENE);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
   return res;
 }
 
@@ -296,22 +289,22 @@ HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferIn
 
 pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
 {
-  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(HR2::XML_OBJ_MATERIALS, a_mat.id);
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_MATERIALS, a_mat.id);
 }
 
 pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_light)
 {
-  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(HR2::XML_OBJ_LIGHT, a_light.id);
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_LIGHT, a_light.id);
 }
 
 pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
 {
-  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(HR2::XML_OBJ_CAMERA, a_cam.id);
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_CAMERA, a_cam.id);
 }
 
 pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_settings)
 {
-  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(HR2::XML_OBJ_SETTINGS, a_settings.id);
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_SETTINGS, a_settings.id);
 }
 
 #endif
