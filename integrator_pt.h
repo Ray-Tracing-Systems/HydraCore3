@@ -50,6 +50,8 @@ struct SceneInfo
   uint64_t memGeom;
   uint64_t memTextures;
 };
+
+#include "LiteScene/hydraxml.h"
 #endif
 
 class Integrator // : public DataClass, IRenderer
@@ -82,6 +84,7 @@ public:
   
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
+  virtual bool LoadScene(hydra_xml::HydraScene& scene);
   #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
@@ -559,7 +562,7 @@ public:
 
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
-  
+  std::string        m_sceneFolder;
   #ifndef KERNEL_SLICER
   static SceneInfo   g_lastSceneInfo;
   #endif

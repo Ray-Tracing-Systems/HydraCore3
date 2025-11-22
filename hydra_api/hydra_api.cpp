@@ -228,9 +228,10 @@ void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
   g_context.cmdInFlight[a_cmbBuff.id] = nullptr;
 }
 
-void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
+void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
 {
-
+  hr2Commit(a_cmbBuff, a_async);
+  //todo: call actual render
 }
 
 HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
@@ -291,19 +292,6 @@ HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferIn
   return res;
 }
 
-int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
-{
-  return 0;
-}
-
-int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
-{
-  return 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #ifdef HR2_SEE_PUGIXML
 
 pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
@@ -327,6 +315,19 @@ pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef
 }
 
 #endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  return 0;
+}
+
+int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  return 0;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

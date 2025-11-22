@@ -66,7 +66,7 @@ HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storage, HR2_CMD_TYPE
 HR2_CommandBuffer hr2CommandBufferScene  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
 
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
-void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_SceneRef a_scn, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
+void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
 
 /**
 \brief these struct is returned by hr2HaveUpdate

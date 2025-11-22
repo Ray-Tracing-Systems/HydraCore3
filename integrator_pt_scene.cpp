@@ -306,10 +306,10 @@ Spectrum ParseSpectrumStr(const std::string &specStr)
   return res;
 }
 
-bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
-{ 
-  LoadSceneBegin();
 
+
+bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
+{
   std::string scenePathStr(a_scenePath);
   std::string sceneDirStr(a_sncDir);  
   hydra_xml::HydraScene sceneLocal;
@@ -327,7 +327,24 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
   }
 
-  //// init spectral curves
+  #ifdef WIN32
+  size_t endPos = scenePathStr.find_last_of("\\");
+  if(endPos == std::string::npos)
+    endPos = scenePathStr.find_last_of("/");
+  #else
+  size_t endPos = scenePathStr.find_last_of('/');
+  #endif
+
+  m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+
+  LoadScene(scene);
+}
+
+bool Integrator::LoadScene(hydra_xml::HydraScene& scene)
+{ 
+  LoadSceneBegin();
+
+  //// init spectral curves, TODO: do not init them when working with rgb scene
   #ifndef DISABLE_SPECTRUM
   std::vector<float> cie_x = Get_CIE_X();
   std::vector<float> cie_y = Get_CIE_Y();
@@ -351,15 +368,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   texturesInfo.resize(0);
   texturesInfo.reserve(100);
 
-  #ifdef WIN32
-  size_t endPos = scenePathStr.find_last_of("\\");
-  if(endPos == std::string::npos)
-    endPos = scenePathStr.find_last_of("/");
-  #else
-  size_t endPos = scenePathStr.find_last_of('/');
-  #endif
-
-  const std::string sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+  const std::string& sceneFolder = m_sceneFolder;
 
   //// (0) load textures info
   //

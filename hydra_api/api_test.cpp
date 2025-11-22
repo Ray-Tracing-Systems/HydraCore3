@@ -201,7 +201,7 @@ int main(int argc, const char** argv)
       }
     }
 
-    hr2CommitAndRender(frameLvl, sceneRef, camRef, settingsRef, frameImageRef, false); 
+    hr2CommitAndRender(frameLvl, camRef, settingsRef, frameImageRef, false); 
     
     // when async commit-and-wait is used
     //
