@@ -307,41 +307,6 @@ Spectrum ParseSpectrumStr(const std::string &specStr)
 }
 
 
-
-bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
-{
-  std::string scenePathStr(a_scenePath);
-  std::string sceneDirStr(a_sncDir);  
-  hydra_xml::HydraScene sceneLocal;
-  
-  const bool sameSceneAnalyzed = (scenePathStr == g_lastScenePath) && (sceneDirStr == g_lastSceneDir);
-  hydra_xml::HydraScene& scene = sameSceneAnalyzed ? g_lastScene : sceneLocal;
-  
-  if(!sameSceneAnalyzed)
-  {
-    auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
-    if(loadRes != 0)
-    {
-      std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
-      exit(0);
-    }
-  }
-
-  #ifdef WIN32
-  size_t endPos = scenePathStr.find_last_of("\\");
-  if(endPos == std::string::npos)
-    endPos = scenePathStr.find_last_of("/");
-  #else
-  size_t endPos = scenePathStr.find_last_of('/');
-  #endif
-
-  m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
-
-  LoadScene(scene);
-
-  return true;
-}
-
 void Integrator::LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo,
                                        std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache)
 {
@@ -883,7 +848,24 @@ void Integrator::LoadSceneRemapLists(hydra_xml::HydraScene& scene)
   m_allRemapLists.insert(m_allRemapLists.end(), m_allRemapListsOffsets.begin(), m_allRemapListsOffsets.end()); // put all offsets to the end of the array
 }
 
-bool Integrator::LoadScene(hydra_xml::HydraScene& scene)
+void Integrator::LoadSceneSettings(hydra_xml::HydraScene& scene)
+{
+  for(const auto& sett : scene.Settings())
+  {
+    m_traceDepth = sett.depth;
+    m_spp        = sett.spp;
+
+    if(m_traceDepth == 0)
+      m_traceDepth = 6;
+    
+    if(m_spp == 0)
+      m_spp = 1;
+
+    break; // take first render settings
+  }
+}
+
+bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
 { 
   static const std::vector<float> cie_x = Get_CIE_X();
   static const std::vector<float> cie_y = Get_CIE_Y();
@@ -911,42 +893,37 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene)
   #endif
   ////
   
-  LoadSceneTexturesInfo(scene, m_textureLoadInfo, m_texCache);
+  if((a_flags & LOAD_TEXTURES) != 0)
+    LoadSceneTexturesInfo(scene, m_textureLoadInfo, m_texCache);
 
   #ifndef DISABLE_SPECTRUM
-  if(m_spectral_mode != 0 || true)
-  {
+  if((a_flags & LOAD_SPECTRUM) != 0 && (m_spectral_mode != 0 || true))
     LoadSceneSpectrumData(scene);
-  }
   #endif
-
-  LoadSceneLights(scene, m_texCache);
-
-  LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
-
-  LoadSceneCamera(scene);
-  SetCamId(0); // take first cam by default
   
-  LoadSceneGeometry(scene);
+  if((a_flags & LOAD_LIGHTS) != 0)
+    LoadSceneLights(scene, m_texCache);
 
-  LoadSceneInstances(scene);
-  LoadSceneRemapLists(scene);
+  if((a_flags & LOAD_MATERIALS) != 0)
+    LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
 
-  // load render settings
-  //
-  for(const auto& sett : scene.Settings())
+  if((a_flags & LOAD_CAMERA) != 0)
   {
-    m_traceDepth = sett.depth;
-    m_spp        = sett.spp;
-
-    if(m_traceDepth == 0)
-      m_traceDepth = 6;
-    
-    if(m_spp == 0)
-      m_spp = 1;
-
-    break; // take first render settings
+    LoadSceneCamera(scene);
+    SetCamId(0); // take first cam by default
   }
+
+  if((a_flags & LOAD_GEOMETRY) != 0)
+    LoadSceneGeometry(scene);
+
+  if((a_flags & LOAD_INSTANCES) != 0)
+    LoadSceneInstances(scene);
+  
+  if((a_flags & LOAD_REMAP_LISTS) != 0)
+    LoadSceneRemapLists(scene);
+
+  if((a_flags & LOAD_SETTINGS) != 0)
+    LoadSceneSettings(scene);
 
   // (6) print enabled features in scene
   //
@@ -978,6 +955,41 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene)
 #endif
 
   LoadSceneEnd();
+  return true;
+}
+
+
+bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
+{
+  std::string scenePathStr(a_scenePath);
+  std::string sceneDirStr(a_sncDir);  
+  hydra_xml::HydraScene sceneLocal;
+  
+  const bool sameSceneAnalyzed = (scenePathStr == g_lastScenePath) && (sceneDirStr == g_lastSceneDir);
+  hydra_xml::HydraScene& scene = sameSceneAnalyzed ? g_lastScene : sceneLocal;
+  
+  if(!sameSceneAnalyzed)
+  {
+    auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
+    if(loadRes != 0)
+    {
+      std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
+      exit(0);
+    }
+  }
+
+  #ifdef WIN32
+  size_t endPos = scenePathStr.find_last_of("\\");
+  if(endPos == std::string::npos)
+    endPos = scenePathStr.find_last_of("/");
+  #else
+  size_t endPos = scenePathStr.find_last_of('/');
+  #endif
+
+  m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+
+  LoadScene(scene, LOAD_ALL);
+
   return true;
 }
 

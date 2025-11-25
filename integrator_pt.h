@@ -131,7 +131,7 @@ public:
   
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
-  virtual bool LoadScene(hydra_xml::HydraScene& scene);
+  virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = LOAD_ALL);
   #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
@@ -615,9 +615,22 @@ public:
   #ifndef KERNEL_SLICER
   static SceneInfo   g_lastSceneInfo;
   
-  // loading scene
+  // load/update scene from
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  static constexpr uint32_t LOAD_TEXTURES    = 1;
+  static constexpr uint32_t LOAD_SPECTRUM    = 2;
+  static constexpr uint32_t LOAD_LIGHTS      = 4;
+  static constexpr uint32_t LOAD_MATERIALS   = 8;
+  static constexpr uint32_t LOAD_CAMERA      = 16;
+  static constexpr uint32_t LOAD_GEOMETRY    = 32;
+  static constexpr uint32_t LOAD_INSTANCES   = 64;
+  static constexpr uint32_t LOAD_REMAP_LISTS = 128;
+  static constexpr uint32_t LOAD_SETTINGS    = 256;
+
+  static constexpr uint32_t LOAD_ALL = 0xFFFFFFFF;
+
   std::vector<TextureLoadInfo> m_textureLoadInfo;
   std::vector<uint32_t>        m_oldLightIdToNewLightId;
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> m_texCache;
@@ -631,6 +644,7 @@ public:
   void LoadSceneGeometry(hydra_xml::HydraScene& scene);
   void LoadSceneInstances(hydra_xml::HydraScene& scene);
   void LoadSceneRemapLists(hydra_xml::HydraScene& scene);
+  void LoadSceneSettings(hydra_xml::HydraScene& scene);
   #endif
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 
