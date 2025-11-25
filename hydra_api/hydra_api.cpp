@@ -195,6 +195,12 @@ HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_T
       break;
     }
   }
+
+  if(foundCmdBuffId == uint32_t(-1))
+  {
+    g_context.textOut << "[hr2CommandBufferStorage]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
+    return buf;
+  }
   
   buf.id = foundCmdBuffId;
   g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_storageRef.id]);
@@ -209,6 +215,28 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
   buf.level = HR2_LVL_SCENE;
+
+  uint32_t foundCmdBuffId = uint32_t(-1);
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+  {
+    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
+    {
+      foundCmdBuffId = cmdBuffId;
+      break;
+    }
+  }
+
+  if(foundCmdBuffId == uint32_t(-1))
+  {
+    g_context.textOut << "[hr2CommandBufferScene]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
+    return buf;
+  }
+
+  //buf.id = foundCmdBuffId;
+  //g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_storageRef.id]);
+  //g_context.cmdInFlight[buf.id]->m_type  = buf.type;
+  //g_context.cmdInFlight[buf.id]->m_level = buf.level;
+
   return buf;
 }
 
