@@ -38,6 +38,11 @@
 using LiteImage::ICombinedImageSampler;
 
 #ifndef KERNEL_SLICER
+#include "Image2d.h"
+using LiteImage::Image2D;
+using LiteImage::Sampler;
+using LiteImage::ICombinedImageSampler;
+
 struct SceneInfo
 {
   int width;
@@ -49,6 +54,48 @@ struct SceneInfo
   uint32_t maxPrimitivesPerMesh;
   uint64_t memGeom;
   uint64_t memTextures;
+};
+
+struct TextureLoadInfo
+{
+  std::wstring path;   ///< path to file with texture data
+  uint32_t     width;  ///< assumed texture width
+  uint32_t     height; ///< assumed texture height
+  uint32_t     bpp;    ///< assumed texture bytes per pixel, we support 4 (LDR) or 16 (HDR) during loading; Note that HDR texture could be compressed to 8 bytes (half4) on GPU.
+};
+
+struct HydraSampler
+{
+  float4    row0       = float4(1,0,0,0);
+  float4    row1       = float4(0,1,0,0);
+  float     inputGamma = 2.2f;
+  bool      alphaFromRGB = true;
+  
+  uint32_t  texId = 0;
+  Sampler   sampler;
+
+  bool operator==(const HydraSampler& a_rhs) const
+  {
+    const bool addrAreSame     = (sampler.addressU == a_rhs.sampler.addressU) && (sampler.addressV == a_rhs.sampler.addressV) && (sampler.addressW == a_rhs.sampler.addressW);
+    const bool filtersAreSame  = (sampler.filter == a_rhs.sampler.filter);
+    const bool hasBorderSam    = (sampler.addressU == Sampler::AddressMode::BORDER || sampler.addressV == Sampler::AddressMode::BORDER || sampler.addressW == Sampler::AddressMode::BORDER);
+    const bool sameBorderColor = (length3f(sampler.borderColor - a_rhs.sampler.borderColor) < 1e-5f);
+    const bool sameTexId       = (texId == a_rhs.texId);
+    return (addrAreSame && filtersAreSame) && (!hasBorderSam || sameBorderColor) && sameTexId;
+  }
+};
+
+class HydraSamplerHash 
+{
+public:
+  size_t operator()(const HydraSampler& sam) const
+  {
+    const size_t addressMode1 = size_t(sam.sampler.addressU);
+    const size_t addressMode2 = size_t(sam.sampler.addressV) << 4;
+    const size_t addressMode3 = size_t(sam.sampler.addressW) << 8;
+    const size_t filterMode   = size_t(sam.sampler.filter)   << 12;
+    return addressMode1 | addressMode2 | addressMode3 | filterMode | (size_t(sam.texId) << 16);
+  }
 };
 
 #include "LiteScene/hydraxml.h"
@@ -563,11 +610,29 @@ public:
   static std::string g_lastScenePath;
   static std::string g_lastSceneDir;
   std::string        m_sceneFolder;
+  std::string        m_resourcesDir = ".";
+
   #ifndef KERNEL_SLICER
   static SceneInfo   g_lastSceneInfo;
-  #endif
+  
+  // loading scene
+  //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
+  std::vector<TextureLoadInfo> m_textureLoadInfo;
+  std::vector<uint32_t>        m_oldLightIdToNewLightId;
+  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> m_texCache;
 
-  std::string m_resourcesDir = ".";
+  void LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache);
+  void LoadSceneSpectrumData(hydra_xml::HydraScene& scene);
+  void LoadSceneLights      (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& a_texCache);
+  void LoadSceneMaterials   (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
+                             const std::vector<float>& cie_x, const std::vector<float>& cie_y, const std::vector<float>& cie_z);
+  void LoadSceneCamera(hydra_xml::HydraScene& scene);
+  void LoadSceneGeometry(hydra_xml::HydraScene& scene);
+  void LoadSceneInstances(hydra_xml::HydraScene& scene);
+  void LoadSceneRemapLists(hydra_xml::HydraScene& scene);
+  #endif
+  //////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // for recording path "constant" parameters, override in dereved class
   //
