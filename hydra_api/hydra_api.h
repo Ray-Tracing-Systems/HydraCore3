@@ -8,7 +8,7 @@
 #endif
 
 struct HR2_StorageRef  { int32_t id = -1; }; ///< LEVEL ZERO,  main data storage, scene library, resource manager, navel of the earth. Usually this object is created in a single copy.
-struct HR2_SceneRef    { int32_t id = -1; }; ///< LEVEL ONE,   per scene data storage. 
+struct HR2_SceneRef    { int32_t id = -1; int32_t stgId = -1; }; ///< LEVEL ONE,   per scene data storage. 
 
 struct HR2_GeomRef     { int32_t id = -1; };
 struct HR2_MaterialRef { int32_t id = -1; };
@@ -62,8 +62,8 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
   HR2_CMD_LEVEL level = HR2_LVL_STORAGE;
 };
 
-HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! 
-HR2_CommandBuffer hr2CommandBufferScene  (HR2_SceneRef   a_scene, HR2_CMD_TYPE a_type);   ///<! 
+HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! LEVEL ZERO command buffer
+HR2_CommandBuffer hr2CommandBufferScene  (HR2_SceneRef   a_scene,   HR2_CMD_TYPE a_type); ///<! LEVEL ONE  command buffer
 
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
 void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);

@@ -116,7 +116,7 @@ int main(int argc, const char** argv)
 
   // next we can do relativelly quck scene create/update during edit/work with program
   //
-  HR2_CommandBuffer sceneLvl = hr2CommandBufferScene(sceneRef, HR2_CLEAR_AND_APPEND); // you can pass empty image ref
+  HR2_CommandBuffer sceneLvl = hr2CommandBufferScene(sceneRef, HR2_CLEAR_AND_APPEND); 
 
   // (4) Create camera; 
   //

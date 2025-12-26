@@ -12,12 +12,11 @@
 
 namespace HR2
 {
-
   struct SceneStorage
   {
     SceneStorage() {
       for(int i=0;i<hydra_xml::XML_OBJ_TYPES_NUM; i++)
-        xmlById[i].reserve(128); 
+        xmlById[i].reserve(1024); 
     }
     virtual ~SceneStorage(){}
 
@@ -32,8 +31,10 @@ namespace HR2
     virtual ~CommandBuffer(){}
 
     std::shared_ptr<SceneStorage> pStorage = nullptr;
+    int32_t                       m_stgId  = -1;
     HR2_CMD_TYPE                  m_type   = HR2_APPEND_ONLY;
     HR2_CMD_LEVEL                 m_level  = HR2_LVL_SCENE;
+    
 
     uint32_t       AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType);
     pugi::xml_node NodeById  (hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id);
@@ -51,17 +52,11 @@ struct GlobalContext
   static constexpr uint32_t MAX_STORAGES = 4;
   static constexpr uint32_t MAX_COMMMAND_BUFFERS = 8;
 
-  ///////////////////////////////////////////////////////////////
-
   std::shared_ptr<HR2::SceneStorage> storages[MAX_STORAGES] = {};
   uint32_t                           storageTop = 0;
 
   std::unique_ptr<HR2::CommandBuffer> cmdInFlight[MAX_COMMMAND_BUFFERS];
-
-  ///////////////////////////////////////////////////////////////
-
   std::ostream& textOut = std::cout;
-
 } g_context;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -176,6 +171,20 @@ bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+uint32_t FirstEmptyCmdBuff()
+{
+  uint32_t foundCmdBuffId = uint32_t(-1);
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+  {
+    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
+    {
+      foundCmdBuffId = cmdBuffId;
+      break;
+    }
+  }
+  return foundCmdBuffId;
+}
+
 HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
@@ -186,16 +195,7 @@ HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_T
   if(!CheckStorage(a_storageRef, "hr2CommandBufferStorage"))
     return buf; 
 
-  uint32_t foundCmdBuffId = uint32_t(-1);
-  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
-  {
-    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
-    {
-      foundCmdBuffId = cmdBuffId;
-      break;
-    }
-  }
-
+  const uint32_t foundCmdBuffId = FirstEmptyCmdBuff();
   if(foundCmdBuffId == uint32_t(-1))
   {
     g_context.textOut << "[hr2CommandBufferStorage]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
@@ -206,6 +206,7 @@ HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_T
   g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_storageRef.id]);
   g_context.cmdInFlight[buf.id]->m_type  = buf.type;
   g_context.cmdInFlight[buf.id]->m_level = buf.level;
+  g_context.cmdInFlight[buf.id]->m_stgId = a_storageRef.id;
 
   return buf;
 }
@@ -216,26 +217,26 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
   buf.type  = a_type;
   buf.level = HR2_LVL_SCENE;
 
-  uint32_t foundCmdBuffId = uint32_t(-1);
-  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+  if(a_scene.stgId >= g_context.MAX_STORAGES)
   {
-    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
-    {
-      foundCmdBuffId = cmdBuffId;
-      break;
-    }
+    g_context.textOut << "[hr2CommandBufferScene]: Bad scene storage id " << a_scene.stgId << ", scene: " << a_scene.id << std::endl;
+    return buf;
   }
 
+  //TODO: validate scene was actually created!
+
+  const uint32_t foundCmdBuffId = FirstEmptyCmdBuff();
   if(foundCmdBuffId == uint32_t(-1))
   {
     g_context.textOut << "[hr2CommandBufferScene]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
     return buf;
   }
 
-  //buf.id = foundCmdBuffId;
-  //g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_storageRef.id]);
-  //g_context.cmdInFlight[buf.id]->m_type  = buf.type;
-  //g_context.cmdInFlight[buf.id]->m_level = buf.level;
+  buf.id = foundCmdBuffId;
+  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_scene.stgId]);
+  g_context.cmdInFlight[buf.id]->m_type  = buf.type;
+  g_context.cmdInFlight[buf.id]->m_level = buf.level;
+  g_context.cmdInFlight[buf.id]->m_stgId = a_scene.stgId;
 
   return buf;
 }
@@ -296,14 +297,15 @@ HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SettingsRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SETTINGS);
   return res;
 }
 
 HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SceneRef res = {};
-  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
+  res.id    = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
+  res.stgId = g_context.cmdInFlight[a_cmdBuff.id]->m_stgId;
   return res;
 }
 
