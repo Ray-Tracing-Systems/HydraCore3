@@ -38,6 +38,8 @@ void HR2::CommandBuffer::CommitToStorage()
   if(pStorage->m_pDriver == nullptr)
     return;
 
+  pStorage->xmlData.SaveState("z_debug.xml");
+
   pStorage->m_pDriver->LoadScene(pStorage->xmlData);
   pStorage->m_pDriver->CommitDeviceData();
 }

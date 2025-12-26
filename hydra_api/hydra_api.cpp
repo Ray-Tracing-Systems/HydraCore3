@@ -33,7 +33,10 @@ uint32_t HR2::CommandBuffer::AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType)
   
   auto nodeNamePair = pStorage->xmlData.RootFor(a_objType);
   assert(nodeNamePair.first != nullptr);
-  pStorage->xmlById[typeId].push_back(nodeNamePair.first.append_child(nodeNamePair.second)); 
+
+  auto node = nodeNamePair.first.append_child(nodeNamePair.second);
+  node.append_attribute(L"id") = pStorage->xmlById[typeId].size();
+  pStorage->xmlById[typeId].push_back(node); 
   
   return uint32_t(pStorage->xmlById[typeId].size() - 1);
 }
