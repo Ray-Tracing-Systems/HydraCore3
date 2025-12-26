@@ -8,9 +8,16 @@
 
 namespace HR2
 {
+  struct RDScene_Input
+  {
+    const std::unordered_map<int, HR2_MeshInput>* pMeshPtrs = nullptr;
+  };
+
   struct IRenderDriver
   {
-    virtual void LoadScene(hydra_xml::HydraScene& a_scn) = 0;
+    IRenderDriver(){}
+    virtual ~IRenderDriver(){}
+    virtual void LoadScene(hydra_xml::HydraScene& a_scn, const RDScene_Input& a_input) = 0;
     virtual void CommitDeviceData() = 0;
   };
   
@@ -48,6 +55,10 @@ namespace HR2
     pugi::xml_node NodeById  (hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id);
 
     virtual void CommitToStorage();
+
+    /// @brief /// temporary storage for mesh pointers by mesh id to pass them inside render
+    std::unordered_map<int, HR2_MeshInput> meshPtrById;
+    
   };
 
 };

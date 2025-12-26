@@ -125,6 +125,7 @@ struct HR2_MeshInput
 
   uint32_t* indicesPtr = nullptr;
   uint32_t  indicesNum = 0;
+  uint32_t  vertNum    = 0;
   //uint32_t  indicesStride = 3; ///<! 3 for triangle mesh, 4 for quad mesh, quads are not supported yet
 
   uint32_t* matIdPtr = nullptr;

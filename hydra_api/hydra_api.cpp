@@ -235,7 +235,10 @@ HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_mes
 {
   HR2_GeomRef res = {};
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_GEOMETRY);
-  // TODO: do some thing with actual data 
+           g_context.cmdInFlight[a_cmdBuff.id]->meshPtrById[res.id] = a_input;
+  
+  auto node = g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_GEOMETRY, res.id);
+  node.append_attribute(L"ptrs") = 1;
   return res;
 }
 

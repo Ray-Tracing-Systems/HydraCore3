@@ -99,6 +99,25 @@ public:
 };
 
 #include "LiteScene/hydraxml.h"
+
+struct Mesh4fInput
+{
+  float*   vPosPtr        = nullptr; 
+  uint32_t vPosByteStride = 16;
+
+  float*   vNormPtr4f  = nullptr; 
+  float*   vTangPtr4f  = nullptr; 
+  float*   vTexCoord2f = nullptr; 
+
+  uint32_t* indicesPtr = nullptr;
+  uint32_t  indicesNum = 0;
+  uint32_t  vertNum    = 0;
+ 
+  uint32_t* matIdPtr = nullptr;
+  uint32_t  matIdAll = 0;
+  uint32_t  matIdNum = 1; ///<! if 1, set whole mesh with single material, read matIdAll; else read material indices from matIdPtr
+};
+
 #endif
 
 class Integrator // : public DataClass, IRenderer
@@ -132,6 +151,8 @@ public:
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
   virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = LOAD_ALL);
+  virtual void LoadScene_SetMeshPointers(const std::unordered_map<int, Mesh4fInput>* a_meshPtrs) { m_LSMeshPtrs = a_meshPtrs; }
+  const std::unordered_map<int, Mesh4fInput>* m_LSMeshPtrs = nullptr;
   #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }
@@ -628,7 +649,6 @@ public:
   static constexpr uint32_t LOAD_INSTANCES   = 64;
   static constexpr uint32_t LOAD_REMAP_LISTS = 128;
   static constexpr uint32_t LOAD_SETTINGS    = 256;
-
   static constexpr uint32_t LOAD_ALL = 0xFFFFFFFF;
 
   std::vector<TextureLoadInfo> m_textureLoadInfo;

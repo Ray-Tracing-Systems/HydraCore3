@@ -62,6 +62,7 @@ int main(int argc, const char** argv)
     inputCube.matIdAll      = mat0.id;
     inputCube.indicesPtr    = (uint32_t*)meshCube.triIndices.data();
     inputCube.indicesNum    = uint32_t(meshCube.triIndices.size());
+    inputCube.vertNum       = meshCube.vPos.size()/4;
   
     inputPlane.vPosPtr      = meshPlane.vPos.data();
     inputPlane.vNormPtr     = meshPlane.vNorm.data();
@@ -69,6 +70,7 @@ int main(int argc, const char** argv)
     inputPlane.matIdAll     = mat1.id;
     inputPlane.indicesPtr   = (uint32_t*)meshPlane.triIndices.data();
     inputPlane.indicesNum   = uint32_t(meshPlane.triIndices.size());
+    inputPlane.vertNum      = meshPlane.vPos.size()/4;
   }
 
   HR2_GeomRef cubeRef  = hr2CreateMeshFromData(storageLevel, "cube", inputCube);

@@ -730,21 +730,70 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
       #ifdef _DEBUG
       std::cout << "[LoadScene]: mesh = " << dir.c_str() << std::endl;
       #endif
-      auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
-      auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
-      (void)geomId; // silence unused var. warning
+      if(mIter->attribute(L"ptrs").as_int() == 1 && m_LSMeshPtrs != nullptr)
+      {
+        auto meshId   = mIter->attribute(L"id").as_uint();
+        auto pMeshPts = m_LSMeshPtrs->find(meshId);
+        if(pMeshPts == m_LSMeshPtrs->end())
+        {
+          std::cout << "[Integrator::LoadSceneGeometry]: bad mesh pointer id = " << meshId << std::endl;
+          exit(0);
+        }
+        
+        const Mesh4fInput& input = pMeshPts->second;
+        
+        auto geomId = m_pAccelStruct->AddGeom_Triangles3f((const float*)input.vPosPtr, input.vertNum, input.indicesPtr, input.indicesNum, BUILD_HIGH, input.vPosByteStride);
+        (void)geomId; // silence unused var. warning
 
-      const size_t lastVertex = m_vData8f.size();
+        const size_t lastVertex = m_vData8f.size();
+        
+        if(input.matIdNum != input.indicesNum/3) 
+        {
+          size_t oldSize = m_matIdByPrimId.size();
+          m_matIdByPrimId.resize(oldSize + input.indicesNum/3);
+          for(size_t i=oldSize;i<m_matIdByPrimId.size();i++)
+            m_matIdByPrimId[i] = input.matIdAll;
+        }
+        else
+          m_matIdByPrimId.insert(m_matIdByPrimId.end(), input.matIdPtr, input.matIdPtr + input.matIdNum);
 
-      m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
-      m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
-      m_vData8f.resize(m_vData8f.size() + currMesh.vNorm4f.size());
-      for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack vertex data
-        m_vData8f[lastVertex + i].normAndTx   = currMesh.vNorm4f[i];
-        m_vData8f[lastVertex + i].tangAndTy   = currMesh.vTang4f[i];
-        m_vData8f[lastVertex + i].normAndTx.w = currMesh.vTexCoord2f[i].x;
-        m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
+        m_triIndices.insert(m_triIndices.end(), input.indicesPtr, input.indicesPtr + input.indicesNum);
+        m_vData8f.resize(m_vData8f.size() + input.vertNum);
+
+        if(input.vTangPtr4f != nullptr)
+        {
+          for(size_t i = 0; i<input.vertNum; i++) {          // pack vertex data
+            m_vData8f[lastVertex + i].normAndTx = float4(input.vNormPtr4f[4*i+0], input.vNormPtr4f[4*i+1], input.vNormPtr4f[4*i+2], input.vTexCoord2f[2*i+0]);
+            m_vData8f[lastVertex + i].tangAndTy = float4(input.vTangPtr4f[4*i+0], input.vTangPtr4f[4*i+1], input.vTangPtr4f[4*i+2], input.vTexCoord2f[2*i+1]);
+          }
+        }
+        else // render must not compute tangent space, hydra_api may
+        {
+          for(size_t i = 0; i<input.vertNum; i++) {          // pack vertex data
+            m_vData8f[lastVertex + i].normAndTx = float4(input.vNormPtr4f[4*i+0], input.vNormPtr4f[4*i+1], input.vNormPtr4f[4*i+2], input.vTexCoord2f[2*i+0]);
+            m_vData8f[lastVertex + i].tangAndTy = float4(0.0f, 0.0f, 0.0f, input.vTexCoord2f[2*i+1]);
+          }
+        }
+      }
+      else
+      {
+        auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
+        auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
+  
+        (void)geomId; // silence unused var. warning
+  
+        const size_t lastVertex = m_vData8f.size();
+  
+        m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
+        m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+        m_vData8f.resize(m_vData8f.size() + currMesh.vNorm4f.size());
+        for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack vertex data
+          m_vData8f[lastVertex + i].normAndTx   = currMesh.vNorm4f[i];
+          m_vData8f[lastVertex + i].tangAndTy   = currMesh.vTang4f[i];
+          m_vData8f[lastVertex + i].normAndTx.w = currMesh.vTexCoord2f[i].x;
+          m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
+        }
       }
     }
     else
@@ -765,6 +814,8 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
     mIter++;
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
+
+  m_LSMeshPtrs = nullptr; // always reset after load
 }
 
 void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
