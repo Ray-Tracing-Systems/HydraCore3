@@ -1,9 +1,9 @@
 #include "hydra_cpu.h"
 #include "../integrator_pt.h"
 
-struct CPURenderDriver : HR2::IRenderDriver
+struct HydraCore3RenderDriver : HR2::IRenderDriver
 {
-  CPURenderDriver()
+  HydraCore3RenderDriver()
   {
     m_pImpl = std::make_shared<Integrator>(1024*1024, std::vector<uint32_t>());
   }
@@ -14,27 +14,30 @@ struct CPURenderDriver : HR2::IRenderDriver
   std::shared_ptr<Integrator> m_pImpl;
 };
 
-std::shared_ptr<HR2::IRenderDriver> MakeHydraRenderCPU()
+std::shared_ptr<HR2::IRenderDriver> HR2::MakeHydraRenderCPU()
 {
-  return std::make_shared<CPURenderDriver>();
+  return std::make_shared<HydraCore3RenderDriver>();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CPURenderDriver::LoadScene(hydra_xml::HydraScene& a_scn)
+void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn)
 {
   m_pImpl->LoadScene(a_scn);
 }
 
-void CPURenderDriver::CommitDeviceData()
+void HydraCore3RenderDriver::CommitDeviceData()
 {
   m_pImpl->CommitDeviceData();
 }
 
 void HR2::CommandBuffer::CommitToStorage()
 {
-  // current implementation assume direct forwarding data to renderer
-  // m_pRenderImpl = GetRenderDriverForStorage()
-  // m_pRenderImpl->LoadScene();
-  // m_pRenderImpl->CommitDeviceData();
+  if(pStorage == nullptr)
+    return;
+  if(pStorage->m_pDriver == nullptr)
+    return;
+
+  pStorage->m_pDriver->LoadScene(pStorage->xmlData);
+  pStorage->m_pDriver->CommitDeviceData();
 }

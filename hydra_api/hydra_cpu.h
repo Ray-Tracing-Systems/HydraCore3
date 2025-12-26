@@ -8,16 +8,28 @@
 
 namespace HR2
 {
+  struct IRenderDriver
+  {
+    virtual void LoadScene(hydra_xml::HydraScene& a_scn) = 0;
+    virtual void CommitDeviceData() = 0;
+  };
+  
+  std::shared_ptr<IRenderDriver> MakeHydraRenderCPU(); 
+
   struct SceneStorage
   {
     SceneStorage() {
       for(int i=0;i<hydra_xml::XML_OBJ_TYPES_NUM; i++)
         xmlById[i].reserve(1024); 
+
+      m_pDriver = MakeHydraRenderCPU();
     }
     virtual ~SceneStorage(){}
 
     hydra_xml::HydraScene       xmlData;
     std::vector<pugi::xml_node> xmlById[hydra_xml::XML_OBJ_TYPES_NUM]; 
+
+    std::shared_ptr<IRenderDriver> m_pDriver;
   };
 
   struct CommandBuffer
@@ -38,12 +50,5 @@ namespace HR2
     virtual void CommitToStorage();
   };
 
-  struct IRenderDriver
-  {
-    virtual void LoadScene(hydra_xml::HydraScene& a_scn) = 0;
-    virtual void CommitDeviceData() = 0;
-  };
-
-  std::shared_ptr<IRenderDriver> MakeHydraRenderCPU(); 
 };
 
