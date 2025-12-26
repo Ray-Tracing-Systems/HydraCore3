@@ -108,7 +108,7 @@ int main(int argc, const char** argv)
 
   hr2Commit(storageLevel); // now scene library is finished 
 
-  // MUST NOT USE storageLevel after hr2Commit, immediately report error! 
+  // MUST NOT USE storageLevel AFTER hr2Commit, immediately report error! 
   // ALWAYS create new command buffer
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

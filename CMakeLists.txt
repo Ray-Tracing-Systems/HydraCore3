@@ -188,7 +188,6 @@ else()
 endif()
 
 set(CORE_SRC
-        ${MAIN_FILES}
         integrator_rt.cpp
         integrator_pt.cpp
         integrator_pt_lgt.cpp
@@ -243,7 +242,8 @@ endif()
 if(HYDRA_CORE3_LIB)
   if(USE_VULKAN)    
     if(CAM_PLUGIN)
-        add_library(hydra ${CORE_SRC}
+        add_library(hydra ${MAIN_FILES}
+                          ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
                           ${VULKAN_SRC}
                           ${VULKAN_CAM1}
@@ -251,38 +251,43 @@ if(HYDRA_CORE3_LIB)
                           ${LOADER_EXTERNAL_SRC}
                           ${OTHER_EXTERNAL_SRC})
     else()
-        add_library(hydra ${CORE_SRC}
+        add_library(hydra ${MAIN_FILES}
+                          ${CORE_SRC}
                           ${VULKAN_EXTERNAL_SRC}
                           ${VULKAN_SRC}
                           ${LOADER_EXTERNAL_SRC}
                           ${OTHER_EXTERNAL_SRC})
     endif()
   else()
-      add_library(hydra ${CORE_SRC}
+      add_library(hydra ${MAIN_FILES}
+                        ${CORE_SRC}
                         ${LOADER_EXTERNAL_SRC}
                         ${OTHER_EXTERNAL_SRC})
   endif()
 else()
   if(USE_VULKAN)    
     if(CAM_PLUGIN)
-      add_executable(hydra ${CORE_SRC}
-                          ${VULKAN_EXTERNAL_SRC}
-                          ${VULKAN_SRC}
-                          ${VULKAN_CAM1}
-                          ${VULKAN_CAM2}
-                          ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+      add_executable(hydra ${MAIN_FILES} 
+                           ${CORE_SRC}
+                           ${VULKAN_EXTERNAL_SRC}
+                           ${VULKAN_SRC}
+                           ${VULKAN_CAM1}
+                           ${VULKAN_CAM2}
+                           ${LOADER_EXTERNAL_SRC}
+                           ${OTHER_EXTERNAL_SRC})
     else()
-      add_executable(hydra ${CORE_SRC}
-                          ${VULKAN_EXTERNAL_SRC}
-                          ${VULKAN_SRC}
-                          ${LOADER_EXTERNAL_SRC}
-                          ${OTHER_EXTERNAL_SRC})
+      add_executable(hydra ${MAIN_FILES}
+                           ${CORE_SRC}
+                           ${VULKAN_EXTERNAL_SRC}
+                           ${VULKAN_SRC}
+                           ${LOADER_EXTERNAL_SRC}
+                           ${OTHER_EXTERNAL_SRC})
     endif()
   else()
-    add_executable(hydra ${CORE_SRC}
-                        ${LOADER_EXTERNAL_SRC}
-                        ${OTHER_EXTERNAL_SRC})
+    add_executable(hydra ${MAIN_FILES}
+                         ${CORE_SRC}
+                         ${LOADER_EXTERNAL_SRC}
+                         ${OTHER_EXTERNAL_SRC})
   endif()
 endif()
 
@@ -339,5 +344,20 @@ if(TEST_API2)
                            external/LiteScene/3rd_party/pugixml.cpp
                            external/LiteScene/hydraxml.cpp
                            external/LiteScene/cmesh4.cpp
-                           hydra_api/mesh_utils.cpp)
+                           hydra_api/mesh_utils.cpp
+                           ${CORE_SRC}
+                           ${LOADER_EXTERNAL_SRC}
+                           ${OTHER_EXTERNAL_SRC}
+                           )
+
+  target_link_libraries(api_test LINK_PUBLIC project_options project_warnings miniz ies_parser spectral)
+  target_link_libraries(api_test LINK_PUBLIC ${EMBREE_LIBS})
+  target_link_libraries(api_test LINK_PUBLIC dl)
+
+  if (CMAKE_BUILD_TYPE STREQUAL "Debug")   # add debug specific options here
+    target_link_libraries(api_test LINK_PUBLIC Threads::Threads OpenMP::OpenMP_CXX)
+  else()
+    target_link_libraries(api_test LINK_PUBLIC OpenMP::OpenMP_CXX)
+   endif()
+
 endif()

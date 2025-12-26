@@ -10,43 +10,6 @@
 #include <iostream>
 #include <ostream>
 
-namespace HR2
-{
-  struct SceneStorage
-  {
-    SceneStorage() {
-      for(int i=0;i<hydra_xml::XML_OBJ_TYPES_NUM; i++)
-        xmlById[i].reserve(1024); 
-    }
-    virtual ~SceneStorage(){}
-
-    hydra_xml::HydraScene       xmlData;
-    std::vector<pugi::xml_node> xmlById[hydra_xml::XML_OBJ_TYPES_NUM]; 
-  };
-
-  struct CommandBuffer
-  {
-    CommandBuffer(){}
-    CommandBuffer(std::shared_ptr<SceneStorage> a_pStorage) : pStorage(a_pStorage) {}
-    virtual ~CommandBuffer(){}
-
-    std::shared_ptr<SceneStorage> pStorage = nullptr;
-    int32_t                       m_stgId  = -1;
-    HR2_CMD_TYPE                  m_type   = HR2_APPEND_ONLY;
-    HR2_CMD_LEVEL                 m_level  = HR2_LVL_SCENE;
-    
-
-    uint32_t       AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType);
-    pugi::xml_node NodeById  (hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id);
-
-    virtual void CommitToStorage()
-    {
-      
-    }
-  };
-
-};
-
 struct GlobalContext
 {
   static constexpr uint32_t MAX_STORAGES = 4;
