@@ -1,10 +1,13 @@
 #ifndef INCLUDE__CMAT_NEURAL_BRDF_H_
 #define INCLUDE__CMAT_NEURAL_BRDF_H_
-#include "../neural.h" 
+
+#include "../neural.h"
+#include "cglobals.h"
+#include "cmaterial.h"
 
 #include <iostream>
-static constexpr uint NBRDF_LATENT_CHANNELS = 0;
-static constexpr uint NBRDF_INPUT_DIM = NBRDF_LATENT_CHANNELS + 6;
+
+static constexpr uint NBRDF_INPUT_DIM = 6;
 static constexpr uint NBRDF_HIDDEN_DIM = 64;
 
 static constexpr uint NBRDF_OFFSET_BIAS0 = NBRDF_INPUT_DIM * NBRDF_HIDDEN_DIM;
@@ -17,7 +20,7 @@ static constexpr uint NBRDF_SIZE_MAT6    = NBRDF_HIDDEN_DIM * 6;
 static bool isUsed = false;
 
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights,
-                                    float3 l, float3 v, float3 n, float *tex, BsdfEval *pRes)
+                                    float3 l, float3 v, float3 n, BsdfEval *pRes)
 {
   const float cosThetaOut = dot(l, n);
   l = LiteMath::normalize(l);
@@ -44,11 +47,6 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   x[3] = wi.x;
   x[4] = wi.y;
   x[5] = wi.z;
-  for(uint i = 0; i < NBRDF_LATENT_CHANNELS; ++i) {
-      x[6 + i] = tex[i];
-  }
-
-
 
   //Layer0
   nn::Linear(weights, x, buf, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
@@ -86,13 +84,13 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 
 
 static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 rands, 
-                                            float3 vec, float3 n, float *tex, BsdfSample* pRes)
+                                            float3 vec, float3 n, BsdfSample* pRes)
 {
   const uint   cflags     = a_materials[0].cflags;
   const float3 lambertDir = lambertSample(float2(rands.x, rands.y), vec, n);
   const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
   BsdfEval tRes;
-  neuralBrdfEval(a_materials, weights, lambertDir, vec, n, tex, &tRes);
+  neuralBrdfEval(a_materials, weights, lambertDir, vec, n, &tRes);
 
   pRes->dir   = lambertDir;
   pRes->val   = tRes.val;

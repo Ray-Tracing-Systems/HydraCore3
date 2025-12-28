@@ -55,6 +55,7 @@ else()
 endif()
 
 add_subdirectory(ies_parser)
+add_subdirectory(external/LiteMath)
 
 set(GENERATOR_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root output directory for all artifacts")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -319,7 +320,7 @@ else()
   set(CUSTOM_OMP "")
 endif()
 
-target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser spectral)
+target_link_libraries(hydra LINK_PUBLIC project_options project_warnings miniz ies_parser spectral LiteMath)
 
 if(USE_VULKAN)
   target_link_libraries(hydra LINK_PUBLIC volk ${EMBREE_LIBS})
