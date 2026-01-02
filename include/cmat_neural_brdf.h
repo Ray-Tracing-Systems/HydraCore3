@@ -4,6 +4,7 @@
 #include "../neural.h"
 #include "cglobals.h"
 #include "cmaterial.h"
+#include "../spectrum.h"
 
 #include <iostream>
 
@@ -15,6 +16,16 @@ static constexpr size_t NBRDF_WEIGTH_OFFSETS[] = {0, 448, 4608, 8768, 12928};
 
 static constexpr uint NBRDF_SIZE_MAT6 = NBRDF_HIDDEN_DIM * 6;
 
+static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[32] = {
+                        380.0000f, 394.5161f, 409.0323f, 423.5484f,
+                        438.0645f, 452.5807f, 467.0968f, 481.6129f,
+                        496.1290f, 510.6452f, 525.1613f, 539.6774f,
+                        554.1935f, 568.7097f, 583.2258f, 597.7419f,
+                        612.2581f, 626.7742f, 641.2903f, 655.8065f,
+                        670.3226f, 684.8387f, 699.3549f, 713.8710f,
+                        728.3871f, 742.9032f, 757.4194f, 771.9355f,
+                        786.4516f, 800.9677f, 815.4839f, 830.0000f
+                      };
 
 /**
  * x is of size max(NBRDF_INPUT_DIM, out_dim))
@@ -77,24 +88,37 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   x[3] = wi.x;
   x[4] = wi.y;
   x[5] = wi.z;
-  evalNeuralNetwork(weights, x, out_dim)
+  evalNeuralNetwork(weights, x, out_dim);
 
-  
+  if(spectral_mode == 1) {
+
+    for(int i = 0; i < 4; ++i) {
+      float lambda = wavelengths[i];
+      uint idx = BinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, sizeof(NBRDF_SPECTRAL_WAVELENGTHS) / sizeof(float), wavelengths[i]);
+      float t = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
+      pRes->val[i] = lerp(x[idx], x[idx + 1], t);
+    }
+
+  }
+  else {
+    pRes->val = float4(x[0], x[1], x[2], 1.0f);
+  }
+
 
   pRes->pdf = lambertEvalPDF(l, v, n); //TODO
-  pRes->val = float4(buf[2], buf[1], buf[0], 1.0f);
+  
 
 }
 
 
 static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 wavelengths, float4 rands, 
-                                            float3 vec, float3 n, BsdfSample* pRes)
+                                            float3 vec, float3 n, BsdfSample* pRes, int spectral_mode)
 {
   const uint   cflags     = a_materials[0].cflags;
   const float3 lambertDir = lambertSample(float2(rands.x, rands.y), vec, n);
   const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
   BsdfEval tRes;
-  neuralBrdfEval(a_materials, weights, wavelengths, lambertDir, vec, n, &tRes);
+  neuralBrdfEval(a_materials, weights, wavelengths, lambertDir, vec, n, &tRes, spectral_mode);
 
   pRes->dir   = lambertDir;
   pRes->val   = tRes.val;

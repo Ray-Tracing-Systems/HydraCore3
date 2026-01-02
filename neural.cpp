@@ -26,9 +26,9 @@ namespace nn
     std::fill(out, out + batch_size * out_dim, 0.0f);
     for(uint32_t i = 0; i < batch_size; ++i) {
       for(uint32_t j = 0; j < out_dim; ++j) {
-        float bias = weigths[in_dim * out_dim + j];
+        float bias = weights[in_dim * out_dim + j];
         for(uint32_t p = 0; p < in_dim; ++p) {
-          out[i * out_dim + j] += weights[j * in_dim + p] * B[p * out_dim + j]; // ???
+          out[i * out_dim + j] += weights[j * in_dim + p] * x[p * out_dim + j]; // ???
         }
         out[i * out_dim + j] += bias;
       }
