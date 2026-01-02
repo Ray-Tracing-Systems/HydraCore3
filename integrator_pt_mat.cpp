@@ -294,7 +294,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
       if(m_spectral_mode == 0) {
-        neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, &res);
+        neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, wavelengths, rands, v, n, &res);
       }
       else {
         //neuralSpecSmoothSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, v, n, wavelengths, buf, &res);
@@ -539,7 +539,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         uint weights_offset = m_neural_weights_offsets[currMat.id];
 
-        neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, v, l, n, &res);
+        neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset,, wavelengths, v, l, n, &res);
 
       }
       break;

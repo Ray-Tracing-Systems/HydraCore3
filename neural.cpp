@@ -17,6 +17,23 @@ namespace nn
     }
   }
 
+  void Linear(const float *weights, const float *x, float *out, 
+                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim)
+  {
+#ifndef KERNEL_SLICER
+    assert(weights != out && x != out);
+#endif
+    std::fill(out, out + batch_size * out_dim, 0.0f);
+    for(uint32_t i = 0; i < batch_size; ++i) {
+      for(uint32_t j = 0; j < out_dim; ++j) {
+        float bias = weigths[in_dim * out_dim + j];
+        for(uint32_t p = 0; p < in_dim; ++p) {
+          out[i * out_dim + j] += weights[j * in_dim + p] * B[p * out_dim + j]; // ???
+        }
+        out[i * out_dim + j] += bias;
+      }
+    }
+  }
 
   void Matmul(const float *A, const float *B, float *out,  
                       uint32_t m, uint32_t n, uint32_t k)

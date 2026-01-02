@@ -80,17 +80,13 @@ namespace nn
 
    /**
    * weights   : out_dim x in_dim + out_dim (matrix + bias)
-   * x   : in_dim
-   * out : out_dim
+   * x   : batch_size x in_dim
+   * out : batch_size x out_dim
    * 
-   * assert(out != A && out != B)
+   * assert(out != x && out != weights)
    */
-  inline void Linear(const float *weights, const float *x, float *out, 
-                      uint32_t in_dim, uint32_t out_dim)
-  {
-    Matmul(weights, x, out, out_dim, in_dim);
-    Add(weights + in_dim * out_dim, out, out, out_dim);
-  }
+  void Linear(const float *weights, const float *x, float *out, 
+                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim);
 
 
   /**
