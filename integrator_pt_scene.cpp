@@ -168,7 +168,7 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     {
       features[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
-    else if(mat_type == dielectricMatTypeStr)
+    else if(mat_type == neuralBrdfMatTypeStr)
     {
       features[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
     }

@@ -6,7 +6,9 @@
 #include "cmaterial.h"
 #include "../spectrum.h"
 
+#include <cmath>
 #include <iostream>
+#include <string>
 
 static constexpr uint NBRDF_INPUT_DIM = 6;
 static constexpr uint NBRDF_HIDDEN_DIM = 64;
@@ -58,6 +60,7 @@ static inline void evalNeuralNetwork(const float *weights, float *x, uint out_di
   //Layer4
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[4], buf0, x, 
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, out_dim);
+  nn::ReLU(x, x, NBRDF_BATCH_SIZE * out_dim);
 }
 
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights, float4 wavelengths,
@@ -81,20 +84,20 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 
   uint out_dim = spectral_mode == 0 ? 3 : 32;
 
-  float x[NBRDF_HIDDEN_DIM];
-  x[0] = wo.x;
-  x[1] = wo.y;
-  x[2] = wo.z;
-  x[3] = wi.x;
-  x[4] = wi.y;
-  x[5] = wi.z;
+  float x[32];
+  x[0] = wi.x;
+  x[1] = wi.y;
+  x[2] = wi.z;
+  x[3] = wo.x;
+  x[4] = wo.y;
+  x[5] = wo.z;
   evalNeuralNetwork(weights, x, out_dim);
 
-  if(spectral_mode == 1) {
+  if(spectral_mode) {
 
     for(int i = 0; i < 4; ++i) {
       float lambda = wavelengths[i];
-      uint idx = BinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, sizeof(NBRDF_SPECTRAL_WAVELENGTHS) / sizeof(float), wavelengths[i]);
+      uint idx = BinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, 32, wavelengths[i]);
       float t = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
       pRes->val[i] = lerp(x[idx], x[idx + 1], t);
     }
@@ -114,7 +117,6 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 wavelengths, float4 rands, 
                                             float3 vec, float3 n, BsdfSample* pRes, int spectral_mode)
 {
-  const uint   cflags     = a_materials[0].cflags;
   const float3 lambertDir = lambertSample(float2(rands.x, rands.y), vec, n);
   const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
   BsdfEval tRes;

@@ -28,7 +28,7 @@ namespace nn
       for(uint32_t j = 0; j < out_dim; ++j) {
         float bias = weights[in_dim * out_dim + j];
         for(uint32_t p = 0; p < in_dim; ++p) {
-          out[i * out_dim + j] += weights[j * in_dim + p] * x[p * out_dim + j]; // ???
+          out[i * out_dim + j] += weights[p * out_dim + j] * x[i * in_dim + p]; // ???
         }
         out[i * out_dim + j] += bias;
       }
