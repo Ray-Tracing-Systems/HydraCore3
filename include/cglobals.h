@@ -131,6 +131,46 @@ static inline void CoordinateSystemV2(float3 n, float3* s, float3* t)
   (*t) = float3{b, n.y * n.y * a + sign, -n.y};
 }
 
+
+  static inline float3 rotate(float3 v, float3 axis, float angle)
+  {
+    axis = normalize(axis);
+    float cosTheta = std::cos(angle);
+    float sinTheta = std::sin(angle);
+
+    return v * cosTheta + cross(axis, v) * sinTheta + axis * dot(axis, v) * (1 - cosTheta);
+  }
+
+  static inline float3 xyz2sph(const float3 v)
+  {
+    float r_xy = v.x * v.x + v.y * v.y;
+    float r = std::sqrt(r_xy + v.z * v.z);
+    float theta = std::atan2(std::sqrt(r_xy), v.z);
+    float phi = std::atan2(v.y, v.x);
+
+    return float3(r, theta, phi);
+  }
+
+  static inline void RusinkiewiczTransform(float3 wi, float3 wo, float3* half, float3* diff) {
+    (*half) = normalize(wi + wo);
+
+    float3 sph = xyz2sph(*half);
+    float theta_h = sph.y;
+    float phi_h = sph.z;
+
+    float3 binormal(0.f, 1.f, 0.f);
+    float3 normal(0.f, 0.f, 1.f);
+
+    // Fix for isotropic NBRDF
+    (*half) = rotate((*half), normal, -phi_h);
+    (*diff) = rotate(wi, normal, -phi_h);
+    phi_h = 0.f;
+
+    (*diff) = rotate(*diff, binormal, -theta_h);
+    (*diff) = normalize(*diff);
+    return;
+}
+
 //constexpr float M_PI     = 3.14159265358979323846f;
 //constexpr float M_TWOPI  = 6.28318530717958647692f;
 //constexpr float INV_PI   = 0.31830988618379067154f

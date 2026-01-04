@@ -12,13 +12,14 @@
 
 static constexpr uint NBRDF_INPUT_DIM = 6;
 static constexpr uint NBRDF_HIDDEN_DIM = 64;
+static constexpr uint NBRDF_SPECTRUM_SIZE = 32;
 
 static constexpr uint NBRDF_BATCH_SIZE = 1;
 static constexpr size_t NBRDF_WEIGTH_OFFSETS[] = {0, 448, 4608, 8768, 12928};
 
-static constexpr uint NBRDF_SIZE_MAT6 = NBRDF_HIDDEN_DIM * 6;
+static constexpr float NBRDF_LOGREL_MU = 255.0f;
 
-static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[32] = {
+static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[NBRDF_SPECTRUM_SIZE] = {
                         380.0000f, 394.5161f, 409.0323f, 423.5484f,
                         438.0645f, 452.5807f, 467.0968f, 481.6129f,
                         496.1290f, 510.6452f, 525.1613f, 539.6774f,
@@ -28,6 +29,12 @@ static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[32] = {
                         728.3871f, 742.9032f, 757.4194f, 771.9355f,
                         786.4516f, 800.9677f, 815.4839f, 830.0000f
                       };
+
+static inline float invLogMapping(float x, float mu)
+{
+  const float logmu = logf(mu + 1.0f);
+  return (expf(x * logmu) - 1.0f) / mu;
+}
 
 /**
  * x is of size max(NBRDF_INPUT_DIM, out_dim))
@@ -61,6 +68,7 @@ static inline void evalNeuralNetwork(const float *weights, float *x, uint out_di
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[4], buf0, x, 
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, out_dim);
   nn::ReLU(x, x, NBRDF_BATCH_SIZE * out_dim);
+
 }
 
 static inline void neuralBrdfEval(const Material* a_materials, const float *weights, float4 wavelengths,
@@ -82,29 +90,44 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
     return;
   }
 
-  uint out_dim = spectral_mode == 0 ? 3 : 32;
+  uint out_dim = spectral_mode == 0 ? 3 : NBRDF_SPECTRUM_SIZE;
 
-  float x[32];
-  x[0] = wi.x;
-  x[1] = wi.y;
-  x[2] = wi.z;
-  x[3] = wo.x;
-  x[4] = wo.y;
-  x[5] = wo.z;
+  float3 half, diff;
+  RusinkiewiczTransform(l, v, &half, &diff);
+
+  float x[NBRDF_SPECTRUM_SIZE];
+  x[0] = half.x;
+  x[1] = half.y;
+  x[2] = half.z;
+  x[3] = diff.x;
+  x[4] = diff.y;
+  x[5] = diff.z;
   evalNeuralNetwork(weights, x, out_dim);
+
+  constexpr float logmu = logf(1 + NBRDF_LOGREL_MU);
+
+  //for(int i = 0; i < out_dim; ++i) {
+  //  x[i] = (expf(x[i] * logmu) - 1.0f) / NBRDF_LOGREL_MU;
+  //}
 
   if(spectral_mode) {
 
     for(int i = 0; i < 4; ++i) {
       float lambda = wavelengths[i];
-      uint idx = BinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, 32, wavelengths[i]);
+      uint idx = BinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, NBRDF_SPECTRUM_SIZE, lambda);
       float t = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
-      pRes->val[i] = lerp(x[idx], x[idx + 1], t);
+
+      float y0 = invLogMapping(x[idx], NBRDF_LOGREL_MU);
+      float y1 = invLogMapping(x[idx + 1], NBRDF_LOGREL_MU);
+      pRes->val[i] = lerp(y0, y1, t);
     }
 
   }
   else {
-    pRes->val = float4(x[0], x[1], x[2], 1.0f);
+    pRes->val = float4(invLogMapping(x[0], NBRDF_LOGREL_MU),
+                       invLogMapping(x[1], NBRDF_LOGREL_MU), 
+                       invLogMapping(x[2], NBRDF_LOGREL_MU),
+                       1.0f);
   }
 
 
@@ -117,7 +140,7 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
 static inline void neuralBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 wavelengths, float4 rands, 
                                             float3 vec, float3 n, BsdfSample* pRes, int spectral_mode)
 {
-  const float3 lambertDir = lambertSample(float2(rands.x, rands.y), vec, n);
+  const float3 lambertDir = MapSampleToCosineDistribution(rands.x, rands.y, vec, n, 1.0f);//lambertSample(float2(rands.x, rands.y), vec, n);
   const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
   BsdfEval tRes;
   neuralBrdfEval(a_materials, weights, wavelengths, lambertDir, vec, n, &tRes, spectral_mode);
