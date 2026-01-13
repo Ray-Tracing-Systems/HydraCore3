@@ -150,7 +150,7 @@ public:
   
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
-  virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = LOAD_ALL);
+  virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = 0xffffffff);
   virtual void LoadScene_SetMeshPointers(const std::unordered_map<int, Mesh4fInput>* a_meshPtrs) { m_LSMeshPtrs = a_meshPtrs; }
   const std::unordered_map<int, Mesh4fInput>* m_LSMeshPtrs = nullptr;
   #endif
@@ -639,17 +639,6 @@ public:
   // load/update scene from
   //
   //////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  static constexpr uint32_t LOAD_TEXTURES    = 1;
-  static constexpr uint32_t LOAD_SPECTRUM    = 2;
-  static constexpr uint32_t LOAD_LIGHTS      = 4;
-  static constexpr uint32_t LOAD_MATERIALS   = 8;
-  static constexpr uint32_t LOAD_CAMERA      = 16;
-  static constexpr uint32_t LOAD_GEOMETRY    = 32;
-  static constexpr uint32_t LOAD_INSTANCES   = 64;
-  static constexpr uint32_t LOAD_REMAP_LISTS = 128;
-  static constexpr uint32_t LOAD_SETTINGS    = 256;
-  static constexpr uint32_t LOAD_ALL = 0xFFFFFFFF;
 
   std::vector<TextureLoadInfo> m_textureLoadInfo;
   std::vector<uint32_t>        m_oldLightIdToNewLightId;

@@ -820,6 +820,9 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
 
 void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
 { 
+  if(scene.GetInstancesNum() == 0)
+    return;
+
   m_normMatrices.clear(); m_normMatrices.reserve(1000*2);
   std::vector<float4x4>   m_normMatrices2;
   m_normMatrices2.reserve(1000);
@@ -944,36 +947,36 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
   #endif
   ////
   
-  if((a_flags & LOAD_TEXTURES) != 0)
+  if((a_flags & SCN_UPDATE_TEXTURES) != 0)
     LoadSceneTexturesInfo(scene, m_textureLoadInfo, m_texCache);
 
   #ifndef DISABLE_SPECTRUM
-  if((a_flags & LOAD_SPECTRUM) != 0 && (m_spectral_mode != 0 || true))
+  if((a_flags & SCN_UPDATE_SPECTRUM) != 0 && (m_spectral_mode != 0 || true))
     LoadSceneSpectrumData(scene);
   #endif
   
-  if((a_flags & LOAD_LIGHTS) != 0)
+  if((a_flags & SCN_UPDATE_LIGHTS) != 0)
     LoadSceneLights(scene, m_texCache);
 
-  if((a_flags & LOAD_MATERIALS) != 0)
+  if((a_flags & SCN_UPDATE_MATERIALS) != 0)
     LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
 
-  if((a_flags & LOAD_CAMERA) != 0)
+  if((a_flags & SCN_UPDATE_CAMERA) != 0)
   {
     LoadSceneCamera(scene);
     SetCamId(0); // take first cam by default
   }
 
-  if((a_flags & LOAD_GEOMETRY) != 0)
+  if((a_flags & SCN_UPDATE_GEOMETRY) != 0)
     LoadSceneGeometry(scene);
 
-  if((a_flags & LOAD_INSTANCES) != 0)
+  if((a_flags & SCN_UPDATE_INSTANCES) != 0)
     LoadSceneInstances(scene);
   
-  if((a_flags & LOAD_REMAP_LISTS) != 0)
+  if((a_flags & SCN_UPDATE_REMAP_LISTS) != 0)
     LoadSceneRemapLists(scene);
 
-  if((a_flags & LOAD_SETTINGS) != 0)
+  if((a_flags & SCN_UPDATE_SETTINGS) != 0)
     LoadSceneSettings(scene);
 
   // (6) print enabled features in scene
@@ -1039,7 +1042,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
   m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
 
-  LoadScene(scene, LOAD_ALL);
+  LoadScene(scene, SCN_UPDATE_ALL);
 
   return true;
 }

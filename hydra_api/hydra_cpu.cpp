@@ -8,7 +8,7 @@ struct HydraCore3RenderDriver : HR2::IRenderDriver
     m_pImpl = std::make_shared<Integrator>(1024*1024, std::vector<uint32_t>());
   }
 
-  void LoadScene(hydra_xml::HydraScene& a_scn, const HR2::RDScene_Input& a_input) override;
+  void LoadScene(hydra_xml::HydraScene& a_scn, const HR2::RDScene_Input& a_input, uint32_t a_updateFlags) override;
   void CommitDeviceData() override;
 
   std::shared_ptr<Integrator> m_pImpl;
@@ -21,7 +21,7 @@ std::shared_ptr<HR2::IRenderDriver> HR2::MakeHydraRenderCPU()
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::RDScene_Input& a_input)
+void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::RDScene_Input& a_input, uint32_t a_updateFlags)
 {
   // put / convert mesh  pointers / data, then pass data to LoadScene
   //
@@ -72,7 +72,7 @@ void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::
 
   //m_pImpl->LoadScene_SetImagePointers(...);
 
-  m_pImpl->LoadScene(a_scn);
+  m_pImpl->LoadScene(a_scn, a_updateFlags);
 }
 
 void HydraCore3RenderDriver::CommitDeviceData()
@@ -93,6 +93,6 @@ void HR2::CommandBuffer::CommitToStorage()
   input.pMeshPtrs = &meshPtrById;
   //input.pImagePtrs = 
 
-  pStorage->m_pDriver->LoadScene(pStorage->xmlData, input);
+  pStorage->m_pDriver->LoadScene(pStorage->xmlData, input, m_updateFlags);
   pStorage->m_pDriver->CommitDeviceData();
 }

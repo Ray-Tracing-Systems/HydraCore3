@@ -335,11 +335,14 @@ Material ConvertOldHydraMaterial(const pugi::xml_node& materialNode, const std::
   if(nodeDiffColor != nullptr)
   {
     color = GetColorFromNode(nodeDiffColor, is_spectral_mode);
-    const auto& [diffSampler, texID] = LoadTextureFromNode(nodeDiffColor, texturesInfo, texCache, textures);
-    
-    mat.row0 [0] = diffSampler.row0;
-    mat.row1 [0] = diffSampler.row1;
-    mat.texid[0] = texID;
+
+    if(nodeDiffColor.child(L"texture") != nullptr)
+    {
+      const auto& [diffSampler, texID] = LoadTextureFromNode(nodeDiffColor, texturesInfo, texCache, textures);
+      mat.row0 [0] = diffSampler.row0;
+      mat.row1 [0] = diffSampler.row1;
+      mat.texid[0] = texID;
+    }
   }
 
   float4 reflColor     = float4(0, 0, 0, 0);

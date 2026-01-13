@@ -10,6 +10,8 @@ using cmesh4::SimpleMesh;
 #include "spectrum.h"
 #include "LiteScene/hydraxml.h"
 
+#include "hydra_api/hydra_cpu.h"
+
 #include <string>
 #include <cstdint>
 #include <unordered_map>
@@ -23,7 +25,6 @@ using LiteImage::Image2D;
 using LiteImage::Sampler;
 using LiteImage::ICombinedImageSampler;
 using namespace LiteMath;
-
 
 Sampler::AddressMode GetAddrModeFromString(const std::wstring& a_mode);
 float4x4 ReadMatrixFromString(const std::string& str);

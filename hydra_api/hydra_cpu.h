@@ -4,6 +4,17 @@
 #include "hydra_api.h"
 #include "LiteScene/hydraxml.h"
 
+static constexpr uint32_t SCN_UPDATE_TEXTURES    = 1;
+static constexpr uint32_t SCN_UPDATE_SPECTRUM    = 2;
+static constexpr uint32_t SCN_UPDATE_LIGHTS      = 4;
+static constexpr uint32_t SCN_UPDATE_MATERIALS   = 8;
+static constexpr uint32_t SCN_UPDATE_CAMERA      = 16;
+static constexpr uint32_t SCN_UPDATE_GEOMETRY    = 32;
+static constexpr uint32_t SCN_UPDATE_INSTANCES   = 64;
+static constexpr uint32_t SCN_UPDATE_REMAP_LISTS = 128;
+static constexpr uint32_t SCN_UPDATE_SETTINGS    = 256;
+static constexpr uint32_t SCN_UPDATE_ALL         = 0xFFFFFFFF;
+
 #include <memory>
 
 namespace HR2
@@ -17,7 +28,7 @@ namespace HR2
   {
     IRenderDriver(){}
     virtual ~IRenderDriver(){}
-    virtual void LoadScene(hydra_xml::HydraScene& a_scn, const RDScene_Input& a_input) = 0;
+    virtual void LoadScene(hydra_xml::HydraScene& a_scn, const RDScene_Input& a_input, uint32_t a_updateFlags) = 0;
     virtual void CommitDeviceData() = 0;
   };
   
@@ -49,7 +60,7 @@ namespace HR2
     int32_t                       m_stgId  = -1;
     HR2_CMD_TYPE                  m_type   = HR2_APPEND_ONLY;
     HR2_CMD_LEVEL                 m_level  = HR2_LVL_SCENE;
-    
+    uint32_t                      m_updateFlags = 0;
 
     uint32_t       AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType);
     pugi::xml_node NodeById  (hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id);
