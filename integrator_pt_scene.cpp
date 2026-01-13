@@ -742,11 +742,11 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
       std::cout << "[LoadScene]: mesh = " << dir.c_str() << std::endl;
       #endif
 
-      if(mIter->attribute(L"ptrs").as_int() == 1 && m_LSMeshPtrs != nullptr)
+      if(mIter->attribute(L"ptrs").as_int() == 1)
       {
         auto meshId   = mIter->attribute(L"id").as_uint();
-        auto pMeshPts = m_LSMeshPtrs->find(meshId);
-        if(pMeshPts == m_LSMeshPtrs->end())
+        auto pMeshPts = m_LSMeshPtrs.find(meshId);
+        if(pMeshPts == m_LSMeshPtrs.end())
         {
           std::cout << "[Integrator::LoadSceneGeometry]: bad mesh pointer id = " << meshId << std::endl;
           exit(0);
@@ -826,7 +826,7 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
 
-  m_LSMeshPtrs = nullptr; // always reset after load
+  m_LSMeshPtrs.clear();
 }
 
 void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)

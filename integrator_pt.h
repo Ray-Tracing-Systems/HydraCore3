@@ -151,8 +151,8 @@ public:
   #ifndef KERNEL_SLICER
   static std::vector<uint32_t> PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo);
   virtual bool LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags = 0xffffffff);
-  virtual void LoadScene_SetMeshPointers(const std::unordered_map<int, Mesh4fInput>* a_meshPtrs) { m_LSMeshPtrs = a_meshPtrs; }
-  const std::unordered_map<int, Mesh4fInput>* m_LSMeshPtrs = nullptr;
+  virtual void LoadScene_SetMeshPointers(const std::unordered_map<int, Mesh4fInput>& a_meshPtrs) { m_LSMeshPtrs = a_meshPtrs; }
+  std::unordered_map<int, Mesh4fInput> m_LSMeshPtrs;
   #endif
 
   void SetSpectralMode(int a_mode) { m_spectral_mode = a_mode; }

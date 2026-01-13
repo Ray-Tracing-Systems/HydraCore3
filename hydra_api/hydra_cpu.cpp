@@ -25,47 +25,52 @@ void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::
 {
   // put / convert mesh  pointers / data, then pass data to LoadScene
   //
-  std::unordered_map<int, Mesh4fInput> meshPtrs(a_input.pMeshPtrs->size());
-  
-  for(auto p = a_input.pMeshPtrs->begin(); p != a_input.pMeshPtrs->end(); ++p)
+  static constexpr uint32_t SCN_UPDATE_GEOMETRY = 1 << (hydra_xml::XML_OBJ_GEOMETRY  + 1);
+
+  if(a_updateFlags & SCN_UPDATE_GEOMETRY)
   {
-    Mesh4fInput input;
-    input.vPosPtr        = p->second.vPosPtr;
-    input.vPosByteStride = p->second.vPosStride*sizeof(float);
-    input.vNormPtr4f     = p->second.vNormPtr;
-    input.vTangPtr4f     = p->second.vTangPtr;
-    input.vTexCoord2f    = p->second.vTexCoordPtr;
-    input.vertNum        = p->second.vertNum;
+    std::unordered_map<int, Mesh4fInput> meshPtrs(a_input.pMeshPtrs->size());
     
-    input.indicesPtr = p->second.indicesPtr;
-    input.indicesNum = p->second.indicesNum;
-    
-    input.matIdPtr   = p->second.matIdPtr;
-    input.matIdAll   = p->second.matIdAll;
-    input.matIdNum   = p->second.matIdNum;
-    
-    if(p->second.vNormStride != 4)
+    for(auto p = a_input.pMeshPtrs->begin(); p != a_input.pMeshPtrs->end(); ++p)
     {
-      std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported normal stride = " << p->second.vNormStride << std::endl;
-      exit(0);
+      Mesh4fInput input;
+      input.vPosPtr        = p->second.vPosPtr;
+      input.vPosByteStride = p->second.vPosStride*sizeof(float);
+      input.vNormPtr4f     = p->second.vNormPtr;
+      input.vTangPtr4f     = p->second.vTangPtr;
+      input.vTexCoord2f    = p->second.vTexCoordPtr;
+      input.vertNum        = p->second.vertNum;
+      
+      input.indicesPtr = p->second.indicesPtr;
+      input.indicesNum = p->second.indicesNum;
+      
+      input.matIdPtr   = p->second.matIdPtr;
+      input.matIdAll   = p->second.matIdAll;
+      input.matIdNum   = p->second.matIdNum;
+      
+      if(p->second.vNormStride != 4)
+      {
+        std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported normal stride = " << p->second.vNormStride << std::endl;
+        exit(0);
+      }
+  
+      if(p->second.vTangStride != 4)
+      {
+        std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported tangent stride = " << p->second.vTangStride  << std::endl;
+        exit(0);
+      }
+  
+      if(p->second.vTexCoordStride != 2)
+      {
+        std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported texcoord stride = " << p->second.vTexCoordPtr << std::endl;
+        exit(0);
+      }
+      
+      meshPtrs[p->first] = input;
     }
-
-    if(p->second.vTangStride != 4)
-    {
-      std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported tangent stride = " << p->second.vTangStride  << std::endl;
-      exit(0);
-    }
-
-    if(p->second.vTexCoordStride != 2)
-    {
-      std::cout << "[HydraCore3RenderDriver::LoadScene]: unsuported texcoord stride = " << p->second.vTexCoordPtr << std::endl;
-      exit(0);
-    }
-    
-    meshPtrs[p->first] = input;
+  
+    m_pImpl->LoadScene_SetMeshPointers(meshPtrs);
   }
-
-  m_pImpl->LoadScene_SetMeshPointers(&meshPtrs);
 
   // put / convert image pointers / data, then pass data to LoadScene
   //
@@ -86,9 +91,11 @@ void HR2::CommandBuffer::CommitToStorage()
     return;
   if(pStorage->m_pDriver == nullptr)
     return;
-
-  pStorage->xmlData.SaveState("z_debug.xml");
   
+  //#ifdef _DEBUG
+  pStorage->xmlData.SaveState("z_debug.xml");
+  //#endif
+
   HR2::RDScene_Input input;
   input.pMeshPtrs = &meshPtrById;
   //input.pImagePtrs = 

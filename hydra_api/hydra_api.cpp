@@ -201,11 +201,27 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
     return buf;
   }
 
+  auto pStorage = g_context.storages[a_scene.stgId];
+
   buf.id = foundCmdBuffId;
-  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_scene.stgId]);
+  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(pStorage);
   g_context.cmdInFlight[buf.id]->m_type  = buf.type;
   g_context.cmdInFlight[buf.id]->m_level = buf.level;
   g_context.cmdInFlight[buf.id]->m_stgId = a_scene.stgId;
+  g_context.cmdInFlight[buf.id]->m_scnId = a_scene.id;
+  g_context.cmdInFlight[buf.id]->instTop = 0;
+  g_context.cmdInFlight[buf.id]->lghtTop = 0;
+  
+  // find appropriate scene node by 'a_scene.id'
+  //
+  g_context.cmdInFlight[buf.id]->m_sceneNode = pugi::xml_node();
+  for (pugi::xml_node child = pStorage->xmlData.GetScenesNode().first_child(); child != nullptr; child = child.next_sibling()) 
+  {
+    if(child.name() == std::wstring(L"scene") && child.attribute(L"id").as_int() == a_scene.id) {
+      g_context.cmdInFlight[buf.id]->m_sceneNode = child;
+      break;
+    }
+  }
 
   return buf;
 }
@@ -314,13 +330,49 @@ pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh,  float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+static std::wstring MatrixToString(float a_mat[16])
 {
+  std::wstringstream matrixOut;
+  for(int i=0;i<16;i++) {
+    matrixOut << a_mat[i];
+    if(i!=15)
+      matrixOut << L" ";
+  }
+
+  return matrixOut.str();
+}
+
+int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  const std::wstring matrixStr = MatrixToString(a_mat);
+  
+  auto instNode = g_context.cmdInFlight[a_cmdBuff.id]->m_sceneNode.append_child(L"instance");
+  
+  instNode.append_attribute(L"id")      = g_context.cmdInFlight[a_cmdBuff.id]->instTop;
+  instNode.append_attribute(L"mesh_id") = a_pMesh.id;
+  instNode.append_attribute(L"scn_id")  = g_context.cmdInFlight[a_cmdBuff.id]->m_scnId;
+  instNode.append_attribute(L"rmap_id") = -1;
+  instNode.append_attribute(L"scn_sid") = 0;
+  instNode.append_attribute(L"matrix")  = matrixStr.c_str();
+  
+  g_context.cmdInFlight[a_cmdBuff.id]->instTop++;
+
   return 0;
 }
 
 int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
 {
+  const std::wstring matrixStr = MatrixToString(a_mat);
+
+  auto instNode = g_context.cmdInFlight[a_cmdBuff.id]->m_sceneNode.append_child(L"instance_light");
+  
+  instNode.append_attribute(L"id")        = g_context.cmdInFlight[a_cmdBuff.id]->lghtTop;
+  instNode.append_attribute(L"light_id")  = a_pLight.id;
+  instNode.append_attribute(L"lgroup_id") = -1;
+  instNode.append_attribute(L"matrix")    = matrixStr.c_str();
+
+  g_context.cmdInFlight[a_cmdBuff.id]->lghtTop++;
+
   return 0;
 }
 
