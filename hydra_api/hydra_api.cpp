@@ -38,6 +38,8 @@ uint32_t HR2::CommandBuffer::AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType)
   node.append_attribute(L"id") = pStorage->xmlById[typeId].size();
   pStorage->xmlById[typeId].push_back(node); 
   
+  m_updateFlags |= 1 << (uint32_t(a_objType) + 1);
+
   return uint32_t(pStorage->xmlById[typeId].size() - 1);
 }
 
@@ -45,6 +47,7 @@ pugi::xml_node HR2::CommandBuffer::NodeById(hydra_xml::XML_OBJECT_TYPES a_objTyp
 {
   const int typeId = int(a_objType);
   assert(typeId < int(hydra_xml::XML_OBJ_TYPES_NUM));
+  m_updateFlags |= 1 << (uint32_t(a_objType) + 1);
   return pStorage->xmlById[typeId][a_id];
 }
 
@@ -239,7 +242,6 @@ HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_mes
   
   auto node = g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_GEOMETRY, res.id);
   node.append_attribute(L"ptrs") = 1;
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_GEOMETRY;
   return res;
 }
 
@@ -247,7 +249,6 @@ HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_MaterialRef res = {};
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_MATERIALS);
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_MATERIALS;
   return res;
 }
 
@@ -255,7 +256,6 @@ HR2_LightRef  hr2CreateLight(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_LightRef res = {};
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_LIGHT);
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_LIGHTS;
   return res;
 }
 
@@ -263,7 +263,6 @@ HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_CameraRef res = {};
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_CAMERA);
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_CAMERA;
   return res;
 }
 
@@ -271,7 +270,6 @@ HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SettingsRef res = {};
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SETTINGS);
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_SETTINGS;
   return res;
 }
 
@@ -293,25 +291,21 @@ HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferIn
 
 pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
 {
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_MATERIALS;
   return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_MATERIALS, a_mat.id);
 }
 
 pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_light)
 {
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_LIGHTS;
   return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_LIGHT, a_light.id);
 }
 
 pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
 {
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_CAMERA;
   return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_CAMERA, a_cam.id);
 }
 
 pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_settings)
 {
-  g_context.cmdInFlight[a_cmdBuff.id]->m_updateFlags |= SCN_UPDATE_SETTINGS;
   return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_SETTINGS, a_settings.id);
 }
 

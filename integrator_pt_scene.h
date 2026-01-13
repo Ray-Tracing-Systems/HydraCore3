@@ -10,8 +10,6 @@ using cmesh4::SimpleMesh;
 #include "spectrum.h"
 #include "LiteScene/hydraxml.h"
 
-#include "hydra_api/hydra_cpu.h"
-
 #include <string>
 #include <cstdint>
 #include <unordered_map>

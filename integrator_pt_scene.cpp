@@ -1,5 +1,16 @@
 #include "integrator_pt_scene.h"
 
+static constexpr uint32_t SCN_UPDATE_TEXTURES    = 1 << (hydra_xml::XML_OBJ_TEXTURE + 1);
+static constexpr uint32_t SCN_UPDATE_SPECTRUM    = 1 << (hydra_xml::XML_OBJ_SPECTRA + 1);
+static constexpr uint32_t SCN_UPDATE_LIGHTS      = 1 << (hydra_xml::XML_OBJ_LIGHT   + 1);
+static constexpr uint32_t SCN_UPDATE_MATERIALS   = 1 << (hydra_xml::XML_OBJ_MATERIALS + 1);
+static constexpr uint32_t SCN_UPDATE_CAMERA      = 1 << (hydra_xml::XML_OBJ_CAMERA    + 1);
+static constexpr uint32_t SCN_UPDATE_GEOMETRY    = 1 << (hydra_xml::XML_OBJ_GEOMETRY  + 1);
+static constexpr uint32_t SCN_UPDATE_SETTINGS    = 1 << (hydra_xml::XML_OBJ_SETTINGS  + 1);
+static constexpr uint32_t SCN_UPDATE_INSTANCES   = 1 << (hydra_xml::XML_OBJ_SCENE     + 1);
+static constexpr uint32_t SCN_UPDATE_REMAP_LISTS = 1 << (hydra_xml::XML_OBJ_RMAP_LIST + 1);
+static constexpr uint32_t SCN_UPDATE_ALL         = 0xFFFFFFFF;
+
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
   switch(a_featureId)
