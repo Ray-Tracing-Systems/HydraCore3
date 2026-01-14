@@ -11,6 +11,8 @@ struct HydraCore3RenderDriver : HR2::IRenderDriver
   void LoadScene(hydra_xml::HydraScene& a_scn, const HR2::RDScene_Input& a_input, uint32_t a_updateFlags) override;
   void CommitDeviceData() override;
 
+  void Render(uint32_t startX, uint32_t startY, int32_t sizeX, uint32_t sizeY, uint32_t channels, float* data, uint32_t a_passNumber) override;
+
   std::shared_ptr<Integrator> m_pImpl;
 };
 
@@ -83,6 +85,18 @@ void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::
 void HydraCore3RenderDriver::CommitDeviceData()
 {
   m_pImpl->CommitDeviceData();
+}
+
+void HydraCore3RenderDriver::Render(uint32_t startX, uint32_t startY, int32_t sizeX, uint32_t sizeY, uint32_t channels, float* data, uint32_t a_passNumber)
+{
+  //pImpl->SetSpectralMode(spectral_mode);
+  m_pImpl->SetFrameBufferSize(sizeX, sizeY);
+  m_pImpl->SetViewport(startX,startY,sizeX,sizeY);
+  
+  m_pImpl->UpdateMembersPlainData();      
+
+  m_pImpl->PackXYBlock(sizeX, sizeY, 1);
+  m_pImpl->PathTraceBlock(sizeX*sizeY, channels, data, a_passNumber);
 }
 
 void HR2::CommandBuffer::CommitToStorage()

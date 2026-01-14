@@ -180,7 +180,7 @@ HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_T
   return buf;
 }
 
-HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_type)
+HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene, HR2_CMD_TYPE a_type)
 {
   HR2_CommandBuffer buf = {};
   buf.type  = a_type;
@@ -209,8 +209,6 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
   g_context.cmdInFlight[buf.id]->m_level = buf.level;
   g_context.cmdInFlight[buf.id]->m_stgId = a_scene.stgId;
   g_context.cmdInFlight[buf.id]->m_scnId = a_scene.id;
-  g_context.cmdInFlight[buf.id]->instTop = 0;
-  g_context.cmdInFlight[buf.id]->lghtTop = 0;
   
   // find appropriate scene node by 'a_scene.id'
   //
@@ -221,6 +219,13 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene,  HR2_CMD_TYPE a_ty
       g_context.cmdInFlight[buf.id]->m_sceneNode = child;
       break;
     }
+  }
+
+  if(a_type == HR2_CLEAR_AND_APPEND)
+  {
+    g_context.cmdInFlight[buf.id]->m_sceneNode.remove_children();
+    g_context.cmdInFlight[buf.id]->instTop = 0;
+    g_context.cmdInFlight[buf.id]->lghtTop = 0;
   }
 
   return buf;
@@ -238,7 +243,22 @@ void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
 void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
 {
   hr2Commit(a_cmbBuff, a_async);
-  //todo: call actual render
+  //if(a_async) { run render in seperate thread, use std::future and e.t.c }
+  
+  auto pStorage = g_context.cmdInFlight[a_cmbBuff.id]->pStorage;
+  if(pStorage == nullptr)
+    return;
+
+  auto  fbSize = pStorage->fbSize[a_frameBuffer.id];
+  auto* fbData = pStorage->fbData[a_frameBuffer.id].data();
+
+  pStorage->m_pDriver->Render(0,0,fbSize.x,fbSize.y,fbSize.z, fbData, 1); // TODO extract settings
+
+  //pImpl->GetExecutionTime("PathTraceBlock", timings);
+  //std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+  //std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+  //std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+
 }
 
 HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
@@ -253,6 +273,9 @@ HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
 HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_meshName, HR2_MeshInput a_input)
 {
   HR2_GeomRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateMeshFromData"))
+    return res;
+
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_GEOMETRY);
            g_context.cmdInFlight[a_cmdBuff.id]->meshPtrById[res.id] = a_input;
   
@@ -264,6 +287,8 @@ HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_mes
 HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_MaterialRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateMaterial"))
+    return res;
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_MATERIALS);
   return res;
 }
@@ -271,6 +296,8 @@ HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff)
 HR2_LightRef  hr2CreateLight(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_LightRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateLight"))
+    return res;
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_LIGHT);
   return res;
 }
@@ -278,6 +305,8 @@ HR2_LightRef  hr2CreateLight(HR2_CommandBuffer a_cmdBuff)
 HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_CameraRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateCamera"))
+    return res;
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_CAMERA);
   return res;
 }
@@ -285,6 +314,8 @@ HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
 HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SettingsRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateSettings"))
+    return res;
   res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SETTINGS);
   return res;
 }
@@ -292,6 +323,8 @@ HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
 HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
 {
   HR2_SceneRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateScene"))
+    return res;
   res.id    = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
   res.stgId = g_context.cmdInFlight[a_cmdBuff.id]->m_stgId;
   return res;
@@ -300,6 +333,22 @@ HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
 HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferInfo a_info)
 {
   HR2_FrameImgRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateFrameImg"))
+    return res;
+
+  auto pStorage = g_context.cmdInFlight[a_cmdBuff.id]->pStorage;
+
+  if(pStorage->fbTop >= HR2::MAX_FRAME_IMAGES) {
+    g_context.textOut << "hr2CreateFrameImg, exceeded MAX_FRAME_IMAGES = " << HR2::MAX_FRAME_IMAGES << std::endl;
+    return res;
+  }
+
+  res.id = pStorage->fbTop;
+  pStorage->fbTop++;
+
+  pStorage->fbData[res.id].resize(a_info.width*a_info.height*a_info.channels); // simple implementation for current
+  pStorage->fbSize[res.id] = uint3(a_info.width, a_info.height, a_info.channels);
+
   return res;
 }
 
@@ -381,5 +430,16 @@ int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a
 
 void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName)
 {
-
+  //if(saveHDR)
+  //{
+  //  const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+  //  std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+  //  SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+  //}
+  //else
+  //{
+  //  const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+  //  std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+  //  SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+  //}
 }

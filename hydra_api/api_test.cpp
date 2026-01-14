@@ -110,7 +110,7 @@ int main(int argc, const char** argv)
 
   hr2Commit(storageLevel); // now scene library is finished 
 
-  // MUST NOT USE storageLevel AFTER hr2Commit, immediately report error! 
+  // MUST NOT USE old command buffer AFTER hr2Commit, immediately report error! 
   // ALWAYS create new command buffer
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,7 +205,7 @@ int main(int argc, const char** argv)
 
     hr2CommitAndRender(frameLvl, camRef, settingsRef, frameImageRef, false); 
     
-    // when async commit-and-wait is used
+    // when async commit-and-wait is used (laset parameter of 'hr2CommitAndRender' == true)
     //
     //while (true)
     //{

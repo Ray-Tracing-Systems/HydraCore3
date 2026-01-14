@@ -65,6 +65,12 @@ struct HR2_CommandBuffer ///<! use this object to add new data to scene library
 HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storage, HR2_CMD_TYPE a_type); ///<! LEVEL ZERO command buffer
 HR2_CommandBuffer hr2CommandBufferScene  (HR2_SceneRef   a_scene,   HR2_CMD_TYPE a_type); ///<! LEVEL ONE  command buffer
 
+// proposal: use enum instead of true/false for async commit
+//
+// enum HR2_COMMIT_TYPE { HR2_COMMIT_IMMEDIATE = 0, ///<! syncronious  commit 
+//                        HR2_COMMIT_NOWAIT    = 1  ///<! asyncronious commit
+//                      }; 
+
 void              hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async = false);           ///<! Commit and then immediately delete it
 void              hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async = false);
 

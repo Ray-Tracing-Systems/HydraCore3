@@ -8,6 +8,8 @@
 
 namespace HR2
 {
+  static constexpr uint32_t MAX_FRAME_IMAGES = 8;
+
   struct RDScene_Input
   {
     const std::unordered_map<int, HR2_MeshInput>* pMeshPtrs = nullptr;
@@ -19,10 +21,12 @@ namespace HR2
     virtual ~IRenderDriver(){}
     virtual void LoadScene(hydra_xml::HydraScene& a_scn, const RDScene_Input& a_input, uint32_t a_updateFlags) = 0;
     virtual void CommitDeviceData() = 0;
+
+    virtual void Render(uint32_t startX, uint32_t startY, int32_t sizeX, uint32_t sizeY, uint32_t channels, float* data, uint32_t a_passNumber) = 0;
   };
   
   std::shared_ptr<IRenderDriver> MakeHydraRenderCPU(); 
-
+  
   struct SceneStorage
   {
     SceneStorage() {
@@ -37,6 +41,10 @@ namespace HR2
     std::vector<pugi::xml_node> xmlById[hydra_xml::XML_OBJ_TYPES_NUM]; 
 
     std::shared_ptr<IRenderDriver> m_pDriver;
+    
+    std::vector<float> fbData[MAX_FRAME_IMAGES];
+    uint3              fbSize[MAX_FRAME_IMAGES];
+    uint32_t           fbTop = 0;
   };
 
   struct CommandBuffer
