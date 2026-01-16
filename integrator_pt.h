@@ -644,7 +644,7 @@ public:
   std::vector<uint32_t>        m_oldLightIdToNewLightId;
   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> m_texCache;
 
-  void LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache);
+  void LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo);
   void LoadSceneSpectrumData(hydra_xml::HydraScene& scene);
   void LoadSceneLights      (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& a_texCache);
   void LoadSceneMaterials   (hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
@@ -654,6 +654,7 @@ public:
   void LoadSceneInstances(hydra_xml::HydraScene& scene);
   void LoadSceneRemapLists(hydra_xml::HydraScene& scene);
   void LoadSceneSettings(hydra_xml::HydraScene& scene);
+  void ClearTexCache(std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache);
   #endif
   //////////////////////////////////////////////////////////////////////////////////////////////////////
 

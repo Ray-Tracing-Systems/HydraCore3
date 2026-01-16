@@ -317,9 +317,17 @@ Spectrum ParseSpectrumStr(const std::string &specStr)
   return res;
 }
 
+void Integrator::ClearTexCache(std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache)
+{
+  texCache.clear();
+  texCache[HydraSampler()] = 0; // zero white texture
 
-void Integrator::LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo,
-                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache)
+  m_textures.resize(0);
+  m_textures.reserve(256);
+  m_textures.push_back(MakeWhiteDummy());
+}
+
+void Integrator::LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo)
 {
   a_texturesInfo.resize(0);
   a_texturesInfo.reserve(100);
@@ -344,13 +352,7 @@ void Integrator::LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector
       a_texturesInfo.push_back(tex);
     }
   }
-  
-  texCache.clear();
-  texCache[HydraSampler()] = 0; // zero white texture
 
-  m_textures.resize(0);
-  m_textures.reserve(256);
-  m_textures.push_back(MakeWhiteDummy());
 }
 
 void Integrator::LoadSceneSpectrumData(hydra_xml::HydraScene& scene)
@@ -968,8 +970,10 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
   #endif
   ////
   
-  if((a_flags & SCN_UPDATE_TEXTURES) != 0)
-    LoadSceneTexturesInfo(scene, m_textureLoadInfo, m_texCache);
+  if((a_flags & SCN_UPDATE_TEXTURES) != 0) {
+    LoadSceneTexturesInfo(scene, m_textureLoadInfo);
+    ClearTexCache(m_texCache);
+  }
 
   #ifndef DISABLE_SPECTRUM
   if((a_flags & SCN_UPDATE_SPECTRUM) != 0 && (m_spectral_mode != 0 || true))
@@ -1028,6 +1032,9 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
   }
   std::cout << "};" << std::endl;
 #endif
+
+  if(m_textures.size() == 0)   // usually happends when a scene dont have a texture
+    ClearTexCache(m_texCache); //
 
   LoadSceneEnd();
   return true;
