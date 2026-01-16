@@ -18,7 +18,7 @@ struct HR2_SpectrumRef { int32_t id = -1; };
 
 struct HR2_CameraRef   { int32_t id = -1; };
 struct HR2_SettingsRef { int32_t id = -1; };
-struct HR2_FrameImgRef { int32_t id = -1; }; 
+struct HR2_FrameImgRef { int32_t id = -1; int32_t stgId = -1; }; 
 
 enum HR2_RES_STORAGE_TYPE { HR2_STORAGE_CPU  = 0, ///< force CPU implementation
                             HR2_STORAGE_GPU  = 1, ///< force GPU implementation, try not to store data on CPU when possible

@@ -645,7 +645,12 @@ void Integrator::LoadSceneCamera(hydra_xml::HydraScene& scene)
   m_allCams.clear();
   for(auto cam : scene.Cameras())
   {
-    float aspect   = float(m_fbWidth) / float(m_fbHeight);
+    float aspect = 1.0f;
+    if(m_fbWidth != 0 && m_fbHeight != 0)
+      aspect   = float(m_fbWidth) / float(m_fbHeight);
+    else
+      std::cout << "[Integrator::LoadSceneCamera]: bad aspect, use 1.0 " << std::endl;  
+
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
 
     LiteMath::float4x4 c2w;
@@ -931,6 +936,8 @@ void Integrator::LoadSceneSettings(hydra_xml::HydraScene& scene)
 
     break; // take first render settings
   }
+
+  //todo: call SetFrameBufferSize
 }
 
 bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
@@ -975,6 +982,9 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
   if((a_flags & SCN_UPDATE_MATERIALS) != 0)
     LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
 
+  if((a_flags & SCN_UPDATE_SETTINGS) != 0)
+    LoadSceneSettings(scene);
+
   if((a_flags & SCN_UPDATE_CAMERA) != 0)
   {
     LoadSceneCamera(scene);
@@ -989,9 +999,6 @@ bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
   
   if((a_flags & SCN_UPDATE_REMAP_LISTS) != 0)
     LoadSceneRemapLists(scene);
-
-  if((a_flags & SCN_UPDATE_SETTINGS) != 0)
-    LoadSceneSettings(scene);
 
   // (6) print enabled features in scene
   //

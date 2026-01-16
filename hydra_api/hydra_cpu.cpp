@@ -102,7 +102,8 @@ void HydraCore3RenderDriver::Render(uint32_t startX, uint32_t startY, int32_t si
   m_pImpl->UpdateMembersPlainData();      
 
   m_pImpl->PackXYBlock(sizeX, sizeY, 1);
-  m_pImpl->PathTraceBlock(sizeX*sizeY, channels, data, a_passNumber);
+  //m_pImpl->PathTraceBlock(sizeX*sizeY, channels, data, a_passNumber);
+  m_pImpl->CastSingleRayBlock(sizeX*sizeY, data, 1);
 }
 
 void HR2::CommandBuffer::CommitToStorage()

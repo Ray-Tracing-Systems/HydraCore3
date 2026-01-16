@@ -350,7 +350,8 @@ HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferIn
     return res;
   }
 
-  res.id = pStorage->fbTop;
+  res.id    = pStorage->fbTop;
+  res.stgId = g_context.cmdInFlight[a_cmdBuff.id]->m_stgId;
   pStorage->fbTop++;
 
   pStorage->fbData[res.id].resize(a_info.width*a_info.height*a_info.channels); // simple implementation for current
@@ -435,8 +436,21 @@ int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+bool SaveImage4fToBMP(const float* rgb, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
+bool SaveImage4fByExtension(const float* data, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
+
+#ifdef USE_STB_IMAGE
+  #define SaveLDRImageM SaveImage4fByExtension
+#else
+  #define SaveLDRImageM SaveImage4fToBMP
+#endif
+
 void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName)
 {
+  auto pStorage = g_context.storages[a_frameImage.stgId];
+  auto  fbSize  = pStorage->fbSize[a_frameImage.id];
+  auto* fbData  = pStorage->fbData[a_frameImage.id].data();
+  
   //if(saveHDR)
   //{
   //  const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
@@ -445,8 +459,8 @@ void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName)
   //}
   //else
   //{
-  //  const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
-  //  std::cout << "[main]: save image to " << outName.c_str() << std::endl;
-  //  SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst, gamma);
+    //const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+    //std::cout << "[hr2SaveFrameBuffer]: save image to " << a_fileName << std::endl;
+    SaveLDRImageM(fbData, fbSize.x, fbSize.y, fbSize.z, a_fileName, 1.0f, 2.2f);
   //}
 }
