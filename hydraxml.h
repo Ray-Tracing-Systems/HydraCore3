@@ -43,7 +43,8 @@ namespace hydra_xml
     XML_OBJ_CAMERA    = 5,
     XML_OBJ_SETTINGS  = 6,
     XML_OBJ_SCENE     = 7,
-    XML_OBJ_TYPES_NUM = 8,
+    XML_OBJ_RMAP_LIST = 8,
+    XML_OBJ_TYPES_NUM = 9,
   };
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -387,8 +388,18 @@ namespace hydra_xml
         return pFound->second; 
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     size_t GetInstancesNum() const { return m_numInstances; }
     LiteMath::Box4f GetSceneBBox()  const { return m_scene_bbox; }
+
+    pugi::xml_node GetScenesNode() { return m_scenesNode; }
+    size_t m_numInstances = 0;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
   private:
     void parseInstancedMeshes(pugi::xml_node a_scenelib, pugi::xml_node a_geomlib);
     void LogError(const std::string &msg);  
@@ -407,7 +418,6 @@ namespace hydra_xml
 
     std::unordered_map<std::string, std::vector<LiteMath::float4x4> > m_instancesPerMeshLoc;
 
-    size_t m_numInstances = 0;
     LiteMath::Box4f m_scene_bbox;
   };
 
