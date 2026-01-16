@@ -834,6 +834,9 @@ void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
   if(scene.GetInstancesNum() == 0)
     return;
 
+  if(m_remapInst.size() == 0) // happends when work with an API
+    m_remapInst.resize(scene.GetInstancesNum(), int2{-1,-1}); 
+
   m_normMatrices.clear(); m_normMatrices.reserve(1000*2);
   std::vector<float4x4>   m_normMatrices2;
   m_normMatrices2.reserve(1000);
