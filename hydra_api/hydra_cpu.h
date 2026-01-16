@@ -13,6 +13,8 @@ namespace HR2
   struct RDScene_Input
   {
     const std::unordered_map<int, HR2_MeshInput>* pMeshPtrs = nullptr;
+    uint32_t geomInstNum = 0;
+    uint32_t lghtInstNum = 0;
   };
 
   struct IRenderDriver

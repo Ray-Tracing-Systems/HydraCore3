@@ -226,6 +226,7 @@ HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene, HR2_CMD_TYPE a_typ
     g_context.cmdInFlight[buf.id]->m_sceneNode.remove_children();
     g_context.cmdInFlight[buf.id]->instTop = 0;
     g_context.cmdInFlight[buf.id]->lghtTop = 0;
+    g_context.cmdInFlight[buf.id]->m_updateFlags = (1 << (uint32_t(hydra_xml::XML_OBJ_SCENE) + 1)); // | (1 << (uint32_t(hydra_xml::XML_OBJ_RMAP_LIST) + 1);
   }
 
   return buf;
@@ -242,7 +243,13 @@ void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
 
 void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
 {
-  hr2Commit(a_cmbBuff, a_async);
+  //hr2Commit(a_cmbBuff, a_async);
+
+  if(!CheckCommandBuffer(a_cmbBuff, "hr2Commit"))
+    return;
+  
+  g_context.cmdInFlight[a_cmbBuff.id]->CommitToStorage();  
+
   //if(a_async) { run render in seperate thread, use std::future and e.t.c }
   
   auto pStorage = g_context.cmdInFlight[a_cmbBuff.id]->pStorage;
@@ -258,7 +265,7 @@ void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_Se
   //std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
   //std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
   //std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
-
+  g_context.cmdInFlight[a_cmbBuff.id] = nullptr;
 }
 
 HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
@@ -403,7 +410,7 @@ int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh, float a_
   instNode.append_attribute(L"rmap_id") = -1;
   instNode.append_attribute(L"scn_sid") = 0;
   instNode.append_attribute(L"matrix")  = matrixStr.c_str();
-  
+
   g_context.cmdInFlight[a_cmdBuff.id]->instTop++;
 
   return 0;

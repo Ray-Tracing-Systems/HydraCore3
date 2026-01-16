@@ -27,7 +27,8 @@ void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::
 {
   // put / convert mesh  pointers / data, then pass data to LoadScene
   //
-  static constexpr uint32_t SCN_UPDATE_GEOMETRY = 1 << (hydra_xml::XML_OBJ_GEOMETRY  + 1);
+  static constexpr uint32_t SCN_UPDATE_GEOMETRY  = 1 << (hydra_xml::XML_OBJ_GEOMETRY  + 1);
+  static constexpr uint32_t SCN_UPDATE_INSTANCES = 1 << (hydra_xml::XML_OBJ_SCENE     + 1);
 
   if(a_updateFlags & SCN_UPDATE_GEOMETRY)
   {
@@ -79,6 +80,11 @@ void HydraCore3RenderDriver::LoadScene(hydra_xml::HydraScene& a_scn, const HR2::
 
   //m_pImpl->LoadScene_SetImagePointers(...);
 
+  if((a_updateFlags & SCN_UPDATE_INSTANCES) != 0 && a_input.geomInstNum != 0)
+  {
+    a_scn.m_numInstances = a_input.geomInstNum;
+  }
+
   m_pImpl->LoadScene(a_scn, a_updateFlags);
 }
 
@@ -112,7 +118,8 @@ void HR2::CommandBuffer::CommitToStorage()
 
   HR2::RDScene_Input input;
   input.pMeshPtrs = &meshPtrById;
-  //input.pImagePtrs = 
+  input.geomInstNum = instTop;
+  input.lghtInstNum = lghtTop;
 
   pStorage->m_pDriver->LoadScene(pStorage->xmlData, input, m_updateFlags);
   pStorage->m_pDriver->CommitDeviceData();
