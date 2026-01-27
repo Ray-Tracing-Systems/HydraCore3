@@ -21,6 +21,7 @@
     },
 
     "defines" : {
+      "KERNEL_SLICER"    : "1",
       "USE_HEAVYRT"      : "1",
       "DISABLE_LENS"     : "1",
       "DISABLE_SPECTRUM" : "1"
