@@ -16,7 +16,7 @@ std::shared_ptr<ICombinedImageSampler> MakeWhiteDummy()
 }
 
 
-std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma)
+std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureLoadInfo& a_texInfo, const Sampler& a_sampler, bool a_disableGamma)
 {
   std::shared_ptr<ICombinedImageSampler> pResult = nullptr;
 
@@ -102,7 +102,7 @@ std::shared_ptr<ICombinedImageSampler> LoadTextureAndMakeCombined(const TextureI
   return pResult;
 }
 
-std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureInfo> &texturesInfo,
+std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node, const std::vector<TextureLoadInfo> &texturesInfo,
                                                       std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                       std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {
@@ -126,7 +126,7 @@ std::pair<HydraSampler, uint32_t> LoadTextureFromNode(const pugi::xml_node& node
   return {sampler, p->second};
 }
 
-std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureInfo> &texturesInfo, const HydraSampler& sampler,
+std::pair<HydraSampler, uint32_t> LoadTextureById(uint32_t texId, const std::vector<TextureLoadInfo> &texturesInfo, const HydraSampler& sampler,
                                                   std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache, 
                                                   std::vector< std::shared_ptr<ICombinedImageSampler> > &textures)
 {

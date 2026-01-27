@@ -1,0 +1,466 @@
+#include "hydra_api.h"
+#include "hydra_cpu.h"
+//#include "hydra_vk.h"
+
+#include "LiteScene/hydraxml.h"
+
+#include <memory>
+#include <vector>
+
+#include <iostream>
+#include <ostream>
+
+struct GlobalContext
+{
+  static constexpr uint32_t MAX_STORAGES = 4;
+  static constexpr uint32_t MAX_COMMMAND_BUFFERS = 8;
+
+  std::shared_ptr<HR2::SceneStorage> storages[MAX_STORAGES] = {};
+  uint32_t                           storageTop = 0;
+
+  std::unique_ptr<HR2::CommandBuffer> cmdInFlight[MAX_COMMMAND_BUFFERS];
+  std::ostream& textOut = std::cout;
+} g_context;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+uint32_t HR2::CommandBuffer::AppendNode(hydra_xml::XML_OBJECT_TYPES a_objType)
+{
+  const int typeId = int(a_objType);
+  assert(typeId < int(hydra_xml::XML_OBJ_TYPES_NUM));
+  
+  auto nodeNamePair = pStorage->xmlData.RootFor(a_objType);
+  assert(nodeNamePair.first != nullptr);
+
+  auto node = nodeNamePair.first.append_child(nodeNamePair.second);
+  node.append_attribute(L"id") = pStorage->xmlById[typeId].size();
+  pStorage->xmlById[typeId].push_back(node); 
+  
+  m_updateFlags |= 1 << (uint32_t(a_objType) + 1);
+
+  return uint32_t(pStorage->xmlById[typeId].size() - 1);
+}
+
+pugi::xml_node HR2::CommandBuffer::NodeById(hydra_xml::XML_OBJECT_TYPES a_objType, uint32_t a_id)
+{
+  const int typeId = int(a_objType);
+  assert(typeId < int(hydra_xml::XML_OBJ_TYPES_NUM));
+  m_updateFlags |= 1 << (uint32_t(a_objType) + 1);
+  return pStorage->xmlById[typeId][a_id];
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+HR2_StorageRef hr2CreateStorage(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions)
+{
+  HR2_StorageRef res = {};
+ 
+  if(g_context.storageTop >= GlobalContext::MAX_STORAGES)
+  {
+    g_context.textOut << "[hr2CreateStorage]: MAX_STORAGES exceeded! " << std::endl;
+    res.id = -1;
+  }
+  else
+  {
+    g_context.storages[g_context.storageTop] = std::make_unique<HR2::SceneStorage>();
+    g_context.storages[g_context.storageTop]->xmlData.LoadEmpty();
+    res.id = g_context.storageTop;
+    g_context.storageTop++;
+  }
+
+  return res;
+}
+
+HR2_StorageRef hr2CreateStorageFromFile(HR2_RES_STORAGE_TYPE a_type, HR2_ReserveOpions a_reserveOptions, const char* a_filename, bool a_async)
+{
+  HR2_StorageRef res = {};
+  return res;
+}
+
+static bool CheckStorage(HR2_StorageRef a_ref, const char* a_funName)
+{
+  if(a_ref.id >= g_context.storageTop)
+  {
+    g_context.textOut << "[" << a_funName << "]: Bad storage at: " << a_ref.id << std::endl;
+    return false;
+  }
+
+  if(g_context.storages[a_ref.id] == nullptr)
+  {
+    g_context.textOut << "[" << a_funName << "]: Nullptr storage at: " << a_ref.id << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
+static bool CheckCommandBuffer(HR2_CommandBuffer a_ref, const char* a_funName)
+{
+  if(a_ref.id >= GlobalContext::MAX_COMMMAND_BUFFERS)
+  {
+    g_context.textOut << "[" << a_funName << "]: Bad Command Buffer at: " << a_ref.id << std::endl;
+    return false;
+  }
+
+  if(g_context.cmdInFlight[a_ref.id] == nullptr)
+  {
+    g_context.textOut << "[" << a_funName << "]: Nullptr Command Buffer at: " << a_ref.id << std::endl;
+    g_context.cmdInFlight[a_ref.id]->pStorage = nullptr; // always ensure don't have copies
+    return false;
+  }
+
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void hr2SaveStorage(HR2_StorageRef a_ref, const char* a_filename, bool a_async)
+{
+  if(!CheckStorage(a_ref, "hr2SaveStorage")) 
+    return;
+  g_context.storages[a_ref.id]->xmlData.SaveState(a_filename);
+}
+
+void hr2DeleteStorage(HR2_StorageRef a_ref)
+{
+  if(!CheckStorage(a_ref, "hr2DeleteStorage"))
+    return; 
+
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+    g_context.cmdInFlight[cmdBuffId] = nullptr;
+  g_context.storages[a_ref.id] = nullptr; // unique_ptr should delete it
+}
+
+bool hr2StorageIsFinished(HR2_StorageRef a_ref) { return true; }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+uint32_t FirstEmptyCmdBuff()
+{
+  uint32_t foundCmdBuffId = uint32_t(-1);
+  for(uint32_t cmdBuffId=0; cmdBuffId<GlobalContext::MAX_COMMMAND_BUFFERS; cmdBuffId++)
+  {
+    if(g_context.cmdInFlight[cmdBuffId] == nullptr)
+    {
+      foundCmdBuffId = cmdBuffId;
+      break;
+    }
+  }
+  return foundCmdBuffId;
+}
+
+HR2_CommandBuffer hr2CommandBufferStorage(HR2_StorageRef a_storageRef, HR2_CMD_TYPE a_type)
+{
+  HR2_CommandBuffer buf = {};
+  buf.type  = a_type;
+  buf.level = HR2_LVL_STORAGE;
+  buf.id    = uint32_t(-1);
+
+  if(!CheckStorage(a_storageRef, "hr2CommandBufferStorage"))
+    return buf; 
+
+  const uint32_t foundCmdBuffId = FirstEmptyCmdBuff();
+  if(foundCmdBuffId == uint32_t(-1))
+  {
+    g_context.textOut << "[hr2CommandBufferStorage]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
+    return buf;
+  }
+  
+  buf.id = foundCmdBuffId;
+  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(g_context.storages[a_storageRef.id]);
+  g_context.cmdInFlight[buf.id]->m_type  = buf.type;
+  g_context.cmdInFlight[buf.id]->m_level = buf.level;
+  g_context.cmdInFlight[buf.id]->m_stgId = a_storageRef.id;
+
+  return buf;
+}
+
+HR2_CommandBuffer hr2CommandBufferScene(HR2_SceneRef a_scene, HR2_CMD_TYPE a_type)
+{
+  HR2_CommandBuffer buf = {};
+  buf.type  = a_type;
+  buf.level = HR2_LVL_SCENE;
+
+  if(a_scene.stgId >= g_context.MAX_STORAGES)
+  {
+    g_context.textOut << "[hr2CommandBufferScene]: Bad scene storage id " << a_scene.stgId << ", scene: " << a_scene.id << std::endl;
+    return buf;
+  }
+
+  //TODO: validate scene was actually created!
+
+  const uint32_t foundCmdBuffId = FirstEmptyCmdBuff();
+  if(foundCmdBuffId == uint32_t(-1))
+  {
+    g_context.textOut << "[hr2CommandBufferScene]: Too many command buffers in flight, max " << GlobalContext::MAX_COMMMAND_BUFFERS << std::endl;
+    return buf;
+  }
+
+  auto pStorage = g_context.storages[a_scene.stgId];
+
+  buf.id = foundCmdBuffId;
+  g_context.cmdInFlight[buf.id] = std::make_unique<HR2::CommandBuffer>(pStorage);
+  g_context.cmdInFlight[buf.id]->m_type  = buf.type;
+  g_context.cmdInFlight[buf.id]->m_level = buf.level;
+  g_context.cmdInFlight[buf.id]->m_stgId = a_scene.stgId;
+  g_context.cmdInFlight[buf.id]->m_scnId = a_scene.id;
+  
+  // find appropriate scene node by 'a_scene.id'
+  //
+  g_context.cmdInFlight[buf.id]->m_sceneNode = pugi::xml_node();
+  for (pugi::xml_node child = pStorage->xmlData.GetScenesNode().first_child(); child != nullptr; child = child.next_sibling()) 
+  {
+    if(child.name() == std::wstring(L"scene") && child.attribute(L"id").as_int() == a_scene.id) {
+      g_context.cmdInFlight[buf.id]->m_sceneNode = child;
+      break;
+    }
+  }
+
+  if(a_type == HR2_CLEAR_AND_APPEND)
+  {
+    g_context.cmdInFlight[buf.id]->m_sceneNode.remove_children();
+    g_context.cmdInFlight[buf.id]->instTop = 0;
+    g_context.cmdInFlight[buf.id]->lghtTop = 0;
+    g_context.cmdInFlight[buf.id]->m_updateFlags = (1 << (uint32_t(hydra_xml::XML_OBJ_SCENE) + 1)); // | (1 << (uint32_t(hydra_xml::XML_OBJ_RMAP_LIST) + 1);
+  }
+
+  return buf;
+}
+
+void hr2Commit(HR2_CommandBuffer a_cmbBuff, bool a_async)
+{
+  if(!CheckCommandBuffer(a_cmbBuff, "hr2Commit"))
+    return;
+  
+  g_context.cmdInFlight[a_cmbBuff.id]->CommitToStorage();  
+  g_context.cmdInFlight[a_cmbBuff.id] = nullptr;
+}
+
+void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_SettingsRef a_settings, HR2_FrameImgRef a_frameBuffer, bool a_async)
+{
+  //hr2Commit(a_cmbBuff, a_async);
+
+  if(!CheckCommandBuffer(a_cmbBuff, "hr2Commit"))
+    return;
+  
+  g_context.cmdInFlight[a_cmbBuff.id]->CommitToStorage();  
+
+  //if(a_async) { run render in seperate thread, use std::future and e.t.c }
+  
+  auto pStorage = g_context.cmdInFlight[a_cmbBuff.id]->pStorage;
+  if(pStorage == nullptr)
+    return;
+
+  auto  fbSize = pStorage->fbSize[a_frameBuffer.id];
+  auto* fbData = pStorage->fbData[a_frameBuffer.id].data();
+
+  pStorage->m_pDriver->Render(0,0,fbSize.x,fbSize.y,fbSize.z, fbData, 1); // TODO extract settings
+
+  //pImpl->GetExecutionTime("PathTraceBlock", timings);
+  //std::cout << "PathTraceBlock(exec) = " << timings[0]              << " ms " << std::endl;
+  //std::cout << "PathTraceBlock(copy) = " << timings[1] + timings[2] << " ms " << std::endl;
+  //std::cout << "PathTraceBlock(ovrh) = " << timings[3]              << " ms " << std::endl;
+  g_context.cmdInFlight[a_cmbBuff.id] = nullptr;
+}
+
+HR2RenderUpdateInfo hr2HaveUpdate(HR2_CommandBuffer a_cmbBuff)
+{
+  HR2RenderUpdateInfo res{};
+  return res;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+HR2_GeomRef hr2CreateMeshFromData(HR2_CommandBuffer a_cmdBuff, const char* a_meshName, HR2_MeshInput a_input)
+{
+  HR2_GeomRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateMeshFromData"))
+    return res;
+
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_GEOMETRY);
+           g_context.cmdInFlight[a_cmdBuff.id]->meshPtrById[res.id] = a_input;
+  
+  auto node = g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_GEOMETRY, res.id);
+  node.append_attribute(L"ptrs") = 1;
+  return res;
+}
+
+HR2_MaterialRef hr2CreateMaterial(HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_MaterialRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateMaterial"))
+    return res;
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_MATERIALS);
+  return res;
+}
+
+HR2_LightRef  hr2CreateLight(HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_LightRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateLight"))
+    return res;
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_LIGHT);
+  return res;
+}
+
+HR2_CameraRef  hr2CreateCamera(HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_CameraRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateCamera"))
+    return res;
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_CAMERA);
+  return res;
+}
+
+HR2_SettingsRef hr2CreateSettings(HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_SettingsRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateSettings"))
+    return res;
+  res.id = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SETTINGS);
+  return res;
+}
+
+HR2_SceneRef    hr2CreateScene   (HR2_CommandBuffer a_cmdBuff)
+{
+  HR2_SceneRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateScene"))
+    return res;
+  res.id    = g_context.cmdInFlight[a_cmdBuff.id]->AppendNode(hydra_xml::XML_OBJ_SCENE);
+  res.stgId = g_context.cmdInFlight[a_cmdBuff.id]->m_stgId;
+  return res;
+}
+
+HR2_FrameImgRef hr2CreateFrameImg(HR2_CommandBuffer a_cmdBuff, HR2_FrameBufferInfo a_info)
+{
+  HR2_FrameImgRef res = {};
+  if(!CheckCommandBuffer(a_cmdBuff, "hr2CreateFrameImg"))
+    return res;
+
+  auto pStorage = g_context.cmdInFlight[a_cmdBuff.id]->pStorage;
+
+  if(pStorage->fbTop >= HR2::MAX_FRAME_IMAGES) {
+    g_context.textOut << "hr2CreateFrameImg, exceeded MAX_FRAME_IMAGES = " << HR2::MAX_FRAME_IMAGES << std::endl;
+    return res;
+  }
+
+  res.id    = pStorage->fbTop;
+  res.stgId = g_context.cmdInFlight[a_cmdBuff.id]->m_stgId;
+  pStorage->fbTop++;
+
+  pStorage->fbData[res.id].resize(a_info.width*a_info.height*a_info.channels); // simple implementation for current
+  pStorage->fbSize[res.id] = uint3(a_info.width, a_info.height, a_info.channels);
+
+  return res;
+}
+
+#ifdef HR2_SEE_PUGIXML
+
+pugi::xml_node hr2MaterialParamNode(HR2_CommandBuffer a_cmdBuff, HR2_MaterialRef a_mat)
+{
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_MATERIALS, a_mat.id);
+}
+
+pugi::xml_node hr2LightParamNode(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_light)
+{
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_LIGHT, a_light.id);
+}
+
+pugi::xml_node hr2CameraParamNode(HR2_CommandBuffer a_cmdBuff, HR2_CameraRef a_cam)
+{
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_CAMERA, a_cam.id);
+}
+
+pugi::xml_node hr2SettingsParamNode(HR2_CommandBuffer a_cmdBuff, HR2_SettingsRef a_settings)
+{
+  return g_context.cmdInFlight[a_cmdBuff.id]->NodeById(hydra_xml::XML_OBJ_SETTINGS, a_settings.id);
+}
+
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static std::wstring MatrixToString(float a_mat[16])
+{
+  std::wstringstream matrixOut;
+  for(int i=0;i<16;i++) {
+    matrixOut << a_mat[i];
+    if(i!=15)
+      matrixOut << L" ";
+  }
+
+  return matrixOut.str();
+}
+
+int hr2GeomInstance (HR2_CommandBuffer a_cmdBuff, HR2_GeomRef  a_pMesh, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  const std::wstring matrixStr = MatrixToString(a_mat);
+  
+  auto instNode = g_context.cmdInFlight[a_cmdBuff.id]->m_sceneNode.append_child(L"instance");
+  
+  instNode.append_attribute(L"id")      = g_context.cmdInFlight[a_cmdBuff.id]->instTop;
+  instNode.append_attribute(L"mesh_id") = a_pMesh.id;
+  instNode.append_attribute(L"scn_id")  = g_context.cmdInFlight[a_cmdBuff.id]->m_scnId;
+  instNode.append_attribute(L"rmap_id") = -1;
+  instNode.append_attribute(L"scn_sid") = 0;
+  instNode.append_attribute(L"matrix")  = matrixStr.c_str();
+
+  g_context.cmdInFlight[a_cmdBuff.id]->instTop++;
+
+  return 0;
+}
+
+int hr2LightInstance(HR2_CommandBuffer a_cmdBuff, HR2_LightRef a_pLight, float a_mat[16], const int32_t* a_remapList, int32_t a_remapListSize)
+{
+  const std::wstring matrixStr = MatrixToString(a_mat);
+
+  auto instNode = g_context.cmdInFlight[a_cmdBuff.id]->m_sceneNode.append_child(L"instance_light");
+  
+  instNode.append_attribute(L"id")        = g_context.cmdInFlight[a_cmdBuff.id]->lghtTop;
+  instNode.append_attribute(L"light_id")  = a_pLight.id;
+  instNode.append_attribute(L"lgroup_id") = -1;
+  instNode.append_attribute(L"matrix")    = matrixStr.c_str();
+
+  g_context.cmdInFlight[a_cmdBuff.id]->lghtTop++;
+
+  return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool SaveImage4fToBMP(const float* rgb, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
+bool SaveImage4fByExtension(const float* data, int width, int height, int channels, const char* outfilename, float a_normConst, float a_gamma);
+
+#ifdef USE_STB_IMAGE
+  #define SaveLDRImageM SaveImage4fByExtension
+#else
+  #define SaveLDRImageM SaveImage4fToBMP
+#endif
+
+void hr2SaveFrameBuffer(HR2_FrameImgRef a_frameImage, const char* a_fileName)
+{
+  auto pStorage = g_context.storages[a_frameImage.stgId];
+  auto  fbSize  = pStorage->fbSize[a_frameImage.id];
+  auto* fbData  = pStorage->fbData[a_frameImage.id].data();
+  
+  //if(saveHDR)
+  //{
+  //  const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+  //  std::cout << "[main]: save image to " << outName.c_str() << std::endl;
+  //  SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), normConst);
+  //}
+  //else
+  //{
+    //const std::string outName = (integratorType == "mispt" && !splitDirectAndIndirect) ? imageOutClean + suffix + "." + imageOutFiExt : imageOutClean + "_mispt" + suffix + "." + imageOutFiExt;
+    //std::cout << "[hr2SaveFrameBuffer]: save image to " << a_fileName << std::endl;
+    SaveLDRImageM(fbData, fbSize.x, fbSize.y, fbSize.z, a_fileName, 1.0f, 2.2f);
+  //}
+}

@@ -1,5 +1,16 @@
 #include "integrator_pt_scene.h"
 
+static constexpr uint32_t SCN_UPDATE_TEXTURES    = 1 << (hydra_xml::XML_OBJ_TEXTURE + 1);
+static constexpr uint32_t SCN_UPDATE_SPECTRUM    = 1 << (hydra_xml::XML_OBJ_SPECTRA + 1);
+static constexpr uint32_t SCN_UPDATE_LIGHTS      = 1 << (hydra_xml::XML_OBJ_LIGHT   + 1);
+static constexpr uint32_t SCN_UPDATE_MATERIALS   = 1 << (hydra_xml::XML_OBJ_MATERIALS + 1);
+static constexpr uint32_t SCN_UPDATE_CAMERA      = 1 << (hydra_xml::XML_OBJ_CAMERA    + 1);
+static constexpr uint32_t SCN_UPDATE_GEOMETRY    = 1 << (hydra_xml::XML_OBJ_GEOMETRY  + 1);
+static constexpr uint32_t SCN_UPDATE_SETTINGS    = 1 << (hydra_xml::XML_OBJ_SETTINGS  + 1);
+static constexpr uint32_t SCN_UPDATE_INSTANCES   = 1 << (hydra_xml::XML_OBJ_SCENE     + 1);
+static constexpr uint32_t SCN_UPDATE_REMAP_LISTS = 1 << (hydra_xml::XML_OBJ_RMAP_LIST + 1);
+static constexpr uint32_t SCN_UPDATE_ALL         = 0xFFFFFFFF;
+
 std::string Integrator::GetFeatureName(uint32_t a_featureId)
 {
   switch(a_featureId)
@@ -306,71 +317,31 @@ Spectrum ParseSpectrumStr(const std::string &specStr)
   return res;
 }
 
-bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
-{ 
-  LoadSceneBegin();
+void Integrator::ClearTexCache(std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache)
+{
+  texCache.clear();
+  texCache[HydraSampler()] = 0; // zero white texture
 
-  std::string scenePathStr(a_scenePath);
-  std::string sceneDirStr(a_sncDir);  
-  hydra_xml::HydraScene sceneLocal;
-  
-  const bool sameSceneAnalyzed = (scenePathStr == g_lastScenePath) && (sceneDirStr == g_lastSceneDir);
-  hydra_xml::HydraScene& scene = sameSceneAnalyzed ? g_lastScene : sceneLocal;
-  
-  if(!sameSceneAnalyzed)
-  {
-    auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
-    if(loadRes != 0)
-    {
-      std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
-      exit(0);
-    }
-  }
+  m_textures.resize(0);
+  m_textures.reserve(256);
+  m_textures.push_back(MakeWhiteDummy());
+}
 
-  //// init spectral curves
-  #ifndef DISABLE_SPECTRUM
-  std::vector<float> cie_x = Get_CIE_X();
-  std::vector<float> cie_y = Get_CIE_Y();
-  std::vector<float> cie_z = Get_CIE_Z();
-  m_cie_xyz.resize(cie_x.size());
-  for(size_t i=0; i < m_cie_xyz.size(); i++)
-    m_cie_xyz[i] = float4(cie_x[i], cie_y[i], cie_z[i], 0.0f);
-  #endif
-  ////
-  
-  //// init render feature map
-  m_actualFeatures.resize(TOTAL_FEATURES_NUM); // disable all features by default
-  for(auto& feature : m_actualFeatures)              //
-    feature = 0;                                      //
-  m_actualFeatures[BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
-  m_actualFeatures[FILMS_STACK_SIZE] = 1;
-  m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
-  //// 
-
-  std::vector<TextureInfo> texturesInfo;
-  texturesInfo.resize(0);
-  texturesInfo.reserve(100);
-
-  #ifdef WIN32
-  size_t endPos = scenePathStr.find_last_of("\\");
-  if(endPos == std::string::npos)
-    endPos = scenePathStr.find_last_of("/");
-  #else
-  size_t endPos = scenePathStr.find_last_of('/');
-  #endif
-
-  const std::string sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+void Integrator::LoadSceneTexturesInfo(hydra_xml::HydraScene& scene, std::vector<TextureLoadInfo>& a_texturesInfo)
+{
+  a_texturesInfo.resize(0);
+  a_texturesInfo.reserve(100);
 
   //// (0) load textures info
   //
   for(auto texNode : scene.TextureNodes())
   {
-    TextureInfo tex;
+    TextureLoadInfo tex;
 
     if (texNode.attribute(L"loc").empty())
       tex.path = std::wstring(texNode.attribute(L"path").as_string());
     else
-      tex.path = std::wstring(sceneFolder.begin(), sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
+      tex.path = std::wstring(m_sceneFolder.begin(), m_sceneFolder.end()) + L"/" + texNode.attribute(L"loc").as_string();
     
     tex.width  = texNode.attribute(L"width").as_uint();
     tex.height = texNode.attribute(L"height").as_uint();
@@ -378,95 +349,78 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     {
       const size_t byteSize = texNode.attribute(L"bytesize").as_ullong();
       tex.bpp = uint32_t(byteSize / size_t(tex.width*tex.height));
-      texturesInfo.push_back(tex);
+      a_texturesInfo.push_back(tex);
     }
-    
   }
 
-  std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> texCache;
-  texCache[HydraSampler()] = 0; // zero white texture
-  
-  m_textures.resize(0);
-  m_textures.reserve(256);
-  m_textures.push_back(MakeWhiteDummy());
+}
 
-  // std::vector<SpectrumInfo> spectraInfo;
-  // spectraInfo.reserve(100);
-  #ifndef DISABLE_SPECTRUM
-  if(m_spectral_mode != 0 || true)
-  {  
-    for(auto specNode : scene.SpectraNodes())
+void Integrator::LoadSceneSpectrumData(hydra_xml::HydraScene& scene)
+{
+  for(auto specNode : scene.SpectraNodes())
+  {
+    auto spec_id   = specNode.attribute(L"id").as_uint();
+    auto refs_attr = specNode.attribute(L"lambda_ref_ids");
+    auto val_attr  = specNode.attribute(L"value");
+    if(refs_attr)
     {
-      auto spec_id   = specNode.attribute(L"id").as_uint();
-
-      auto refs_attr = specNode.attribute(L"lambda_ref_ids");
-      auto val_attr = specNode.attribute(L"value");
-      if(refs_attr)
+      auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
+      assert(lambda_ref_ids.size() % 2 == 0);
+      size_t tex_spec_sz = lambda_ref_ids.size() / 2;
+      uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
+      for(size_t idx = 0; idx < tex_spec_sz; ++idx)
       {
-        auto lambda_ref_ids = hydra_xml::readvalVectorU(refs_attr);
-
-        assert(lambda_ref_ids.size() % 2 == 0);
-
-        size_t tex_spec_sz = lambda_ref_ids.size() / 2;
-
-        uint32_t offset = uint32_t(m_spec_tex_ids_wavelengths.size());
-        for(size_t idx = 0; idx < tex_spec_sz; ++idx)
-        {
-          m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
-        }
-        m_actualFeatures[KSPEC_SPD_TEX] = 1;
-        m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
-        m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+        m_spec_tex_ids_wavelengths.push_back({lambda_ref_ids[idx * 2 + 1], lambda_ref_ids[idx * 2 + 0]});
+      }
+      m_actualFeatures[KSPEC_SPD_TEX] = 1;
+      m_spec_tex_offset_sz.push_back(uint2{offset, uint32_t(tex_spec_sz)});
+      m_spec_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+    }
+    else
+    {
+      Spectrum spec;
+      if (val_attr) // spectrum is specified directly in XML
+      {
+        std::wstring wstr = val_attr.as_string();
+        spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
+        
       }
       else
       {
-        Spectrum spec;
-        if (val_attr) // spectrum is specified directly in XML
-        {
-          std::wstring wstr = val_attr.as_string();
-          spec = ParseSpectrumStr(std::string(wstr.begin(), wstr.end()));
-          
-        }
-        else
-        {
-          auto spec_path = std::filesystem::path(sceneFolder);
-          spec_path.append(specNode.attribute(L"loc").as_string());
-
-          spec = LoadSPDFromFile(spec_path, spec_id);
-          if(spec.values.size() == 0)
-            std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
-        }
-        
-        auto specValsUniform = spec.ResampleUniform();
-        
-        uint32_t offset = uint32_t(m_spec_values.size());
-        std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
-
-        m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
-        m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
+        auto spec_path = std::filesystem::path(m_sceneFolder);
+        spec_path.append(specNode.attribute(L"loc").as_string());
+        spec = LoadSPDFromFile(spec_path, spec_id);
+        if(spec.values.size() == 0)
+          std::cout << "[Integrator::LoadScene]: ALERT! Spectrum path '" << spec_path << "' is not found, file does not exists!" << std::endl;
       }
-
-    }
-
-    // if no spectra are loaded add uniform 1.0 spectrum
-    if(m_spec_offset_sz.empty())
-    {
-      Spectrum uniform1;
-      uniform1.id = 0;
-      uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
-      uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
-      auto specValsUniform = uniform1.ResampleUniform();
+      
+      auto specValsUniform = spec.ResampleUniform();
       
       uint32_t offset = uint32_t(m_spec_values.size());
       std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
       m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+      m_spec_tex_offset_sz.push_back(uint2{0xFFFFFFFF, 0});
     }
   }
-  #endif
 
-  // (1) load lights
-  //
-  std::vector<uint32_t> oldLightIdToNewLightId(scene.GetInstancesNum(), uint32_t(-1));
+  // if no spectra are loaded add uniform 1.0 spectrum
+  if(m_spec_offset_sz.empty())
+  {
+    Spectrum uniform1;
+    uniform1.id = 0;
+    uniform1.wavelengths = {200.0f, 400.0f, 600.0f, 800.0f};
+    uniform1.values = {1.0f, 1.0f, 1.0f, 1.0f};
+    auto specValsUniform = uniform1.ResampleUniform();
+    
+    uint32_t offset = uint32_t(m_spec_values.size());
+    std::copy(specValsUniform.begin(),    specValsUniform.end(),    std::back_inserter(m_spec_values));
+    m_spec_offset_sz.push_back(uint2{offset, uint32_t(specValsUniform.size())});
+  }
+}
+
+void Integrator::LoadSceneLights(hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& a_texCache)
+{
+  m_oldLightIdToNewLightId = std::vector<uint32_t> (scene.GetInstancesNum(), uint32_t(-1));
 
   m_remapInst.resize(scene.GetInstancesNum(), int2{-1,-1});
   m_arrays1f.resize(0);
@@ -474,7 +428,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   uint32_t oldLightId = 0;
   for(auto lightInst : scene.InstancesLights())
   {
-    auto lightSource = LoadLightSourceFromNode(lightInst, sceneFolder,m_spectral_mode, texturesInfo, texCache, m_textures);                                
+    auto lightSource = LoadLightSourceFromNode(lightInst, m_sceneFolder,m_spectral_mode, m_textureLoadInfo, a_texCache, m_textures);                                
     
     if(lightSource.iesId != uint(-1))
       m_actualFeatures[Integrator::KSPEC_LIGHT_IES] = 1;
@@ -504,7 +458,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       
       if(lightSource.texId != uint(-1))
       {
-        auto info         = texturesInfo[lightSource.texId];
+        auto info         = m_textureLoadInfo[lightSource.texId];
         addToLightSources = (info.path.find(L".exr") != std::wstring::npos) || (info.bpp > 4);
         m_envEnableSam    = addToLightSources ? 1 : 0;
   
@@ -528,15 +482,17 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     
     if(addToLightSources)
-      oldLightIdToNewLightId[oldLightId] = uint32_t(m_lights.size());
+      m_oldLightIdToNewLightId[oldLightId] = uint32_t(m_lights.size());
     oldLightId++;
 
     if(addToLightSources)
       m_lights.push_back(lightSource);
   }
+}
 
-  //// (2) load materials
-  //
+void Integrator::LoadSceneMaterials(hydra_xml::HydraScene& scene, std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash>& texCache,
+                                    const std::vector<float>& cie_x, const std::vector<float>& cie_y, const std::vector<float>& cie_z)
+{
   m_materials.resize(0);
   m_materials.reserve(100);
 
@@ -550,7 +506,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     if(mat_type == hydraOldMatTypeStr)
     {
-      mat = ConvertOldHydraMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = ConvertOldHydraMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_spectral_mode);
       if(mat.mtype == MAT_TYPE_GLASS)
         m_actualFeatures[KSPEC_MAT_TYPE_GLASS] = 1;
       else
@@ -558,18 +514,18 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == hydraGLTFTypeStr)
     {
-      mat = ConvertGLTFMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = ConvertGLTFMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_GLTF] = 1;
     }
     else if(mat_type == roughConductorMatTypeStr)
     {
-      mat = LoadRoughConductorMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadRoughConductorMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_CONDUCTOR] = 1;
     }
     #ifndef DISABLE_SPECTRUM
     else if (mat_type == thinFilmMatTypeStr)
     {
-      mat = LoadThinFilmMaterial(materialNode, texturesInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
+      mat = LoadThinFilmMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_precomp_thin_films, m_films_thickness_vec, m_films_spec_id_vec, m_films_eta_k_vec,
                                  m_spec_values, m_spec_offset_sz, cie_x, cie_y, cie_z, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_THIN_FILM] = 1;
       uint layers = 0;
@@ -579,21 +535,21 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == simpleDiffuseMatTypeStr)
     {
-      mat = LoadDiffuseMaterial(materialNode, texturesInfo, texCache, m_textures, m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
+      mat = LoadDiffuseMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIFFUSE] = 1;
     }
     #endif
     else if(mat_type == blendMatTypeStr)
     {
-      mat = LoadBlendMaterial(materialNode, texturesInfo, texCache, m_textures);
+      mat = LoadBlendMaterial(materialNode, m_textureLoadInfo, texCache, m_textures);
       m_actualFeatures[KSPEC_MAT_TYPE_BLEND]   = 1;
       m_actualFeatures[BLEND_STACK_SIZE] = 4; // set appropriate stack size for blends
     }
     else if(mat_type == plasticMatTypeStr)
     {
       #ifndef DISABLE_SPECTRUM
-      mat = LoadPlasticMaterial(materialNode, texturesInfo, texCache, m_textures, m_arrays1f, m_spectral_mode,
+      mat = LoadPlasticMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_arrays1f, m_spectral_mode,
                                 m_spec_values, m_spec_offset_sz,  m_spec_tex_ids_wavelengths, m_spec_tex_offset_sz, 
                                 loadedSpectralTextures);
       #else
@@ -609,7 +565,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     }
     else if(mat_type == dielectricMatTypeStr)
     {
-      mat = LoadDielectricMaterial(materialNode, texturesInfo, texCache, m_textures, m_spectral_mode);
+      mat = LoadDielectricMaterial(materialNode, m_textureLoadInfo, texCache, m_textures, m_spectral_mode);
       m_actualFeatures[KSPEC_MAT_TYPE_DIELECTRIC] = 1;
     }
 
@@ -661,7 +617,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
         auto invertNode  = normalNode.child(L"invert");   // todo read swap flag also
         auto textureNode = normalNode.child(L"texture");
 
-        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, texturesInfo, texCache, m_textures);
+        const auto& [sampler, texID] = LoadTextureFromNode(normalNode, m_textureLoadInfo, texCache, m_textures);
 
         mat.row0 [1] = sampler.row0;
         mat.row1 [1] = sampler.row1;
@@ -684,13 +640,19 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     m_materials.push_back(mat);
   }
+}
 
-  // load first camera and update matrix
-  //
+void Integrator::LoadSceneCamera(hydra_xml::HydraScene& scene)
+{
   m_allCams.clear();
   for(auto cam : scene.Cameras())
   {
-    float aspect   = float(m_fbWidth) / float(m_fbHeight);
+    float aspect = 1.0f;
+    if(m_fbWidth != 0 && m_fbHeight != 0)
+      aspect   = float(m_fbWidth) / float(m_fbHeight);
+    else
+      std::cout << "[Integrator::LoadSceneCamera]: bad aspect, use 1.0 " << std::endl;  
+
     auto proj      = perspectiveMatrix(cam.fov, aspect, cam.nearPlane, cam.farPlane);
 
     LiteMath::float4x4 c2w;
@@ -760,25 +722,20 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     
     AppendCamFromInternalVariables();
   }
-  
-  SetCamId(0); // take first cam by default
-  
-  //// (2) load meshes
-  //
+}
+
+void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
+{
   m_matVertOffset.reserve(1024);
   m_matIdByPrimId.reserve(128000);
   m_triIndices.reserve(128000*3);
-  
   m_vData8f.resize(0);
-  //m_vNorm4f.resize(0);
-  //m_vTang4f.resize(0);
-  //m_vTexc2f.resize(0);
 
   m_pAccelStruct->ClearGeom();
   auto mIter = scene.GeomNodes().begin();
   while (mIter != scene.GeomNodes().end())
   {
-    std::string dir = sceneFolder + "/" + hydra_xml::ws2s(std::wstring(mIter->attribute(L"loc").as_string()));
+    std::string dir  = m_sceneFolder + "/" + hydra_xml::ws2s(std::wstring(mIter->attribute(L"loc").as_string()));
     std::string name = hydra_xml::ws2s(std::wstring(mIter->name()));
     
     uint2 offsets;
@@ -791,25 +748,70 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
       #ifdef _DEBUG
       std::cout << "[LoadScene]: mesh = " << dir.c_str() << std::endl;
       #endif
-      auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
-      auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
 
-      (void)geomId; // silence unused var. warning
+      if(mIter->attribute(L"ptrs").as_int() == 1)
+      {
+        auto meshId   = mIter->attribute(L"id").as_uint();
+        auto pMeshPts = m_LSMeshPtrs.find(meshId);
+        if(pMeshPts == m_LSMeshPtrs.end())
+        {
+          std::cout << "[Integrator::LoadSceneGeometry]: bad mesh pointer id = " << meshId << std::endl;
+          exit(0);
+        }
+        
+        const Mesh4fInput& input = pMeshPts->second;
+        
+        auto geomId = m_pAccelStruct->AddGeom_Triangles3f((const float*)input.vPosPtr, input.vertNum, input.indicesPtr, input.indicesNum, BUILD_HIGH, input.vPosByteStride);
+        (void)geomId; // silence unused var. warning
 
-      const size_t lastVertex = m_vData8f.size();
+        const size_t lastVertex = m_vData8f.size();
+        
+        if(input.matIdNum != input.indicesNum/3) 
+        {
+          size_t oldSize = m_matIdByPrimId.size();
+          m_matIdByPrimId.resize(oldSize + input.indicesNum/3);
+          for(size_t i=oldSize;i<m_matIdByPrimId.size();i++)
+            m_matIdByPrimId[i] = input.matIdAll;
+        }
+        else
+          m_matIdByPrimId.insert(m_matIdByPrimId.end(), input.matIdPtr, input.matIdPtr + input.matIdNum);
 
-      m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
-      m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+        m_triIndices.insert(m_triIndices.end(), input.indicesPtr, input.indicesPtr + input.indicesNum);
+        m_vData8f.resize(m_vData8f.size() + input.vertNum);
 
-      //m_vNorm4f.insert(m_vNorm4f.end(), currMesh.vNorm4f.begin(), currMesh.vNorm4f.end());
-      //m_vTang4f.insert(m_vTang4f.end(), currMesh.vTang4f.begin(), currMesh.vTang4f.end());
-      
-      m_vData8f.resize(m_vData8f.size() + currMesh.vNorm4f.size());
-      for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack vertex data
-        m_vData8f[lastVertex + i].normAndTx   = currMesh.vNorm4f[i];
-        m_vData8f[lastVertex + i].tangAndTy   = currMesh.vTang4f[i];
-        m_vData8f[lastVertex + i].normAndTx.w = currMesh.vTexCoord2f[i].x;
-        m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
+        if(input.vTangPtr4f != nullptr)
+        {
+          for(size_t i = 0; i<input.vertNum; i++) {          // pack vertex data
+            m_vData8f[lastVertex + i].normAndTx = float4(input.vNormPtr4f[4*i+0], input.vNormPtr4f[4*i+1], input.vNormPtr4f[4*i+2], input.vTexCoord2f[2*i+0]);
+            m_vData8f[lastVertex + i].tangAndTy = float4(input.vTangPtr4f[4*i+0], input.vTangPtr4f[4*i+1], input.vTangPtr4f[4*i+2], input.vTexCoord2f[2*i+1]);
+          }
+        }
+        else // render must not compute tangent space, hydra_api may
+        {
+          for(size_t i = 0; i<input.vertNum; i++) {          // pack vertex data
+            m_vData8f[lastVertex + i].normAndTx = float4(input.vNormPtr4f[4*i+0], input.vNormPtr4f[4*i+1], input.vNormPtr4f[4*i+2], input.vTexCoord2f[2*i+0]);
+            m_vData8f[lastVertex + i].tangAndTy = float4(0.0f, 0.0f, 0.0f, input.vTexCoord2f[2*i+1]);
+          }
+        }
+      }
+      else
+      {
+        auto currMesh = cmesh4::LoadMeshFromVSGF(dir.c_str());
+        auto geomId   = m_pAccelStruct->AddGeom_Triangles3f((const float*)currMesh.vPos4f.data(), currMesh.vPos4f.size(), currMesh.indices.data(), currMesh.indices.size(), BUILD_HIGH, sizeof(float)*4);
+  
+        (void)geomId; // silence unused var. warning
+  
+        const size_t lastVertex = m_vData8f.size();
+  
+        m_matIdByPrimId.insert(m_matIdByPrimId.end(), currMesh.matIndices.begin(), currMesh.matIndices.end() );
+        m_triIndices.insert(m_triIndices.end(), currMesh.indices.begin(), currMesh.indices.end());
+        m_vData8f.resize(m_vData8f.size() + currMesh.vNorm4f.size());
+        for(size_t i = 0; i<currMesh.VerticesNum(); i++) {          // pack vertex data
+          m_vData8f[lastVertex + i].normAndTx   = currMesh.vNorm4f[i];
+          m_vData8f[lastVertex + i].tangAndTy   = currMesh.vTang4f[i];
+          m_vData8f[lastVertex + i].normAndTx.w = currMesh.vTexCoord2f[i].x;
+          m_vData8f[lastVertex + i].tangAndTy.w = currMesh.vTexCoord2f[i].y;
+        }
       }
     }
     else
@@ -831,8 +833,17 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     //m_vTexc2f.insert(m_vTexc2f.end(), currMesh.vTexCoord2f.begin(), currMesh.vTexCoord2f.end()); // #TODO: store quantized texture coordinates
   }
 
-  //// (3) make instances of created meshes
-  //
+  m_LSMeshPtrs.clear();
+}
+
+void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
+{ 
+  if(scene.GetInstancesNum() == 0)
+    return;
+
+  if(m_remapInst.size() == 0) // happends when work with an API
+    m_remapInst.resize(scene.GetInstancesNum(), int2{-1,-1}); 
+
   m_normMatrices.clear(); m_normMatrices.reserve(1000*2);
   std::vector<float4x4>   m_normMatrices2;
   m_normMatrices2.reserve(1000);
@@ -868,7 +879,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
     m_remapInst[realInstId].x = inst.rmapId;
     
     if(inst.lightInstId != uint32_t(-1))
-      m_remapInst[inst.instId].y = oldLightIdToNewLightId[inst.lightInstId];
+      m_remapInst[inst.instId].y = m_oldLightIdToNewLightId[inst.lightInstId];
     else
       m_remapInst[inst.instId].y = inst.lightInstId;
     realInstId++;
@@ -882,6 +893,7 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
   else
     m_normMatrices2Offs = uint32_t(m_normMatrices.size());
+
   m_normMatrices.insert(m_normMatrices.end(), m_normMatrices2.begin(), m_normMatrices2.end());
 
   uint32_t build_options = BUILD_HIGH;
@@ -891,9 +903,11 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   }
 
   m_pAccelStruct->CommitScene(build_options); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
-  
-  // (4) load remap lists and put all of the to the flat data structure
-  // 
+ 
+}
+
+void Integrator::LoadSceneRemapLists(hydra_xml::HydraScene& scene)
+{
   m_allRemapLists.clear();
   std::vector<int>  m_allRemapListsOffsets;
   m_allRemapLists.reserve(m_normMatrices.size()*10);     // approx size for all reamp lists based on number of instances; may not do this reserve in fact, or make it more precise
@@ -907,9 +921,10 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   
   m_allRemapListsSize = uint32_t(m_allRemapLists.size());                                                      // save array size
   m_allRemapLists.insert(m_allRemapLists.end(), m_allRemapListsOffsets.begin(), m_allRemapListsOffsets.end()); // put all offsets to the end of the array
+}
 
-  // (5) load render settings
-  //
+void Integrator::LoadSceneSettings(hydra_xml::HydraScene& scene)
+{
   for(const auto& sett : scene.Settings())
   {
     m_traceDepth = sett.depth;
@@ -923,6 +938,71 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
 
     break; // take first render settings
   }
+
+  //todo: call SetFrameBufferSize
+}
+
+bool Integrator::LoadScene(hydra_xml::HydraScene& scene, uint32_t a_flags)
+{ 
+  static const std::vector<float> cie_x = Get_CIE_X();
+  static const std::vector<float> cie_y = Get_CIE_Y();
+  static const std::vector<float> cie_z = Get_CIE_Z();
+
+  LoadSceneBegin();
+
+  //// (1) reset feature map
+  m_actualFeatures.resize(TOTAL_FEATURES_NUM); // disable all features by default
+  for(auto& feature : m_actualFeatures)        //
+    feature = 0;                               //
+  m_actualFeatures[BLEND_STACK_SIZE] = 1;      // set smallest possible stack size for blends
+  m_actualFeatures[FILMS_STACK_SIZE] = 1;
+  m_actualFeatures[KSPEC_SPECTRAL_RENDERING] = (m_spectral_mode == 0) ? 0 : 1;
+  //// 
+
+  //// (2) init spectral curves if needed
+  #ifndef DISABLE_SPECTRUM
+  if(m_spectral_mode != 0 && m_cie_xyz.size() == 0)
+  {
+    m_cie_xyz.resize(cie_x.size());
+    for(size_t i=0; i < m_cie_xyz.size(); i++)
+      m_cie_xyz[i] = float4(cie_x[i], cie_y[i], cie_z[i], 0.0f);
+  }
+  #endif
+  ////
+  
+  if((a_flags & SCN_UPDATE_TEXTURES) != 0) {
+    LoadSceneTexturesInfo(scene, m_textureLoadInfo);
+    ClearTexCache(m_texCache);
+  }
+
+  #ifndef DISABLE_SPECTRUM
+  if((a_flags & SCN_UPDATE_SPECTRUM) != 0 && (m_spectral_mode != 0 || true))
+    LoadSceneSpectrumData(scene);
+  #endif
+  
+  if((a_flags & SCN_UPDATE_LIGHTS) != 0)
+    LoadSceneLights(scene, m_texCache);
+
+  if((a_flags & SCN_UPDATE_MATERIALS) != 0)
+    LoadSceneMaterials(scene, m_texCache, cie_x, cie_y, cie_z);
+
+  if((a_flags & SCN_UPDATE_SETTINGS) != 0)
+    LoadSceneSettings(scene);
+
+  if((a_flags & SCN_UPDATE_CAMERA) != 0)
+  {
+    LoadSceneCamera(scene);
+    SetCamId(0); // take first cam by default
+  }
+
+  if((a_flags & SCN_UPDATE_GEOMETRY) != 0)
+    LoadSceneGeometry(scene);
+
+  if((a_flags & SCN_UPDATE_INSTANCES) != 0)
+    LoadSceneInstances(scene);
+  
+  if((a_flags & SCN_UPDATE_REMAP_LISTS) != 0)
+    LoadSceneRemapLists(scene);
 
   // (6) print enabled features in scene
   //
@@ -953,7 +1033,45 @@ bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
   std::cout << "};" << std::endl;
 #endif
 
+  if(m_textures.size() == 0)   // usually happends when a scene dont have a texture
+    ClearTexCache(m_texCache); //
+
   LoadSceneEnd();
+  return true;
+}
+
+
+bool Integrator::LoadScene(const char* a_scenePath, const char* a_sncDir)
+{
+  std::string scenePathStr(a_scenePath);
+  std::string sceneDirStr(a_sncDir);  
+  hydra_xml::HydraScene sceneLocal;
+  
+  const bool sameSceneAnalyzed = (scenePathStr == g_lastScenePath) && (sceneDirStr == g_lastSceneDir);
+  hydra_xml::HydraScene& scene = sameSceneAnalyzed ? g_lastScene : sceneLocal;
+  
+  if(!sameSceneAnalyzed)
+  {
+    auto loadRes = scene.LoadState(scenePathStr, sceneDirStr);
+    if(loadRes != 0)
+    {
+      std::cout << "Integrator::LoadScene failed: '" << a_scenePath << "'" << std::endl; 
+      exit(0);
+    }
+  }
+
+  #ifdef WIN32
+  size_t endPos = scenePathStr.find_last_of("\\");
+  if(endPos == std::string::npos)
+    endPos = scenePathStr.find_last_of("/");
+  #else
+  size_t endPos = scenePathStr.find_last_of('/');
+  #endif
+
+  m_sceneFolder = (sceneDirStr == "") ? scenePathStr.substr(0, endPos) : sceneDirStr;
+
+  LoadScene(scene, SCN_UPDATE_ALL);
+
   return true;
 }
 

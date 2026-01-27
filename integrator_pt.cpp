@@ -204,8 +204,8 @@ float3 decode_normal(float2 e)
   if (v.z < 0) 
   {
     float vx = v.x;
-    v.x = (1.0f - std::abs(v.y)) * ((v.x >= 0.0) ? +1.0f : -1.0f);
-    v.y = (1.0f - std::abs( vx)) * ((v.y >= 0.0) ? +1.0f : -1.0f);
+    v.x = (1.0f - std::abs(v.y)) * ((v.x >= 0.0f) ? +1.0f : -1.0f);
+    v.y = (1.0f - std::abs( vx)) * ((v.y >= 0.0f) ? +1.0f : -1.0f);
   }
   return normalize(v);
 }

@@ -326,7 +326,7 @@ if __name__ == '__main__':
   parser.add_argument('-h2', '--hydra2-tests', action="store", help="path to hydra2 tests (HydraAPI-tests repo)",
                       default='../../HydraAPI-tests')
   parser.add_argument('-h3', '--hydra3-tests', action="store", help="path to hydra3 tests",
-                      default='../../hydra3_tests')
+                      default='../../comparisonrender')
   parser.add_argument('-hydra', '--hydra-bin', action="store", help="path to hydra3 executable")
   parser.add_argument('--cpu', help="run tests on cpu", action='store_true')
 
