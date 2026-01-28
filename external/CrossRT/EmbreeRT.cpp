@@ -103,7 +103,7 @@ void error_handler(void* userPtr, const RTCError code, const char* str)
 
 EmbreeRT::EmbreeRT()
 {
-  m_device = rtcNewDevice("isa=avx2");
+  m_device = rtcNewDevice("");
   m_scene  = nullptr;
   
   rtcSetDeviceErrorFunction(m_device, error_handler, nullptr);
