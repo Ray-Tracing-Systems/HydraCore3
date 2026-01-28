@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../../bin-debug/libnlohmannjson.a CMakeFiles/nlohmannjson.dir/impl.cpp.o
+/usr/bin/ranlib ../../../../bin-debug/libnlohmannjson.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../../../bin-debug/libspectral-internal.a common/CMakeFiles/common.dir/util.cpp.o common/CMakeFiles/common.dir/refl.cpp.o common/CMakeFiles/common.dir/constants.cpp.o math/CMakeFiles/math.dir/mat3.cpp.o math/CMakeFiles/math.dir/vec3.cpp.o math/CMakeFiles/math.dir/math.cpp.o math/CMakeFiles/math.dir/fourier.cpp.o serialization/CMakeFiles/serialization.dir/parsers.cpp.o serialization/CMakeFiles/serialization.dir/binary.cpp.o serialization/CMakeFiles/serialization.dir/envi.cpp.o
+/usr/bin/ranlib ../../../../../bin-debug/libspectral-internal.a
