@@ -60,6 +60,35 @@
   },
 
   {
+    "name": "SpectralPlastic (gpu)",
+    "type": "cppdbg",
+    "request": "launch",
+    "program": "${workspaceFolder}/bin-debug/hydra",
+    "args": ["--gpu", "--spectral",
+             "-in", "/home/frol/PROG/vg_code/LiteRT/HydraCore3/hydra3_tests/newtests/Tests/Spectral/0007/PlasticRough-025_sphere_hydra3.xml",
+             "-integrator", "mispt", 
+             //"--qmc",
+             "-width", "512",
+             "-height", "512",
+             //"-channels", "16",
+             "-spp", "64",
+             "-scn_dir", "/home/frol/PROG/vg_code/LiteRT/HydraCore3/hydra3_tests/newtests/",
+             "-out", "z_out.bmp"],
+    "stopAtEntry": false,
+    "cwd": "${workspaceFolder}",
+    "environment": [],
+    "externalConsole": false,
+    "MIMode": "gdb",
+    "setupCommands": [
+        {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+        }
+    ]
+  },
+
+  {
     "name": "OpticTest1 (release)",
     "type": "cppdbg",
     "request": "launch",
@@ -168,7 +197,7 @@
             "ignoreFailures": true
         }
     ]
-},
+  },
 
   {
       "name": "MotionBlurSpectral",
@@ -226,7 +255,59 @@
           }
       ]
   },
+  
+  {
+      "name": "test_102",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", 
+               "-in", "scenes/test_102/statex_00001.xml",
+               "-integrator", "mispt",
+               "-width", "512",
+               "-height", "512",
+               "-spp", "1024",
+               "-out", "z_render_gpu_old.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
 
+
+  {
+      "name": "bunny_cornell",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin-release/hydra",
+      "args": ["--gpu", 
+               "-in", "/home/frol/PROG/vg_code/LiteRT/scenes/01_simple_scenes/bunny.xml",
+               "-integrator", "mispt",
+               "-width", "512",
+               "-height", "512",
+               "-spp", "32",
+               "-out", "z_bunny_cornell.bmp"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+          {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+          }
+      ]
+  },
 
   {
       "name": "test_35",

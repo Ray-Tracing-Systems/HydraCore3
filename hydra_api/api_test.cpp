@@ -161,7 +161,7 @@ int main(int argc, const char** argv)
 
   // (6) Create scene as instances of existing objects and lights
   //
-  const int NFrames = 10;
+  const int NFrames = 25;
   for(int frame = 0; frame < NFrames; frame++)
   {
       
@@ -193,9 +193,9 @@ int main(int argc, const char** argv)
       {
         for (int x = -2; x <= 2; x++)
         {
-          float m4[16] = {1, 0, 0, float(x) * float(frame),
+          float m4[16] = {1, 0, 0, float(x) * float(frame) * 0.5f,
                           0, 1, 0, 1,
-                          0, 0, 1, float(z) * float(frame),
+                          0, 0, 1, float(z) * float(frame) * 0.5f,
                           0, 0, 0, 1,};
         
           hr2GeomInstance(frameLvl, cubeRef, m4);

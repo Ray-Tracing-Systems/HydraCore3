@@ -47,7 +47,7 @@ Integrator::EyeRayData Integrator::SampleCameraRay(RandomGen* pGen, uint tid)
   const uint x  = (XY & 0x0000FFFF);
   const uint y  = (XY & 0xFFFF0000) >> 16;
 
-  if(x == 256 && y == 256)
+  if(x == 256 && y == 450)
   {
     int a = 2;
   }

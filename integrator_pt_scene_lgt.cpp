@@ -144,8 +144,8 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
         float3 lookAtO = float3(0,-1,0);
         float3 upO     = float3(0,0,1);
         
-        float3 lookAtT = lightInst.matrix * lookAtO;
-        float3 upT     = rot*upO;
+        float3 lookAtT = to_float3(lightInst.matrix * to_float4(lookAtO, 1.0f));
+        float3 upT     = to_float3(rot*to_float4(upO, 1.0f));
 
         float4x4 mProj   = LiteMath::perspectiveMatrix(fov, 1.0f, znear, zfar);
         float4x4 mLookAt = LiteMath::lookAt(to_float3(lightSource.pos), lookAtT, upT);

@@ -258,7 +258,8 @@ void hr2CommitAndRender(HR2_CommandBuffer a_cmbBuff, HR2_CameraRef a_cam, HR2_Se
 
   auto  fbSize = pStorage->fbSize[a_frameBuffer.id];
   auto* fbData = pStorage->fbData[a_frameBuffer.id].data();
-
+  
+  memset(fbData, 0, fbSize.x*fbSize.y*fbSize.z*sizeof(float));
   pStorage->m_pDriver->Render(0,0,fbSize.x,fbSize.y,fbSize.z, fbData, 1); // TODO extract settings
 
   //pImpl->GetExecutionTime("PathTraceBlock", timings);
