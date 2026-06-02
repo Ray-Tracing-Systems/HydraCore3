@@ -131,3 +131,52 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
   m_neural_weights_offsets[id] = weights_offset;
   return mat;
 }
+
+Material LoadKanBrdfMaterial(const std::string &scn_dir,
+                             const pugi::xml_node& materialNode,
+                             std::vector<float> &m_neural_weights, std::vector<uint> &m_neural_weights_offsets)
+{
+  std::wstring name = materialNode.attribute(L"name").as_string();
+  uint32_t id = materialNode.attribute(L"id").as_uint();
+  Material mat = {};
+  mat.mtype = MAT_TYPE_KANBRDF;
+  mat.lightId = uint(-1);
+  //TODO
+
+
+  const auto nnNode = materialNode.child(L"nn");
+  const auto texNode = nnNode.child(L"texture");
+
+  //Loading latent texture
+  /*std::vector<std::pair<HydraSampler, uint32_t>> loaded_tex = LoadLatentTexturesFromNode(texNode, texturesInfo, texCache, textures, scn_dir);
+  m_neural_tex_offsets[id] = {m_neural_tex_ids.size(), loaded_tex.size()};
+  for(const auto &[sampler_out, loaded_tex_id] : loaded_tex)
+  {
+    m_neural_tex_ids.push_back(loaded_tex_id);
+  }*/
+
+
+  //Loading weights
+  std::string weights_path = fs::path(scn_dir) / hydra_xml::ws2s(nnNode.attribute(L"weights_loc").as_string());
+
+  size_t weights_offset = m_neural_weights.size();
+
+  nn::WeightsLoader wloader{weights_path};
+  while(wloader.has_next())
+  {
+    const size_t rows = wloader.next_rows();
+    const size_t cols = wloader.next_cols();
+//std::cout<< "Rows, cols: " << rows << " " << cols << std::endl;
+    const size_t mat_size = rows * cols;
+    const size_t old_size = m_neural_weights.size();
+    m_neural_weights.resize(old_size + mat_size + wloader.next_rows());
+    //std::vector<float> weights;
+    //weights.resize(mat_size);
+    //wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
+    //nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
+
+    wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
+  }
+  m_neural_weights_offsets[id] = weights_offset;
+  return mat;
+}
