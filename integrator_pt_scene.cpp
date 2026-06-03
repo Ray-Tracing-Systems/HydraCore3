@@ -69,6 +69,7 @@ static const std::wstring blendMatTypeStr          {L"blend"};
 static const std::wstring plasticMatTypeStr        {L"plastic"};
 static const std::wstring dielectricMatTypeStr     {L"dielectric"};
 static const std::wstring neuralBrdfMatTypeStr     {L"neural_brdf"};
+static const std::wstring kanBrdfMatTypeStr        {L"kanbrdf"};
 
 std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePath, const char* a_sncDir, SceneInfo* pSceneInfo)
 {
@@ -171,6 +172,10 @@ std::vector<uint32_t> Integrator::PreliminarySceneAnalysis(const char* a_scenePa
     else if(mat_type == neuralBrdfMatTypeStr)
     {
       features[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
+    }
+    else if(mat_type == kanBrdfMatTypeStr)
+    {
+      features[KSPEC_MAT_TYPE_KANBRDF] = 1;
     }
 
     if(materialNode.child(L"displacement") != nullptr)
@@ -590,6 +595,12 @@ void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::Hyd
                                    m_neural_tex_ids, m_neural_tex_offsets,
                                    m_neural_weights, m_neural_weights_offsets);
       m_actualFeatures[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
+    }
+    else if(mat_type == kanBrdfMatTypeStr)
+    {
+      mat = LoadKanBrdfMaterial(scene_dir, materialNode,
+                                m_neural_weights, m_neural_weights_offsets);
+      m_actualFeatures[KSPEC_MAT_TYPE_KANBRDF] = 1;
     }
 
     if((mat.cflags & FLAG_FOUR_TEXTURES) != 0 )

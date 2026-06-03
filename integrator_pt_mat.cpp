@@ -10,6 +10,7 @@
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
 #include "include/cmat_neural_brdf.h"
+#include "include/cmat_kanbrdf.h"
 
 #include <chrono>
 #include <string>
@@ -295,6 +296,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
       neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, wavelengths, rands, v, n, &res, m_spectral_mode);
     }
     break;
+    case MAT_TYPE_KANBRDF:
+    if(KSPEC_MAT_TYPE_KANBRDF != 0)
+    {
+      uint weights_offset = m_neural_weights_offsets[currMatId];
+
+      kanBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, &res, m_spectral_mode);
+    } 
     default:
     break;
   }
@@ -533,9 +541,15 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         uint weights_offset = m_neural_weights_offsets[currMat.id];
 
         neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, wavelengths, v, l, n, &res, m_spectral_mode);
-
       }
       break;
+      case MAT_TYPE_KANBRDF:
+      if(KSPEC_MAT_TYPE_KANBRDF != 0)
+      {
+        uint weights_offset = m_neural_weights_offsets[currMat.id];
+
+        kanBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, v, l, n, &res, m_spectral_mode);
+      }
       default:
         break;
     }

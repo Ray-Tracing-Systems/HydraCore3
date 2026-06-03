@@ -12,7 +12,7 @@
 
 
 static constexpr float KANBRDF_GRID_MIN = -1.0;
-static constexpr float KANBRDF_GRID_MIN = 1.0;
+static constexpr float KANBRDF_GRID_MAX = 1.0;
 static constexpr uint KANBRDF_GRID_SIZE = 6;
 
 static constexpr size_t KANBRDF_MAX_SIZE = 6;
@@ -33,13 +33,13 @@ static inline void evalKanLayer(const float *weights, const float *x, float *y, 
 {
   float grid_step = (KANBRDF_GRID_MAX - KANBRDF_GRID_MIN) / (KANBRDF_GRID_SIZE - 1);
 
-  float spline_basis[KANBRDF_GRID_SIZE * in_dim];
-  for(int i = 0; i < in_dim; ++i) {
-    for(int j = 0; j < KANBRDF_GRID_SIZE; ++j) {
+  float spline_basis[KANBRDF_GRID_SIZE * KANBRDF_MAX_SIZE];
+  for(uint i = 0; i < in_dim; ++i) {
+    for(uint j = 0; j < KANBRDF_GRID_SIZE; ++j) {
       float grid_val = KANBRDF_GRID_MIN + grid_step * j;
       float t = (x[i] - grid_val) / grid_step;
 
-      spline_basis[i * KANBRDF_GRID_SIZE + j] = exp(-t * t);
+      spline_basis[i * KANBRDF_GRID_SIZE + j] = expf(-t * t);
     }
   }
   nn::Matmul(spline_basis, weights, y, 1, KANBRDF_GRID_SIZE * in_dim, out_dim);
@@ -53,7 +53,7 @@ static inline void evalKanLayer(const float *weights, const float *x, float *y, 
 }
 
 static inline float kanbrdf_output_transform(float x) {
-  float val = exp(x) - 1;
+  float val = expf(x) - 1;
   return val < 0 ? 0 : val;
 }
 
@@ -61,7 +61,7 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
                                     float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
 {
 
-  const float cosThetaOut = dot(l, n);
+  //const float cosThetaOut = dot(l, n);
   l = LiteMath::normalize(l);
   v = LiteMath::normalize(v);
   n = LiteMath::normalize(n);
@@ -69,26 +69,23 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
   CoordinateSystemV2(n, &s, &t);
   const float3 wo = LiteMath::normalize(float3(dot(l, s), dot(l, t), dot(l, n)));
   const float3 wi = LiteMath::normalize(float3(dot(v, s), dot(v, t), dot(v, n)));
-  const float3 wm = normalize(wo + wi);
+  //const float3 wm = normalize(wo + wi);
 
   if (wi.z * wo.z < 0.0f)
   {
     return;
   }
 
-  uint out_dim = spectral_mode == 0 ? 3 : NBRDF_SPECTRUM_SIZE;
-
   float3 half, diff;
   RusinkiewiczTransform(l, v, &half, &diff);
 
-  float x[NBRDF_SPECTRUM_SIZE];
+  float x[6];
   x[0] = half.x;
   x[1] = half.y;
   x[2] = half.z;
   x[3] = diff.x;
   x[4] = diff.y;
   x[5] = diff.z;
-  evalNeuralNetwork(weights, x, out_dim);
 
   float buf0[KANBRDF_MAX_SIZE];
   float buf1[KANBRDF_MAX_SIZE];
@@ -98,7 +95,7 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
   evalKanLayer(weights + KANBRDF_WEIGTH_OFFSETS[1], buf0, buf1, KANBRDF_LAYER_SIZES[1], KANBRDF_LAYER_SIZES[2]);
   evalKanLayer(weights + KANBRDF_WEIGTH_OFFSETS[1], buf1, buf0, KANBRDF_LAYER_SIZES[1], KANBRDF_LAYER_SIZES[2]);
 
-  pRes->val = float4(kanbrdf_output_transform(buf0[0]), kanbrdf_output_transform(buf0[1]), kanbrdf_output_transform(buf0[2]));
+  pRes->val = float4(kanbrdf_output_transform(buf0[0]), kanbrdf_output_transform(buf0[1]), kanbrdf_output_transform(buf0[2]), 1.0f);
   pRes->pdf = lambertEvalPDF(l, v, n); //TODO
 }
 
@@ -109,7 +106,7 @@ static inline void kanBrdfSampleAndEval(const Material* a_materials, const float
   const float3 lambertDir = MapSampleToCosineDistribution(rands.x, rands.y, vec, n, 1.0f);//lambertSample(float2(rands.x, rands.y), vec, n);
   const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
   BsdfEval tRes;
-  neuralBrdfEval(a_materials, weights, wavelengths, lambertDir, vec, n, &tRes, spectral_mode);
+  kanBrdfEval(a_materials, weights, lambertDir, vec, n, &tRes, spectral_mode);
 
   pRes->dir   = lambertDir;
   pRes->val   = tRes.val;
