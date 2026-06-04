@@ -593,7 +593,7 @@ public:
   std::vector<uint> m_neural_tex_ids;
   std::vector<uint2> m_neural_tex_offsets; //x: offset, y: size
   std::vector<float> m_neural_weights;
-  std::vector<uint> m_neural_weights_offsets;
+  std::vector<uint64_t> m_neural_weights_offsets;
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

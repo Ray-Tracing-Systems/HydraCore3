@@ -3,6 +3,7 @@
 #include <fstream>
 #include <cinttypes>
 #include <string>
+#include <vector>
 
 namespace nn
 {
@@ -23,18 +24,26 @@ namespace nn
   class WeightsLoader
   {
   public:
-    WeightsLoader(const std::string &path)
-      : file(path) { init(); }
+    WeightsLoader(const std::string &_path)
+      : path(_path), file(_path) { init(); }
 
-    uint32_t next_rows() const { return rows; } //returns 0 on error
-    uint32_t next_cols() const { return cols; } //returns 0 on error
-    bool load_next(float *weights, float *bias);
+    uint32_t next_size() const { return layer_size; } //returns 0 on error
+    bool load_next(float *weights);
     bool has_next() const { return layers != 0; }
   private:
+    enum class Type {
+      NBRDF,
+      KANBRDF
+    };
+
+    std::string path;
     std::ifstream file;
-    uint32_t rows = 0;
-    uint32_t cols = 0;
+    uint32_t layer_size = 0;
     uint32_t layers = 0;
+
+    size_t next_pos = 0;
+    std::vector<uint32_t> shapes;
+    Type type;
 
     void init();
     void next();

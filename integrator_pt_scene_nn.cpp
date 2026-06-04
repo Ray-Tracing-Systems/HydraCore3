@@ -86,7 +86,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
-                                std::vector<float> &m_neural_weights, std::vector<uint> &m_neural_weights_offsets)
+                                std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   uint32_t id = materialNode.attribute(L"id").as_uint();
@@ -115,18 +115,15 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
   nn::WeightsLoader wloader{weights_path};
   while(wloader.has_next())
   {
-    const size_t rows = wloader.next_rows();
-    const size_t cols = wloader.next_cols();
-//std::cout<< "Rows, cols: " << rows << " " << cols << std::endl;
-    const size_t mat_size = rows * cols;
+    const size_t next_size = wloader.next_size();
     const size_t old_size = m_neural_weights.size();
-    m_neural_weights.resize(old_size + mat_size + wloader.next_rows());
+    m_neural_weights.resize(old_size + next_size);
     //std::vector<float> weights;
     //weights.resize(mat_size);
     //wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
     //nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
 
-    wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
+    wloader.load_next(m_neural_weights.data() + old_size);
   }
   m_neural_weights_offsets[id] = weights_offset;
   return mat;
@@ -134,7 +131,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
 
 Material LoadKanBrdfMaterial(const std::string &scn_dir,
                              const pugi::xml_node& materialNode,
-                             std::vector<float> &m_neural_weights, std::vector<uint> &m_neural_weights_offsets)
+                             std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   uint32_t id = materialNode.attribute(L"id").as_uint();
@@ -145,7 +142,6 @@ Material LoadKanBrdfMaterial(const std::string &scn_dir,
 
 
   const auto nnNode = materialNode.child(L"nn");
-  const auto texNode = nnNode.child(L"texture");
 
   //Loading latent texture
   /*std::vector<std::pair<HydraSampler, uint32_t>> loaded_tex = LoadLatentTexturesFromNode(texNode, texturesInfo, texCache, textures, scn_dir);
@@ -164,18 +160,15 @@ Material LoadKanBrdfMaterial(const std::string &scn_dir,
   nn::WeightsLoader wloader{weights_path};
   while(wloader.has_next())
   {
-    const size_t rows = wloader.next_rows();
-    const size_t cols = wloader.next_cols();
-//std::cout<< "Rows, cols: " << rows << " " << cols << std::endl;
-    const size_t mat_size = rows * cols;
+    const size_t next_size = wloader.next_size();
     const size_t old_size = m_neural_weights.size();
-    m_neural_weights.resize(old_size + mat_size + wloader.next_rows());
+    m_neural_weights.resize(old_size + next_size);
     //std::vector<float> weights;
     //weights.resize(mat_size);
     //wloader.load_next(weights.data(), m_neural_weights.data() + old_size + mat_size);
     //nn::Transpose(weights.data(), m_neural_weights.data() + old_size, rows, cols);
 
-    wloader.load_next(m_neural_weights.data() + old_size, m_neural_weights.data() + old_size + mat_size);
+    wloader.load_next(m_neural_weights.data() + old_size);
   }
   m_neural_weights_offsets[id] = weights_offset;
   return mat;
