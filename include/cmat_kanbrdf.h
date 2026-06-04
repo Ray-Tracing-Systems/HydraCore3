@@ -20,9 +20,9 @@ static constexpr size_t KANBRDF_MAX_SIZE = 6;
 static constexpr uint KANBRDF_LAYER_COUNT = 3;
 static constexpr size_t KANBRDF_LAYER_SIZES[KANBRDF_LAYER_COUNT + 1] = {6, 5, 5, 3};
 static constexpr size_t KANBRDF_WEIGTH_OFFSETS[KANBRDF_LAYER_COUNT] = {
+    0,
     ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[0] + 1) * KANBRDF_LAYER_SIZES[1],
-    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[1] + 1) * KANBRDF_LAYER_SIZES[2],
-    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[2] + 1) * KANBRDF_LAYER_SIZES[3]
+    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[1] + 1) * KANBRDF_LAYER_SIZES[2]
 };
 
 
@@ -31,24 +31,25 @@ static constexpr size_t KANBRDF_WEIGTH_OFFSETS[KANBRDF_LAYER_COUNT] = {
  */
 static inline void evalKanLayer(const float *weights, const float *x, float *y, uint in_dim, uint out_dim)
 {
-  float grid_step = (KANBRDF_GRID_MAX - KANBRDF_GRID_MIN) / (KANBRDF_GRID_SIZE - 1);
+  const float grid_step = (KANBRDF_GRID_MAX - KANBRDF_GRID_MIN) / (KANBRDF_GRID_SIZE - 1);
+  const float denom_inv = 1.0 / grid_step;
 
   float spline_basis[KANBRDF_GRID_SIZE * KANBRDF_MAX_SIZE];
   for(uint i = 0; i < in_dim; ++i) {
     for(uint j = 0; j < KANBRDF_GRID_SIZE; ++j) {
       float grid_val = KANBRDF_GRID_MIN + grid_step * j;
-      float t = (x[i] - grid_val) / grid_step;
+      float t = (x[i] - grid_val) * denom_inv;
 
       spline_basis[i * KANBRDF_GRID_SIZE + j] = expf(-t * t);
     }
   }
-  nn::Matmul(spline_basis, weights, y, 1, KANBRDF_GRID_SIZE * in_dim, out_dim);
+  nn::Linear(weights, spline_basis, y, 1, KANBRDF_GRID_SIZE * in_dim, out_dim, false);
 
 
   float activated[KANBRDF_MAX_SIZE];
   float base[KANBRDF_MAX_SIZE];
   nn::SiLU(x, activated, in_dim);
-  nn::Linear(weights + KANBRDF_GRID_SIZE * in_dim, activated, base, 1, in_dim, out_dim);
+  nn::Linear(weights + KANBRDF_GRID_SIZE * in_dim * out_dim, activated, base, 1, in_dim, out_dim, true);
   nn::Add(y, base, y, out_dim);
 }
 
@@ -90,10 +91,14 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
   float buf0[KANBRDF_MAX_SIZE];
   float buf1[KANBRDF_MAX_SIZE];
 
-  
-  evalKanLayer(weights + KANBRDF_WEIGTH_OFFSETS[0], x, buf0, KANBRDF_LAYER_SIZES[0], KANBRDF_LAYER_SIZES[1]);
-  evalKanLayer(weights + KANBRDF_WEIGTH_OFFSETS[1], buf0, buf1, KANBRDF_LAYER_SIZES[1], KANBRDF_LAYER_SIZES[2]);
-  evalKanLayer(weights + KANBRDF_WEIGTH_OFFSETS[1], buf1, buf0, KANBRDF_LAYER_SIZES[1], KANBRDF_LAYER_SIZES[2]);
+  size_t offset = KANBRDF_WEIGTH_OFFSETS[0];
+  evalKanLayer(weights + offset, x, buf0, KANBRDF_LAYER_SIZES[0], KANBRDF_LAYER_SIZES[1]);
+
+  offset += KANBRDF_WEIGTH_OFFSETS[1];
+  evalKanLayer(weights + offset, buf0, buf1, KANBRDF_LAYER_SIZES[1], KANBRDF_LAYER_SIZES[2]);
+
+  offset += KANBRDF_WEIGTH_OFFSETS[2];
+  evalKanLayer(weights + offset, buf1, buf0, KANBRDF_LAYER_SIZES[2], KANBRDF_LAYER_SIZES[3]);
 
   pRes->val = float4(kanbrdf_output_transform(buf0[0]), kanbrdf_output_transform(buf0[1]), kanbrdf_output_transform(buf0[2]), 1.0f);
   pRes->pdf = lambertEvalPDF(l, v, n); //TODO

@@ -42,17 +42,19 @@ namespace nn
       throw std::runtime_error("Error occured while reading file: " + path);
     } 
     else {
+      uint nshapes = type == Type::KANBRDF ? 4 : 2;
+
       const size_t pos = file.tellg();
       file.seekg(0, std::ios::end);
       const size_t end = file.tellg();
-      if(end - pos < layers * 4 * sizeof(uint32_t)) {
+      if(end - pos < layers * nshapes * sizeof(uint32_t)) {
         throw std::runtime_error("Weigths file has incorrect size: " + path);
       }
 
       file.seekg(pos, std::ios::beg);
 
-      shapes.resize(layers * 4);
-      file.read(reinterpret_cast<char *>(shapes.data()), layers * 4 * sizeof(uint32_t));
+      shapes.resize(layers * nshapes);
+      file.read(reinterpret_cast<char *>(shapes.data()), layers * nshapes * sizeof(uint32_t));
       if(!file.good()) {
         throw std::runtime_error("Error occured while reading file: " + path);
       }

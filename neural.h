@@ -86,7 +86,7 @@ namespace nn
    * assert(out != x && out != weights)
    */
   void Linear(const float *weights, const float *x, float *out, 
-                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim);
+                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim, bool has_bias);
 
 
   /**

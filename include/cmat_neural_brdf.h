@@ -46,27 +46,27 @@ static inline void evalNeuralNetwork(const float *weights, float *x, uint out_di
 
   //Layer0
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[0], x, buf1,
-             NBRDF_BATCH_SIZE, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
+             NBRDF_BATCH_SIZE, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM, true);
   nn::ReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer1
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[1], buf1, buf0,
-             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
+             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
   nn::ReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer2
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[2], buf0, buf1,
-             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
+             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
   nn::ReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer3
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[3], buf1, buf0,
-             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
+             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
   nn::ReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer4
   nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[4], buf0, x, 
-             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, out_dim);
+             NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, out_dim, true);
   nn::ReLU(x, x, NBRDF_BATCH_SIZE * out_dim);
 
 }

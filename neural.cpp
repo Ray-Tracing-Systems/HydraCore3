@@ -18,19 +18,24 @@ namespace nn
   }
 
   void Linear(const float *weights, const float *x, float *out, 
-                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim)
+                      uint32_t batch_size, uint32_t in_dim, uint32_t out_dim, bool has_bias)
   {
 #ifndef KERNEL_SLICER
     assert(weights != out && x != out);
 #endif
-    std::fill(out, out + batch_size * out_dim, 0.0f);
+    //std::fill(out, out + batch_size * out_dim, 0.0f);
+
     for(uint32_t i = 0; i < batch_size; ++i) {
       for(uint32_t j = 0; j < out_dim; ++j) {
-        float bias = weights[in_dim * out_dim + j];
+        out[i * out_dim + j] = 0;
         for(uint32_t p = 0; p < in_dim; ++p) {
-          out[i * out_dim + j] += weights[p * out_dim + j] * x[i * in_dim + p]; // ???
+          out[i * out_dim + j] += weights[j * in_dim + p] * x[i * in_dim + p]; // ???
         }
-        out[i * out_dim + j] += bias;
+        if(has_bias) {
+          float bias = weights[in_dim * out_dim + j];
+          out[i * out_dim + j] += bias;
+        }
+
       }
     }
   }
