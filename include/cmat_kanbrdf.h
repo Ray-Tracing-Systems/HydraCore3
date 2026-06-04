@@ -78,7 +78,7 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
   }
 
   float3 half, diff;
-  RusinkiewiczTransform(l, v, &half, &diff);
+  RusinkiewiczTransform(wi, wo, &half, &diff);
 
   float x[6];
   x[0] = half.x;
@@ -106,16 +106,36 @@ static inline void kanBrdfEval(const Material* a_materials, const float *weights
 
 
 static inline void kanBrdfSampleAndEval(const Material* a_materials, const float *weights, float4 rands, 
-                                            float3 vec, float3 n, BsdfSample* pRes, int spectral_mode)
+                                            float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
 {
-  const float3 lambertDir = MapSampleToCosineDistribution(rands.x, rands.y, vec, n, 1.0f);//lambertSample(float2(rands.x, rands.y), vec, n);
-  const float  lambertPdf = lambertEvalPDF(lambertDir, vec, n);
+  const float3 lambertDir = MapSampleToCosineDistribution(rands.x, rands.y, v, n, 1.0f);//lambertSample(float2(rands.x, rands.y), vec, n);
+  //const float  lambertPdf = lambertEvalPDF(lambertDir, v, n);
   BsdfEval tRes;
-  kanBrdfEval(a_materials, weights, lambertDir, vec, n, &tRes, spectral_mode);
+  kanBrdfEval(a_materials, weights, lambertDir, v, n, &tRes, spectral_mode);
+
+  const float2 alpha = float2(0.01f, 0.01f);
+
+  float3 nx, ny, nz = n;
+  CoordinateSystemV2(nz, &nx, &ny);
+  const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+  if(wo.z == 0)
+    return;
+
+  if(wo.z == 0)
+    return;
+
+  float3 wm = trSample(wo, float2(rands.x, rands.y), alpha);
+  float3 wi = reflect((-1.0f) * wo, wm);
+
+  if(wo.z * wi.z < 0) // not in the same hemisphere
+  {
+    return;
+  }
+  pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 
   pRes->dir   = lambertDir;
   pRes->val   = tRes.val;
-  pRes->pdf   = lambertPdf; //TODO
+  //pRes->pdf   = lambertPdf; //TODO
   pRes->flags = RAY_FLAG_HAS_NON_SPEC;
 }
 
