@@ -461,6 +461,15 @@ public:
 
   uint RemapMaterialId(uint a_mId, int a_instId); 
 
+  //////////////////////////////MATERIAL IMPLEMENTATIONS//////////////////////////////////////////
+  //
+
+  void EvalKANLayer(uint weights_offset, const float x[KANBRDF_MAX_SIZE], float y[KANBRDF_MAX_SIZE], uint in_dim, uint out_dim); 
+  float4 KanBrdfEvalInternal(uint weights_offset, float3 wo, float3 wi, int spectral_mode);
+  void KanBrdfEval(uint32_t a_matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
+
+
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
   void InitSceneMaterials(int a_numSpheres, int a_seed = 0);
@@ -593,7 +602,7 @@ public:
   std::vector<uint> m_neural_tex_ids;
   std::vector<uint2> m_neural_tex_offsets; //x: offset, y: size
   std::vector<float> m_neural_weights;
-  std::vector<uint64_t> m_neural_weights_offsets;
+  std::vector<uint32_t> m_neural_weights_offsets;
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

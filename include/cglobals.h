@@ -24,6 +24,23 @@ static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;
 
 
+static constexpr float KANBRDF_GRID_MIN = -1.0;
+static constexpr float KANBRDF_GRID_MAX = 1.0;
+static constexpr uint KANBRDF_GRID_SIZE = 6;
+
+static constexpr uint KANBRDF_MAX_SIZE = 6;
+
+static constexpr uint KANBRDF_LAYER_COUNT = 3;
+static constexpr uint KANBRDF_LAYER_SIZES[KANBRDF_LAYER_COUNT + 1] = {6, 5, 5, 3};
+static constexpr uint KANBRDF_WEIGTH_OFFSETS[KANBRDF_LAYER_COUNT + 1] = {
+    0,
+    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[0] + 1) * KANBRDF_LAYER_SIZES[1],
+    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[1] + 1) * KANBRDF_LAYER_SIZES[2],
+    ((KANBRDF_GRID_SIZE + 1) * KANBRDF_LAYER_SIZES[2] + 1) * KANBRDF_LAYER_SIZES[3]
+};
+
+
+
 using float4 = float4;
 static constexpr uint32_t SPECTRUM_SAMPLE_SZ = 4; //sizeof(float4) / sizeof(float); // srry, sizeof() evaluation not yet supported ... 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,10 +168,10 @@ static inline void CoordinateSystemV2(float3 n, float3* s, float3* t)
     return float3(r, theta, phi);
   }
 
-  static inline void RusinkiewiczTransform(float3 wi, float3 wo, float3* half, float3* diff) {
-    (*half) = normalize(wi + wo);
+  static inline void RusinkiewiczTransform(float3 wi, float3 wo, float3* hf, float3* diff) {
+    (*hf) = normalize(wi + wo);
 
-    float3 sph = xyz2sph(*half);
+    float3 sph = xyz2sph(*hf);
     float theta_h = sph.y;
     float phi_h = sph.z;
 
@@ -162,7 +179,7 @@ static inline void CoordinateSystemV2(float3 n, float3* s, float3* t)
     float3 normal(0.f, 0.f, 1.f);
 
     // Fix for isotropic NBRDF
-    (*half) = rotate((*half), normal, -phi_h);
+    (*hf) = rotate((*hf), normal, -phi_h);
     (*diff) = rotate(wi, normal, -phi_h);
     phi_h = 0.f;
 

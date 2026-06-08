@@ -131,8 +131,8 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
-                                std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets);
+                                std::vector<float> &m_neural_weights, std::vector<uint32_t> &m_neural_weights_offsets);
 
 Material LoadKanBrdfMaterial(const std::string &scn_dir,
                              const pugi::xml_node& materialNode,
-                             std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets);
+                             std::vector<float> &m_neural_weights, std::vector<uint32_t> &m_neural_weights_offsets);

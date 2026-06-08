@@ -9,8 +9,7 @@
 #include "include/cmat_diffuse.h"
 #include "include/cmat_plastic.h"
 #include "include/cmat_dielectric.h"
-#include "include/cmat_neural_brdf.h"
-#include "include/cmat_kanbrdf.h"
+//#include "include/cmat_neural_brdf.h"
 
 #include <chrono>
 #include <string>
@@ -293,7 +292,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
     {
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
-      neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, wavelengths, rands, v, n, &res, m_spectral_mode);
+      //neuralBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, wavelengths, rands, v, n, &res, m_spectral_mode);
     }
     break;
     case MAT_TYPE_KANBRDF:
@@ -301,7 +300,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
     {
       uint weights_offset = m_neural_weights_offsets[currMatId];
 
-      kanBrdfSampleAndEval(m_materials.data() + currMatId, m_neural_weights.data() + weights_offset, rands, v, n, &res, m_spectral_mode);
+      KanBrdfSampleAndEval(currMatId, weights_offset, rands, v, n, &res, m_spectral_mode);
     } 
     default:
     break;
@@ -540,7 +539,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         uint weights_offset = m_neural_weights_offsets[currMat.id];
 
-        neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, wavelengths, v, l, n, &res, m_spectral_mode);
+        //neuralBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, wavelengths, v, l, n, &res, m_spectral_mode);
       }
       break;
       case MAT_TYPE_KANBRDF:
@@ -548,7 +547,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       {
         uint weights_offset = m_neural_weights_offsets[currMat.id];
 
-        kanBrdfEval(m_materials.data() + currMat.id, m_neural_weights.data() + weights_offset, v, l, n, &res, m_spectral_mode);
+        KanBrdfEval(currMat.id, weights_offset, v, l, n, &res, m_spectral_mode);
       }
       default:
         break;

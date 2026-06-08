@@ -193,6 +193,7 @@ set(CORE_SRC
         integrator_pt.cpp
         integrator_pt_lgt.cpp
         integrator_pt_mat.cpp
+        integrator_pt_mat_impl.cpp
         integrator_pt_nn.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
@@ -210,7 +211,6 @@ set(CORE_SRC
         imageutils.cpp
         imageutils_gbuffer.cpp
         utils.cpp
-        neural.cpp
         neural_loader.cpp
         ies_parser/ies_render.cpp)
 
@@ -243,7 +243,7 @@ if(USE_HEAVYRT)
 
 endif()
 
-add_executable(neural_tests tests/neural_tests.cpp neural.cpp)
+add_executable(neural_tests tests/neural_tests.cpp)
 target_link_libraries(neural_tests PRIVATE project_options)
 
 if(HYDRA_CORE3_LIB)

@@ -181,6 +181,7 @@ static constexpr uint FILM_LAYERS_COUNT      = 14;
 static constexpr uint FILM_TRANSPARENT       = 15;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TRANSPARENT;
 
+static constexpr uint KANBRDF_ALPHA          = 0;
 
 // The size is taken according to the largest indexes
 static constexpr uint COLOR_DATA_SIZE  = 4;  // std::max(std::max(GLTF_COLOR_LAST_IND, GLASS_COLOR_LAST_IND), CONDUCTOR_COLOR_LAST_IND) + 1;

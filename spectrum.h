@@ -23,7 +23,7 @@ struct Spectrum
 };
 #endif
 
-inline uint BinarySearch(const float* array, size_t array_sz, float val) 
+inline uint BinarySearch(const float *array, size_t array_sz, float val) 
 {
   int last  = int(array_sz) - 2;
   int first = 1;

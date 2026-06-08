@@ -1,6 +1,5 @@
 #include "integrator_pt_scene.h"
 #include "neural_loader.h"
-#include <algorithm>
 #include <cassert>
 #include <utility>
 #include <iostream>
@@ -86,7 +85,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
                                 std::unordered_map<HydraSampler, uint32_t, HydraSamplerHash> &texCache,
                                 std::vector<std::shared_ptr<ICombinedImageSampler>> &textures,
                                 std::vector<uint> &m_neural_tex_ids, std::vector<uint2> &m_neural_tex_offsets,
-                                std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets)
+                                std::vector<float> &m_neural_weights, std::vector<uint32_t> &m_neural_weights_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   uint32_t id = materialNode.attribute(L"id").as_uint();
@@ -131,7 +130,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
 
 Material LoadKanBrdfMaterial(const std::string &scn_dir,
                              const pugi::xml_node& materialNode,
-                             std::vector<float> &m_neural_weights, std::vector<uint64_t> &m_neural_weights_offsets)
+                             std::vector<float> &m_neural_weights, std::vector<uint32_t> &m_neural_weights_offsets)
 {
   std::wstring name = materialNode.attribute(L"name").as_string();
   uint32_t id = materialNode.attribute(L"id").as_uint();
@@ -139,7 +138,8 @@ Material LoadKanBrdfMaterial(const std::string &scn_dir,
   mat.mtype = MAT_TYPE_KANBRDF;
   mat.lightId = uint(-1);
   //TODO
-
+  const float alpha = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+  mat.data[KANBRDF_ALPHA] = alpha;
 
   const auto nnNode = materialNode.child(L"nn");
 

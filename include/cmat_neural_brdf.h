@@ -10,16 +10,16 @@
 #include <iostream>
 #include <string>
 
-static constexpr uint NBRDF_INPUT_DIM = 6;
-static constexpr uint NBRDF_HIDDEN_DIM = 64;
-static constexpr uint NBRDF_SPECTRUM_SIZE = 32;
+static const uint NBRDF_INPUT_DIM = 6;
+static const uint NBRDF_HIDDEN_DIM = 64;
+static const uint NBRDF_SPECTRUM_SIZE = 32;
 
-static constexpr uint NBRDF_BATCH_SIZE = 1;
-static constexpr size_t NBRDF_WEIGTH_OFFSETS[] = {0, 448, 4608, 8768, 12928};
+static const uint NBRDF_BATCH_SIZE = 1;
+static const size_t NBRDF_WEIGTH_OFFSETS[] = {0, 448, 4608, 8768, 12928};
 
-static constexpr float NBRDF_LOGREL_MU = 255.0f;
+static const float NBRDF_LOGREL_MU = 255.0f;
 
-static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[NBRDF_SPECTRUM_SIZE] = {
+static const float NBRDF_SPECTRAL_WAVELENGTHS[NBRDF_SPECTRUM_SIZE] = {
                         380.0000f, 394.5161f, 409.0323f, 423.5484f,
                         438.0645f, 452.5807f, 467.0968f, 481.6129f,
                         496.1290f, 510.6452f, 525.1613f, 539.6774f,
@@ -32,7 +32,7 @@ static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[NBRDF_SPECTRUM_SIZE] = {
 
 static inline float invLogMapping(float x, float mu)
 {
-  const float logmu = logf(mu + 1.0f);
+  const float logmu = log(mu + 1.0f);
   return (expf(x * logmu) - 1.0f) / mu;
 }
 
@@ -45,29 +45,29 @@ static inline void evalNeuralNetwork(const float *weights, float *x, uint out_di
   float buf1[NBRDF_HIDDEN_DIM];
 
   //Layer0
-  nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[0], x, buf1,
+  NeuralLinear(weights + NBRDF_WEIGTH_OFFSETS[0], x, buf1,
              NBRDF_BATCH_SIZE, NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM, true);
-  nn::ReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
+  NeuralReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer1
-  nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[1], buf1, buf0,
+  NeuralLinear(weights + NBRDF_WEIGTH_OFFSETS[1], buf1, buf0,
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
-  nn::ReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
+  NeuralReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer2
-  nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[2], buf0, buf1,
+  NeuralLinear(weights + NBRDF_WEIGTH_OFFSETS[2], buf0, buf1,
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
-  nn::ReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
+  NeuralReLU(buf1, buf1, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer3
-  nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[3], buf1, buf0,
+  NeuralLinear(weights + NBRDF_WEIGTH_OFFSETS[3], buf1, buf0,
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM, true);
-  nn::ReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
+  NeuralReLU(buf0, buf0, NBRDF_BATCH_SIZE * NBRDF_HIDDEN_DIM);
 
   //Layer4
-  nn::Linear(weights + NBRDF_WEIGTH_OFFSETS[4], buf0, x, 
+  NeuralLinear(weights + NBRDF_WEIGTH_OFFSETS[4], buf0, x, 
              NBRDF_BATCH_SIZE, NBRDF_HIDDEN_DIM, out_dim, true);
-  nn::ReLU(x, x, NBRDF_BATCH_SIZE * out_dim);
+  NeuralReLU(x, x, NBRDF_BATCH_SIZE * out_dim);
 
 }
 
@@ -104,7 +104,7 @@ static inline void neuralBrdfEval(const Material* a_materials, const float *weig
   x[5] = diff.z;
   evalNeuralNetwork(weights, x, out_dim);
 
-  constexpr float logmu = logf(1 + NBRDF_LOGREL_MU);
+  const float logmu = log(1 + NBRDF_LOGREL_MU);
 
   //for(int i = 0; i < out_dim; ++i) {
   //  x[i] = (expf(x[i] * logmu) - 1.0f) / NBRDF_LOGREL_MU;
