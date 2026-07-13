@@ -604,6 +604,23 @@ public:
   std::vector<float> m_neural_weights;
   std::vector<uint32_t> m_neural_weights_offsets;
 
+
+  /**
+   *  dim: (theta1, theta2, phi1, phi2)
+   *       phi2 == 0 -- for isotropic materials 
+   *       phi2 > 0  -- for anisotropic matrials
+  */
+  struct MeasuredBrdfEntry
+  {
+    uint4 dim; 
+    uint64_t offset;
+  };
+
+
+  std::vector<float> m_measured_brdfs;
+  std::vector<MeasuredBrdfEntry> m_measured_brdf_data;
+
+
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleMatParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);
   float4 SampleFilmsSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId, uint32_t layer);

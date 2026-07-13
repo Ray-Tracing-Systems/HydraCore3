@@ -43,8 +43,14 @@ enum MATERIAL_TYPES { MAT_TYPE_GLTF          = 1,
                       MAT_TYPE_BLEND         = 6,
                       MAT_TYPE_DIELECTRIC    = 7,
                       MAT_TYPE_THIN_FILM     = 8,
-                      MAT_TYPE_NEURAL_BRDF   = 0x10000001, //1 for neural material types
-                      MAT_TYPE_KANBRDF   = 0x10000002,
+                      
+                      MAT_TYPE_MEASURED      = 9,
+
+                      //NEURAL MATERIALS
+                      MAT_TYPE_NEURAL_BRDF   = 0x10000000,
+                      MAT_TYPE_KANBRDF       = 0x10000001,
+
+
                       MAT_TYPE_LIGHT_SOURCE  = 0xEFFFFFFF };
 
 enum MATERIAL_EVENT {

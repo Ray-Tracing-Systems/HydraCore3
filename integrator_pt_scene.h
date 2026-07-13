@@ -136,3 +136,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir,
 Material LoadKanBrdfMaterial(const std::string &scn_dir,
                              const pugi::xml_node& materialNode,
                              std::vector<float> &m_neural_weights, std::vector<uint32_t> &m_neural_weights_offsets);
+
+Material LoadMeasuredMaterial(const std::string &scn_dir,
+                              const pugi::xml_node& materialNode,
+                              std::vector<float> &a_measured_brdfs, std::vector<Integrator::MeasuredBrdfEntry> &a_measured_brdf_data);
