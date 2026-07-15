@@ -469,6 +469,9 @@ public:
   void KanBrdfEval(uint32_t a_matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
   void KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
+  float4 MeasuredEvalInternal(uint brdf_offset, float3 wo, float3 wi, int spectral_mode);
+  void MeasuredEval(uint32_t a_matId, uint brdf_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void MeasuredSampleAndEval(uint32_t a_matId, uint brdf_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -607,8 +610,8 @@ public:
 
   /**
    *  dim: (theta1, theta2, phi1, phi2)
-   *       phi2 == 0 -- for isotropic materials 
-   *       phi2 > 0  -- for anisotropic matrials
+   *       phi2 == 1 -- for isotropic materials 
+   *       phi2 > 1  -- for anisotropic matrials
   */
   struct MeasuredBrdfEntry
   {
@@ -638,22 +641,23 @@ public:
   static constexpr uint32_t KSPEC_MAT_TYPE_THIN_FILM  = 6;
   static constexpr uint32_t KSPEC_MAT_TYPE_NEURAL_BRDF= 7;
   static constexpr uint32_t KSPEC_MAT_TYPE_KANBRDF    = 8;
+  static constexpr uint32_t KSPEC_MAT_TYPE_MEASURED   = 9;
 
-  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 9;
-  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 10;
-  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 11;
-  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 12;
-  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 13;
+  static constexpr uint32_t KSPEC_SPECTRAL_RENDERING  = 10;
+  static constexpr uint32_t KSPEC_MAT_TYPE_BLEND      = 11;
+  static constexpr uint32_t KSPEC_BUMP_MAPPING        = 12;
+  static constexpr uint32_t KSPEC_MAT_TYPE_DIELECTRIC = 13;
+  static constexpr uint32_t KSPEC_MAT_FOUR_TEXTURES   = 14;
   
-  static constexpr uint32_t KSPEC_LIGHT_IES           = 14;
-  static constexpr uint32_t KSPEC_LIGHT_ENV           = 15;
+  static constexpr uint32_t KSPEC_LIGHT_IES           = 15;
+  static constexpr uint32_t KSPEC_LIGHT_ENV           = 16;
 
-  static constexpr uint32_t KSPEC_MOTION_BLUR         = 16;  
-  static constexpr uint32_t KSPEC_OPTIC_SIM           = 17;
-  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 18;
-  static constexpr uint32_t KSPEC_SPD_TEX             = 19;
+  static constexpr uint32_t KSPEC_MOTION_BLUR         = 17;  
+  static constexpr uint32_t KSPEC_OPTIC_SIM           = 18;
+  static constexpr uint32_t KSPEC_LIGHT_PROJECTIVE    = 19;
+  static constexpr uint32_t KSPEC_SPD_TEX             = 20;
 
-  static constexpr uint32_t TOTAL_FEATURES_NUM        = 20; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
+  static constexpr uint32_t TOTAL_FEATURES_NUM        = 21; // (!!!) DON'T rename it to KSPEC_TOTAL_FEATURES_NUM.
 
   //virtual std::vector<uint32_t> ListRequiredFeatures()  { return {1,1,1,1,1,1,1,1,4,1}; } 
   virtual std::vector<uint32_t> ListRequiredFeatures()  { return m_enabledFeatures; } 

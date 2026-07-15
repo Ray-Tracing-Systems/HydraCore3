@@ -88,6 +88,8 @@ static inline float kanbrdf_output_transform(float x) {
 }
 
 
+//------------------------KANBRDF------------------------
+
 void Integrator::EvalKANLayer(uint weights_offset, const float x[KANBRDF_MAX_SIZE], float y[KANBRDF_MAX_SIZE], uint in_dim, uint out_dim)
 {
   const float grid_step = (KANBRDF_GRID_MAX - KANBRDF_GRID_MIN) / (KANBRDF_GRID_SIZE - 1);
@@ -189,6 +191,62 @@ void Integrator::KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, flo
 
 
   pRes->val   = KanBrdfEvalInternal(weights_offset, wo, wi, spectral_mode);
+  pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+  pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
+
+  pRes->flags = RAY_FLAG_HAS_NON_SPEC;
+}
+
+//------------------------MEASURED------------------------
+
+float4 Integrator::MeasuredEvalInternal(uint brdf_offset, float3 wo, float3 wi, int spectral_mode)
+{
+
+}
+
+void Integrator::MeasuredEval(uint32_t a_matId, uint brdf_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
+{
+  const float alpha0 = m_materials[a_matId].data[MEASURED_ALPHA];
+  const float2 alpha = float2(alpha0, alpha0);
+  float3 nx, ny, nz = n;
+  CoordinateSystemV2(nz, &nx, &ny);
+
+  // v = (-1.0f) * v;
+  const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+  const float3 wi = float3(dot(l, nx), dot(l, ny), dot(l, nz));
+
+  if(wo.z * wi.z < 0.0f)
+    return;
+
+  float3 wm = wo + wi;
+  if (dot(wm, wm) == 0)
+      return;
+
+  wm = normalize(wm);
+  pRes->val = MeasuredEvalInternal(brdf_offset, wo, wi, spectral_mode);
+  wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
+  pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
+}
+
+
+void Integrator::MeasuredSampleAndEval(uint32_t a_matId, uint brdf_offset, float4 rands, 
+                                            float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
+{
+  const float alpha0 = m_materials[a_matId].data[MEASURED_ALPHA];
+  const float2 alpha = float2(alpha0, alpha0);
+
+  float3 nx, ny, nz = n;
+  CoordinateSystemV2(nz, &nx, &ny);
+  const float3 wo = float3(dot(v, nx), dot(v, ny), dot(v, nz));
+  if(wo.z == 0) return;
+
+  float3 wm = trSample(wo, float2(rands.x, rands.y), alpha);
+  float3 wi = reflect((-1.0f) * wo, wm);
+
+  if(wo.z * wi.z < 0) return;// not in the same hemisphere
+
+
+  pRes->val   = MeasuredEvalInternal(brdf_offset, wo, wi, spectral_mode);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
 
