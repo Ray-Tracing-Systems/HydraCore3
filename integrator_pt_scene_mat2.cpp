@@ -1,3 +1,4 @@
+#include "include/cmaterial.h"
 #include "integrator_pt_scene.h"
 #include <iostream>
 #include <fstream>
@@ -70,6 +71,7 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
     data32[i * 3 + 2] = static_cast<float>(data64[i + 2 * MERL_SIZE] * BLUE_SCALE / SCALE_DIV);
   }
 
+  mat.datai[MEASURED_DATAIDX] = static_cast<uint>(a_measured_brdf_data.size());
   a_measured_brdf_data.push_back(std::move(entry));
 
 }
@@ -97,11 +99,7 @@ Material LoadMeasuredMaterial(const std::string &scn_dir,
   }
   else {
     std::cout << "[LoadMeasuredMaterial] Unknown measured material type: " + hydra_xml::ws2s(type) << std::endl;
-
-    Integrator::MeasuredBrdfEntry entry;
-    entry.dim = {0, 0, 0, 0};
-    entry.offset = 0;
-    a_measured_brdf_data.push_back(std::move(entry));
+    mat.datai[MEASURED_DATAIDX] = uint(-1);
   }
 
 
