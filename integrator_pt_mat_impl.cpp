@@ -204,19 +204,22 @@ void Integrator::KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, flo
 static inline float4 RvectorsToRangles(float3 half, float3 diff)
 {
   float4 res;
-  res.x = atan2f(sqrt(half.x * half.x + half.y * half.y), half.z); //theta_h
-  res.y = atan2f(sqrt(diff.x * diff.x + diff.y * diff.y), diff.z); //theta_d
+  res.x = atan2(sqrt(half.x * half.x + half.y * half.y), half.z); //theta_h
+  res.y = atan2(sqrt(diff.x * diff.x + diff.y * diff.y), diff.z); //theta_d
 
-  res.z = atan2f(half.y, half.x); //phi_h
-  res.w = atan2f(diff.y, diff.x); //phi_d
+  res.z = atan2(half.y, half.x); //phi_h
+  res.w = atan2(diff.y, diff.x); //phi_d
 
   return res;
 }
 
-static const float4 MAX_ANGLES{0.5f * M_PI, 0.5f * M_PI, M_PI, M_PI};  
 
 static inline void GetMeasuredInterpParams(uint4 dim, float3 wo, float3 wi, uint4 *idx0, uint4 *idx1, float4 *coeff)
 {
+
+  const float4 MAX_ANGLES = float4(0.5f * M_PI, 0.5f * M_PI, M_PI, M_PI);
+
+
   float4 maxIdx = float4(dim - 1);
 
   float3 half, diff;
@@ -245,7 +248,7 @@ static inline void GetMeasuredInterpParams(uint4 dim, float3 wo, float3 wi, uint
   *idx1 = idxI1;
 }
 
-static inline uint64_t CalcOffset4d(uint i0, uint i1, uint i2, uint i3, uint4 dim, uint n_channels)
+static inline uint32_t CalcOffset4d(uint i0, uint i1, uint i2, uint i3, uint4 dim, uint n_channels)
 {
   return (((i0 * dim.y + i1) * dim.z + i2) * dim.w + i3) * n_channels;
 }
@@ -261,19 +264,19 @@ float4 Integrator::MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi,
 
   uint4 idx0, idx1;
   float4 coeff0;
-  int aniso = entry.dim.z > 1;
+  bool aniso = entry.dim.z > 1;
   GetMeasuredInterpParams(entry.dim, wo, wi, &idx0, &idx1, &coeff0);
   float4 coeff1 = 1 - coeff0;
 
-  uint64_t offset = entry.offset;
+  uint offset = uint(entry.offset);
 
 
 
-  if(!spectral_mode) {
+  if(spectral_mode == 0) {
     uint nch = 3;
 
     float3 res = float3(0, 0, 0);
-    uint64_t i;
+    uint i;
 
     i = offset + CalcOffset4d(idx0.x, idx0.y, idx0.z, idx0.w, entry.dim, nch); //0000
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
@@ -348,7 +351,7 @@ float4 Integrator::MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi,
   
 
 
-  return float4();
+  return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void Integrator::MeasuredEval(uint32_t a_matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)

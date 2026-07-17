@@ -616,7 +616,8 @@ public:
   struct MeasuredBrdfEntry
   {
     uint4 dim; 
-    uint64_t offset;
+    uint32_t offset;
+    uint32_t _dummy[3];
   };
 
 
