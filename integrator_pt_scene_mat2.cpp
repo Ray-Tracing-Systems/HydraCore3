@@ -12,7 +12,7 @@ static bool safe_read_exact(std::istream &file, char *dst, uint32_t bytecount, s
     file.read(dst, bytecount);
   }
   catch(std::ios::failure &e) {
-    errmesg = e.what();
+    errmesg = e.code().message();
     return false;
   }
 
@@ -38,7 +38,14 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
 
   std::string errmesg;
   std::ifstream file{path, std::ios::in | std::ios::binary};
-  file.exceptions(std::ios::badbit | std::ios::failbit);
+
+  try {
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+  }
+  catch(std::ios::failure &e) {
+    errmesg = e.code().message();
+    throw std::runtime_error("Error opening file (" + path + "): " + errmesg);
+  }
 
   uint32_t dims[3];
   if(!safe_read_exact(file, reinterpret_cast<char *>(dims), 3 * sizeof(uint32_t), errmesg)) {
@@ -59,16 +66,18 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
 
 
   Integrator::MeasuredBrdfEntry entry;
-  entry.dim = uint4(SAMPLING_THETA_H, SAMPLING_THETA_D, SAMPLING_PHI_D, 1);
+  entry.dim = uint4(SAMPLING_THETA_H, SAMPLING_THETA_D, 1, SAMPLING_PHI_D);
   entry.offset = a_measured_brdfs.size();
 
   a_measured_brdfs.resize(entry.offset + MERL_SIZE * 3);
   float *data32 = a_measured_brdfs.data() + entry.offset;
 
   for(uint64_t i = 0; i < MERL_SIZE; ++i) {
-    data32[i * 3 + 0] = static_cast<float>(data64[i]                 * RED_SCALE / SCALE_DIV);
-    data32[i * 3 + 1] = static_cast<float>(data64[i + MERL_SIZE]     * GREEN_SCALE / SCALE_DIV);
-    data32[i * 3 + 2] = static_cast<float>(data64[i + 2 * MERL_SIZE] * BLUE_SCALE / SCALE_DIV);
+    data32[i * 3 + 0] = max(0.0f, static_cast<float>(data64[i]                 * RED_SCALE / SCALE_DIV));
+    data32[i * 3 + 1] = max(0.0f, static_cast<float>(data64[i + MERL_SIZE]     * GREEN_SCALE / SCALE_DIV));
+    data32[i * 3 + 2] = max(0.0f, static_cast<float>(data64[i + 2 * MERL_SIZE] * BLUE_SCALE / SCALE_DIV));
+
+    //std::cout << data32[i * 3 + 0] << " " << data32[i * 3 + 1] << " " << data32[i * 3 + 2] << std::endl;
   }
 
   mat.datai[MEASURED_DATAIDX] = static_cast<uint>(a_measured_brdf_data.size());

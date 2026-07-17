@@ -470,8 +470,8 @@ public:
   void KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
   float4 MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi, int spectral_mode);
-  void MeasuredEval(uint32_t a_matId, uint32_t entry_id, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
-  void MeasuredSampleAndEval(uint32_t a_matId, uint32_t entry_id, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
+  void MeasuredEval(uint32_t a_matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void MeasuredSampleAndEval(uint32_t a_matId, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -609,9 +609,9 @@ public:
 
 
   /**
-   *  dim: (theta1, theta2, phi1, phi2)
-   *       phi2 == 1 -- for isotropic materials 
-   *       phi2 > 1  -- for anisotropic matrials
+   *  dim: (theta_h, theta_d, phi_h, phi_d)
+   *       phi_h == 1 -- for isotropic materials 
+   *       phi_h > 1  -- for anisotropic matrials
   */
   struct MeasuredBrdfEntry
   {

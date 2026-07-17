@@ -2,6 +2,7 @@
 #include "integrator_pt.h"
 
 #include "include/cmaterial.h"
+#include <cstdint>
 
 using namespace LiteMath;
 
@@ -221,7 +222,7 @@ static inline void GetMeasuredInterpParams(uint4 dim, float3 wo, float3 wi, uint
   float3 half, diff;
   RusinkiewiczTransform(wi, wo, &half, &diff);
   float4 angles = RvectorsToRangles(half, diff);
-  //if(angles.z < 0) angles.z += M_PI;
+  if(angles.z < 0) angles.z += M_PI;
   if(angles.w < 0) angles.w += M_PI;
 
 
@@ -244,13 +245,18 @@ static inline void GetMeasuredInterpParams(uint4 dim, float3 wo, float3 wi, uint
   *idx1 = idxI1;
 }
 
-static inline uint32_t CalcOffset4d(uint i0, uint i1, uint i2, uint i3, uint4 dim)
+static inline uint64_t CalcOffset4d(uint i0, uint i1, uint i2, uint i3, uint4 dim, uint n_channels)
 {
-  return ((i0 * dim.y + i1) * dim.z + i2) * dim.w + i3;
+  return (((i0 * dim.y + i1) * dim.z + i2) * dim.w + i3) * n_channels;
 }
 
 float4 Integrator::MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi, int spectral_mode)
 {
+  if(entry_id == uint32_t(-1)) {
+    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+  }
+
+
   MeasuredBrdfEntry entry = m_measured_brdf_data[entry_id];
 
   uint4 idx0, idx1;
@@ -261,79 +267,83 @@ float4 Integrator::MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi,
 
   uint64_t offset = entry.offset;
 
+
+
   if(!spectral_mode) {
-    
+    uint nch = 3;
+
     float3 res = float3(0, 0, 0);
     uint64_t i;
 
-    i = offset + CalcOffset4d(idx0.x, idx0.y, idx0.z, idx0.w, entry.dim); //0000
+    i = offset + CalcOffset4d(idx0.x, idx0.y, idx0.z, idx0.w, entry.dim, nch); //0000
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff1.x * coeff1.y * coeff1.z * coeff1.w;
 
-    i = offset + CalcOffset4d(idx0.x, idx0.y, idx0.z, idx1.w, entry.dim); //0001
+    i = offset + CalcOffset4d(idx0.x, idx0.y, idx0.z, idx1.w, entry.dim, nch); //0001
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff1.x * coeff1.y * coeff1.z * coeff0.w;
 
-    i = offset + CalcOffset4d(idx0.x, idx1.y, idx0.z, idx0.w, entry.dim); //0100
+    i = offset + CalcOffset4d(idx0.x, idx1.y, idx0.z, idx0.w, entry.dim, nch); //0100
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff1.x * coeff0.y * coeff1.z * coeff1.w;
 
-    i = offset + CalcOffset4d(idx0.x, idx1.y, idx0.z, idx1.w, entry.dim); //0101
+    i = offset + CalcOffset4d(idx0.x, idx1.y, idx0.z, idx1.w, entry.dim, nch); //0101
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff1.x * coeff0.y * coeff1.z * coeff0.w;
 
-    i = offset + CalcOffset4d(idx1.x, idx0.y, idx0.z, idx0.w, entry.dim); //1000
+    i = offset + CalcOffset4d(idx1.x, idx0.y, idx0.z, idx0.w, entry.dim, nch); //1000
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff0.x * coeff1.y * coeff1.z * coeff1.w;
 
-    i = offset + CalcOffset4d(idx1.x, idx0.y, idx0.z, idx1.w, entry.dim); //1001
+    i = offset + CalcOffset4d(idx1.x, idx0.y, idx0.z, idx1.w, entry.dim, nch); //1001
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff0.x * coeff1.y * coeff1.z * coeff0.w;
 
-    i = offset + CalcOffset4d(idx1.x, idx1.y, idx0.z, idx0.w, entry.dim); //1100
+    i = offset + CalcOffset4d(idx1.x, idx1.y, idx0.z, idx0.w, entry.dim, nch); //1100
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff0.x * coeff0.y * coeff1.z * coeff1.w;
 
-    i = offset + CalcOffset4d(idx1.x, idx1.y, idx0.z, idx1.w, entry.dim); //1101
+    i = offset + CalcOffset4d(idx1.x, idx1.y, idx0.z, idx1.w, entry.dim, nch); //1101
     res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
          * coeff0.x * coeff0.y * coeff1.z * coeff0.w;
 
 
     if(aniso) {
-      i = offset + CalcOffset4d(idx0.x, idx0.y, idx1.z, idx0.w, entry.dim); //0010
+
+      i = offset + CalcOffset4d(idx0.x, idx0.y, idx1.z, idx0.w, entry.dim, nch); //0010
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff1.x * coeff1.y * coeff0.z * coeff1.w;
 
-      i = offset + CalcOffset4d(idx0.x, idx0.y, idx1.z, idx1.w, entry.dim); //0011
+      i = offset + CalcOffset4d(idx0.x, idx0.y, idx1.z, idx1.w, entry.dim, nch); //0011
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff1.x * coeff1.y * coeff0.z * coeff0.w;
 
-      i = offset + CalcOffset4d(idx0.x, idx1.y, idx1.z, idx0.w, entry.dim); //0110
+      i = offset + CalcOffset4d(idx0.x, idx1.y, idx1.z, idx0.w, entry.dim, nch); //0110
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff1.x * coeff0.y * coeff0.z * coeff1.w;
 
-      i = offset + CalcOffset4d(idx0.x, idx1.y, idx1.z, idx1.w, entry.dim); //0111
+      i = offset + CalcOffset4d(idx0.x, idx1.y, idx1.z, idx1.w, entry.dim, nch); //0111
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff1.x * coeff0.y * coeff0.z * coeff0.w;
 
-      i = offset + CalcOffset4d(idx1.x, idx0.y, idx1.z, idx0.w, entry.dim); //1010
+      i = offset + CalcOffset4d(idx1.x, idx0.y, idx1.z, idx0.w, entry.dim, nch); //1010
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff0.x * coeff1.y * coeff0.z * coeff1.w;
 
-      i = offset + CalcOffset4d(idx1.x, idx0.y, idx1.z, idx1.w, entry.dim); //1011
+      i = offset + CalcOffset4d(idx1.x, idx0.y, idx1.z, idx1.w, entry.dim, nch); //1011
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff0.x * coeff1.y * coeff0.z * coeff0.w;
 
-      i = offset + CalcOffset4d(idx1.x, idx1.y, idx1.z, idx0.w, entry.dim); //1110
+      i = offset + CalcOffset4d(idx1.x, idx1.y, idx1.z, idx0.w, entry.dim, nch); //1110
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff0.x * coeff0.y * coeff0.z * coeff1.w;
 
-      i = offset + CalcOffset4d(idx1.x, idx1.y, idx1.z, idx1.w, entry.dim); //1111
+      i = offset + CalcOffset4d(idx1.x, idx1.y, idx1.z, idx1.w, entry.dim, nch); //1111
       res += float3(m_measured_brdfs[i], m_measured_brdfs[i + 1], m_measured_brdfs[i + 2])
            * coeff0.x * coeff0.y * coeff0.z * coeff0.w;
     }
 
-    return float4(res.x, res.y, res.z, 0.0f);
+    return float4(res.x, res.y, res.z, 1.0f);
   }
   
 
@@ -341,8 +351,10 @@ float4 Integrator::MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi,
   return float4();
 }
 
-void Integrator::MeasuredEval(uint32_t a_matId, uint32_t entry_id, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
+void Integrator::MeasuredEval(uint32_t a_matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
 {
+  const uint32_t entry_id = m_materials[a_matId].datai[MEASURED_DATAIDX];
+
   const float alpha0 = m_materials[a_matId].data[MEASURED_ALPHA];
   const float2 alpha = float2(alpha0, alpha0);
   float3 nx, ny, nz = n;
@@ -366,9 +378,11 @@ void Integrator::MeasuredEval(uint32_t a_matId, uint32_t entry_id, float3 l, flo
 }
 
 
-void Integrator::MeasuredSampleAndEval(uint32_t a_matId, uint32_t entry_id, float4 rands, 
+void Integrator::MeasuredSampleAndEval(uint32_t a_matId, float4 rands, 
                                             float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
 {
+  const uint32_t entry_id = m_materials[a_matId].datai[MEASURED_DATAIDX];
+
   const float alpha0 = m_materials[a_matId].data[MEASURED_ALPHA];
   const float2 alpha = float2(alpha0, alpha0);
 
