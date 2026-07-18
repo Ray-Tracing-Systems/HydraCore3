@@ -302,11 +302,13 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
 
       KanBrdfSampleAndEval(currMatId, weights_offset, rands, v, n, &res, m_spectral_mode);
     } 
+    break;
     case MAT_TYPE_MEASURED:
     if(KSPEC_MAT_TYPE_MEASURED != 0)
     {
       MeasuredSampleAndEval(currMatId, rands, v, n, &res, m_spectral_mode);
     }
+    break;
     default:
     break;
   }
@@ -554,11 +556,13 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
 
         KanBrdfEval(currMat.id, weights_offset, v, l, n, &res, m_spectral_mode);
       }
+      break;
       case MAT_TYPE_MEASURED:
       if(KSPEC_MAT_TYPE_MEASURED != 0)
       {
         MeasuredEval(currMat.id, l, v, n, &res, m_spectral_mode);
       }
+      break;
       default:
         break;
     }

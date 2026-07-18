@@ -517,10 +517,6 @@ void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::Hyd
   m_materials.resize(0);
   m_materials.reserve(mat_count);
 
-  m_neural_tex_offsets.resize(mat_count, {0, 0});
-  m_neural_weights_offsets.resize(mat_count, 0);
-
-
   std::set<uint32_t> loadedSpectralTextures = {};
   for(auto materialNode : scene.MaterialNodes())
   {
@@ -596,9 +592,7 @@ void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::Hyd
     else if(mat_type == neuralBrdfMatTypeStr)
     {
 
-      mat = LoadNeuralBrdfMaterial(scene_dir, materialNode, m_textureLoadInfo, texCache, m_textures,
-                                   m_neural_tex_ids, m_neural_tex_offsets,
-                                   m_neural_weights, m_neural_weights_offsets);
+      mat = LoadNeuralBrdfMaterial(scene_dir, materialNode, m_neural_weights, m_neural_weights_offsets);
       m_actualFeatures[KSPEC_MAT_TYPE_NEURAL_BRDF] = 1;
     }
     else if(mat_type == kanBrdfMatTypeStr)

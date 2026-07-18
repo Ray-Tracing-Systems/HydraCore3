@@ -54,6 +54,8 @@ else()
   enable_sanitizers(project_options)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+
 add_subdirectory(ies_parser)
 add_subdirectory(external/LiteMath)
 
@@ -194,7 +196,7 @@ set(CORE_SRC
         integrator_pt_lgt.cpp
         integrator_pt_mat.cpp
         integrator_pt_mat_impl.cpp
-        integrator_pt_nn.cpp
+        integrator_pt_measured.cpp
         integrator_pt_host.cpp
         integrator_pt_scene.cpp
         integrator_pt_scene_mat.cpp

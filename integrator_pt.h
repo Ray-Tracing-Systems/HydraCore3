@@ -469,7 +469,8 @@ public:
   void KanBrdfEval(uint32_t a_matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
   void KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
-  float4 MeasuredEvalInternal(uint32_t entry_id, float3 wo, float3 wi, int spectral_mode);
+  float MeasuredInterpIso1D(uint32_t entry_id, float3 wo, float3 wi);
+  float3 MeasuredInterpRGB(uint32_t entry_id, float3 wo, float3 wi);
   void MeasuredEval(uint32_t a_matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
   void MeasuredSampleAndEval(uint32_t a_matId, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
@@ -601,9 +602,7 @@ public:
   std::vector<float>  m_films_eta_k_vec;
   std::vector<float>  m_precomp_thin_films;   // frenel precomputed data for thin films
   #endif
-   
-  std::vector<uint> m_neural_tex_ids;
-  std::vector<uint2> m_neural_tex_offsets; //x: offset, y: size
+
   std::vector<float> m_neural_weights;
   std::vector<uint32_t> m_neural_weights_offsets;
 
@@ -616,8 +615,9 @@ public:
   struct MeasuredBrdfEntry
   {
     uint4 dim; 
+    uint32_t nchannels;
     uint32_t offset;
-    uint32_t _dummy[3];
+    uint32_t _dummy[2];
   };
 
 

@@ -67,7 +67,8 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
 
   Integrator::MeasuredBrdfEntry entry;
   entry.dim = uint4(SAMPLING_THETA_H, SAMPLING_THETA_D, 1, SAMPLING_PHI_D);
-  entry.offset = a_measured_brdfs.size();
+  entry.offset = uint32_t(a_measured_brdfs.size());
+  entry.nchannels = 3;
 
   a_measured_brdfs.resize(entry.offset + MERL_SIZE * 3);
   float *data32 = a_measured_brdfs.data() + entry.offset;

@@ -6,6 +6,8 @@
 #include "airy_reflectance.h"
 #include <iostream>
 
+
+
 static inline void filmSmoothSampleAndEval(const Material* a_materials, uint32_t a_matId, 
         const float extIOR, const complex filmIOR, const complex intIOR, const float thickness, const float4 a_wavelengths, const float _extIOR,
         float4 rands, float3 v, float3 n, float2 tc, BsdfSample* pRes, const float* precomputed_data, const uint32_t precompOffset, const bool spectral_mode, const bool precomputed)
