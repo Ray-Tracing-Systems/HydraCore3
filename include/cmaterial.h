@@ -188,6 +188,7 @@ static constexpr uint FILM_TRANSPARENT       = 15;
 static constexpr uint FILM_CUSTOM_LAST_IND   = FILM_TRANSPARENT;
 
 static constexpr uint NBRDF_MEDIANIDX      = 0;
+static constexpr uint NBRDF_ALPHA          = 0;
 static constexpr uint KANBRDF_ALPHA        = 0;
 static constexpr uint MEASURED_ALPHA       = 0;
 static constexpr uint MEASURED_DATAIDX     = 0;

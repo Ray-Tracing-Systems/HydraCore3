@@ -24,12 +24,27 @@ static constexpr float LAMBDA_MAX = 830.0f;
 static constexpr float EPSILON_32 = 5.960464477539063E-8; //0x1p-24;
 
 
+
+static constexpr float NBRDF_INVMAP_EPS = 0.002f;
+static constexpr uint NBRDF_INPUT_DIM = 6;
+static constexpr uint NBRDF_HIDDEN_DIM = 64;
+static constexpr uint NBRDF_SPECTRUM_SIZE = 32;
+static constexpr uint NBRDF_MAX_SIZE = 64;
+static constexpr float NBRDF_SPECTRAL_WAVELENGTHS[NBRDF_SPECTRUM_SIZE] = {
+    380.0000f, 394.5161f, 409.0323f, 423.5484f,
+    438.0645f, 452.5807f, 467.0968f, 481.6129f,
+    496.1290f, 510.6452f, 525.1613f, 539.6774f,
+    554.1935f, 568.7097f, 583.2258f, 597.7419f,
+    612.2581f, 626.7742f, 641.2903f, 655.8065f,
+    670.3226f, 684.8387f, 699.3549f, 713.8710f,
+    728.3871f, 742.9032f, 757.4194f, 771.9355f,
+    786.4516f, 800.9677f, 815.4839f, 830.0000f
+};
+
 static constexpr float KANBRDF_GRID_MIN = -1.0;
 static constexpr float KANBRDF_GRID_MAX = 1.0;
 static constexpr uint KANBRDF_GRID_SIZE = 6;
-
 static constexpr uint KANBRDF_MAX_SIZE = 6;
-
 static constexpr uint KANBRDF_LAYER_COUNT = 3;
 static constexpr uint KANBRDF_LAYER_SIZES[KANBRDF_LAYER_COUNT + 1] = {6, 5, 5, 3};
 static constexpr uint KANBRDF_WEIGTH_OFFSETS[KANBRDF_LAYER_COUNT + 1] = {

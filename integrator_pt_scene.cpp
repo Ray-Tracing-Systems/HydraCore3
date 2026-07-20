@@ -517,6 +517,8 @@ void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::Hyd
   m_materials.resize(0);
   m_materials.reserve(mat_count);
 
+  m_neural_weights_offsets.resize(mat_count, -1);
+
   std::set<uint32_t> loadedSpectralTextures = {};
   for(auto materialNode : scene.MaterialNodes())
   {

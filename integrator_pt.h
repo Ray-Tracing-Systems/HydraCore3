@@ -464,15 +464,19 @@ public:
   //////////////////////////////MATERIAL IMPLEMENTATIONS//////////////////////////////////////////
   //
 
+  float4 NeuralBrdfEvalInternal(uint weights_offset, uint median_entry_id, float4 wavelengths, float3 wi, float3 wo, int spectral_mode);
+  void NeuralBrdfEval(uint32_t matId, float4 wavelengths, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void NeuralBrdfSampleAndEval(uint32_t matId, float4 rands, float4 wavelengths, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
+
   void EvalKANLayer(uint weights_offset, const float x[KANBRDF_MAX_SIZE], float y[KANBRDF_MAX_SIZE], uint in_dim, uint out_dim); 
   float4 KanBrdfEvalInternal(uint weights_offset, float3 wo, float3 wi, int spectral_mode);
-  void KanBrdfEval(uint32_t a_matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
-  void KanBrdfSampleAndEval(uint32_t a_matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
+  void KanBrdfEval(uint32_t matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void KanBrdfSampleAndEval(uint32_t matId, uint weights_offset, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
-  float MeasuredInterpIso1D(uint32_t entry_id, float3 wo, float3 wi);
-  float3 MeasuredInterpRGB(uint32_t entry_id, float3 wo, float3 wi);
-  void MeasuredEval(uint32_t a_matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
-  void MeasuredSampleAndEval(uint32_t a_matId, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
+  float MeasuredInterpIso1D(uint32_t entry_id, float3 wi, float3 wo);
+  float3 MeasuredInterpRGB(uint32_t entry_id, float3 wi, float3 wo);
+  void MeasuredEval(uint32_t matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode);
+  void MeasuredSampleAndEval(uint32_t matId, float4 rands, float3 v, float3 n, BsdfSample* pRes, int spectral_mode);
 
   ////////////////////////////////////////////////////////////////////////////////////////////////
 

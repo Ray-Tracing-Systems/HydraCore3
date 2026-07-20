@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <vector>
 
-static bool safe_read_exact(std::istream &file, char *dst, uint32_t bytecount, std::string &errmesg)
+static bool safe_read_exact(std::istream &file, char *dst, uint64_t bytecount, std::string &errmesg)
 {
   try {
     file.read(dst, bytecount);
@@ -86,6 +86,58 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
 
 }
 
+static void LoadHydraMeasuredMaterial(const std::string &path, Material &mat,
+                                      std::vector<float> &a_measured_brdfs, std::vector<Integrator::MeasuredBrdfEntry> &a_measured_brdf_data)
+{
+  static constexpr char HEADER_STRING[] = "hydrameasured1";
+
+  std::string errmesg;
+  std::ifstream file{path, std::ios::in | std::ios::binary};
+
+  try {
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+  }
+  catch(std::ios::failure &e) {
+    errmesg = e.code().message();
+    throw std::runtime_error("Error opening file (" + path + "): " + errmesg);
+  }
+  
+  char buf[sizeof(HEADER_STRING)];
+  file.read(buf, sizeof(HEADER_STRING) - 1);
+  buf[sizeof(HEADER_STRING) - 1] = '\0';
+  if(strcmp(buf, HEADER_STRING) != 0) {
+    throw std::runtime_error("File does not contain nn weigths: " + path);
+  }
+
+  uint32_t dims[4];
+  if(!safe_read_exact(file, reinterpret_cast<char *>(dims), 4 * sizeof(uint32_t), errmesg)) {
+     throw std::runtime_error("Error reading Hydra Measured BRDF file (" + path + "): " + errmesg);
+  }
+  uint8_t n_channels;
+  if(!safe_read_exact(file, reinterpret_cast<char *>(&n_channels), 1, errmesg)) {
+     throw std::runtime_error("Error reading Hydra Measured BRDF file (" + path + "): " + errmesg);
+  }
+
+  uint64_t data_size = dims[0] * dims[1] * dims[2] * dims[3];
+  //std::cout << dims[0] << " " << dims[1] << " " << dims[2] << " " << dims[3] << " " << uint(n_channels) << " " << std::endl;
+
+  Integrator::MeasuredBrdfEntry entry;
+  entry.dim = uint4(dims[0], dims[1], dims[2], dims[3]);
+  entry.offset = uint32_t(a_measured_brdfs.size());
+  entry.nchannels = n_channels;
+
+  a_measured_brdfs.resize(entry.offset + data_size * n_channels);
+  float *data32 = a_measured_brdfs.data() + entry.offset;
+
+  if(!safe_read_exact(file, reinterpret_cast<char *>(data32), data_size * n_channels * sizeof(float), errmesg)) {
+     throw std::runtime_error("Error reading Hydra Measured BRDF file (" + path + "): " + errmesg);
+  }
+  file.close();
+
+  mat.datai[MEASURED_DATAIDX] = static_cast<uint>(a_measured_brdf_data.size());
+  a_measured_brdf_data.push_back(std::move(entry));
+}
+
 Material LoadMeasuredMaterial(const std::string &scn_dir,
                               const pugi::xml_node& materialNode,
                               std::vector<float> &a_measured_brdfs, std::vector<Integrator::MeasuredBrdfEntry> &a_measured_brdf_data)
@@ -106,6 +158,9 @@ Material LoadMeasuredMaterial(const std::string &scn_dir,
 
   if(type == L"merl" || (type.empty() && data_path.extension() == ".binary")) {
     LoadMerlMaterial(data_path, mat, a_measured_brdfs, a_measured_brdf_data);
+  }
+  if(type == L"hydra" || (type.empty() && data_path.extension() == ".hydram")) {
+    LoadHydraMeasuredMaterial(data_path, mat, a_measured_brdfs, a_measured_brdf_data);
   }
   else {
     std::cout << "[LoadMeasuredMaterial] Unknown measured material type: " + hydra_xml::ws2s(type) << std::endl;

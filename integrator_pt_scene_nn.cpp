@@ -35,6 +35,9 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir, const pugi::xml_node
   mat.mtype = MAT_TYPE_NEURAL_BRDF;
   mat.lightId = uint(-1);
 
+  const float alpha = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
+  mat.data[NBRDF_ALPHA] = alpha;
+
   const auto medianGridNode = materialNode.child(L"median");
   uint32_t median_id = medianGridNode.attribute(L"mat_id").as_uint();
   mat.datai[NBRDF_MEDIANIDX] = median_id;
@@ -53,7 +56,7 @@ Material LoadKanBrdfMaterial(const std::string &scn_dir, const pugi::xml_node& m
   Material mat = {};
   mat.mtype = MAT_TYPE_KANBRDF;
   mat.lightId = uint(-1);
-  //TODO
+
   const float alpha = hydra_xml::readval1f(materialNode.child(L"alpha"), 0.1f);
   mat.data[KANBRDF_ALPHA] = alpha;
 
