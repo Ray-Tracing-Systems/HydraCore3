@@ -607,10 +607,6 @@ public:
   std::vector<float>  m_precomp_thin_films;   // frenel precomputed data for thin films
   #endif
 
-  std::vector<float> m_neural_weights;
-  std::vector<uint32_t> m_neural_weights_offsets;
-
-
   /**
    *  dim: (theta_h, theta_d, phi_h, phi_d)
    *       phi_h == 1 -- for isotropic materials 
@@ -619,15 +615,18 @@ public:
   struct MeasuredBrdfEntry
   {
     uint4 dim; 
+    float phi_range;
     uint32_t nchannels;
     uint32_t offset;
-    float phi_range;
     uint32_t _dummy;
   };
 
-
   std::vector<float> m_measured_brdfs;
   std::vector<MeasuredBrdfEntry> m_measured_brdf_data;
+
+  std::vector<float> m_neural_weights;
+  std::vector<uint32_t> m_neural_weights_offsets;
+
 
 
   float4 SampleMatColorParamSpectrum(uint32_t matId, float4 a_wavelengths, uint32_t paramId, uint32_t paramSpecId);

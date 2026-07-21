@@ -30,8 +30,8 @@ static inline void GetMeasuredInterpParams(uint4 dim, float phi_range, float3 wi
   float3 half, diff;
   RusinkiewiczTransform(wi, wo, &half, &diff);
   float4 angles = RvectorsToRangles(half, diff);
-  if(angles.z < 0) angles.z += 2 * M_PI;
-  if(angles.w < 0) angles.w += 2 * M_PI;
+  if(angles.z < 0) angles.z += phi_range;
+  if(angles.w < 0) angles.w += phi_range;
 
 
   float4 idxF = clamp(angles / MAX_ANGLES, 0.0f, 1.0f);

@@ -166,7 +166,7 @@ Material LoadMeasuredMaterial(const std::string &scn_dir,
   if(type == L"merl" || (type.empty() && data_path.extension() == ".binary")) {
     LoadMerlMaterial(data_path, mat, a_measured_brdfs, a_measured_brdf_data);
   }
-  if(type == L"hydra" || (type.empty() && data_path.extension() == ".hydram")) {
+  else if(type == L"hydra" || (type.empty() && data_path.extension() == ".hydram")) {
     LoadHydraMeasuredMaterial(data_path, mat, a_measured_brdfs, a_measured_brdf_data);
   }
   else {
