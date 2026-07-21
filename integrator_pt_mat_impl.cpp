@@ -24,7 +24,7 @@ static constexpr uint32_t NBRDF_WEIGTH_OFFSETS[] = {0, 448, 4608, 8768, 12928};
 static inline float4 invLogMapping(float4 x, float p_ref)
 {
   float4 eX = float4(exp(x.x), exp(x.y), exp(x.z), exp(x.w));
-  return eX * (p_ref + NBRDF_INVMAP_EPS) - NBRDF_INVMAP_EPS; 
+  return max(eX * (p_ref + NBRDF_INVMAP_EPS) - NBRDF_INVMAP_EPS, float4(0, 0, 0, 0)); 
 }
 
 
@@ -185,7 +185,7 @@ void Integrator::NeuralBrdfEval(uint32_t matId, float4 wavelengths,
       return;
 
   wm = normalize(wm);
-  pRes->val = NeuralBrdfEvalInternal(weights_offset, median_entry_id, wavelengths, wo, wi, spectral_mode);
+  pRes->val = NeuralBrdfEvalInternal(weights_offset, median_entry_id, wavelengths, wi, wo, spectral_mode);
   wm        = FaceForward(wm, float3(0.0f, 0.0f, 1.0f));
   pRes->pdf = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
 }
@@ -211,7 +211,7 @@ void Integrator::NeuralBrdfSampleAndEval(uint32_t matId, float4 rands, float4 wa
   if(wo.z * wi.z < 0) return;// not in the same hemisphere
 
 
-  pRes->val   = NeuralBrdfEvalInternal(weights_offset, median_entry_id, wavelengths, wo, wi, spectral_mode);
+  pRes->val   = NeuralBrdfEvalInternal(weights_offset, median_entry_id, wavelengths, wi, wo, spectral_mode);
   pRes->pdf   = trPDF(wo, wm, alpha) / (4.0f * std::abs(dot(wo, wm)));
   pRes->dir   = normalize(wi.x * nx + wi.y * ny + wi.z * nz);
 
