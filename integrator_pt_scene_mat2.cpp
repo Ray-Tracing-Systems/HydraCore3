@@ -69,6 +69,7 @@ static void LoadMerlMaterial(const std::string &path, Material &mat,
   entry.dim = uint4(SAMPLING_THETA_H, SAMPLING_THETA_D, 1, SAMPLING_PHI_D);
   entry.offset = uint32_t(a_measured_brdfs.size());
   entry.nchannels = 3;
+  entry.phi_range = M_PI;
 
   a_measured_brdfs.resize(entry.offset + MERL_SIZE * 3);
   float *data32 = a_measured_brdfs.data() + entry.offset;
@@ -117,6 +118,11 @@ static void LoadHydraMeasuredMaterial(const std::string &path, Material &mat,
   if(!safe_read_exact(file, reinterpret_cast<char *>(&n_channels), 1, errmesg)) {
      throw std::runtime_error("Error reading Hydra Measured BRDF file (" + path + "): " + errmesg);
   }
+  float phi_range;
+  if(!safe_read_exact(file, reinterpret_cast<char *>(&phi_range), sizeof(float), errmesg)) {
+     throw std::runtime_error("Error reading Hydra Measured BRDF file (" + path + "): " + errmesg);
+  }
+
 
   uint64_t data_size = dims[0] * dims[1] * dims[2] * dims[3];
   //std::cout << dims[0] << " " << dims[1] << " " << dims[2] << " " << dims[3] << " " << uint(n_channels) << " " << std::endl;
@@ -125,6 +131,7 @@ static void LoadHydraMeasuredMaterial(const std::string &path, Material &mat,
   entry.dim = uint4(dims[0], dims[1], dims[2], dims[3]);
   entry.offset = uint32_t(a_measured_brdfs.size());
   entry.nchannels = n_channels;
+  entry.phi_range = phi_range;
 
   a_measured_brdfs.resize(entry.offset + data_size * n_channels);
   float *data32 = a_measured_brdfs.data() + entry.offset;

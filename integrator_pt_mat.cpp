@@ -290,7 +290,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
     case MAT_TYPE_NEURAL_BRDF:
     if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)
     {
-      NeuralBrdfSampleAndEval(currMatId, wavelengths, rands, v, n, &res, m_spectral_mode);
+      NeuralBrdfSampleAndEval(currMatId, rands, wavelengths, v, n, &res, m_spectral_mode);
     }
     break;
     case MAT_TYPE_KANBRDF:

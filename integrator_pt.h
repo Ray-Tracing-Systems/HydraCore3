@@ -621,7 +621,8 @@ public:
     uint4 dim; 
     uint32_t nchannels;
     uint32_t offset;
-    uint32_t _dummy[2];
+    float phi_range;
+    uint32_t _dummy;
   };
 
 

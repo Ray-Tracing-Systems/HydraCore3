@@ -19,10 +19,10 @@ static inline float4 RvectorsToRangles(float3 half, float3 diff)
 }
 
 
-static inline void GetMeasuredInterpParams(uint4 dim, float3 wi, float3 wo, uint4 *idx0, uint4 *idx1, float4 *coeff)
+static inline void GetMeasuredInterpParams(uint4 dim, float phi_range, float3 wi, float3 wo, uint4 *idx0, uint4 *idx1, float4 *coeff)
 {
 
-  const float4 MAX_ANGLES = float4(0.5f * M_PI, 0.5f * M_PI, M_PI, M_PI);
+  const float4 MAX_ANGLES = float4(0.5f * M_PI, 0.5f * M_PI, phi_range, phi_range);
 
 
   float4 maxIdx = float4(dim - 1);
@@ -30,8 +30,8 @@ static inline void GetMeasuredInterpParams(uint4 dim, float3 wi, float3 wo, uint
   float3 half, diff;
   RusinkiewiczTransform(wi, wo, &half, &diff);
   float4 angles = RvectorsToRangles(half, diff);
-  if(angles.z < 0) angles.z += M_PI;
-  if(angles.w < 0) angles.w += M_PI;
+  if(angles.z < 0) angles.z += 2 * M_PI;
+  if(angles.w < 0) angles.w += 2 * M_PI;
 
 
   float4 idxF = clamp(angles / MAX_ANGLES, 0.0f, 1.0f);
@@ -73,7 +73,7 @@ float3 Integrator::MeasuredInterpRGB(uint32_t entry_id, float3 wi, float3 wo)
   uint4 idx0, idx1;
   float4 coeff0;
   bool aniso = entry.dim.z > 1;
-  GetMeasuredInterpParams(entry.dim, wi, wo, &idx0, &idx1, &coeff0);
+  GetMeasuredInterpParams(entry.dim, entry.phi_range, wi, wo, &idx0, &idx1, &coeff0);
   float4 coeff1 = 1 - coeff0;
 
   uint offset = uint(entry.offset);
@@ -166,7 +166,7 @@ float Integrator::MeasuredInterpIso1D(uint32_t entry_id, float3 wi, float3 wo)
 
   uint4 idx0, idx1;
   float4 coeff0;
-  GetMeasuredInterpParams(entry.dim, wi, wo, &idx0, &idx1, &coeff0);
+  GetMeasuredInterpParams(entry.dim, entry.phi_range, wi, wo, &idx0, &idx1, &coeff0);
   float4 coeff1 = 1 - coeff0;
 
   uint offset = uint(entry.offset);

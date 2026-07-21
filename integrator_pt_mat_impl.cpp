@@ -195,7 +195,7 @@ void Integrator::NeuralBrdfSampleAndEval(uint32_t matId, float4 rands, float4 wa
                                          float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
 {
   const float alpha0 = m_materials[matId].data[NBRDF_ALPHA];
-  const float2 alpha = float2(alpha0, alpha0);
+  const float2 alpha = float2(alpha0, alpha0); 
   const uint32_t median_idx = m_materials[matId].datai[NBRDF_MEDIANIDX];
   const uint32_t median_entry_id = m_materials[median_idx].datai[MEASURED_DATAIDX];
   const uint32_t weights_offset = m_neural_weights_offsets[matId];
