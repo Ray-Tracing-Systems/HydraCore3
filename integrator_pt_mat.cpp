@@ -296,9 +296,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
     case MAT_TYPE_KANBRDF:
     if(KSPEC_MAT_TYPE_KANBRDF != 0)
     {
-      uint weights_offset = m_neural_weights_offsets[currMatId];
-
-      KanBrdfSampleAndEval(currMatId, weights_offset, rands, v, n, &res, m_spectral_mode);
+      KanBrdfSampleAndEval(currMatId, rands, v, n, &res, m_spectral_mode);
     } 
     break;
     case MAT_TYPE_MEASURED:
@@ -548,9 +546,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       case MAT_TYPE_KANBRDF:
       if(KSPEC_MAT_TYPE_KANBRDF != 0)
       {
-        uint weights_offset = m_neural_weights_offsets[currMat.id];
-
-        KanBrdfEval(currMat.id, weights_offset, v, l, n, &res, m_spectral_mode);
+        KanBrdfEval(currMat.id, v, l, n, &res, m_spectral_mode);
       }
       break;
       case MAT_TYPE_MEASURED:

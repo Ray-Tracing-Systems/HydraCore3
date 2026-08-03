@@ -1,3 +1,4 @@
+#include "include/cmaterial.h"
 #include "integrator_pt_scene.h"
 #include "neural_loader.h"
 #include <cassert>
@@ -8,7 +9,7 @@
 namespace fs = std::filesystem;
 
 static void LoadNeuralWeights(uint32_t mat_id, const std::string &scn_dir, const pugi::xml_node& nnNode,
-                              std::vector<float> &neural_weights, std::vector<uint32_t> &neural_weights_offsets)
+                              std::vector<float> &neural_weights, std::vector<uint32_t> &neural_weights_offsets, uint &weights_id)
 {
   std::string weights_path = fs::path(scn_dir) / hydra_xml::ws2s(nnNode.attribute(L"weights_loc").as_string());
 
@@ -23,7 +24,8 @@ static void LoadNeuralWeights(uint32_t mat_id, const std::string &scn_dir, const
 
     wloader.load_next(neural_weights.data() + old_size);
   }
-  neural_weights_offsets[mat_id] = uint32_t(weights_offset);
+  weights_id = static_cast<uint>(neural_weights_offsets.size());
+  neural_weights_offsets.push_back(uint32_t(weights_offset));
 }
 
 Material LoadNeuralBrdfMaterial(const std::string &scn_dir, const pugi::xml_node& materialNode,
@@ -44,7 +46,7 @@ Material LoadNeuralBrdfMaterial(const std::string &scn_dir, const pugi::xml_node
 
   const auto nnNode = materialNode.child(L"nn");
 
-  LoadNeuralWeights(id, scn_dir, nnNode, neural_weights, neural_weights_offsets);
+  LoadNeuralWeights(id, scn_dir, nnNode, neural_weights, neural_weights_offsets, mat.datai[NBRDF_WEIGTHSIDX]);
   return mat;
 }
 
@@ -62,7 +64,7 @@ Material LoadKanBrdfMaterial(const std::string &scn_dir, const pugi::xml_node& m
 
   const auto nnNode = materialNode.child(L"nn");
 
-  LoadNeuralWeights(id, scn_dir, nnNode, neural_weights, neural_weights_offsets);
+  LoadNeuralWeights(id, scn_dir, nnNode, neural_weights, neural_weights_offsets, mat.datai[KANBRDF_WEIGTHSIDX]);
   
   return mat;
 }

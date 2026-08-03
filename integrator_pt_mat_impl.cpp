@@ -27,44 +27,40 @@ static inline float4 invLogMapping(float4 x, float p_ref)
   return max(eX * (p_ref + NBRDF_INVMAP_EPS) - NBRDF_INVMAP_EPS, float4(0, 0, 0, 0)); 
 }
 
-
-static inline void NeuralBrdfLinear(const float *weights, const float x[NBRDF_MAX_SIZE], float res[NBRDF_MAX_SIZE], 
-                                    uint32_t in_dim, uint32_t out_dim)
-{
-  for(uint32_t j = 0; j < out_dim; ++j) {
-    res[j] = 0;
-    for(uint32_t p = 0; p < in_dim; ++p) {
-      res[j] += weights[j * in_dim + p] * x[p];
-    }
-    float bias = weights[in_dim * out_dim + j];
-    res[j] += bias;
-  }
+#define LINEAR_LAYER(wptr, woffset, x, res, in_dim, out_dim) \
+{\
+  const uint32_t LINEAR_LAYER_offset = (woffset); \
+  for(uint32_t _j = 0; _j < (out_dim); ++_j)  { \
+    res[_j] = 0; \
+    for(uint32_t _p = 0; _p < (in_dim); ++_p) { \
+      res[_j] += (wptr)[LINEAR_LAYER_offset + _j * (in_dim) + _p] * x[_p]; \
+    } \
+    res[_j] += (wptr)[LINEAR_LAYER_offset + (in_dim) * (out_dim) + _j]; \
+  } \
 }
 
-static inline float4 NeuralBrdfCroppedLinear(const float *weights, const float x[NBRDF_MAX_SIZE], 
-                                                   uint4 idx, uint32_t in_dim, uint32_t uncropped_out_dim)
-{
-  float4 res = float4(0, 0, 0, 0);
-  for(uint32_t j = 0; j < 4; ++j) {
-    uint cidx = idx[j];
-
-    for(uint32_t p = 0; p < in_dim; ++p) {
-      res[j] += weights[cidx * in_dim + p] * x[p];
-    }
-    float bias = weights[in_dim * uncropped_out_dim + cidx];
-    res[j] += bias;
-  }
-  return res;
+#define RELU(xptr, xoffset, size) \
+{\
+  const uint32_t RELU_offset = (xoffset); \
+  const uint32_t RELU_size = (size); \
+  for(uint32_t _i = 0; _i < RELU_size; ++_i) { \
+    (xptr)[RELU_offset + _i] = max((xptr)[RELU_offset + _i], 0.0f); \
+  } \
 }
 
-static inline void NeuralBrdfReLU(float x[NBRDF_MAX_SIZE], uint32_t size)
-{
-  for(uint32_t i = 0; i < size; ++i) {
-    x[i] = max(x[i], 0.0f);
-  }
+#define LINEAR_LAYER_CROPPED(wptr, woffset, x, idx, in_dim, uncropped_out_dim, res) \
+{ \
+  const uint32_t LINEAR_LAYER_offset = (woffset); \
+  for(uint32_t _j = 0; _j < 4; ++_j) {\
+    res[_j] = 0.0f; \
+    for(uint32_t _p = 0; _p < (in_dim); ++_p) {\
+      (res)[_j] += (wptr)[LINEAR_LAYER_offset + (idx)[_j] * (in_dim) + _p] * (x)[_p];\
+    }\
+    (res)[_j] += (wptr)[LINEAR_LAYER_offset + (in_dim) * (uncropped_out_dim) + (idx)[_j]];\
+  }\
 }
 
-inline uint NeuralBrdfBinarySearch(const float array[NBRDF_SPECTRUM_SIZE], float val) 
+inline uint NeuralBrdfBinarySearch(float val) 
 {
   int last  = int(NBRDF_SPECTRUM_SIZE) - 2;
   int first = 1;
@@ -72,7 +68,7 @@ inline uint NeuralBrdfBinarySearch(const float array[NBRDF_SPECTRUM_SIZE], float
   {
     uint half = uint(last) >> 1; 
     int middle = first + int(half);
-    bool predResult = array[middle] <= val;
+    bool predResult = NBRDF_SPECTRAL_WAVELENGTHS[middle] <= val;
     first = predResult ? int(middle + 1) : first;
     last = predResult ? last - int(half + 1) : int(half);
   }
@@ -102,34 +98,34 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
 
   //Layer0
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[0];
-  NeuralBrdfLinear(m_neural_weights.data() + offset, buf0, buf1,
-                   NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
-  NeuralBrdfReLU(buf1, NBRDF_HIDDEN_DIM);
+  LINEAR_LAYER(m_neural_weights.data(), offset, buf0, buf1,
+               NBRDF_INPUT_DIM, NBRDF_HIDDEN_DIM);
+  RELU(buf1, 0, NBRDF_HIDDEN_DIM);
 
   //Layer1
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[1];
-  NeuralBrdfLinear(m_neural_weights.data() + offset, buf1, buf0,
+  LINEAR_LAYER(m_neural_weights.data(), offset, buf1, buf0,
                    NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
-  NeuralBrdfReLU(buf0, NBRDF_HIDDEN_DIM);
+  RELU(buf0, 0, NBRDF_HIDDEN_DIM);
 
   //Layer2
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[2];
-  NeuralBrdfLinear(m_neural_weights.data() + offset, buf0, buf1,
+  LINEAR_LAYER(m_neural_weights.data(), offset, buf0, buf1,
                    NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
-  NeuralBrdfReLU(buf1, NBRDF_HIDDEN_DIM);
+  RELU(buf1, 0, NBRDF_HIDDEN_DIM);
 
   //Layer3
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[3];
-  NeuralBrdfLinear(m_neural_weights.data() + offset, buf1, buf0,
+  LINEAR_LAYER(m_neural_weights.data(), offset, buf1, buf0,
                    NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
-  NeuralBrdfReLU(buf0, NBRDF_HIDDEN_DIM);
+  RELU(buf0, 0, NBRDF_HIDDEN_DIM);
 
 
   float4 t;
   uint4 lerpIdx;
   for(int i = 0; i < 4; ++i) {
     float lambda = wavelengths[i];
-    uint idx = NeuralBrdfBinarySearch(NBRDF_SPECTRAL_WAVELENGTHS, lambda);
+    uint idx = NeuralBrdfBinarySearch(lambda);
     t[i] = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
 
     lerpIdx[i] = idx; 
@@ -138,12 +134,14 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
 
   //Layer4
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[4];
-  float4 y0 = NeuralBrdfCroppedLinear(m_neural_weights.data() + offset, buf0, 
-                                       lerpIdx, NBRDF_HIDDEN_DIM, out_dim);
+  float4 y0 = float4(0, 0, 0, 0);
+  LINEAR_LAYER_CROPPED(m_neural_weights.data(), offset, buf0, 
+                       lerpIdx, NBRDF_HIDDEN_DIM, out_dim, y0);
   y0 = clamp(y0, -20.0f, 20.0f);
 
-  float4 y1 = NeuralBrdfCroppedLinear(m_neural_weights.data() + offset, buf0, 
-                                       lerpIdx + 1, NBRDF_HIDDEN_DIM, out_dim);
+  float4 y1 = float4(0, 0, 0, 0);;
+  LINEAR_LAYER_CROPPED(m_neural_weights.data(), offset, buf0, 
+                       lerpIdx + 1, NBRDF_HIDDEN_DIM, out_dim, y1);
   y1 = clamp(y1, -20.0f, 20.0f);
 
 
@@ -166,9 +164,12 @@ void Integrator::NeuralBrdfEval(uint32_t matId, float4 wavelengths,
 {
   const float alpha0 = m_materials[matId].data[NBRDF_ALPHA];
   const float2 alpha = float2(alpha0, alpha0);
+
+  const uint32_t weigths_id = m_materials[matId].datai[NBRDF_WEIGTHSIDX];
   const uint32_t median_idx = m_materials[matId].datai[NBRDF_MEDIANIDX];
   const uint32_t median_entry_id = m_materials[median_idx].datai[MEASURED_DATAIDX];
-  const uint32_t weights_offset = m_neural_weights_offsets[matId];
+
+  const uint32_t weights_offset = m_neural_weights_offsets[weigths_id];
 
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);
@@ -196,9 +197,12 @@ void Integrator::NeuralBrdfSampleAndEval(uint32_t matId, float4 rands, float4 wa
 {
   const float alpha0 = m_materials[matId].data[NBRDF_ALPHA];
   const float2 alpha = float2(alpha0, alpha0); 
+
+  const uint32_t weigths_id = m_materials[matId].datai[NBRDF_WEIGTHSIDX];
   const uint32_t median_idx = m_materials[matId].datai[NBRDF_MEDIANIDX];
   const uint32_t median_entry_id = m_materials[median_idx].datai[MEASURED_DATAIDX];
-  const uint32_t weights_offset = m_neural_weights_offsets[matId];
+
+  const uint32_t weights_offset = m_neural_weights_offsets[weigths_id];
 
   float3 nx, ny, nz = n;
   CoordinateSystemV2(nz, &nx, &ny);
@@ -340,8 +344,11 @@ float4 Integrator::KanBrdfEvalInternal(uint weights_offset, float3 wo, float3 wi
   return float4(kanbrdf_output_transform(buf0[0]), kanbrdf_output_transform(buf0[1]), kanbrdf_output_transform(buf0[2]), 1.0f);
 }
 
-void Integrator::KanBrdfEval(uint32_t matId, uint weights_offset, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
+void Integrator::KanBrdfEval(uint32_t matId, float3 l, float3 v, float3 n, BsdfEval *pRes, int spectral_mode)
 {
+  const uint weigths_id = m_materials[matId].datai[KANBRDF_WEIGTHSIDX];
+  const uint weights_offset = m_neural_weights_offsets[weigths_id];
+
   const float alpha0 = m_materials[matId].data[KANBRDF_ALPHA];
   const float2 alpha = float2(alpha0, alpha0);
   float3 nx, ny, nz = n;
@@ -365,9 +372,12 @@ void Integrator::KanBrdfEval(uint32_t matId, uint weights_offset, float3 l, floa
 }
 
 
-void Integrator::KanBrdfSampleAndEval(uint32_t matId, uint weights_offset, float4 rands, 
-                                            float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
+void Integrator::KanBrdfSampleAndEval(uint32_t matId, float4 rands, 
+                                      float3 v, float3 n, BsdfSample* pRes, int spectral_mode)
 {
+  const uint weigths_id = m_materials[matId].datai[KANBRDF_WEIGTHSIDX];
+  const uint weights_offset = m_neural_weights_offsets[weigths_id];
+
   const float alpha0 = m_materials[matId].data[KANBRDF_ALPHA];
   const float2 alpha = float2(alpha0, alpha0);
 
