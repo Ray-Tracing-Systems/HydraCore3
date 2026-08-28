@@ -679,6 +679,12 @@ void Integrator::LoadSceneMaterials(const std::string &scene_dir, hydra_xml::Hyd
 
     m_materials.push_back(mat);
   }
+  
+  m_neural_weights.shrink_to_fit();
+  m_neural_weights_offsets.shrink_to_fit();
+  m_measured_brdfs.shrink_to_fit();
+  m_measured_brdf_data.shrink_to_fit();
+
 }
 
 void Integrator::LoadSceneCamera(hydra_xml::HydraScene& scene)

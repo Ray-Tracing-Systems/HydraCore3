@@ -524,6 +524,30 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         dielectricSmoothEval(&res); // val and pdf are always zero
       }
       break;
+      case MAT_TYPE_NEURAL_BRDF:
+      if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)
+      {
+        NeuralBrdfEval(currMat.id, wavelengths, v, l, n, &currVal, m_spectral_mode);
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+      }
+      break;
+      case MAT_TYPE_KANBRDF:
+      if(KSPEC_MAT_TYPE_KANBRDF != 0)
+      {
+        KanBrdfEval(currMat.id, v, l, n, &currVal, m_spectral_mode);
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+      }
+      break;
+      case MAT_TYPE_MEASURED:
+      if(KSPEC_MAT_TYPE_MEASURED != 0)
+      {
+        MeasuredEval(currMat.id, l, v, n, &currVal, m_spectral_mode);
+        res.val += currVal.val * currMat.weight * bumpCosMult;
+        res.pdf += currVal.pdf * currMat.weight;
+      }
+      break;
       case MAT_TYPE_BLEND:
       if(KSPEC_MAT_TYPE_BLEND != 0)
       {
@@ -535,24 +559,6 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
           material_stack[top] = childMats.second; // remember second mat in stack
           top++;
         }
-      }
-      break;
-      case MAT_TYPE_NEURAL_BRDF:
-      if(KSPEC_MAT_TYPE_NEURAL_BRDF != 0)
-      {
-        NeuralBrdfEval(currMat.id, wavelengths, v, l, n, &res, m_spectral_mode);
-      }
-      break;
-      case MAT_TYPE_KANBRDF:
-      if(KSPEC_MAT_TYPE_KANBRDF != 0)
-      {
-        KanBrdfEval(currMat.id, v, l, n, &res, m_spectral_mode);
-      }
-      break;
-      case MAT_TYPE_MEASURED:
-      if(KSPEC_MAT_TYPE_MEASURED != 0)
-      {
-        MeasuredEval(currMat.id, l, v, n, &res, m_spectral_mode);
       }
       break;
       default:

@@ -32,8 +32,9 @@ static inline float4 invLogMapping(float4 x, float p_ref)
   const uint32_t LINEAR_LAYER_offset = (woffset); \
   for(uint32_t _j = 0; _j < (out_dim); ++_j)  { \
     res[_j] = 0; \
+    uint32_t LINEAR_LAYER_offset_j = LINEAR_LAYER_offset + _j * (in_dim); \
     for(uint32_t _p = 0; _p < (in_dim); ++_p) { \
-      res[_j] += (wptr)[LINEAR_LAYER_offset + _j * (in_dim) + _p] * x[_p]; \
+      res[_j] += (wptr)[LINEAR_LAYER_offset_j + _p] * x[_p]; \
     } \
     res[_j] += (wptr)[LINEAR_LAYER_offset + (in_dim) * (out_dim) + _j]; \
   } \
@@ -50,13 +51,15 @@ static inline float4 invLogMapping(float4 x, float p_ref)
 
 #define LINEAR_LAYER_CROPPED(wptr, woffset, x, idx, in_dim, uncropped_out_dim, res) \
 { \
-  const uint32_t LINEAR_LAYER_offset = (woffset); \
+  const uint32_t LINEAR_LAYER_CROPPED_offset = (woffset); \
   for(uint32_t _j = 0; _j < 4; ++_j) {\
     res[_j] = 0.0f; \
+    uint32_t LINEAR_LAYER_CROPPED_idxj = (idx)[_j]; \
+    uint32_t LINEAR_LAYER_CROPPED_offset_j = LINEAR_LAYER_CROPPED_idxj * (in_dim) + LINEAR_LAYER_CROPPED_offset; \
     for(uint32_t _p = 0; _p < (in_dim); ++_p) {\
-      (res)[_j] += (wptr)[LINEAR_LAYER_offset + (idx)[_j] * (in_dim) + _p] * (x)[_p];\
+      (res)[_j] += (wptr)[LINEAR_LAYER_CROPPED_offset_j + _p] * (x)[_p];\
     }\
-    (res)[_j] += (wptr)[LINEAR_LAYER_offset + (in_dim) * (uncropped_out_dim) + (idx)[_j]];\
+    (res)[_j] += (wptr)[LINEAR_LAYER_CROPPED_offset + (in_dim) * (uncropped_out_dim) + LINEAR_LAYER_CROPPED_idxj];\
   }\
 }
 
@@ -82,6 +85,18 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
 
   float3 half, diff;
   RusinkiewiczTransform(wi, wo, &half, &diff);
+
+  
+  float4 t;
+  uint4 lerpIdx;
+  for(int i = 0; i < 4; ++i) {
+    float lambda = wavelengths[i];
+    uint idx = NeuralBrdfBinarySearch(lambda);
+    t[i] = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
+
+    lerpIdx[i] = idx; 
+  }
+
 
   float buf0[NBRDF_MAX_SIZE];
   buf0[0] = half.x;
@@ -120,18 +135,6 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
                    NBRDF_HIDDEN_DIM, NBRDF_HIDDEN_DIM);
   RELU(buf0, 0, NBRDF_HIDDEN_DIM);
 
-
-  float4 t;
-  uint4 lerpIdx;
-  for(int i = 0; i < 4; ++i) {
-    float lambda = wavelengths[i];
-    uint idx = NeuralBrdfBinarySearch(lambda);
-    t[i] = (lambda - NBRDF_SPECTRAL_WAVELENGTHS[idx]) / (NBRDF_SPECTRAL_WAVELENGTHS[idx + 1] - NBRDF_SPECTRAL_WAVELENGTHS[idx]);
-
-    lerpIdx[i] = idx; 
-  }
-
-
   //Layer4
   offset = weights_offset + NBRDF_WEIGTH_OFFSETS[4];
   float4 y0 = float4(0, 0, 0, 0);
@@ -139,7 +142,7 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
                        lerpIdx, NBRDF_HIDDEN_DIM, out_dim, y0);
   y0 = clamp(y0, -20.0f, 20.0f);
 
-  float4 y1 = float4(0, 0, 0, 0);;
+  float4 y1 = float4(0, 0, 0, 0);
   LINEAR_LAYER_CROPPED(m_neural_weights.data(), offset, buf0, 
                        lerpIdx + 1, NBRDF_HIDDEN_DIM, out_dim, y1);
   y1 = clamp(y1, -20.0f, 20.0f);
@@ -147,14 +150,10 @@ float4 Integrator::NeuralBrdfEvalInternal(uint weights_offset, uint median_entry
 
   float p_ref = MeasuredInterpIso1D(median_entry_id, wi, wo);
 
- // std::cout << "pref=" + std::to_string(p_ref) + " " << std::endl;
-
   y0 = invLogMapping(y0, p_ref);
   y1 = invLogMapping(y1, p_ref);
 
   float4 res = y0 + t * (y1 - y0);
-
- // std::cout << std::to_string(res[0]) + " " + std::to_string(res[1]) + " " + std::to_string(res[2]) + " " + std::to_string(res[3]) << std::endl; 
 
   return res;
 }
