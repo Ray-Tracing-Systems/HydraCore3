@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "variant": "sw-mega",
+  "scene": "test035",
+  "scene_path": "/home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+  "scene_xml_sha256": "bcbc08f517cc80d8180f8f1d05b58103e763d34655bc370d3258279a0cdd363f",
+  "integrator": "mispt",
+  "width": 1024,
+  "height": 1024,
+  "spp": 256,
+  "repeat": 0,
+  "gpu_id": 0,
+  "ao_radius": null,
+  "host": "intellekt6-PC",
+  "platform": "Linux-6.8.0-149-generic-x86_64-with-glibc2.35",
+  "gpu_label": "Arc A380",
+  "captured_at": "2026-11-23T15:38:22.267036+00:00",
+  "command": [
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-mega/hydra",
+    "--gpu",
+    "-gpu_id",
+    "0",
+    "-in",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+    "-integrator",
+    "mispt",
+    "-width",
+    "1024",
+    "-height",
+    "1024",
+    "-spp",
+    "256",
+    "-resource_dir",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-mega",
+    "-profile-json",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-pt/sw-mega_test035_gpu0_mispt_0.raw.json",
+    "-out",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-pt/sw-mega_test035_gpu0_mispt_0.bmp"
+  ],
+  "build": {
+    "variant": "sw-mega",
+    "config": "kmake_mega_swrt_v1.json",
+    "config_sha256": "c2e9616db37d9371adb2468d621de15109834d60d9190b08f05ec679c2d34201",
+    "source_revision": "13b2e5df416b7ddfa8f0f8b39be6f117544356de",
+    "slicer_revision": "dbdee38256b0aacb39397075c2b7fd640d11e618",
+    "source_dirty": false,
+    "heavyrt_patch_sha256": "ce64bdca98fd16db0b254a9f04dfc80dc0c3be4a684370c69e26a6e6a939ae5a",
+    "built_at": "2026-11-23T15:36:14.628141+00:00",
+    "binary": "hydra",
+    "sha256": {
+      "hydra": "bfef0da6efbab8a22639b206e7fa017206a7567ad94d95dec8fd73feb03b7a73",
+      "shaders_generated/AmbientOcclusionMega.comp.spv": "7c7754905ccb0e1f736a21311b672698c8b44162ea1d8748b6a390f74e274eed",
+      "shaders_generated/CastSingleRayMega.comp.spv": "2d0b1d77ef504228228d57a4314b30745769582ec59ee7ca763cc984656693f0",
+      "shaders_generated/NaivePathTraceMega.comp.spv": "96e3fde2b07344ac392f0a5c750bd85b729680ed3d03f0ee685b82dbd1287a13",
+      "shaders_generated/PackXYMega.comp.spv": "36951a5de79f7877ac26170fc163880edd5528a5e89765d800ec4de59f3af6b3",
+      "shaders_generated/PathTraceFromInputRaysMega.comp.spv": "cd4f5aa71bad8f730bfedba161a8d7e533d3174a84b99faed65430070eeb0d1d",
+      "shaders_generated/PathTraceMega.comp.spv": "2fe84a0514546c9336f68c554576d1208f7e9ccd2c840fb26bc397ceb69be6de",
+      "shaders_generated/RayTraceMega.comp.spv": "5aeb5bd3ec2319076ae8b7b90d440369e1a6df0a980d66c3fe31645278f36815"
+    },
+    "heavyrt_revision": "ee2721c5726aa8841a088f2c85ded2351539e702"
+  },
+  "submit_wait_ms": {
+    "PathTraceBlock": 4200.44
+  },
+  "profile": {
+    "schema_version": 1,
+    "source": "VK_KHR_pipeline_executable_properties",
+    "supported": true,
+    "device": {
+      "name": "Intel(R) Arc(tm) A380 Graphics (DG2)",
+      "vendor_id": 32902,
+      "device_id": 22181,
+      "api_version": 4206881,
+      "driver_version": 100671587,
+      "driver_name": "Intel open-source Mesa driver",
+      "driver_info": "Mesa 24.3.0-devel (git-9fc8668b66)"
+    },
+    "kernels": [
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-mega/shaders_generated/PathTraceMega.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD8 compute shader",
+            "subgroup_size": 8,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 11464
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 286
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 366542368
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 214
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 348
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 16384
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 249
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0x790e476d. Hash generated from shader source.",
+                "format": 2,
+                "value": 2030978925
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      }
+    ]
+  }
+}

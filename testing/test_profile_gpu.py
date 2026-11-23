@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from profile_gpu import report_files, write_json, summary_tables
+from profile_gpu import ARC_OCCUPANCY, ARC_RESIDENCY, report_files, write_json, summary_tables
 
 
 class ReportTests(unittest.TestCase):
@@ -55,7 +55,7 @@ class ReportTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not a run record"):
                 report_files([directory / "raw.json"], directory / "result.tex")
 
-    def test_gpu_columns_kernel_filter_repeats_and_absent_kernels(self):
+    def test_gpu_columns_kernel_filter_and_repeats(self):
         a = self.record()
         a["profile"]["device"]["name"] = "GPU A"
         a["profile"]["kernels"][0]["shader"] = "kernel_RayTrace2.comp.spv"
@@ -69,13 +69,16 @@ class ReportTests(unittest.TestCase):
         mega = copy.deepcopy(a)
         mega["variant"] = "hw-mega"
         mega["profile"]["kernels"][0]["shader"] = "PathTraceMega.comp.spv"
+        mega["profile"]["kernels"][1]["executables"][0]["statistics"][0]["value"] = 999
         output = "\n".join(summary_tables([a, b, repeat, mega]))
-        self.assertIn(r"\shortstack{(PT,\\GPU A)}", output)
-        self.assertIn(r"\shortstack{(PT,\\GPU B)}", output)
+        self.assertIn(r"\shortstack{(PT,\\GPU A)\\VGPRs}", output)
+        self.assertIn(r"\shortstack{(PT,\\GPU B)\\VGPRs}", output)
         self.assertIn("hw-wave & 160 & 999", output)
-        self.assertIn("hw-wave & 160 & 64", output)
-        ray_table = output.split("Register allocation of standalone")[1]
-        self.assertNotIn("hw-mega &", ray_table)
+        ray_table = output.split("Reported vector registers for PT kernels")[1]
+        self.assertIn(r"hw-wave & kernel\_RayTrace2 & 160 & 64", ray_table)
+        self.assertIn("hw-mega & PathTraceMega & 128 & --", ray_table)
+        self.assertNotIn("Subgroup size (threads)", ray_table)
+        self.assertNotIn("999", ray_table)
         self.assertNotIn("N/A", output)
 
     def test_pt_and_ao_share_maximum_table(self):
@@ -85,9 +88,9 @@ class ReportTests(unittest.TestCase):
         ao["ao_radius"] = 2.0
         ao["profile"]["kernels"][0]["executables"][0]["statistics"][0]["value"] = 48
         output = "\n".join(summary_tables([pt, ao]))
-        self.assertEqual(output.count("Maximum register allocation over rendering kernels"), 1)
-        self.assertIn(r"\shortstack{(PT,\\Test GPU)}", output)
-        self.assertIn(r"\shortstack{(AO,\\Test GPU)}", output)
+        self.assertEqual(output.count("Maximum reported vector registers over rendering kernels"), 1)
+        self.assertIn(r"\shortstack{(PT,\\Test GPU)\\VGPRs}", output)
+        self.assertIn(r"\shortstack{(AO,\\Test GPU)\\VGPRs}", output)
         self.assertIn("hw-wave & 128 & 48", output)
 
     def test_spills_and_estimates_are_not_register_allocation(self):
@@ -101,20 +104,50 @@ class ReportTests(unittest.TestCase):
         self.assertNotIn("8888", output)
         self.assertIn("hw-wave & 128", output)
 
-    def test_register_files_have_separate_tables(self):
-        record = self.record()
-        record["profile"]["kernels"][0]["shader"] = "kernel_RayTrace2.comp.spv"
-        record["profile"]["kernels"][0]["executables"][0]["statistics"].append(
+    def test_summary_merges_vendor_metrics_in_each_table(self):
+        amd = self.record()
+        amd["profile"]["device"]["name"] = "AMD GPU"
+        amd["profile"]["kernels"][0]["shader"] = "kernel_RayTrace2.comp.spv"
+        amd["profile"]["kernels"][0]["executables"][0]["statistics"].append(
             {"name": "SGPRs", "value": 96})
-        output = "\n".join(summary_tables([record]))
+        intel = copy.deepcopy(amd)
+        intel["profile"]["device"]["name"] = "Intel GPU"
+        intel["profile"]["device"]["driver_name"] = "Intel open-source Mesa driver"
+        intel_kernel = intel["profile"]["kernels"][0]
+        intel_kernel["executables"][0]["statistics"] = [{"name": "Max live registers", "value": 42}]
+        intel["profile"]["kernels"] = [intel_kernel]
+        output = "\n".join(summary_tables([amd, intel]))
         tables = output.split(r"\begin{longtable}")[1:]
-        self.assertEqual(len(tables), 4)
-        for table in tables:
-            caption = table.split(r"\label")[0]
-            self.assertNotEqual("SGPRs" in caption, "VGPRs" in caption)
-            self.assertNotIn("Register file / metric", table)
-        self.assertIn("hw-wave & 96", tables[0])
-        self.assertIn("hw-wave & 128", tables[1])
+        self.assertEqual(len(tables), 2)
+        for table, kernel in zip(tables, ("", r"kernel\_RayTrace2 & ")):
+            self.assertIn(r"\shortstack{(PT,\\AMD GPU)\\VGPRs} & \shortstack{(PT,\\Intel GPU)\\Max live registers}", table)
+            self.assertNotIn("SGPRs", table)
+            self.assertNotIn("Subgroups per SIMD", table)
+            self.assertIn(f"hw-wave & {kernel}128 & 42", table)
+
+    def test_arc_residency_uses_workgroup_and_rounded_slm(self):
+        record = self.record()
+        record["profile"]["device"].update(name="Arc A380", vendor_id=0x8086, device_id=0x56A5,
+                                            driver_name="Intel open-source Mesa driver")
+        kernel = record["profile"]["kernels"][0]
+        kernel["local_size"] = [256, 1, 1]
+        executable = kernel["executables"][0]
+        executable["subgroup_size"] = 16
+        executable["statistics"] = [
+            {"name": "Max live registers", "description": "Register pressure", "value": 317},
+            {"name": "Workgroup Memory Size", "description": "Shared memory in bytes", "value": 16385},
+        ]
+        record["profile"]["kernels"] = [kernel]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            write_json(path / "arc.json", record)
+            report_files([path / "arc.json"], path / "arc.tex")
+            output = (path / "arc.tex").read_text()
+        self.assertIn(f" & {ARC_RESIDENCY} & 64", output)
+        self.assertIn(r" & " + ARC_OCCUPANCY.replace("%", r"\%") + " & 50", output)
+        self.assertIn(r"\shortstack{(PT,\\Arc A380)\\Max live registers}", output)
+        del kernel["local_size"]
+        self.assertNotIn(ARC_RESIDENCY, "\n".join(summary_tables([record])))
 
 
 if __name__ == "__main__":

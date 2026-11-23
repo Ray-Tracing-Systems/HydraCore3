@@ -1,0 +1,16 @@
+/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-mega-p/hydra --gpu -gpu_id 0 -in /home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml -integrator rtao -width 1024 -height 1024 -spp 256 -resource_dir /home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-mega-p -profile-json /home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-rtao/hw-mega-p_test035_gpu0_rtao_0.raw.json -out /home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-rtao/hw-mega-p_test035_gpu0_rtao_0.bmp -ao-radius 2.0
+[main]: camsId.size() = 1
+[main]: loading xml ... /home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml
+[main]: Create Integrator begin.
+[VkUtils::INFO] findPhysicalDevice: { 
+[VkUtils::INFO]   device 0, name = Intel(R) Arc(tm) A380 Graphics (DG2) <-- (selected)
+[VkUtils::INFO] }
+[VkUtils::INFO] [Alloc(Special)] Buffers  REALLOC : old_size = 0, new_size = 33554431
+[VkUtils::INFO] [Alloc(Special)] Textures REALLOC : old_size = 0, new_size = 67108896
+[main]: Create Integrator end: 96.39 ms
+[main]: Loading scene ... /home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml
+Color multiplier in material for light geom and in light intensity node are different! Using values from light intensity node. lightId = 0
+Color multiplier in material for light geom and in light intensity node are different! Using values from light intensity node. lightId = 0
+[main]: PackXYBlock() ... 
+[main]: frame = 0 / 1, cam_id = 0, fb_layer = 0
+AmbientOcclusionBlock(exec) = 1129.35 ms

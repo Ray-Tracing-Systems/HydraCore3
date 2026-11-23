@@ -2,5 +2,10 @@
 \usepackage[a4paper,margin=18mm]{geometry}
 \usepackage{longtable}
 \begin{document}
+\noindent\textbf{Arc A380 render check.} All five configurations produced PT and RTAO captures.
+The persistent hardware megakernel produced darker images than the regular hardware megakernel in both workloads.
+For PT, the generated host code divides the pass count by the device's default subgroup size of 32, while ANV reported a subgroup size of 8 for \texttt{PathTraceMega}.
+The tables describe the compiled executables. Treat the persistent run as a profiling capture pending render validation.
+\par\medskip
 \input{supplement.tex}
 \end{document}

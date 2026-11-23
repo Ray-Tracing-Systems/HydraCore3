@@ -8,11 +8,13 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
 import re
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -24,8 +26,12 @@ VARIANTS = {
     "hw-mega": "kmake_mega.json",
     "hw-mega-p": "kmake_mega_persistent.json",
 }
-METRIC = re.compile(r"register|\bregs?\b|\bgrfs?\b|gpr|spill|scratch|shared.*memory|lds|occupancy|"
+METRIC = re.compile(r"register|\bregs?\b|\bgrfs?\b|gpr|spill|fill count|scratch|(?:shared|workgroup).*memory|lds|occupancy|"
                     r"subgroups per|\bwarps?\b|resident|threads per", re.I)
+ARC_RESIDENCY = "Theoretical resident subgroups per Xe-core"
+ARC_OCCUPANCY = "Theoretical Xe-core occupancy (%)"
+PRESSURE = "Max live registers"
+SUBGROUP_SIZE = "Subgroup size (threads)"
 
 
 def digest(path):
@@ -145,6 +151,39 @@ def parse_scene(value):
     return name, path
 
 
+def arc_a380_anv(profile):
+    device = profile["device"]
+    return (device.get("vendor_id") == 0x8086 and device.get("device_id") == 0x56A5
+            and device["driver_name"] == "Intel open-source Mesa driver")
+
+
+def fixed_local_size(path):
+    data = path.read_bytes()
+    if len(data) < 20 or len(data) % 4:
+        return None
+    words = struct.unpack(f"<{len(data) // 4}I", data)
+    if words[0] != 0x07230203:
+        return None
+    entries = []
+    sizes = {}
+    offset = 5
+    while offset < len(words):
+        count, opcode = words[offset] >> 16, words[offset] & 0xffff
+        if not count or offset + count > len(words):
+            return None
+        if opcode == 15 and count >= 4:  # OpEntryPoint
+            entries.append(words[offset + 1:offset + 3])
+        if opcode == 16 and count == 6 and words[offset + 2] == 17:  # OpExecutionMode LocalSize
+            sizes[words[offset + 1]] = words[offset + 3:offset + 6]
+        offset += count
+    # Hydra uses single-entry compute modules with a literal workgroup size.
+    if len(entries) == 1 and entries[0][0] == 5:  # GLCompute
+        size = sizes.get(entries[0][1])
+        if size and all(size):
+            return size
+    return None
+
+
 def run(args):
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -196,6 +235,13 @@ def run(args):
                                            "raw metadata saved, use a vendor profiler on this machine")
                     if not any(e["statistics"] for k in profile["kernels"] for e in k["executables"]):
                         raise RuntimeError("driver returned no executable statistics")
+                    if arc_a380_anv(profile):
+                        for kernel in profile["kernels"]:
+                            shader = Path(kernel["shader"])
+                            if not shader.is_absolute():
+                                shader = ROOT / shader
+                            if shader.is_file() and (size := fixed_local_size(shader)):
+                                kernel["local_size"] = size
                     if variant == "hw-mega-p":
                         widths = {e["subgroup_size"] for k in profile["kernels"] for e in k["executables"]}
                         if any(w == 0 or args.spp % w or (args.width * args.height) % w for w in widths):
@@ -243,12 +289,28 @@ def selected_statistics(executable):
     return [s for s in executable["statistics"] if METRIC.search(s["name"])]
 
 
-def register_statistics(executable):
-    # Allocation counts only: pre-scheduling estimates and spills have different meanings.
-    return [s for s in executable["statistics"]
-            if re.search(r"register|\bregs?\b|\bgrfs?\b|\b[sv]gprs?\b", s["name"], re.I)
-            and not re.search(r"pre.?sched|spill", s["name"], re.I)
-            and isinstance(s["value"], (int, float)) and not isinstance(s["value"], bool)]
+def arc_residency_statistics(kernel, executable):
+    size = kernel.get("local_size")
+    width = executable["subgroup_size"]
+    shared = next((s["value"] for s in executable["statistics"]
+                   if s["name"] == "Workgroup Memory Size"), None)
+    if (not size or not all(type(axis) is int and axis > 0 for axis in size)
+            or width not in (8, 16, 32) or type(shared) is not int or not 0 <= shared <= 65536):
+        return []
+    # Intel's Xe-HPG occupancy model: 16 vector engines x 8 slots, 128 KiB SLM
+    # per Xe-core, with power-of-two SLM allocation starting at 1 KiB.
+    slots = 128
+    subgroups = (math.prod(size) + width - 1) // width
+    groups = slots // subgroups
+    if shared:
+        allocated = max(1024, 1 << (shared - 1).bit_length())
+        groups = min(groups, 131072 // allocated)
+    resident = groups * subgroups
+    return [{"name": ARC_RESIDENCY, "value": resident,
+             "description": "Modeled upper bound from SIMD width, SPIR-V workgroup size and "
+                            "ANV shared memory, assuming enough workgroups to fill the Xe-core."},
+            {"name": ARC_OCCUPANCY, "value": 100 * resident / slots,
+             "description": "Modeled resident subgroups divided by 128 Xe-core hardware thread slots."}]
 
 
 def gpu_key(record):
@@ -259,12 +321,10 @@ def gpu_key(record):
 
 
 def summary_tables(records):
-    lines = [r"\noindent\textbf{Register allocation summary}\par",
-             "Columns identify the workload and GPU. Counts retain the driver's native "
-             "register-file names and units; SGPRs, VGPRs and GRFs are not added together. "
-             "Repeated runs are reduced by taking the maximum for each cell. "
-             "A dash means a measurement or metric was not reported. "
-             "Subgroup widths and native metric definitions are listed in the detailed tables.\\\\"]
+    lines = [r"\noindent\textbf{Reported vector registers}\par",
+             "RADV reports allocated VGPRs per subgroup. ANV reports peak live GRF pressure before allocation and spilling. "
+             "Columns retain their native counters and units. Repeated runs use the maximum for each cell. "
+             "A dash indicates an unavailable count.\\\\"]
     devices = sorted({gpu_key(r) for r in records})
     labels = {}
     for i, key in enumerate(devices, 1):
@@ -295,54 +355,56 @@ def summary_tables(records):
         workload = column[0]
         return (0 if workload == "mispt" else 1 if workload == "rtao" else 2, str(column))
 
-    def header(column):
+    def header(column, metric):
         workload = {"mispt": "PT", "rtao": "AO"}.get(column[0], column[0])
-        return r"\shortstack{(" + latex(workload) + r",\\" + latex(labels[column[1]]) + ")}"
+        return (r"\shortstack{(" + latex(workload) + r",\\" + latex(labels[column[1]]) + r")\\" +
+                latex(metric) + "}")
 
+    variant_order = {variant: i for i, variant in enumerate(VARIANTS)}
     for group_id, (group, runs) in enumerate(sorted(groups.items(), key=lambda item: str(item[0]))):
-        for target in ("maximum", "kernel_RayTrace2"):
+        for target in ("maximum", "path-traversal"):
             cells = {}
+            column_metrics = {}
             for r in runs:
                 column = column_key(r)
+                metric = PRESSURE if r["profile"]["device"]["driver_name"] == "Intel open-source Mesa driver" else "VGPRs"
                 for k in r["profile"]["kernels"]:
                     name = Path(k["shader"]).name.removesuffix(".comp.spv")
-                    if target != "maximum" and name != target:
+                    if target == "path-traversal" and name not in (
+                            "kernel_RayTrace2", "PathTraceMega", "NaivePathTraceMega"):
                         continue
+                    row = (r["variant"], "" if target == "maximum" else name)
                     for e in k["executables"]:
-                        for stat in register_statistics(e):
-                            key = r["variant"], stat["name"], column
-                            cells[key] = max(cells.get(key, stat["value"]), stat["value"])
+                        for stat in e["statistics"]:
+                            if stat["name"] == metric and type(stat["value"]) is int:
+                                key = row, column
+                                cells[key] = max(cells.get(key, stat["value"]), stat["value"])
+                                column_metrics[column] = metric
             if not cells:
                 continue
-            columns = sorted({key[2] for key in cells}, key=column_order)
-            metrics = sorted({key[1] for key in cells})
-            caption = ("Maximum register allocation over rendering kernels" if target == "maximum"
-                       else "Register allocation of standalone kernel_RayTrace2")
-            caption += f"; {group[0]}, {group[2]} x {group[3]}, {group[4]} spp"
+            rows = sorted({key[0] for key in cells}, key=lambda row: (variant_order[row[0]], row[1]))
+            columns = sorted(column_metrics, key=column_order)
+            caption = ("Maximum reported vector registers over rendering kernels" if target == "maximum"
+                       else "Reported vector registers for PT kernels that perform ray traversal")
+            caption += f", {group[0]}, {group[2]} x {group[3]}, {group[4]} spp"
             radii = sorted({c[2] for c in columns if c[0] == "rtao" and c[2] is not None})
             if radii:
-                caption += "; AO radius " + ", ".join(number(radius) for radius in radii)
-            # Each native register file has its own removable table.
-            for metric_id, metric in enumerate(metrics):
-                metric_columns = [c for c in columns if any(k[1] == metric and k[2] == c for k in cells)]
-                for offset in range(0, len(metric_columns), 4):
-                    panel = metric_columns[offset:offset + 4]
-                    heading = r"\hline Variant & " + " & ".join(header(c) for c in panel) + r" \\\hline"
-                    lines += [r"\begin{longtable}{l" + "r" * len(panel) + "}",
-                              r"\caption{" + latex(caption + "; " + metric) + r"}\label{tab:hydra-register-" +
-                              f"{group_id}-{target.replace('_', '-')}-{metric_id}-{offset}" + r"}\\",
-                              heading, r"\endfirsthead", heading, r"\endhead"]
-                    for variant in VARIANTS:
-                        values = [cells.get((variant, metric, c)) for c in panel]
-                        # In particular, omit fused megakernels from RayTrace2's table.
-                        if all(value is None for value in values):
-                            continue
-                        lines.append(latex(variant) + " & " +
-                                     " & ".join("--" if value is None else latex(number(value)) for value in values) + r" \\")
-                    lines += [r"\hline", r"\end{longtable}"]
-    lines.append(r"Standalone kernel\_RayTrace2 is available in PT wavefront variants. "
-                 "Megakernels inline this stage; their register counts cannot be attributed to this function alone. "
-                 "RTAO uses different kernel stages.\\\\")
+                caption += ", AO radius " + ", ".join(number(radius) for radius in radii)
+            target_id = f"{group_id}-{target.replace('_', '-')}"
+            row_headers = ["Variant"] if target == "maximum" else ["Variant", "Kernel"]
+            heading = r"\hline " + " & ".join(row_headers + [header(c, column_metrics[c]) for c in columns]) + r" \\\hline"
+            lines += [r"\begin{longtable}{" + "l" * len(row_headers) + "r" * len(columns) + "}",
+                      r"\caption{" + latex(caption) + r"}\label{tab:hydra-summary-" + target_id + r"}\\",
+                      heading, r"\endfirsthead", heading, r"\endhead"]
+            for row in rows:
+                values = [cells.get((row, c)) for c in columns]
+                labels_for_row = [latex(value) for value in row if value]
+                numbers = ["--" if value is None else latex(number(value)) for value in values]
+                lines.append(" & ".join(labels_for_row + numbers) + r" \\")
+            lines += [r"\hline", r"\end{longtable}"]
+    lines.append(r"In the PT traversal summary, kernel\_RayTrace2 covers the standalone wavefront traversal stage. "
+                 "Megakernel statistics cover the full fused shader, including traversal and shading. "
+                 "RTAO appears in the rendering-kernel summary and the detailed tables.\\\\")
     return lines
 
 
@@ -362,13 +424,20 @@ def report_files(files, destination):
         raise ValueError("no run records")
     lines = [r"% Generated by testing/profile_gpu.py. Requires \usepackage{longtable}.",
              r"\begingroup\scriptsize",
-             r"The numbers were obtained with the Vulkan extension \texttt{VK\_KHR\_pipeline\_executable\_properties}. "
-             "These are compile-time driver statistics for compute kernels recorded during rendering. "
+             r"Driver statistics come from the Vulkan extension \texttt{VK\_KHR\_pipeline\_executable\_properties}. "
+             "The tables describe compute kernels recorded during rendering. "
              "Scene construction and pixel packing are excluded. Register counts and spills retain the "
              "driver's native units; they must not be compared across vendors as equivalent register files. "
              "Subgroups per SIMD is a static residency limit, not measured achieved occupancy. "
              "A maximum row is the independent maximum of one metric over the rendering kernels; "
              "it does not describe a single combined kernel.\\\\"]
+    if any(arc_a380_anv(r["profile"]) for r in records):
+        lines.append(r"On Arc A380, Max live registers is ANV's peak pre-allocation register pressure. "
+                     r"The theoretical Xe-core occupancy ceiling uses Intel's workgroup packing model "
+                     r"with 128 hardware thread slots and 128 KiB of shared local memory per Xe-core. "
+                     r"The calculation assumes enough workgroups and uses the compiled SIMD width, "
+                     r"SPIR-V workgroup size and ANV's workgroup shared memory size. "
+                     r"Actual hardware occupancy requires runtime counters.\\\\")
     lines += summary_tables(records)
     for index, record in enumerate(records):
         p = record["profile"]
@@ -387,8 +456,14 @@ def report_files(files, destination):
             for executable in kernel["executables"]:
                 kernel_name = Path(kernel["shader"]).name.removesuffix(".comp.spv")
                 label = kernel_name + " / " + executable["name"]
-                lines.append(latex(label) + " & Subgroup size (threads) & " + str(executable["subgroup_size"]) + r" \\")
-                for stat in selected_statistics(executable):
+                lines.append(latex(label) + " & " + SUBGROUP_SIZE + " & " + str(executable["subgroup_size"]) + r" \\")
+                stats = selected_statistics(executable)
+                if arc_a380_anv(p):
+                    if kernel.get("local_size"):
+                        lines.append(" & Workgroup size (invocations) & " +
+                                     str(math.prod(kernel["local_size"])) + r" \\")
+                    stats += arc_residency_statistics(kernel, executable)
+                for stat in stats:
                     name, value = stat["name"], stat["value"]
                     lines.append(" & " + latex(name) + " & " + latex(number(value)) + r" \\")
                     definitions[name] = stat["description"]

@@ -1,0 +1,597 @@
+{
+  "schema_version": 1,
+  "variant": "hw-wave",
+  "scene": "test035",
+  "scene_path": "/home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+  "scene_xml_sha256": "bcbc08f517cc80d8180f8f1d05b58103e763d34655bc370d3258279a0cdd363f",
+  "integrator": "mispt",
+  "width": 1024,
+  "height": 1024,
+  "spp": 256,
+  "repeat": 0,
+  "gpu_id": 0,
+  "ao_radius": null,
+  "host": "intellekt6-PC",
+  "platform": "Linux-6.8.0-149-generic-x86_64-with-glibc2.35",
+  "gpu_label": "Arc A380",
+  "captured_at": "2026-11-23T15:38:30.676819+00:00",
+  "command": [
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/hydra",
+    "--gpu",
+    "-gpu_id",
+    "0",
+    "-in",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+    "-integrator",
+    "mispt",
+    "-width",
+    "1024",
+    "-height",
+    "1024",
+    "-spp",
+    "256",
+    "-resource_dir",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave",
+    "-profile-json",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-pt/hw-wave_test035_gpu0_mispt_0.raw.json",
+    "-out",
+    "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/arc-a380/test035-pt/hw-wave_test035_gpu0_mispt_0.bmp"
+  ],
+  "build": {
+    "variant": "hw-wave",
+    "config": "kmake_wave.json",
+    "config_sha256": "e630650bbbf953205995ce5fe1ca7c283f4c34275784171bfce0aab28af3bc39",
+    "source_revision": "13b2e5df416b7ddfa8f0f8b39be6f117544356de",
+    "slicer_revision": "dbdee38256b0aacb39397075c2b7fd640d11e618",
+    "source_dirty": false,
+    "heavyrt_patch_sha256": null,
+    "built_at": "2026-11-23T15:36:50.866166+00:00",
+    "binary": "hydra",
+    "sha256": {
+      "hydra": "b7b59aa034cdff1ebe8cb90bd7dec627b6624244606cb8b35472e4f7a6ae1384",
+      "shaders_generated/kernel_ContributeAO.comp.spv": "74c507b05d01736aabad851208d4d360117a6c1b6a523486acd85144e4f4e5a0",
+      "shaders_generated/kernel_ContributeToImage.comp.spv": "8759f2603f54218fe7789a6483c5402287b1ff7f56a4168021238e5aca8d2b3f",
+      "shaders_generated/kernel_ContributeToImage3.comp.spv": "0b271c3f72a989879479dc571a5ebe09f4186b6f31892cce3117013128d8ad4d",
+      "shaders_generated/kernel_CopyColorToOutput.comp.spv": "1d8a4e823acac91d2a76bb49be5e2e21e841a001093b248f2701c455564868bc",
+      "shaders_generated/kernel_GetRayColor.comp.spv": "4e1bbde5d2bb23625a62fb078529b109f472f58566677c85ab5e9c0defee4a17",
+      "shaders_generated/kernel_HitEnvironment.comp.spv": "0087a39bf807111cb7f67fe02e55a275ebfb0b5fc735f01a5d1c7d9db69af971",
+      "shaders_generated/kernel_InitAOEyeRay.comp.spv": "76607a73cb5cfdd6b008ba7619220259a12384287dd2e9321968f2b064557caa",
+      "shaders_generated/kernel_InitAORay.comp.spv": "7520e464b1f68e951d936172afae68859e35632cae8de412379fca2e15d2612f",
+      "shaders_generated/kernel_InitEyeRay.comp.spv": "ce5c644a8fed928d05c4e5e4501a1af89fc5d11680ad7c2555a24e66cc77de42",
+      "shaders_generated/kernel_InitEyeRay2.comp.spv": "199405a752febce7652e85594e0a70a7e84a7587cbc1069ad02c06ab939dddf3",
+      "shaders_generated/kernel_InitEyeRay3.comp.spv": "44daf2df30148d70ed1a385cc279933cdd5e999a0b19d59ff717421c5fae7f8a",
+      "shaders_generated/kernel_InitEyeRayFromInput.comp.spv": "4a4567bd713902dba01913c86e625202ff9342ad31ec71992053bb11746e2410",
+      "shaders_generated/kernel_NextBounce.comp.spv": "a47f3802ba2d2af833c75f486949fd0f92b2bcd39310eec591b640bf29e9078b",
+      "shaders_generated/kernel_PackXY.comp.spv": "594d252f67fa8316c1ac585e5fedf1bb83aedbd39f9f7df00490a756e041339e",
+      "shaders_generated/kernel_RayBounce.comp.spv": "f07c533f53bafdea221c9320ce468e63be91df7e9e652ec30789bee8bcaf20bb",
+      "shaders_generated/kernel_RayTrace.comp.spv": "3054104c2220f4f67f5df3579c365f14cd2d4d235f94463beb2c820bf49d4436",
+      "shaders_generated/kernel_RayTrace2.comp.spv": "961f3c44848d367349d862a4f235a776c5fd3421b587558cea65c71ffd9304c9",
+      "shaders_generated/kernel_SampleLightSource.comp.spv": "c8b1748becdea45a009fcf751519430705f20db4559a977f34dc9053ccf94b97",
+      "shaders_generated/kernel_TraceAOEyeRay.comp.spv": "2306231e398aa23e4f2d3c499c95435585d8421102aba64d48669b1223241b40",
+      "shaders_generated/kernel_TraceAORay.comp.spv": "4ad906490b5cb629ca0bf4b3e69197ae94e03b28bc317827d0d20f49680baf0c"
+    }
+  },
+  "submit_wait_ms": {
+    "PathTraceBlock": 6964.77
+  },
+  "profile": {
+    "schema_version": 1,
+    "source": "VK_KHR_pipeline_executable_properties",
+    "supported": true,
+    "device": {
+      "name": "Intel(R) Arc(tm) A380 Graphics (DG2)",
+      "vendor_id": 32902,
+      "device_id": 22181,
+      "api_version": 4206881,
+      "driver_version": 100671587,
+      "driver_name": "Intel open-source Mesa driver",
+      "driver_info": "Mesa 24.3.0-devel (git-9fc8668b66)"
+    },
+    "kernels": [
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_InitEyeRay2.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD16 compute shader",
+            "subgroup_size": 16,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 579
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 35
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 1
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 25290
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 16
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 104
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0xa1a86531. Hash generated from shader source.",
+                "format": 2,
+                "value": 2712167729
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      },
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_RayTrace2.comp.spv",
+        "recorded_dispatches": 5,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD16 compute shader",
+            "subgroup_size": 16,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 484
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 61
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 2
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 24918
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 16
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 87
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0x6e14d48d. Hash generated from shader source.",
+                "format": 2,
+                "value": 1846858893
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      },
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_SampleLightSource.comp.spv",
+        "recorded_dispatches": 5,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD8 compute shader",
+            "subgroup_size": 8,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 5299
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 231
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 18
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 6408182
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 66
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 51
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 2048
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 164
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0x7817a86c. Hash generated from shader source.",
+                "format": 2,
+                "value": 2014816364
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      },
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_NextBounce.comp.spv",
+        "recorded_dispatches": 5,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD8 compute shader",
+            "subgroup_size": 8,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 7700
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 259
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 20
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 514710
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 23
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 40
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 1024
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 139
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0x35b6acd1. Hash generated from shader source.",
+                "format": 2,
+                "value": 901164241
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      },
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_HitEnvironment.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD16 compute shader",
+            "subgroup_size": 16,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 455
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 47
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 7624
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 16
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 52
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0x56f40098. Hash generated from shader source.",
+                "format": 2,
+                "value": 1458831512
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      },
+      {
+        "shader": "/home/vfrolov/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/shaders_generated/kernel_ContributeToImage.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "SIMD16 compute shader",
+            "subgroup_size": 16,
+            "statistics": [
+              {
+                "name": "Instruction Count",
+                "description": "Number of GEN instructions in the final generated shader executable.",
+                "format": 2,
+                "value": 522
+              },
+              {
+                "name": "SEND Count",
+                "description": "Number of instructions in the final generated shader executable which access external units such as the constant cache or the sampler.",
+                "format": 2,
+                "value": 65
+              },
+              {
+                "name": "Loop Count",
+                "description": "Number of loops (not unrolled) in the final generated shader executable.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Cycle Count",
+                "description": "Estimate of the number of EU cycles required to execute the final generated executable.  This is an estimate only and may vary greatly from actual run-time performance.",
+                "format": 2,
+                "value": 7060
+              },
+              {
+                "name": "Spill Count",
+                "description": "Number of scratch spill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Fill Count",
+                "description": "Number of scratch fill operations.  This gives a rough estimate of the cost incurred due to spilling temporary values to memory.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch Memory Size",
+                "description": "Number of bytes of scratch memory required by the generated shader executable.  If this is non-zero, you may want to adjust your shader to reduce register pressure.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Max dispatch width",
+                "description": "Largest SIMD dispatch width.",
+                "format": 2,
+                "value": 16
+              },
+              {
+                "name": "Max live registers",
+                "description": "Maximum number of registers used across the entire shader.",
+                "format": 2,
+                "value": 74
+              },
+              {
+                "name": "Workgroup Memory Size",
+                "description": "Number of bytes of workgroup shared memory used by this shader including any padding.",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Source hash",
+                "description": "hash = 0xcfd3174a. Hash generated from shader source.",
+                "format": 2,
+                "value": 3486717770
+              }
+            ]
+          }
+        ],
+        "local_size": [
+          256,
+          1,
+          1
+        ]
+      }
+    ]
+  }
+}
