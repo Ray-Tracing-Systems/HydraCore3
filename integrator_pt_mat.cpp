@@ -194,6 +194,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
         conductorRoughSampleAndEval(m_materials.data(), currMatId, etaSpec, kSpec, rands, v, shadeNormal, tc, alphaTex, &res);
     }
     break;
+    #ifndef DISABLE_FILM // thin films need complex numbers with implicit conversions
     case MAT_TYPE_THIN_FILM:
     if(KSPEC_MAT_TYPE_THIN_FILM != 0)
     {
@@ -250,6 +251,7 @@ BsdfSample Integrator::MaterialSampleAndEval(uint a_materialId, uint tid, uint a
       a_misPrev->ior = res.ior;
     }
     break;
+    #endif
     case MAT_TYPE_DIFFUSE:
     if(KSPEC_MAT_TYPE_DIFFUSE != 0)
     {
@@ -419,6 +421,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
         res.pdf += currVal.pdf * currMat.weight;
       }
       break;
+    #ifndef DISABLE_FILM // thin films need complex numbers with implicit conversions
       case MAT_TYPE_THIN_FILM: 
       #ifndef DISABLE_SPECTRUM
       if(KSPEC_MAT_TYPE_THIN_FILM != 0)
@@ -470,6 +473,7 @@ BsdfEval Integrator::MaterialEval(uint a_materialId, float4 wavelengths, float3 
       }
       #endif
       break;
+    #endif
       case MAT_TYPE_DIFFUSE:
       if(KSPEC_MAT_TYPE_DIFFUSE != 0)
       {

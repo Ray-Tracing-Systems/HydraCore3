@@ -30,7 +30,8 @@ struct LightSource
   float4   intensity;      ///<! brightress, i.e. screen value if light is visable directly
   float4   norm;           ///<! light direction
 
-  float2   size;
+  float    sizeX;          ///<! size of light, not 'float2': LightSource is stored in buffer, but ISPC 'float2' takes 16 bytes
+  float    sizeY;
   float    pdfA;
   uint     geomType;  ///<! LIGHT_GEOM_RECT, LIGHT_GEOM_DISC, LIGHT_GEOM_SPHERE, ...
   
@@ -66,12 +67,12 @@ struct LightSample
 
 static inline LightSample areaLightSampleRev(const LightSource* a_pLight, int a_lightId, float2 rands)
 {
-  float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * a_pLight[a_lightId].size;  
+  float2 sampleOff = 2.0f * (float2(-0.5f,-0.5f) + rands) * float2(a_pLight[a_lightId].sizeX, a_pLight[a_lightId].sizeY);  
   if(a_pLight[a_lightId].geomType == LIGHT_GEOM_DISC)
   {
     const float offsetX = rands.x * 2.0f - 1.0f;
     const float offsetY = rands.y * 2.0f - 1.0f;
-    sampleOff = MapSamplesToDisc(float2(offsetX, offsetY))*a_pLight[a_lightId].size.x; 
+    sampleOff = MapSamplesToDisc(float2(offsetX, offsetY))*a_pLight[a_lightId].sizeX; 
   }
   const float3 samplePos = mul3x3(a_pLight[a_lightId].matrix, float3(sampleOff.x, 0.0f, sampleOff.y)) + to_float3(a_pLight[a_lightId].pos) + epsilonOfPos(to_float3(a_pLight[a_lightId].pos)) * to_float3(a_pLight[a_lightId].norm);
   LightSample res;
@@ -91,7 +92,7 @@ static inline LightSample sphereLightSampleRev(const LightSource* a_pLight, int 
   const float y     = std::sin(phi) * std::sin(theta);
   const float z     = std::cos(phi);
   const float3 lcenter   = to_float3(a_pLight[a_lightId].pos);
-  const float  lradius   = a_pLight[a_lightId].size.x;
+  const float  lradius   = a_pLight[a_lightId].sizeX;
   const float3 samplePos = lcenter + (lradius*1.000001f)*make_float3(x, y, z);
   LightSample res;
   res.pos  = samplePos;

@@ -812,9 +812,9 @@ static inline float3 square_to_cosine_hemisphere(const float2 &s)
 */
 static inline float smith_g1(const float3 &v, const float3 &m, float2 alpha) 
 {
-  float xy_alpha_2 = alpha.x * v.x * alpha.x * v.x + alpha.y * v.y * alpha.y * v.y,
-        tan_theta_alpha_2 = xy_alpha_2 / (v.z * v.z),
-        result;
+  float xy_alpha_2        = alpha.x * v.x * alpha.x * v.x + alpha.y * v.y * alpha.y * v.y; // separate declarations for ISPC
+  float tan_theta_alpha_2 = xy_alpha_2 / (v.z * v.z);
+  float result;
 
 
   result = 2.f / (1.f + safe_sqrt(1.f + tan_theta_alpha_2));

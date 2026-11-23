@@ -1,0 +1,41 @@
+{
+    "mainClass"     : "Integrator", // must explicitly specify main class as main process 'unit' for slicer
+    "baseClasses"   : [],           // specify all base clases in  reverse order from leaf to root
+    "composClasses" : {},           // specify all classes for composition pattern 
+    
+    "options" : {
+        "-pattern"    : "rtv",
+        "-shaderCC"   : "ispc",
+        "-ispc_process_include" : 1, // headers of include/ are C++, they are rewritten for ISPC
+        "-ispc_threads" : 2,         // OpenMP
+        "-megakernel" : 1,
+        "-const_ubo"  : 1,
+        "-const_shit" : 0,
+        "-enable_ray_tracing_pipeline" : 0,
+        "-enable_motion_blur"          : 0,
+        "end" : ""
+    },
+
+    "kernels" : {
+        "all"        : {"nonConstantData": {"out_color"  : 1, "m_randomGens" : 1}},
+        "PackXYMega" : {"nonConstantData": {"m_packedXY" : 1}}
+    },
+
+    "defines" : {
+        "KERNEL_SLICER" : "1",
+      "DISABLE_LENS"     : "", // benchmark scenes: RGB mode, pinhole camera, no thin films
+      "DISABLE_SPECTRUM" : "",
+      "DISABLE_FILM"     : ""
+    },
+
+    "source" : ["integrator_pt.cpp",
+                "integrator_ao.cpp",
+                "integrator_pt_lgt.cpp",
+                "integrator_pt_mat.cpp",
+                "integrator_rt.cpp",
+                "integrator_spectrum.cpp"],
+
+    "includeIgnore"  : ["external/LiteMath", "external/LiteScene"],
+    "includeProcess" : ["external/CrossRT", "cam_plugin"],
+    "end" : ""
+}

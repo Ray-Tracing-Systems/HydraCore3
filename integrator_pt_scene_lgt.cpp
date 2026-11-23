@@ -80,14 +80,14 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     }
     lightSource.matrix = matrix;
     lightSource.matrix.set_col(3, float4(0,0,0,1));
-    lightSource.size = float2(sizeZ, sizeX);       ///<! Please note tha we HAVE MISTAKEN with ZX order in Hydra2 implementation
+    lightSource.sizeX = sizeZ; lightSource.sizeY = sizeX;       ///<! Please note tha we HAVE MISTAKEN with ZX order in Hydra2 implementation
     if(shape == L"disk")
     {
-      lightSource.size.x = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
-      lightSource.pdfA   = 1.0f / (LiteMath::M_PI * lightSource.size.x *lightSource.size.x * scale.x * scale.z);
+      lightSource.sizeX = lightInst.lightNode.child(L"size").attribute(L"radius").as_float();
+      lightSource.pdfA   = 1.0f / (LiteMath::M_PI * lightSource.sizeX *lightSource.sizeX * scale.x * scale.z);
     }
     else
-      lightSource.pdfA   = 1.0f / (4.0f * lightSource.size.x * lightSource.size.y * scale.x * scale.z);
+      lightSource.pdfA   = 1.0f / (4.0f * lightSource.sizeX * lightSource.sizeY * scale.x * scale.z);
   }
   else if (shape == L"sphere")
   {
@@ -109,7 +109,8 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     lightSource.intensity = color;
     lightSource.geomType  = LIGHT_GEOM_SPHERE;
     lightSource.matrix    = float4x4{};
-    lightSource.size      = float2(radius, radius);
+    lightSource.sizeX     = radius;
+    lightSource.sizeY     = radius;
     lightSource.pdfA      = 1.0f / (4.0f*LiteMath::M_PI*radius*radius);
   }
   else if (shape == L"point")
@@ -120,7 +121,8 @@ LightSource LoadLightSourceFromNode(hydra_xml::LightInstance lightInst, const st
     lightSource.geomType  = LIGHT_GEOM_POINT;
     lightSource.distType  = (ldist == L"uniform" || ldist == L"omni" || ldist == L"ies") ? LIGHT_DIST_OMNI : LIGHT_DIST_LAMBERT;
     lightSource.pdfA      = 1.0f;
-    lightSource.size      = float2(0,0);
+    lightSource.sizeX     = 0.0f;
+    lightSource.sizeY     = 0.0f;
     lightSource.matrix    = float4x4{};
     if(ldist == L"spot")
     {
