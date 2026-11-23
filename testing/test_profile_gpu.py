@@ -34,6 +34,7 @@ class ReportTests(unittest.TestCase):
             self.assertIn(r"\textbf{Maximum over kernels} & Subgroups per SIMD & 12", result)
             self.assertNotIn("Hash &", result)
             self.assertIn("not measured achieved occupancy", result)
+            self.assertIn(r"VK\_KHR\_pipeline\_executable\_properties", result)
 
     def test_missing_metric_is_not_zero(self):
         record = copy.deepcopy(self.record())
@@ -69,10 +70,25 @@ class ReportTests(unittest.TestCase):
         mega["variant"] = "hw-mega"
         mega["profile"]["kernels"][0]["shader"] = "PathTraceMega.comp.spv"
         output = "\n".join(summary_tables([a, b, repeat, mega]))
-        self.assertIn("GPU 1 & GPU 2", output)
+        self.assertIn(r"\shortstack{(PT,\\GPU A)}", output)
+        self.assertIn(r"\shortstack{(PT,\\GPU B)}", output)
         self.assertIn("hw-wave & VGPRs & 160 & 999", output)
         self.assertIn("hw-wave & VGPRs & 160 & 64", output)
-        self.assertIn("hw-mega & VGPRs & N/A & --", output)
+        ray_table = output.split("Register allocation of standalone")[1]
+        self.assertNotIn("hw-mega &", ray_table)
+        self.assertNotIn("N/A", output)
+
+    def test_pt_and_ao_share_maximum_table(self):
+        pt = self.record()
+        ao = copy.deepcopy(pt)
+        ao["integrator"] = "rtao"
+        ao["ao_radius"] = 2.0
+        ao["profile"]["kernels"][0]["executables"][0]["statistics"][0]["value"] = 48
+        output = "\n".join(summary_tables([pt, ao]))
+        self.assertEqual(output.count("Maximum register allocation over rendering kernels"), 1)
+        self.assertIn(r"\shortstack{(PT,\\Test GPU)}", output)
+        self.assertIn(r"\shortstack{(AO,\\Test GPU)}", output)
+        self.assertIn("hw-wave & VGPRs & 128 & 48", output)
 
     def test_spills_and_estimates_are_not_register_allocation(self):
         record = self.record()

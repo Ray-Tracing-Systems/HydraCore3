@@ -260,72 +260,86 @@ def gpu_key(record):
 
 def summary_tables(records):
     lines = [r"\noindent\textbf{Register allocation summary}\par",
-             "Each GPU/driver/host combination has its own column. Counts retain the driver's "
-             "native register-file names and units; SGPRs, VGPRs and GRFs are not added together. "
+             "Columns identify the workload and GPU. Counts retain the driver's native "
+             "register-file names and units; SGPRs, VGPRs and GRFs are not added together. "
              "Repeated runs are reduced by taking the maximum for each cell. "
-             "A dash means a metric was not reported; N/A means no standalone kernel exists. "
+             "A dash means a measurement or metric was not reported. "
              "Subgroup widths and native metric definitions are listed in the detailed tables.\\\\"]
-    columns = sorted({gpu_key(r) for r in records})
-    for i, key in enumerate(columns, 1):
-        lines.append(r"\noindent GPU " + str(i) + ": " + latex(
-            f"{key[0] + '; ' if key[0] else ''}{key[1]}; {key[4]} {key[5]}; "
-            f"driver version {key[6]}; host {key[7]}; device {key[8]}") + r"\par")
+    devices = sorted({gpu_key(r) for r in records})
+    labels = {}
+    for i, key in enumerate(devices, 1):
+        label = key[0] or re.sub(r"^(AMD Radeon |NVIDIA GeForce |NVIDIA )", "", key[1].split(" (")[0])
+        labels[key] = label
+        lines.append(r"\noindent " + latex(label) + ": " + latex(
+            f"{key[1]}; {key[4]} {key[5]}; driver version {key[6]}; host {key[7]}; device {key[8]}") + r"\par")
+    # Distinguish different driver/host experiments using the same GPU model.
+    for key in devices:
+        if sum(labels[other] == labels[key] for other in devices) > 1:
+            label = labels[key]
+            for i, other in enumerate(devices, 1):
+                if labels[other] == label:
+                    labels[other] += f" [GPU {i}]"
     groups = {}
     for r in records:
-        key = (r["scene"], r.get("scene_xml_sha256", ""), r["integrator"],
-               r["width"], r["height"], r["spp"], r.get("ao_radius"))
+        key = (r["scene"], r.get("scene_xml_sha256", ""), r["width"], r["height"], r["spp"])
         groups.setdefault(key, []).append(r)
+    # Compare each AO radius with the matching PT experiment without mixing AO settings.
+    groups = {key + (radius,): [r for r in runs if r["integrator"] != "rtao" or r.get("ao_radius") == radius]
+              for key, runs in groups.items()
+              for radius in ({r.get("ao_radius") for r in runs if r["integrator"] == "rtao"} or {None})}
+
+    def column_key(r):
+        return r["integrator"], gpu_key(r), r.get("ao_radius")
+
+    def column_order(column):
+        workload = column[0]
+        return (0 if workload == "mispt" else 1 if workload == "rtao" else 2, str(column))
+
+    def header(column):
+        workload = {"mispt": "PT", "rtao": "AO"}.get(column[0], column[0])
+        return r"\shortstack{(" + latex(workload) + r",\\" + latex(labels[column[1]]) + ")}"
+
     for group_id, (group, runs) in enumerate(sorted(groups.items(), key=lambda item: str(item[0]))):
-        metrics = sorted({s["name"] for r in runs for k in r["profile"]["kernels"]
-                          for e in k["executables"] for s in register_statistics(e)})
-        if not metrics:
-            continue
         for target in ("maximum", "kernel_RayTrace2"):
             cells = {}
-            present = set()
-            measured = {(r["variant"], gpu_key(r)) for r in runs}
             for r in runs:
-                column = gpu_key(r)
+                column = column_key(r)
                 for k in r["profile"]["kernels"]:
                     name = Path(k["shader"]).name.removesuffix(".comp.spv")
                     if target != "maximum" and name != target:
                         continue
-                    present.add((r["variant"], column))
                     for e in k["executables"]:
-                        for s in register_statistics(e):
-                            key = (r["variant"], s["name"], column)
-                            cells[key] = max(cells.get(key, s["value"]), s["value"])
-            if not present:
-                lines.append(r"\noindent " + latex(f"{group[2]}: no standalone {target} was recorded.") + r"\par")
+                        for stat in register_statistics(e):
+                            key = r["variant"], stat["name"], column
+                            cells[key] = max(cells.get(key, stat["value"]), stat["value"])
+            if not cells:
                 continue
+            columns = sorted({key[2] for key in cells}, key=column_order)
+            metrics = sorted({key[1] for key in cells})
             caption = ("Maximum register allocation over rendering kernels" if target == "maximum"
                        else "Register allocation of standalone kernel_RayTrace2")
-            caption += f"; {group[0]}, {group[2]}, {group[3]} x {group[4]}, {group[5]} spp"
-            if group[6] is not None:
-                caption += f", AO radius {group[6]}"
-            # Split very wide comparisons into panels, retaining stable GPU column IDs.
+            caption += f"; {group[0]}, {group[2]} x {group[3]}, {group[4]} spp"
+            radii = sorted({c[2] for c in columns if c[0] == "rtao" and c[2] is not None})
+            if radii:
+                caption += "; AO radius " + ", ".join(number(radius) for radius in radii)
             for offset in range(0, len(columns), 4):
                 panel = columns[offset:offset + 4]
+                heading = r"\hline Variant & Register file / metric & " + " & ".join(header(c) for c in panel) + r" \\\hline"
                 lines += [r"\begin{longtable}{ll" + "r" * len(panel) + "}",
                           r"\caption{" + latex(caption) + r"}\label{tab:hydra-register-" +
                           f"{group_id}-{target.replace('_', '-')}-{offset}" + r"}\\",
-                          r"\hline Variant & Register file / metric & " +
-                          " & ".join(f"GPU {offset + j + 1}" for j in range(len(panel))) + r" \\\hline",
-                          r"\endfirsthead", r"\hline Variant & Register file / metric & " +
-                          " & ".join(f"GPU {offset + j + 1}" for j in range(len(panel))) + r" \\\hline",
-                          r"\endhead"]
+                          heading, r"\endfirsthead", heading, r"\endhead"]
                 for variant in VARIANTS:
-                    if not any(r["variant"] == variant for r in runs):
-                        continue
+                    rows = []
                     for metric in metrics:
-                        values = []
-                        for column in panel:
-                            value = cells.get((variant, metric, column))
-                            values.append(latex(number(value)) if value is not None else
-                                          ("N/A" if (variant, column) in measured and
-                                           (variant, column) not in present and target != "maximum" else "--"))
-                        lines.append(latex(variant) + " & " + latex(metric) + " & " + " & ".join(values) + r" \\")
-                    lines.append(r"\hline")
+                        values = [cells.get((variant, metric, c)) for c in panel]
+                        # In particular, omit fused megakernels from RayTrace2's table.
+                        if all(value is None for value in values):
+                            continue
+                        rows.append(latex(variant) + " & " + latex(metric) + " & " +
+                                    " & ".join("--" if value is None else latex(number(value)) for value in values) + r" \\")
+                    if rows:
+                        lines += rows + [r"\hline"]
                 lines.append(r"\end{longtable}")
     lines.append(r"Standalone kernel\_RayTrace2 is available in PT wavefront variants. "
                  "Megakernels inline this stage; their register counts cannot be attributed to this function alone. "
@@ -349,7 +363,8 @@ def report_files(files, destination):
         raise ValueError("no run records")
     lines = [r"% Generated by testing/profile_gpu.py. Requires \usepackage{longtable}.",
              r"\begingroup\scriptsize",
-             "The following are compiler/driver statistics for compute kernels recorded during rendering. "
+             r"The numbers were obtained with the Vulkan extension \texttt{VK\_KHR\_pipeline\_executable\_properties}. "
+             "These are compile-time driver statistics for compute kernels recorded during rendering. "
              "Scene construction and pixel packing are excluded. Register counts and spills retain the "
              "driver's native units; they must not be compared across vendors as equivalent register files. "
              "Subgroups per SIMD is a static residency limit, not measured achieved occupancy. "
