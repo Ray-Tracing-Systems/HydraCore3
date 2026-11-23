@@ -1,0 +1,940 @@
+{
+  "schema_version": 1,
+  "variant": "sw-wave",
+  "scene": "test035",
+  "scene_path": "/home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+  "scene_xml_sha256": "bcbc08f517cc80d8180f8f1d05b58103e763d34655bc370d3258279a0cdd363f",
+  "integrator": "rtao",
+  "width": 1024,
+  "height": 1024,
+  "spp": 256,
+  "repeat": 0,
+  "gpu_id": 0,
+  "ao_radius": 2.0,
+  "host": "frol-cmc",
+  "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.39",
+  "captured_at": "2026-11-23T12:32:26.809265+00:00",
+  "command": [
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/hydra",
+    "--gpu",
+    "-gpu_id",
+    "0",
+    "-in",
+    "/home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+    "-integrator",
+    "rtao",
+    "-width",
+    "1024",
+    "-height",
+    "1024",
+    "-spp",
+    "256",
+    "-resource_dir",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave",
+    "-profile-json",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/test035-rtao/sw-wave_test035_gpu0_rtao_0.raw.json",
+    "-out",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/test035-rtao/sw-wave_test035_gpu0_rtao_0.bmp",
+    "-ao-radius",
+    "2.0"
+  ],
+  "build": {
+    "variant": "sw-wave",
+    "config": "kmake_wave_swrt_v1.json",
+    "config_sha256": "215655d293bb1cc1020162af82c6ce644958b2f18027faf89219bf94cb02d525",
+    "source_revision": "b3f330b7654e5dc198ad515deee3a63d8ab2bf81",
+    "slicer_revision": "dbdee38256b0aacb39397075c2b7fd640d11e618",
+    "source_dirty": true,
+    "heavyrt_patch_sha256": "ce64bdca98fd16db0b254a9f04dfc80dc0c3be4a684370c69e26a6e6a939ae5a",
+    "built_at": "2026-11-23T12:30:59.830687+00:00",
+    "binary": "hydra",
+    "sha256": {
+      "hydra": "683c66293a37a2d6391e48b3b64a4d21fe78cf1689d2ab74c03af1bcc7ef0b5a",
+      "shaders_generated/kernel_ContributeAO.comp.spv": "59ae3a3abd5353aeca2dd1e3235cb2e7e6af5e5154c6202acb50c0695c0e0fbc",
+      "shaders_generated/kernel_ContributeToImage.comp.spv": "0c29753ca66fd7f570daec0e3072c95d2b2ac9e085e1a9b620cebe6e1ec5dce8",
+      "shaders_generated/kernel_ContributeToImage3.comp.spv": "1538c021a663ab7e99fc6331e9081b5c878f4e1acf5a42cf718c2ed6ce10fe77",
+      "shaders_generated/kernel_CopyColorToOutput.comp.spv": "ffc51114a46481d103113b6d1f2f77154af85c9a878096bcf0cab265f82e8d8a",
+      "shaders_generated/kernel_GetRayColor.comp.spv": "842e7546117d40b1e97fdf92c7005621ed540f0dcded1f0584eca50b7dff7315",
+      "shaders_generated/kernel_HitEnvironment.comp.spv": "07f3f0f2fae2af4b1551ca2c1590507008cb7332af769144a404991c0dea686e",
+      "shaders_generated/kernel_InitAOEyeRay.comp.spv": "39cfd3d4969ad07f65b6a438384108384be6f25b121215d3c72ae46b3a58e89b",
+      "shaders_generated/kernel_InitAORay.comp.spv": "7169251e2f704f7657ee77b1fe31254bb034fe2192dda5815035e80d455b1ea0",
+      "shaders_generated/kernel_InitEyeRay.comp.spv": "97cab82443fa2ee5c28b86be4136bb1489ddb5150b577884623f190acff4644e",
+      "shaders_generated/kernel_InitEyeRay2.comp.spv": "4f88622ade4ce9ab4540f1b8f2c02c38a023f2c7332ad7affa553ab20280d238",
+      "shaders_generated/kernel_InitEyeRay3.comp.spv": "de106044350bf5097ad26c1f2b5e1601c40ee2ad6e829ff7d52d44ce6ee8c208",
+      "shaders_generated/kernel_InitEyeRayFromInput.comp.spv": "e690093810cbc056104998e84fb499c81bbd0cc3fc8e81d0b8dca5bf8d956e49",
+      "shaders_generated/kernel_NextBounce.comp.spv": "ad5ef024a9cd736a728649821ff514506415cc1b51956382a5e3762d68e518f9",
+      "shaders_generated/kernel_PackXY.comp.spv": "9e5a69d0dd2c0061a184911a2aba4c269fa0ef215588bcbf4cf3a353b57d877d",
+      "shaders_generated/kernel_RayBounce.comp.spv": "96ff2dc9b392e3656a64f96bdec273bbb8a46ab47b441ab9ee4a11229abf1634",
+      "shaders_generated/kernel_RayTrace.comp.spv": "1a458f875d3849bdfc0729f812ed9ea98f8f0ba86d7e121afb42ea9401d8d0a0",
+      "shaders_generated/kernel_RayTrace2.comp.spv": "a51136883c2140d69be1e065bef60e2aa337423921470b346606650bff2d985d",
+      "shaders_generated/kernel_SampleLightSource.comp.spv": "84cba973e69d05743f63c6083a5b100d3bebe2cf849a3488f242384aae88c0fd",
+      "shaders_generated/kernel_TraceAOEyeRay.comp.spv": "573a40259b7f9507654e18d24685ee7b7e5bfc9647b5b333f2ae181d62ff46c3",
+      "shaders_generated/kernel_TraceAORay.comp.spv": "74cad5895c5e89ca7a1e4853e2f9ac67db6266cb6e539cb97f98dd327829a672"
+    },
+    "heavyrt_revision": "ee2721c5726aa8841a088f2c85ded2351539e702"
+  },
+  "submit_wait_ms": {
+    "AmbientOcclusionBlock": 92.1
+  },
+  "profile": {
+    "schema_version": 1,
+    "source": "VK_KHR_pipeline_executable_properties",
+    "supported": true,
+    "device": {
+      "name": "AMD Radeon RX 6800 XT (RADV NAVI21)",
+      "vendor_id": 4098,
+      "device_id": 29631,
+      "api_version": 4211006,
+      "driver_version": 104865800,
+      "driver_name": "radv",
+      "driver_info": "Mesa 25.2.8-0ubuntu0.24.04.5"
+    },
+    "kernels": [
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/shaders_generated/kernel_InitAOEyeRay.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "Vulkan Compute Shader",
+            "subgroup_size": 64,
+            "statistics": [
+              {
+                "name": "Driver pipeline hash",
+                "description": "Driver pipeline hash used by RGP",
+                "format": 2,
+                "value": 15298293749896643981
+              },
+              {
+                "name": "SGPRs",
+                "description": "Number of SGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 128
+              },
+              {
+                "name": "VGPRs",
+                "description": "Number of VGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 16
+              },
+              {
+                "name": "Spilled SGPRs",
+                "description": "Number of SGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Spilled VGPRs",
+                "description": "Number of VGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Code size",
+                "description": "Code size in bytes",
+                "format": 2,
+                "value": 452
+              },
+              {
+                "name": "LDS size",
+                "description": "LDS size in bytes per workgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch size",
+                "description": "Private memory in bytes per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Subgroups per SIMD",
+                "description": "The maximum number of subgroups in flight on a SIMD unit",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Combined inputs",
+                "description": "Number of input slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Combined outputs",
+                "description": "Number of output slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Hash",
+                "description": "CRC32 hash of code and constant data",
+                "format": 2,
+                "value": 3934820476
+              },
+              {
+                "name": "Instructions",
+                "description": "Instruction count",
+                "format": 2,
+                "value": 83
+              },
+              {
+                "name": "Copies",
+                "description": "Copy instructions created for pseudo-instructions",
+                "format": 2,
+                "value": 7
+              },
+              {
+                "name": "Branches",
+                "description": "Branch instructions",
+                "format": 2,
+                "value": 1
+              },
+              {
+                "name": "Latency",
+                "description": "Issue cycles plus stall cycles",
+                "format": 2,
+                "value": 755
+              },
+              {
+                "name": "Inverse Throughput",
+                "description": "Estimated busy cycles to execute one wave",
+                "format": 2,
+                "value": 98
+              },
+              {
+                "name": "VMEM Clause",
+                "description": "Number of VMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "SMEM Clause",
+                "description": "Number of SMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 2
+              },
+              {
+                "name": "Pre-Sched SGPRs",
+                "description": "SGPR usage before scheduling",
+                "format": 2,
+                "value": 42
+              },
+              {
+                "name": "Pre-Sched VGPRs",
+                "description": "VGPR usage before scheduling",
+                "format": 2,
+                "value": 9
+              },
+              {
+                "name": "VALU",
+                "description": "Number of VALU instructions",
+                "format": 2,
+                "value": 64
+              },
+              {
+                "name": "SALU",
+                "description": "Number of SALU instructions",
+                "format": 2,
+                "value": 1
+              },
+              {
+                "name": "VMEM",
+                "description": "Number of VMEM instructions",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "SMEM",
+                "description": "Number of SMEM instructions",
+                "format": 2,
+                "value": 7
+              },
+              {
+                "name": "VOPD",
+                "description": "Number of VOPD instructions",
+                "format": 2,
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/shaders_generated/kernel_TraceAOEyeRay.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "Vulkan Compute Shader",
+            "subgroup_size": 64,
+            "statistics": [
+              {
+                "name": "Driver pipeline hash",
+                "description": "Driver pipeline hash used by RGP",
+                "format": 2,
+                "value": 11705967500933361904
+              },
+              {
+                "name": "SGPRs",
+                "description": "Number of SGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 128
+              },
+              {
+                "name": "VGPRs",
+                "description": "Number of VGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 56
+              },
+              {
+                "name": "Spilled SGPRs",
+                "description": "Number of SGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Spilled VGPRs",
+                "description": "Number of VGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Code size",
+                "description": "Code size in bytes",
+                "format": 2,
+                "value": 2444
+              },
+              {
+                "name": "LDS size",
+                "description": "LDS size in bytes per workgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch size",
+                "description": "Private memory in bytes per subgroup",
+                "format": 2,
+                "value": 20480
+              },
+              {
+                "name": "Subgroups per SIMD",
+                "description": "The maximum number of subgroups in flight on a SIMD unit",
+                "format": 2,
+                "value": 18
+              },
+              {
+                "name": "Combined inputs",
+                "description": "Number of input slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Combined outputs",
+                "description": "Number of output slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Hash",
+                "description": "CRC32 hash of code and constant data",
+                "format": 2,
+                "value": 3614804126
+              },
+              {
+                "name": "Instructions",
+                "description": "Instruction count",
+                "format": 2,
+                "value": 451
+              },
+              {
+                "name": "Copies",
+                "description": "Copy instructions created for pseudo-instructions",
+                "format": 2,
+                "value": 39
+              },
+              {
+                "name": "Branches",
+                "description": "Branch instructions",
+                "format": 2,
+                "value": 15
+              },
+              {
+                "name": "Latency",
+                "description": "Issue cycles plus stall cycles",
+                "format": 2,
+                "value": 72550
+              },
+              {
+                "name": "Inverse Throughput",
+                "description": "Estimated busy cycles to execute one wave",
+                "format": 2,
+                "value": 9584
+              },
+              {
+                "name": "VMEM Clause",
+                "description": "Number of VMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 24
+              },
+              {
+                "name": "SMEM Clause",
+                "description": "Number of SMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 10
+              },
+              {
+                "name": "Pre-Sched SGPRs",
+                "description": "SGPR usage before scheduling",
+                "format": 2,
+                "value": 23
+              },
+              {
+                "name": "Pre-Sched VGPRs",
+                "description": "VGPR usage before scheduling",
+                "format": 2,
+                "value": 50
+              },
+              {
+                "name": "VALU",
+                "description": "Number of VALU instructions",
+                "format": 2,
+                "value": 287
+              },
+              {
+                "name": "SALU",
+                "description": "Number of SALU instructions",
+                "format": 2,
+                "value": 59
+              },
+              {
+                "name": "VMEM",
+                "description": "Number of VMEM instructions",
+                "format": 2,
+                "value": 36
+              },
+              {
+                "name": "SMEM",
+                "description": "Number of SMEM instructions",
+                "format": 2,
+                "value": 13
+              },
+              {
+                "name": "VOPD",
+                "description": "Number of VOPD instructions",
+                "format": 2,
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/shaders_generated/kernel_InitAORay.comp.spv",
+        "recorded_dispatches": 256,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "Vulkan Compute Shader",
+            "subgroup_size": 64,
+            "statistics": [
+              {
+                "name": "Driver pipeline hash",
+                "description": "Driver pipeline hash used by RGP",
+                "format": 2,
+                "value": 14944806535635294439
+              },
+              {
+                "name": "SGPRs",
+                "description": "Number of SGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 128
+              },
+              {
+                "name": "VGPRs",
+                "description": "Number of VGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Spilled SGPRs",
+                "description": "Number of SGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Spilled VGPRs",
+                "description": "Number of VGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Code size",
+                "description": "Code size in bytes",
+                "format": 2,
+                "value": 596
+              },
+              {
+                "name": "LDS size",
+                "description": "LDS size in bytes per workgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch size",
+                "description": "Private memory in bytes per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Subgroups per SIMD",
+                "description": "The maximum number of subgroups in flight on a SIMD unit",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Combined inputs",
+                "description": "Number of input slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Combined outputs",
+                "description": "Number of output slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Hash",
+                "description": "CRC32 hash of code and constant data",
+                "format": 2,
+                "value": 2432185024
+              },
+              {
+                "name": "Instructions",
+                "description": "Instruction count",
+                "format": 2,
+                "value": 107
+              },
+              {
+                "name": "Copies",
+                "description": "Copy instructions created for pseudo-instructions",
+                "format": 2,
+                "value": 13
+              },
+              {
+                "name": "Branches",
+                "description": "Branch instructions",
+                "format": 2,
+                "value": 2
+              },
+              {
+                "name": "Latency",
+                "description": "Issue cycles plus stall cycles",
+                "format": 2,
+                "value": 1099
+              },
+              {
+                "name": "Inverse Throughput",
+                "description": "Estimated busy cycles to execute one wave",
+                "format": 2,
+                "value": 99
+              },
+              {
+                "name": "VMEM Clause",
+                "description": "Number of VMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "SMEM Clause",
+                "description": "Number of SMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "Pre-Sched SGPRs",
+                "description": "SGPR usage before scheduling",
+                "format": 2,
+                "value": 21
+              },
+              {
+                "name": "Pre-Sched VGPRs",
+                "description": "VGPR usage before scheduling",
+                "format": 2,
+                "value": 19
+              },
+              {
+                "name": "VALU",
+                "description": "Number of VALU instructions",
+                "format": 2,
+                "value": 77
+              },
+              {
+                "name": "SALU",
+                "description": "Number of SALU instructions",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "VMEM",
+                "description": "Number of VMEM instructions",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "SMEM",
+                "description": "Number of SMEM instructions",
+                "format": 2,
+                "value": 6
+              },
+              {
+                "name": "VOPD",
+                "description": "Number of VOPD instructions",
+                "format": 2,
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/shaders_generated/kernel_TraceAORay.comp.spv",
+        "recorded_dispatches": 256,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "Vulkan Compute Shader",
+            "subgroup_size": 64,
+            "statistics": [
+              {
+                "name": "Driver pipeline hash",
+                "description": "Driver pipeline hash used by RGP",
+                "format": 2,
+                "value": 15985873030731663945
+              },
+              {
+                "name": "SGPRs",
+                "description": "Number of SGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 128
+              },
+              {
+                "name": "VGPRs",
+                "description": "Number of VGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 48
+              },
+              {
+                "name": "Spilled SGPRs",
+                "description": "Number of SGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Spilled VGPRs",
+                "description": "Number of VGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Code size",
+                "description": "Code size in bytes",
+                "format": 2,
+                "value": 2008
+              },
+              {
+                "name": "LDS size",
+                "description": "LDS size in bytes per workgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch size",
+                "description": "Private memory in bytes per subgroup",
+                "format": 2,
+                "value": 20480
+              },
+              {
+                "name": "Subgroups per SIMD",
+                "description": "The maximum number of subgroups in flight on a SIMD unit",
+                "format": 2,
+                "value": 20
+              },
+              {
+                "name": "Combined inputs",
+                "description": "Number of input slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Combined outputs",
+                "description": "Number of output slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Hash",
+                "description": "CRC32 hash of code and constant data",
+                "format": 2,
+                "value": 2306273771
+              },
+              {
+                "name": "Instructions",
+                "description": "Instruction count",
+                "format": 2,
+                "value": 369
+              },
+              {
+                "name": "Copies",
+                "description": "Copy instructions created for pseudo-instructions",
+                "format": 2,
+                "value": 31
+              },
+              {
+                "name": "Branches",
+                "description": "Branch instructions",
+                "format": 2,
+                "value": 14
+              },
+              {
+                "name": "Latency",
+                "description": "Issue cycles plus stall cycles",
+                "format": 2,
+                "value": 54206
+              },
+              {
+                "name": "Inverse Throughput",
+                "description": "Estimated busy cycles to execute one wave",
+                "format": 2,
+                "value": 7014
+              },
+              {
+                "name": "VMEM Clause",
+                "description": "Number of VMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 15
+              },
+              {
+                "name": "SMEM Clause",
+                "description": "Number of SMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "Pre-Sched SGPRs",
+                "description": "SGPR usage before scheduling",
+                "format": 2,
+                "value": 25
+              },
+              {
+                "name": "Pre-Sched VGPRs",
+                "description": "VGPR usage before scheduling",
+                "format": 2,
+                "value": 46
+              },
+              {
+                "name": "VALU",
+                "description": "Number of VALU instructions",
+                "format": 2,
+                "value": 230
+              },
+              {
+                "name": "SALU",
+                "description": "Number of SALU instructions",
+                "format": 2,
+                "value": 59
+              },
+              {
+                "name": "VMEM",
+                "description": "Number of VMEM instructions",
+                "format": 2,
+                "value": 24
+              },
+              {
+                "name": "SMEM",
+                "description": "Number of SMEM instructions",
+                "format": 2,
+                "value": 10
+              },
+              {
+                "name": "VOPD",
+                "description": "Number of VOPD instructions",
+                "format": 2,
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/sw-wave/shaders_generated/kernel_ContributeAO.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "compute",
+            "description": "Vulkan Compute Shader",
+            "subgroup_size": 64,
+            "statistics": [
+              {
+                "name": "Driver pipeline hash",
+                "description": "Driver pipeline hash used by RGP",
+                "format": 2,
+                "value": 685674349877660861
+              },
+              {
+                "name": "SGPRs",
+                "description": "Number of SGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 128
+              },
+              {
+                "name": "VGPRs",
+                "description": "Number of VGPR registers allocated per subgroup",
+                "format": 2,
+                "value": 8
+              },
+              {
+                "name": "Spilled SGPRs",
+                "description": "Number of SGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Spilled VGPRs",
+                "description": "Number of VGPR registers spilled per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Code size",
+                "description": "Code size in bytes",
+                "format": 2,
+                "value": 172
+              },
+              {
+                "name": "LDS size",
+                "description": "LDS size in bytes per workgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Scratch size",
+                "description": "Private memory in bytes per subgroup",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Subgroups per SIMD",
+                "description": "The maximum number of subgroups in flight on a SIMD unit",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Combined inputs",
+                "description": "Number of input slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Combined outputs",
+                "description": "Number of output slots reserved for the shader (including merged stages)",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Hash",
+                "description": "CRC32 hash of code and constant data",
+                "format": 2,
+                "value": 975636426
+              },
+              {
+                "name": "Instructions",
+                "description": "Instruction count",
+                "format": 2,
+                "value": 32
+              },
+              {
+                "name": "Copies",
+                "description": "Copy instructions created for pseudo-instructions",
+                "format": 2,
+                "value": 5
+              },
+              {
+                "name": "Branches",
+                "description": "Branch instructions",
+                "format": 2,
+                "value": 2
+              },
+              {
+                "name": "Latency",
+                "description": "Issue cycles plus stall cycles",
+                "format": 2,
+                "value": 640
+              },
+              {
+                "name": "Inverse Throughput",
+                "description": "Estimated busy cycles to execute one wave",
+                "format": 2,
+                "value": 40
+              },
+              {
+                "name": "VMEM Clause",
+                "description": "Number of VMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "SMEM Clause",
+                "description": "Number of SMEM clauses (includes 1-sized clauses)",
+                "format": 2,
+                "value": 2
+              },
+              {
+                "name": "Pre-Sched SGPRs",
+                "description": "SGPR usage before scheduling",
+                "format": 2,
+                "value": 17
+              },
+              {
+                "name": "Pre-Sched VGPRs",
+                "description": "VGPR usage before scheduling",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "VALU",
+                "description": "Number of VALU instructions",
+                "format": 2,
+                "value": 14
+              },
+              {
+                "name": "SALU",
+                "description": "Number of SALU instructions",
+                "format": 2,
+                "value": 3
+              },
+              {
+                "name": "VMEM",
+                "description": "Number of VMEM instructions",
+                "format": 2,
+                "value": 4
+              },
+              {
+                "name": "SMEM",
+                "description": "Number of SMEM instructions",
+                "format": 2,
+                "value": 3
+              },
+              {
+                "name": "VOPD",
+                "description": "Number of VOPD instructions",
+                "format": 2,
+                "value": 0
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

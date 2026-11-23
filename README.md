@@ -79,3 +79,4 @@ Modern rendering core: spec, vulkan (by kernel_slicer) and other
 
 * [User Guide](user_guide.md)
 * [Input scene format (materials)](hydra_xml_materials.md)
+* [GPU profiling, five execution variants, and RTAO](profiling/README.md)

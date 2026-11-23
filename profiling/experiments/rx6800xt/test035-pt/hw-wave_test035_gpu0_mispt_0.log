@@ -1,0 +1,22 @@
+/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave/hydra --gpu -gpu_id 0 -in /home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml -integrator mispt -width 1024 -height 1024 -spp 256 -resource_dir /home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-wave -profile-json /home/frol/PROG/HydraRepos/HydraCore3/profiling_results/test035-pt/hw-wave_test035_gpu0_mispt_0.raw.json -out /home/frol/PROG/HydraRepos/HydraCore3/profiling_results/test035-pt/hw-wave_test035_gpu0_mispt_0.bmp
+[main]: camsId.size() = 1
+[main]: loading xml ... /home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml
+[main]: Create Integrator begin.
+[VkUtils::INFO] findPhysicalDevice: { 
+[VkUtils::INFO]   device 0, name = AMD Radeon RX 6800 XT (RADV NAVI21) <-- (selected)
+[VkUtils::INFO]   device 1, name = llvmpipe (LLVM 20.1.2, 256 bits)
+[VkUtils::INFO] }
+[VkUtils::INFO] [Alloc(Special)] Buffers  REALLOC : old_size = 0, new_size = 33554432
+[VkUtils::INFO] [Alloc(Special)] Textures REALLOC : old_size = 0, new_size = 67108864
+[main]: Create Integrator end: 65.259 ms
+[main]: Loading scene ... /home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml
+Color multiplier in material for light geom and in light intensity node are different! Using values from light intensity node. lightId = 0
+Color multiplier in material for light geom and in light intensity node are different! Using values from light intensity node. lightId = 0
+[main]: PackXYBlock() ... 
+[main]: frame = 0 / 1, cam_id = 0, fb_layer = 0
+[main]: PathTraceBlock(MIS-PT) ... 
+rendering (gpu), progress = 0 %   rendering (gpu), progress = 0.00 %   
+PathTraceBlock(exec) = 915.43 ms 
+PathTraceBlock(copy) = 11.58 ms 
+PathTraceBlock(ovrh) = 0.06 ms 
+[main]: save image to /home/frol/PROG/HydraRepos/HydraCore3/profiling_results/test035-pt/hw-wave_test035_gpu0_mispt_0.bmp

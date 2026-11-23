@@ -23,18 +23,20 @@
     "defines" : {
       "KERNEL_SLICER"    : "1",
       "USE_HEAVYRT"      : "1",
+      "REMAP_PRIM_ID"    : "1",
       "DISABLE_LENS"     : "1",
       "DISABLE_SPECTRUM" : "1"
     },
 
-    "source" : ["integrator_pt.cpp", 
+    "source" : ["integrator_pt.cpp",
+                "integrator_ao.cpp",
                 "integrator_pt_lgt.cpp",
                 "integrator_pt_mat.cpp",
                 "integrator_rt.cpp",
                 "integrator_spectrum.cpp",
                 "external/HeavyRT/core/BVH2FatRT.cpp"],
 
-    "includeIgnore"  : ["external/LiteMath", "external/LiteScene"],
+    "includeIgnore"  : ["external/LiteMath", "external/LiteScene", "external/HeavyRT/core/common"],
     "includeProcess" : ["external/HeavyRT/core", "cam_plugin"],
     "end" : ""
 }

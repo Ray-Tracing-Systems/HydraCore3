@@ -1,0 +1,79 @@
+diff --git a/core/BVH2FatRT.h b/core/BVH2FatRT.h
+index 001e0e4..e4f7f40 100644
+--- a/core/BVH2FatRT.h
++++ b/core/BVH2FatRT.h
+@@ -7,7 +7,9 @@
+ #include <memory>
+ 
+ #include "LiteMath.h"
+-#include "aligned_alloc.h"
++#ifndef KERNEL_SLICER
++#include "common/aligned_alloc.h"
++#endif
+ 
+ using LiteMath::cross;
+ using LiteMath::dot;
+@@ -38,7 +40,7 @@ using cbvh2::BVHNodeFat;
+ //
+ struct BVH2FatRT : public ISceneObject
+ {
+-  BVH2FatRT(const char* a_buildName, const char* a_layoutName) : m_buildName(a_buildName != nullptr ? a_buildName : ""), 
++  BVH2FatRT(const char* a_buildName = "cbvh_embree2", const char* a_layoutName = "DepthFirst") : m_buildName(a_buildName != nullptr ? a_buildName : ""), 
+                                                                  m_layoutName(a_layoutName != nullptr ? a_layoutName : "") { m_pLBVHBuilder = std::make_shared<LBVHBuilder>(); }
+   ~BVH2FatRT() override {}
+ 
+diff --git a/core/CrossRT.h b/core/CrossRT.h
+index ddf9449..efa509f 100644
+--- a/core/CrossRT.h
++++ b/core/CrossRT.h
+@@ -28,7 +28,9 @@ struct CRT_Hit
+ 
+ //#define REMAP_PRIM_ID
+ 
++#ifndef KERNEL_SLICER
+ #define ENABLE_METRICS
++#endif
+ constexpr int TREELET_ARR_SIZE = 5;
+ constexpr int treelet_sizes[TREELET_ARR_SIZE] = { 128, 512, 4096, 16384, 131072 };
+ 
+@@ -70,6 +72,7 @@ struct ISceneObject
+   \brief get implementation name  
+   */
+   virtual const char* Name() const = 0;
++  virtual ISceneObject* UnderlyingImpl(uint32_t a_implId) { return this; }
+ 
+   /**
+   \brief get the format name the tree build from
+diff --git a/core/builders/FatBVH.h b/core/builders/FatBVH.h
+index c0997b2..9cbcd65 100644
+--- a/core/builders/FatBVH.h
++++ b/core/builders/FatBVH.h
+@@ -6,7 +6,7 @@
+ #include <string>
+ 
+ #include "LiteMath.h"
+-#include "aligned_alloc.h"
++#include "../common/aligned_alloc.h"
+ 
+ using LiteMath::cross;
+ using LiteMath::dot;
+diff --git a/core/builders/lbvh.h b/core/builders/lbvh.h
+index fcfc865..4f94e27 100644
+--- a/core/builders/lbvh.h
++++ b/core/builders/lbvh.h
+@@ -160,6 +160,7 @@ struct LBVHBuilder
+   float m_timings[8];           
+ };
+ 
++#ifndef KERNEL_SLICER
+ class Timer 
+ {
+   std::chrono::time_point<std::chrono::high_resolution_clock> m_start;
+@@ -167,4 +168,5 @@ public:
+   Timer() { start(); }
+   void start();
+   float getElaspedMs() const;
+-};
+\ No newline at end of file
++};
++#endif

@@ -1,0 +1,3 @@
+# Preserve captured console output and the exact upstream context in dependency patches.
+profiling/experiments/**/*.log -whitespace
+profiling/heavyrt-compat.patch -whitespace

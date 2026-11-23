@@ -16,6 +16,7 @@ std::shared_ptr<Integrator> CreateIntegratorKMLT(int a_maxThreads = 1, std::vect
 #ifdef USE_VULKAN
 #include "vk_context.h"
 #include "integrator_pt_generated.h" // advanced way
+#include "profiling/integrator_profiled.h"
 vk_utils::VulkanDeviceFeatures Integrator_Generated_ListRequiredDeviceFeatures();
 #endif
 
@@ -158,6 +159,7 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   const bool enableMISPT    = (integratorType == "mispt" || integratorType == "all");
   const bool enableRT       = (integratorType == "raytracing" || integratorType == "rt" || integratorType == "whitted_rt");
   const bool enablePRT      = (integratorType == "primary" || integratorType == "prt");
+  const bool enableRTAO     = (integratorType == "rtao" || integratorType == "ao");
 
   ///////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -192,6 +194,19 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   
   auto before = std::chrono::high_resolution_clock::now();
   bool onGPU = args.hasOption("--gpu") && !evalGBuffer;
+  const bool profileGPU = args.hasOption("-profile-json");
+  if(profileGPU && !onGPU)
+  {
+    std::cerr << "-profile-json requires --gpu and a rendering integrator" << std::endl;
+    return 1;
+  }
+  #ifndef USE_VULKAN
+  if(profileGPU)
+  {
+    std::cerr << "-profile-json requires a build with USE_VULKAN=ON" << std::endl;
+    return 1;
+  }
+  #endif
   #ifdef USE_VULKAN
   if(onGPU)
   {
@@ -202,7 +217,11 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
     //
     auto deviceFeatures = Integrator_Generated_ListRequiredDeviceFeatures();
     deviceFeatures.memForBuffers += gpuAuxMemSize;
+    if(profileGPU)
+      hydra_profile::Configure(deviceFeatures, a_preferredDeviceId);
     auto ctx            = vk_utils::globalContextInit(deviceFeatures, enableValidationLayers, a_preferredDeviceId);
+    if(profileGPU)
+      hydra_profile::Install(ctx);
 
     // advanced way, you can disable some pipelines creation which you don't actually need;
     // this will make application start-up faster
@@ -214,11 +233,17 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
     Integrator_Generated::EnabledPipelines().enablePathTraceFromInputRaysMega = false; // always false in this main.cpp; see cam_plugin main
     Integrator_Generated::EnabledPipelines().enablePathTraceMega              = enableShadowPT || enableMISPT;
     Integrator_Generated::EnabledPipelines().enableNaivePathTraceMega         = enableNaivePT;
+    Integrator_Generated::EnabledPipelines().enableAmbientOcclusionMega       = enableRTAO;
     #endif
 
     // advanced way
     //
-    auto pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, features);
+    std::shared_ptr<Integrator_Generated> pObj;
+    if(profileGPU)
+      pObj = std::make_shared<Integrator_Profiled>(FB_WIDTH*FB_HEIGHT, features);
+    else
+      pObj = std::make_shared<Integrator_Generated>(FB_WIDTH*FB_HEIGHT, features);
+    pObj->SetResourcesDir(resourceDir);
     pObj->SetVulkanContext(ctx);
     pObj->InitVulkanObjects(ctx.device, ctx.physicalDevice, FB_WIDTH*FB_HEIGHT);
     pImpl = pObj;
@@ -255,16 +280,22 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
   if(override_camera_pos)
     pImpl->SetWorldView(look_at);
 
-  pImpl->CommitDeviceData();
-
   PASS_NUMBER = pImpl->GetSPP();                     // read target spp from scene
   if(args.hasOption("-spp"))                         // override it if spp is specified via command line
     PASS_NUMBER = args.getOptionValue<int>("-spp");
+  if(enableRTAO)
+    pImpl->InitAmbientOcclusion(uint(PASS_NUMBER), args.getOptionValue<float>("-ao-radius", 2.0f));
+
+  pImpl->CommitDeviceData();
 
   // remember (x,y) coords for each thread to make our threading 1D
   //
   std::cout << "[main]: PackXYBlock() ... " << std::endl;
   pImpl->PackXYBlock(vpSizeX, vpSizeY, 1);
+  #ifdef USE_VULKAN
+  if(profileGPU)
+    hydra_profile::BeginRender();
+  #endif
 
   if(evalGBuffer)
   {
@@ -331,6 +362,21 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
     std::cout << "[main]: frame = " << i << " / "  << frames.size() << ", cam_id = " << frame.camId << ", fb_layer = " << frame.fbId  << std::endl;
     
     const auto& suffix = frame.suffix;
+
+    if(enableRTAO)
+    {
+      std::fill(realColor.begin(), realColor.end(), 0.0f);
+      pImpl->UpdateMembersPlainData();
+      // RTAO performs all requested Sobol samples inside its control function.
+      pImpl->AmbientOcclusionBlock(FB_WIDTH*FB_HEIGHT, FB_CHANNELS, realColor.data(), 1);
+      pImpl->GetExecutionTime("AmbientOcclusionBlock", timings);
+      std::cout << "AmbientOcclusionBlock(exec) = " << timings[0] << " ms" << std::endl;
+      const std::string outName = imageOutClean + suffix + "." + imageOutFiExt;
+      if(saveHDR)
+        SaveFrameBufferToEXR(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), 1.0f);
+      else
+        SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, outName.c_str(), 1.0f, gamma);
+    }
 
     if(enableNaivePT)
     {
@@ -490,6 +536,13 @@ int main(int argc, const char** argv) // common hydra main // may 21, 2025 : 13:
       SaveLDRImageM(realColor.data(), FB_WIDTH, FB_HEIGHT, FB_CHANNELS, imageOut.c_str(), normConst, gamma);
   }
 
+  #ifdef USE_VULKAN
+  if(profileGPU)
+  {
+    hydra_profile::Write(args.getOptionValue<std::string>("-profile-json"));
+    hydra_profile::Uninstall();
+  }
+  #endif
   pImpl = nullptr;
   #ifdef USE_VULKAN
   vk_utils::globalContextDestroy();

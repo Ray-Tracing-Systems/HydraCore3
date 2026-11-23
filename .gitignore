@@ -38,6 +38,12 @@ bin-debug/
 bin-release/
 build_generated/
 build/
+profiling_results/
+profiling/reports/*.aux
+profiling/reports/*.log
+profiling/reports/*.out
+__pycache__/
+external/HeavyRT/
 shaders_generated/
 out/
 

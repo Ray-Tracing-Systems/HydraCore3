@@ -25,7 +25,8 @@
       //"DISABLE_SPECTRUM" : ""
     },
 
-    "source" : ["integrator_pt.cpp", 
+    "source" : ["integrator_pt.cpp",
+                "integrator_ao.cpp",
                 "integrator_pt_lgt.cpp",
                 "integrator_pt_mat.cpp",
                 "integrator_rt.cpp",

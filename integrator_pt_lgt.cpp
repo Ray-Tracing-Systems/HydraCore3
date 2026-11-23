@@ -240,6 +240,8 @@ Integrator::Map2DPiecewiseSample Integrator::SampleMap2D(float3 rands, uint32_t 
 
 void Integrator::GetExecutionTime(const char* a_funcName, float a_out[4])
 {
+  if(std::string(a_funcName) == "AmbientOcclusion" || std::string(a_funcName) == "AmbientOcclusionBlock")
+    a_out[0] = aoTime;
   if(std::string(a_funcName) == "NaivePathTrace" || std::string(a_funcName) == "NaivePathTraceBlock")
     a_out[0] = naivePtTime;
   else if(std::string(a_funcName) == "PathTrace" || std::string(a_funcName) == "PathTraceBlock")

@@ -7,10 +7,10 @@
 #include <thread>
 #include <optional>
 
-class Timer 
+class HydraTimer
 {
   public:
-    Timer() 
+    HydraTimer()
     { 
       start = clock::now(); 
     }
@@ -44,7 +44,7 @@ class ConsoleProgressBar
     void Print();
 
     int64_t totalWork;
-    Timer timer;
+    HydraTimer timer;
     std::atomic<int64_t> workDone;
     std::atomic<bool> exitThread;
     std::thread updateThread;

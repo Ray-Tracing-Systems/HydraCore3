@@ -820,7 +820,11 @@ void Integrator::LoadSceneGeometry(hydra_xml::HydraScene& scene)
       uint32_t mat_id = mIter->attribute(L"mat_id").as_int(0);
       m_matIdByPrimId.push_back(mat_id);
       
+      #ifdef USE_HEAVYRT
+      throw std::runtime_error("BVH2FatRT supports triangle mesh geometry only");
+      #else
       m_pAccelStruct->AddCustomGeom_FromFile(name.c_str(), dir.c_str(), m_pAccelStruct.get());
+      #endif
 
       //we insert one fake triangle for each custom geometry, because m_matIdOffsets is also used to 
       //index from m_triIndices list, i.e. we assume to have as many material Ids as triangles in total
@@ -863,10 +867,14 @@ void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
 
     if(inst.hasMotion) 
     {
+      #ifdef USE_HEAVYRT
+      throw std::runtime_error("BVH2FatRT does not support motion-blurred instances");
+      #else
       LiteMath::float4x4 movement[2] = {inst.matrix, inst.matrix_motion};
       m_pAccelStruct->AddInstanceMotion(inst.geomId, movement, 2);
       m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] = 1;
       m_normMatrices2.push_back(transpose(inverse4x4(inst.matrix_motion)));
+      #endif
     }
     else
     {
@@ -896,6 +904,9 @@ void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
 
   m_normMatrices.insert(m_normMatrices.end(), m_normMatrices2.begin(), m_normMatrices2.end());
 
+  #ifdef USE_HEAVYRT
+  m_pAccelStruct->CommitScene(BUILD_HIGH);
+  #else
   uint32_t build_options = BUILD_HIGH;
   if(m_actualFeatures[Integrator::KSPEC_MOTION_BLUR] == 1)
   {
@@ -903,6 +914,7 @@ void Integrator::LoadSceneInstances(hydra_xml::HydraScene& scene)
   }
 
   m_pAccelStruct->CommitScene(build_options); // to enable more anync may call CommitScene later, but need acync API: CommitSceneStart() ... CommitSceneFinish()
+  #endif
  
 }
 

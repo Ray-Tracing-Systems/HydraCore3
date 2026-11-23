@@ -28,9 +28,11 @@ if(USE_LITERT)
   #include_directories(...) # add target incluide directlory for LiteRT o
 endif()
 if(USE_HEAVYRT)
-  add_definitions(-DUSE_HEAVYRT)
+  add_definitions(-DUSE_HEAVYRT -DREMAP_PRIM_ID)
   include_directories("external/HeavyRT/core")
   include_directories("external/HeavyRT/core/builders")
+  include_directories("external/HeavyRT/external")
+  include_directories("external/HeavyRT/external/embree")
 endif()
 
 
@@ -133,6 +135,7 @@ set(VULKAN_EXTERNAL_SRC
         external/vkutils/geom/cmesh.cpp)
 
 set(VULKAN_SRC
+        profiling/pipeline_profile.cpp
         integrator_pt_generated.cpp
         integrator_pt_generated_init.cpp
         integrator_pt_generated_ds.cpp )
@@ -156,7 +159,9 @@ set(LOADER_EXTERNAL_SRC
 
 if(USE_HEAVYRT)
 set(OTHER_EXTERNAL_SRC
-        external/LiteMath/Image2d.cpp)
+        external/LiteMath/Image2d.cpp
+        profiling/heavyrt_support.cpp)
+  list(REMOVE_ITEM VULKAN_EXTERNAL_SRC external/CrossRT/VulkanRTX.cpp)
 else()
 set(OTHER_EXTERNAL_SRC
         external/LiteMath/Image2d.cpp
@@ -188,6 +193,8 @@ else()
 endif()
 
 set(CORE_SRC
+        integrator_ao.cpp
+        integrator_ao_host.cpp
         integrator_rt.cpp
         integrator_pt.cpp
         integrator_pt_lgt.cpp
@@ -232,9 +239,7 @@ if(USE_HEAVYRT)
   list(APPEND CORE_SRC 
         external/HeavyRT/core/BVH2FatRT.cpp             # v1
         external/HeavyRT/core/BVH2FatRT_host.cpp        # v1
-        external/HeavyRT/core/BVH2CommonLoftRT.cpp      # v2
-        external/HeavyRT/core/BVH2CommonLoftRT_host.cpp # v2
-        external/HeavyRT/core/NonunifNodeStorage.cpp)   # TODO: remove 'NonunifNodeStorage.cpp'
+        external/HeavyRT/core/NonunifNodeStorage.cpp)
 
 endif()
 

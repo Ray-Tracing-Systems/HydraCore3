@@ -24,8 +24,7 @@
 #else  
   #ifdef USE_HEAVYRT  
   #include "external/HeavyRT/core/CrossRT.h"
-  //#include "external/HeavyRT/core/BVH2FatRT.h"          // v1
-  #include "external/HeavyRT/core/BVH2CommonLoftRT.h" // v2
+  #include "external/HeavyRT/core/BVH2FatRT.h"
   #else
    #include "CrossRT.h" // special include for ray tracing
   #endif
@@ -128,8 +127,7 @@ public:
   {
     InitRandomGens(a_maxThreads);
     #ifdef USE_HEAVYRT 
-    //m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst"); // v1
-    m_pAccelStruct = std::make_shared<BVH2CommonLoftRT>("cbvh_embree2");      // v2
+    m_pAccelStruct = std::make_shared<BVH2FatRT>("cbvh_embree2", "DepthFirst");
     #else
     m_pAccelStruct = std::shared_ptr<ISceneObject>(CreateSceneRT(""), [](ISceneObject *p) { DeleteSceneRT(p); } );
     #endif
@@ -261,6 +259,15 @@ public:
   virtual void PathTraceFromInputRaysBlock(uint tid, uint channels, const RayPosAndW* in_rayPosAndNear, const RayDirAndT* in_rayDirAndFar, 
                                            float* out_color, uint a_passNum);
   virtual void RayTraceBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+  void AmbientOcclusion(uint tid, uint channels, float* out_color [[size("tid*channels")]]);
+  virtual void AmbientOcclusionBlock(uint tid, uint channels, float* out_color, uint a_passNum);
+  void InitAmbientOcclusion(uint samples, float radius);
+
+  void kernel_InitAOEyeRay(uint tid, float4* rayPos, float4* rayDir, float* visibility);
+  void kernel_TraceAOEyeRay(uint tid, const float4* rayPos, const float4* rayDir, float4* hitPos, float4* hitNorm);
+  void kernel_InitAORay(uint tid, uint sample, const float4* hitPos, const float4* hitNorm, float4* rayPos, float4* rayDir);
+  void kernel_TraceAORay(uint tid, const float4* rayPos, const float4* rayDir, float* visibility);
+  void kernel_ContributeAO(uint tid, uint channels, const float* visibility, float* out_color);
 
   virtual void CommitDeviceData() {}                                     // will be overriden in generated class
   virtual void GetExecutionTime(const char* a_funcName, float a_out[4]); // will be overriden in generated class
@@ -568,6 +575,11 @@ public:
   /////////////////////////////////////////////////////////////////
 
   float naivePtTime  = 0.0f;
+  float aoTime = 0.0f;
+  uint m_aoSamples = 256;
+  float m_aoRadius = 2.0f;
+  static constexpr uint AO_TILE_SIZE = 128;
+  std::vector<float2> m_aoRandomsTile;
   float shadowPtTime = 0.0f;
   float raytraceTime = 0.0f;
   float fromRaysPtTime = 0.0f;
