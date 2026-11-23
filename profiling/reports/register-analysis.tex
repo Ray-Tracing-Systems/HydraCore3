@@ -1,0 +1,65 @@
+\par\medskip
+\noindent\textbf{Register pressure and rendering time in the paper}\par
+We matched the five variants in Tables~\ref{tab:hydra-summary-0-maximum}
+and~\ref{tab:hydra-summary-0-path-traversal} to Table~5 of
+\texttt{crossrt\_ieee\_template.tex} (revision \texttt{1d6010f}). Register
+counts are from \texttt{test\_035}. Times are the measurements reported
+for Coffee, Spaceship, Staircase and Kitchen at 1024$\times$1024 and 256 spp.
+For each GPU and workload, we compare wavefront with megakernel within each
+traversal mode, then compare the two hardware megakernels. Each cell gives
+the change in peak registers from Table~\ref{tab:hydra-summary-0-maximum}
+and the geometric mean of the four scene-wise time ratios
+$(\prod_s t_{\mathrm{after},s}/t_{\mathrm{before},s})^{1/4}$.
+A ratio below one means shorter render time.
+
+\begin{center}
+\begin{tabular}{llccc}
+\hline
+GPU & Workload & SW wave $\to$ mega & HW wave $\to$ mega & HW mega $\to$ mega-p \\
+    &          & $\Delta$reg. / time ratio & $\Delta$reg. / time ratio & $\Delta$reg. / time ratio \\
+\hline
+RTX 4090   & PT   & $+16$ / 0.806 & $+16$ / 0.430 & $0$ / 0.646 \\
+RX 6800 XT & PT   & $+32$ / 1.304 & $+32$ / 1.148 & $+8$ / 0.944 \\
+Arc A380   & PT   & $+123$ / 1.071 & $+153$ / 2.450 & $-5$ / 0.929 \\
+\hline
+RTX 4090   & RTAO & $0$ / 0.998 & $0$ / 0.956 & $0$ / 1.068 \\
+RX 6800 XT & RTAO & $+8$ / 0.999 & $+16$ / 1.001 & $0$ / 1.075 \\
+Arc A380   & RTAO & $-41$ / 1.200 & $+62$ / 0.771 & $0$ / 4.220 \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Path tracing.}
+Fusion raised the register counts in both tables on all three GPUs in both
+traversal modes. With hardware traversal, the megakernel shortened render
+time by 57\% on RTX 4090 and increased it by 15\% on RX 6800 XT and 145\% on
+Arc A380. The effect had the same sign in all four scenes on NVIDIA and Intel,
+and in three on AMD. RADV's reported limit fell from 8 subgroups per SIMD for
+the highest-VGPR wavefront kernel (\texttt{kernel\_NextBounce}) to 6 for the
+hardware megakernel. On Arc A380, ANV reported 352 spill operations for the
+hardware megakernel, versus zero for the standalone hardware traversal stage.
+Enabling persistent rays in the hardware PT megakernel shortened the geometric
+mean time on all three GPUs while the measured count stayed at 80 on RTX 4090,
+rose from 160 to 168 on RX 6800 XT, and fell from 317 to 312 on Arc A380.
+
+\par\medskip
+\noindent\textbf{Ambient occlusion.}
+RTX 4090 reported a peak of 48 registers for every variant. On RX 6800 XT,
+the extra 8--16 VGPRs in the megakernel accompanied less than 0.2\% change in
+geometric mean time in either traversal mode. On Arc A380, the software
+megakernel used fewer peak registers and took 20\% longer, while the
+hardware megakernel used more and took 23\% less time. Both directions held in all
+four scenes. The persistent hardware megakernel on Arc A380 kept the count at
+116 and took 4.22 times as long. The local persistent capture is pending
+render validation as described at the start of this supplement.
+
+\par\medskip
+\noindent\textbf{Conclusion.}
+In both software and hardware PT, switching from wavefront to megakernel
+increased peak register counts on all three GPUs. On average, rendering
+slowed down on RX 6800 XT and Arc A380 and sped up on RTX 4090. RTAO and
+persistent-ray comparisons showed no consistent relationship. Register counts
+and timings come from different scenes, and the variants change several
+aspects of execution, so the results establish associations between
+configurations.
+\par\medskip

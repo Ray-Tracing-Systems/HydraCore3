@@ -31,6 +31,11 @@ METRIC = re.compile(r"register|\bregs?\b|\bgrfs?\b|gpr|spill|fill count|scratch|
 ARC_RESIDENCY = "Theoretical resident subgroups per Xe-core"
 ARC_OCCUPANCY = "Theoretical Xe-core occupancy (%)"
 PRESSURE = "Max live registers"
+NVIDIA_REGISTERS = "Register Count"
+REGISTER_METRICS = {
+    "Intel open-source Mesa driver": PRESSURE,
+    "NVIDIA": NVIDIA_REGISTERS,
+}
 SUBGROUP_SIZE = "Subgroup size (threads)"
 
 
@@ -326,7 +331,7 @@ def summary_tables(records):
              "A dash indicates an unavailable count.\\\\"]
     devices = sorted({gpu_key(r) for r in records})
     labels = {}
-    short_labels = {"RX 6800 XT": "6800XT", "Arc A380": "A380"}
+    short_labels = {"RX 6800 XT": "6800XT", "Arc A380": "A380", "RTX 4090": "RTX4090"}
     for key in devices:
         label = key[0] or re.sub(r"^(AMD Radeon |NVIDIA GeForce |NVIDIA )", "", key[1].split(" (")[0])
         labels[key] = short_labels.get(label, label)
@@ -367,7 +372,8 @@ def summary_tables(records):
             column_metrics = {}
             for r in runs:
                 column = column_key(r)
-                metric = PRESSURE if r["profile"]["device"]["driver_name"] == "Intel open-source Mesa driver" else "VGPRs"
+                driver = r["profile"]["device"]["driver_name"]
+                metric = REGISTER_METRICS.get(driver, "VGPRs")
                 for k in r["profile"]["kernels"]:
                     name = Path(k["shader"]).name.removesuffix(".comp.spv")
                     if target == "path-traversal" and name not in (
@@ -396,6 +402,8 @@ def summary_tables(records):
                 caption += " AMD RADV columns show allocated VGPRs per subgroup."
             if PRESSURE in metrics:
                 caption += " Intel ANV columns show peak live GRFs before allocation and spilling (Max live registers)."
+            if NVIDIA_REGISTERS in metrics:
+                caption += " NVIDIA columns show temporary registers used by the compiled shader (Register Count)."
             if len(metrics) > 1:
                 caption += " Each GPU uses its native counter and register units."
             target_id = f"{group_id}-{target.replace('_', '-')}"
@@ -412,7 +420,7 @@ def summary_tables(records):
             lines += [r"\hline", r"\end{longtable}"]
     lines.append(r"In the PT traversal summary, kernel\_RayTrace2 covers the standalone wavefront traversal stage. "
                  "Megakernel statistics cover the full fused shader, including traversal and shading. "
-                 "RTAO appears in the rendering-kernel summary and the detailed tables.\\\\")
+                 r"RTAO appears in the rendering-kernel summary and the detailed tables.\par")
     return lines
 
 
@@ -438,15 +446,16 @@ def report_files(files, destination):
              "driver's native units; they must not be compared across vendors as equivalent register files. "
              "Subgroups per SIMD is a static residency limit, not measured achieved occupancy. "
              "A maximum row is the independent maximum of one metric over the rendering kernels; "
-             "it does not describe a single combined kernel.\\\\"]
+             r"it does not describe a single combined kernel.\par"]
     if any(arc_a380_anv(r["profile"]) for r in records):
         lines.append(r"On Arc A380, Max live registers is ANV's peak pre-allocation register pressure. "
                      r"The theoretical Xe-core occupancy ceiling uses Intel's workgroup packing model "
                      r"with 128 hardware thread slots and 128 KiB of shared local memory per Xe-core. "
                      r"The calculation assumes enough workgroups and uses the compiled SIMD width, "
                      r"SPIR-V workgroup size and ANV's workgroup shared memory size. "
-                     r"Actual hardware occupancy requires runtime counters.\\\\")
+                     r"Actual hardware occupancy requires runtime counters.\par\medskip")
     lines += summary_tables(records)
+    lines.append(r"\ifdefined\HydraRegisterAnalysis\HydraRegisterAnalysis\fi")
     for index, record in enumerate(records):
         p = record["profile"]
         device = p["device"]

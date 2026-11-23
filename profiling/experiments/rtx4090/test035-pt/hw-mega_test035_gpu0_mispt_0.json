@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "variant": "hw-mega",
+  "scene": "test035",
+  "scene_path": "/home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+  "scene_xml_sha256": "bcbc08f517cc80d8180f8f1d05b58103e763d34655bc370d3258279a0cdd363f",
+  "integrator": "mispt",
+  "width": 1024,
+  "height": 1024,
+  "spp": 256,
+  "repeat": 0,
+  "gpu_id": 0,
+  "ao_radius": null,
+  "host": "frol-pc",
+  "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.39",
+  "gpu_label": "RTX4090",
+  "captured_at": "2026-11-23T18:20:51.137039+00:00",
+  "command": [
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-mega/hydra",
+    "--gpu",
+    "-gpu_id",
+    "0",
+    "-in",
+    "/home/frol/PROG/HydraRepos/HydraCore3/scenes/test_035/statex_00001.xml",
+    "-integrator",
+    "mispt",
+    "-width",
+    "1024",
+    "-height",
+    "1024",
+    "-spp",
+    "256",
+    "-resource_dir",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-mega",
+    "-profile-json",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/rtx4090/test035-pt/hw-mega_test035_gpu0_mispt_0.raw.json",
+    "-out",
+    "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/rtx4090/test035-pt/hw-mega_test035_gpu0_mispt_0.bmp"
+  ],
+  "build": {
+    "variant": "hw-mega",
+    "config": "kmake_mega.json",
+    "config_sha256": "a94f3c5dec93c31379d665b079c4922b1ce88c232edc414ea6303a055fc10759",
+    "source_revision": "28ad39db03cf87b1ac8ee5e0af4ca0217e79604a",
+    "slicer_revision": "dbdee38256b0aacb39397075c2b7fd640d11e618",
+    "source_dirty": false,
+    "heavyrt_patch_sha256": null,
+    "built_at": "2026-11-23T18:20:22.087362+00:00",
+    "binary": "hydra",
+    "sha256": {
+      "hydra": "16aa27fdcd617784e3d1390f9f366ae653f3bfcb634017a81195c836fcab08a5",
+      "shaders_generated/AmbientOcclusionMega.comp.spv": "b42209444b328317bb60d84b101fb4d4b1ac62ee3ea6e0c4dbed3324e3079def",
+      "shaders_generated/CastSingleRayMega.comp.spv": "b722a1eb2babd16258713711fb24aacd323fc365b73aa15b5e77ae1988913377",
+      "shaders_generated/NaivePathTraceMega.comp.spv": "56ad1764852bcf057914a8f4d3474b77c9b4158a44a98f1864c8e97b526b0e1d",
+      "shaders_generated/PackXYMega.comp.spv": "6e376483d855126774146107267ec15bfddbdf8afd62db208240fa0dbeaf0d0e",
+      "shaders_generated/PathTraceFromInputRaysMega.comp.spv": "6cbed438d89882741b51f82253ad09cedaeb79bab1f85f5e6cc01b0b428c3052",
+      "shaders_generated/PathTraceMega.comp.spv": "f510b537e9705572f08fe5dd0accd2a19c4ba1ffc0cb4256bb9d407a5930b166",
+      "shaders_generated/RayTraceMega.comp.spv": "8fd43edf5d6139a788254c3bcf338961e3ec2ca157a7264e59e181f7ad6bfbc1"
+    }
+  },
+  "submit_wait_ms": {
+    "PathTraceBlock": 207.09
+  },
+  "profile": {
+    "schema_version": 1,
+    "source": "VK_KHR_pipeline_executable_properties",
+    "supported": true,
+    "device": {
+      "name": "NVIDIA GeForce RTX 4090",
+      "vendor_id": 4318,
+      "device_id": 9860,
+      "api_version": 4211000,
+      "driver_version": 2435612928,
+      "driver_name": "NVIDIA",
+      "driver_info": "580.178.04"
+    },
+    "kernels": [
+      {
+        "shader": "/home/frol/PROG/HydraRepos/HydraCore3/profiling_results/builds/hw-mega/shaders_generated/PathTraceMega.comp.spv",
+        "recorded_dispatches": 1,
+        "executables": [
+          {
+            "name": "CS",
+            "description": "Compute Shader",
+            "subgroup_size": 32,
+            "statistics": [
+              {
+                "name": "Register Count",
+                "description": "Number of temporary registers used by this shader stage",
+                "format": 2,
+                "value": 80
+              },
+              {
+                "name": "Binary Size",
+                "description": "Size in bytes of the executable for this stage",
+                "format": 2,
+                "value": 240256
+              },
+              {
+                "name": "Stack Size",
+                "description": "Size in bytes required for the shader stack",
+                "format": 2,
+                "value": 0
+              },
+              {
+                "name": "Local Memory Size",
+                "description": "Size in bytes required per-thread for local memory",
+                "format": 2,
+                "value": 68719476912
+              },
+              {
+                "name": "Shared Memory Size",
+                "description": "Size in bytes used for shared memory",
+                "format": 2,
+                "value": 33792
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
