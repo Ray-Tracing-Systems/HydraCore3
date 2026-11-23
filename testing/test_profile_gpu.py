@@ -71,10 +71,9 @@ class ReportTests(unittest.TestCase):
         mega["profile"]["kernels"][0]["shader"] = "PathTraceMega.comp.spv"
         mega["profile"]["kernels"][1]["executables"][0]["statistics"][0]["value"] = 999
         output = "\n".join(summary_tables([a, b, repeat, mega]))
-        self.assertIn(r"\shortstack{(PT,\\GPU A)\\VGPRs}", output)
-        self.assertIn(r"\shortstack{(PT,\\GPU B)\\VGPRs}", output)
+        self.assertIn("Variant & GPU A/PT & GPU B/PT", output)
         self.assertIn("hw-wave & 160 & 999", output)
-        ray_table = output.split("Reported vector registers for PT kernels")[1]
+        ray_table = output.split("Register pressure for PT kernels")[1]
         self.assertIn(r"hw-wave & kernel\_RayTrace2 & 160 & 64", ray_table)
         self.assertIn("hw-mega & PathTraceMega & 128 & --", ray_table)
         self.assertNotIn("Subgroup size (threads)", ray_table)
@@ -88,9 +87,8 @@ class ReportTests(unittest.TestCase):
         ao["ao_radius"] = 2.0
         ao["profile"]["kernels"][0]["executables"][0]["statistics"][0]["value"] = 48
         output = "\n".join(summary_tables([pt, ao]))
-        self.assertEqual(output.count("Maximum reported vector registers over rendering kernels"), 1)
-        self.assertIn(r"\shortstack{(PT,\\Test GPU)\\VGPRs}", output)
-        self.assertIn(r"\shortstack{(AO,\\Test GPU)\\VGPRs}", output)
+        self.assertEqual(output.count("Peak register pressure across rendering kernels"), 1)
+        self.assertIn("Variant & Test GPU/PT & Test GPU/AO", output)
         self.assertIn("hw-wave & 128 & 48", output)
 
     def test_spills_and_estimates_are_not_register_allocation(self):
@@ -106,12 +104,12 @@ class ReportTests(unittest.TestCase):
 
     def test_summary_merges_vendor_metrics_in_each_table(self):
         amd = self.record()
-        amd["profile"]["device"]["name"] = "AMD GPU"
+        amd["gpu_label"] = "RX 6800 XT"
         amd["profile"]["kernels"][0]["shader"] = "kernel_RayTrace2.comp.spv"
         amd["profile"]["kernels"][0]["executables"][0]["statistics"].append(
             {"name": "SGPRs", "value": 96})
         intel = copy.deepcopy(amd)
-        intel["profile"]["device"]["name"] = "Intel GPU"
+        intel["gpu_label"] = "Arc A380"
         intel["profile"]["device"]["driver_name"] = "Intel open-source Mesa driver"
         intel_kernel = intel["profile"]["kernels"][0]
         intel_kernel["executables"][0]["statistics"] = [{"name": "Max live registers", "value": 42}]
@@ -120,7 +118,11 @@ class ReportTests(unittest.TestCase):
         tables = output.split(r"\begin{longtable}")[1:]
         self.assertEqual(len(tables), 2)
         for table, kernel in zip(tables, ("", r"kernel\_RayTrace2 & ")):
-            self.assertIn(r"\shortstack{(PT,\\AMD GPU)\\VGPRs} & \shortstack{(PT,\\Intel GPU)\\Max live registers}", table)
+            caption, rows = table.split(r"\label", 1)
+            self.assertIn("6800XT/PT & A380/PT", rows)
+            self.assertIn("AMD RADV columns show allocated VGPRs", caption)
+            self.assertIn("Intel ANV columns show peak live GRFs", caption)
+            self.assertNotIn("Max live registers", rows)
             self.assertNotIn("SGPRs", table)
             self.assertNotIn("Subgroups per SIMD", table)
             self.assertIn(f"hw-wave & {kernel}128 & 42", table)
@@ -145,7 +147,7 @@ class ReportTests(unittest.TestCase):
             output = (path / "arc.tex").read_text()
         self.assertIn(f" & {ARC_RESIDENCY} & 64", output)
         self.assertIn(r" & " + ARC_OCCUPANCY.replace("%", r"\%") + " & 50", output)
-        self.assertIn(r"\shortstack{(PT,\\Arc A380)\\Max live registers}", output)
+        self.assertIn("Variant & A380/PT", output)
         del kernel["local_size"]
         self.assertNotIn(ARC_RESIDENCY, "\n".join(summary_tables([record])))
 

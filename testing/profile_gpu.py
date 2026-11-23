@@ -321,17 +321,15 @@ def gpu_key(record):
 
 
 def summary_tables(records):
-    lines = [r"\noindent\textbf{Reported vector registers}\par",
-             "RADV reports allocated VGPRs per subgroup. ANV reports peak live GRF pressure before allocation and spilling. "
-             "Columns retain their native counters and units. Repeated runs use the maximum for each cell. "
+    lines = [r"\noindent\textbf{Register pressure summary}\par",
+             "Repeated runs use the maximum for each cell. "
              "A dash indicates an unavailable count.\\\\"]
     devices = sorted({gpu_key(r) for r in records})
     labels = {}
-    for i, key in enumerate(devices, 1):
+    short_labels = {"RX 6800 XT": "6800XT", "Arc A380": "A380"}
+    for key in devices:
         label = key[0] or re.sub(r"^(AMD Radeon |NVIDIA GeForce |NVIDIA )", "", key[1].split(" (")[0])
-        labels[key] = label
-        lines.append(r"\noindent " + latex(label) + ": " + latex(
-            f"{key[1]}; {key[4]} {key[5]}; driver version {key[6]}; host {key[7]}; device {key[8]}") + r"\par")
+        labels[key] = short_labels.get(label, label)
     # Distinguish different driver/host experiments using the same GPU model.
     for key in devices:
         if sum(labels[other] == labels[key] for other in devices) > 1:
@@ -339,6 +337,9 @@ def summary_tables(records):
             for i, other in enumerate(devices, 1):
                 if labels[other] == label:
                     labels[other] += f" [GPU {i}]"
+    for key in devices:
+        lines.append(r"\noindent " + latex(labels[key]) + " identifies " + latex(
+            f"{key[1]} ({key[4]} {key[5]}, driver version {key[6]}, host {key[7]}, device {key[8]})") + r"\par")
     groups = {}
     for r in records:
         key = (r["scene"], r.get("scene_xml_sha256", ""), r["width"], r["height"], r["spp"])
@@ -353,12 +354,11 @@ def summary_tables(records):
 
     def column_order(column):
         workload = column[0]
-        return (0 if workload == "mispt" else 1 if workload == "rtao" else 2, str(column))
+        return (0 if workload == "mispt" else 1 if workload == "rtao" else 2, labels[column[1]], str(column))
 
-    def header(column, metric):
+    def header(column):
         workload = {"mispt": "PT", "rtao": "AO"}.get(column[0], column[0])
-        return (r"\shortstack{(" + latex(workload) + r",\\" + latex(labels[column[1]]) + r")\\" +
-                latex(metric) + "}")
+        return latex(f"{labels[column[1]]}/{workload}")
 
     variant_order = {variant: i for i, variant in enumerate(VARIANTS)}
     for group_id, (group, runs) in enumerate(sorted(groups.items(), key=lambda item: str(item[0]))):
@@ -384,15 +384,23 @@ def summary_tables(records):
                 continue
             rows = sorted({key[0] for key in cells}, key=lambda row: (variant_order[row[0]], row[1]))
             columns = sorted(column_metrics, key=column_order)
-            caption = ("Maximum reported vector registers over rendering kernels" if target == "maximum"
-                       else "Reported vector registers for PT kernels that perform ray traversal")
+            caption = ("Peak register pressure across rendering kernels" if target == "maximum"
+                       else "Register pressure for PT kernels that perform ray traversal")
             caption += f", {group[0]}, {group[2]} x {group[3]}, {group[4]} spp"
             radii = sorted({c[2] for c in columns if c[0] == "rtao" and c[2] is not None})
             if radii:
                 caption += ", AO radius " + ", ".join(number(radius) for radius in radii)
+            metrics = set(column_metrics.values())
+            caption += "."
+            if "VGPRs" in metrics:
+                caption += " AMD RADV columns show allocated VGPRs per subgroup."
+            if PRESSURE in metrics:
+                caption += " Intel ANV columns show peak live GRFs before allocation and spilling (Max live registers)."
+            if len(metrics) > 1:
+                caption += " Each GPU uses its native counter and register units."
             target_id = f"{group_id}-{target.replace('_', '-')}"
             row_headers = ["Variant"] if target == "maximum" else ["Variant", "Kernel"]
-            heading = r"\hline " + " & ".join(row_headers + [header(c, column_metrics[c]) for c in columns]) + r" \\\hline"
+            heading = r"\hline " + " & ".join(row_headers + [header(c) for c in columns]) + r" \\\hline"
             lines += [r"\begin{longtable}{" + "l" * len(row_headers) + "r" * len(columns) + "}",
                       r"\caption{" + latex(caption) + r"}\label{tab:hydra-summary-" + target_id + r"}\\",
                       heading, r"\endfirsthead", heading, r"\endhead"]

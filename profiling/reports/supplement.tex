@@ -2,15 +2,15 @@
 \begingroup\scriptsize
 Driver statistics come from the Vulkan extension \texttt{VK\_KHR\_pipeline\_executable\_properties}. The tables describe compute kernels recorded during rendering. Scene construction and pixel packing are excluded. Register counts and spills retain the driver's native units; they must not be compared across vendors as equivalent register files. Subgroups per SIMD is a static residency limit, not measured achieved occupancy. A maximum row is the independent maximum of one metric over the rendering kernels; it does not describe a single combined kernel.\\
 On Arc A380, Max live registers is ANV's peak pre-allocation register pressure. The theoretical Xe-core occupancy ceiling uses Intel's workgroup packing model with 128 hardware thread slots and 128 KiB of shared local memory per Xe-core. The calculation assumes enough workgroups and uses the compiled SIMD width, SPIR-V workgroup size and ANV's workgroup shared memory size. Actual hardware occupancy requires runtime counters.\\\\
-\noindent\textbf{Reported vector registers}\par
-RADV reports allocated VGPRs per subgroup. ANV reports peak live GRF pressure before allocation and spilling. Columns retain their native counters and units. Repeated runs use the maximum for each cell. A dash indicates an unavailable count.\\
-\noindent RX 6800 XT: AMD Radeon RX 6800 XT (RADV NAVI21); radv Mesa 25.2.8-0ubuntu0.24.04.5; driver version 104865800; host frol-cmc; device 0\par
-\noindent Arc A380: Intel(R) Arc(tm) A380 Graphics (DG2); Intel open-source Mesa driver Mesa 24.3.0-devel (git-9fc8668b66); driver version 100671587; host intellekt6-PC; device 0\par
+\noindent\textbf{Register pressure summary}\par
+Repeated runs use the maximum for each cell. A dash indicates an unavailable count.\\
+\noindent 6800XT identifies AMD Radeon RX 6800 XT (RADV NAVI21) (radv Mesa 25.2.8-0ubuntu0.24.04.5, driver version 104865800, host frol-cmc, device 0)\par
+\noindent A380 identifies Intel(R) Arc(tm) A380 Graphics (DG2) (Intel open-source Mesa driver Mesa 24.3.0-devel (git-9fc8668b66), driver version 100671587, host intellekt6-PC, device 0)\par
 \begin{longtable}{lrrrr}
-\caption{Maximum reported vector registers over rendering kernels, test035, 1024 x 1024, 256 spp, AO radius 2}\label{tab:hydra-summary-0-maximum}\\
-\hline Variant & \shortstack{(PT,\\RX 6800 XT)\\VGPRs} & \shortstack{(PT,\\Arc A380)\\Max live registers} & \shortstack{(AO,\\RX 6800 XT)\\VGPRs} & \shortstack{(AO,\\Arc A380)\\Max live registers} \\\hline
+\caption{Peak register pressure across rendering kernels, test035, 1024 x 1024, 256 spp, AO radius 2. AMD RADV columns show allocated VGPRs per subgroup. Intel ANV columns show peak live GRFs before allocation and spilling (Max live registers). Each GPU uses its native counter and register units.}\label{tab:hydra-summary-0-maximum}\\
+\hline Variant & 6800XT/PT & A380/PT & 6800XT/AO & A380/AO \\\hline
 \endfirsthead
-\hline Variant & \shortstack{(PT,\\RX 6800 XT)\\VGPRs} & \shortstack{(PT,\\Arc A380)\\Max live registers} & \shortstack{(AO,\\RX 6800 XT)\\VGPRs} & \shortstack{(AO,\\Arc A380)\\Max live registers} \\\hline
+\hline Variant & 6800XT/PT & A380/PT & 6800XT/AO & A380/AO \\\hline
 \endhead
 sw-wave & 96 & 126 & 56 & 132 \\
 sw-mega & 128 & 249 & 64 & 91 \\
@@ -20,10 +20,10 @@ hw-mega-p & 168 & 312 & 64 & 116 \\
 \hline
 \end{longtable}
 \begin{longtable}{llrr}
-\caption{Reported vector registers for PT kernels that perform ray traversal, test035, 1024 x 1024, 256 spp}\label{tab:hydra-summary-0-path-traversal}\\
-\hline Variant & Kernel & \shortstack{(PT,\\RX 6800 XT)\\VGPRs} & \shortstack{(PT,\\Arc A380)\\Max live registers} \\\hline
+\caption{Register pressure for PT kernels that perform ray traversal, test035, 1024 x 1024, 256 spp. AMD RADV columns show allocated VGPRs per subgroup. Intel ANV columns show peak live GRFs before allocation and spilling (Max live registers). Each GPU uses its native counter and register units.}\label{tab:hydra-summary-0-path-traversal}\\
+\hline Variant & Kernel & 6800XT/PT & A380/PT \\\hline
 \endfirsthead
-\hline Variant & Kernel & \shortstack{(PT,\\RX 6800 XT)\\VGPRs} & \shortstack{(PT,\\Arc A380)\\Max live registers} \\\hline
+\hline Variant & Kernel & 6800XT/PT & A380/PT \\\hline
 \endhead
 sw-wave & kernel\_RayTrace2 & 56 & 76 \\
 sw-mega & PathTraceMega & 128 & 249 \\
