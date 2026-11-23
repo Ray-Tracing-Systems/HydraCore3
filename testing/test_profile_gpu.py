@@ -72,8 +72,8 @@ class ReportTests(unittest.TestCase):
         output = "\n".join(summary_tables([a, b, repeat, mega]))
         self.assertIn(r"\shortstack{(PT,\\GPU A)}", output)
         self.assertIn(r"\shortstack{(PT,\\GPU B)}", output)
-        self.assertIn("hw-wave & VGPRs & 160 & 999", output)
-        self.assertIn("hw-wave & VGPRs & 160 & 64", output)
+        self.assertIn("hw-wave & 160 & 999", output)
+        self.assertIn("hw-wave & 160 & 64", output)
         ray_table = output.split("Register allocation of standalone")[1]
         self.assertNotIn("hw-mega &", ray_table)
         self.assertNotIn("N/A", output)
@@ -88,7 +88,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(output.count("Maximum register allocation over rendering kernels"), 1)
         self.assertIn(r"\shortstack{(PT,\\Test GPU)}", output)
         self.assertIn(r"\shortstack{(AO,\\Test GPU)}", output)
-        self.assertIn("hw-wave & VGPRs & 128 & 48", output)
+        self.assertIn("hw-wave & 128 & 48", output)
 
     def test_spills_and_estimates_are_not_register_allocation(self):
         record = self.record()
@@ -99,7 +99,22 @@ class ReportTests(unittest.TestCase):
         output = "\n".join(summary_tables([record]))
         self.assertNotIn("9999", output)
         self.assertNotIn("8888", output)
-        self.assertIn("hw-wave & VGPRs & 128", output)
+        self.assertIn("hw-wave & 128", output)
+
+    def test_register_files_have_separate_tables(self):
+        record = self.record()
+        record["profile"]["kernels"][0]["shader"] = "kernel_RayTrace2.comp.spv"
+        record["profile"]["kernels"][0]["executables"][0]["statistics"].append(
+            {"name": "SGPRs", "value": 96})
+        output = "\n".join(summary_tables([record]))
+        tables = output.split(r"\begin{longtable}")[1:]
+        self.assertEqual(len(tables), 4)
+        for table in tables:
+            caption = table.split(r"\label")[0]
+            self.assertNotEqual("SGPRs" in caption, "VGPRs" in caption)
+            self.assertNotIn("Register file / metric", table)
+        self.assertIn("hw-wave & 96", tables[0])
+        self.assertIn("hw-wave & 128", tables[1])
 
 
 if __name__ == "__main__":

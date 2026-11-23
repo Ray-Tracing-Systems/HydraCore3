@@ -322,25 +322,24 @@ def summary_tables(records):
             radii = sorted({c[2] for c in columns if c[0] == "rtao" and c[2] is not None})
             if radii:
                 caption += "; AO radius " + ", ".join(number(radius) for radius in radii)
-            for offset in range(0, len(columns), 4):
-                panel = columns[offset:offset + 4]
-                heading = r"\hline Variant & Register file / metric & " + " & ".join(header(c) for c in panel) + r" \\\hline"
-                lines += [r"\begin{longtable}{ll" + "r" * len(panel) + "}",
-                          r"\caption{" + latex(caption) + r"}\label{tab:hydra-register-" +
-                          f"{group_id}-{target.replace('_', '-')}-{offset}" + r"}\\",
-                          heading, r"\endfirsthead", heading, r"\endhead"]
-                for variant in VARIANTS:
-                    rows = []
-                    for metric in metrics:
+            # Each native register file has its own removable table.
+            for metric_id, metric in enumerate(metrics):
+                metric_columns = [c for c in columns if any(k[1] == metric and k[2] == c for k in cells)]
+                for offset in range(0, len(metric_columns), 4):
+                    panel = metric_columns[offset:offset + 4]
+                    heading = r"\hline Variant & " + " & ".join(header(c) for c in panel) + r" \\\hline"
+                    lines += [r"\begin{longtable}{l" + "r" * len(panel) + "}",
+                              r"\caption{" + latex(caption + "; " + metric) + r"}\label{tab:hydra-register-" +
+                              f"{group_id}-{target.replace('_', '-')}-{metric_id}-{offset}" + r"}\\",
+                              heading, r"\endfirsthead", heading, r"\endhead"]
+                    for variant in VARIANTS:
                         values = [cells.get((variant, metric, c)) for c in panel]
                         # In particular, omit fused megakernels from RayTrace2's table.
                         if all(value is None for value in values):
                             continue
-                        rows.append(latex(variant) + " & " + latex(metric) + " & " +
-                                    " & ".join("--" if value is None else latex(number(value)) for value in values) + r" \\")
-                    if rows:
-                        lines += rows + [r"\hline"]
-                lines.append(r"\end{longtable}")
+                        lines.append(latex(variant) + " & " +
+                                     " & ".join("--" if value is None else latex(number(value)) for value in values) + r" \\")
+                    lines += [r"\hline", r"\end{longtable}"]
     lines.append(r"Standalone kernel\_RayTrace2 is available in PT wavefront variants. "
                  "Megakernels inline this stage; their register counts cannot be attributed to this function alone. "
                  "RTAO uses different kernel stages.\\\\")
