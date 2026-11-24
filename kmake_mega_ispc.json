@@ -8,6 +8,7 @@
         "-shaderCC"   : "ispc",
         "-ispc_process_include" : 1, // headers of include/ are C++, they are rewritten for ISPC
         "-ispc_threads" : 2,         // OpenMP
+        "-ispc_mega_chunk" : 256,  // threads in an OpenMP work item of megakernel
         "-megakernel" : 1,
         "-const_ubo"  : 1,
         "-const_shit" : 0,

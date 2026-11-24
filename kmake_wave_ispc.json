@@ -8,6 +8,7 @@
         "-shaderCC"   : "ispc",
         "-ispc_process_include" : 1, // headers of include/ are C++, they are rewritten for ISPC
         "-ispc_threads" : 2,         // OpenMP
+        "-ispc_wave_chunk" : 512,  // threads in a chunk of wavefront, see profiling_results/ispc/tune
         "-megakernel" : 0,
         "-const_ubo"  : 1,
         "-const_shit" : 0,
